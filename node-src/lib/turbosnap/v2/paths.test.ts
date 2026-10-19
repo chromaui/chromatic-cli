@@ -181,12 +181,35 @@ describe('canonicalImporters', () => {
       expected: ['./src/Foo.vue'],
     },
     {
+      name: 'folds a loader chain reason moduleName onto the loaded resource',
+      module: module({
+        name: '../../node_modules/css-loader/dist/runtime/api.js',
+        reasons: [
+          {
+            moduleName:
+              '../../node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./src/styles.module.css',
+          },
+        ],
+      }),
+      expected: ['./src/styles.module.css'],
+    },
+    {
       name: 'returns nothing when the module has no reasons',
       module: module({ name: './src/Button.tsx' }),
       expected: [],
     },
   ])('$name', ({ module: input, expected }) => {
     expect(canonicalImporters(input, roots)).toEqual(expected);
+  });
+
+  it('resolves the resource of a loader chain reason from the stats root', () => {
+    const input = module({
+      reasons: [
+        { moduleName: '../../node_modules/css-loader/dist/cjs.js!./packages/ui/src/a.css' },
+      ],
+    });
+
+    expect(canonicalImporters(input, { projectRoot, statsRoot: '/repo' })).toEqual(['./src/a.css']);
   });
 });
 
@@ -296,6 +319,32 @@ describe('foldStatsId', () => {
       id: './src/Clazy icons.svg?url',
       expected: './src/Clazy icons.svg',
     },
+    {
+      name: 'a webpack loader chain',
+      id: '../../node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./src/lib/PathDerived/styles.module.css',
+      expected: './src/lib/PathDerived/styles.module.css',
+    },
+    {
+      name: 'an rsbuild inline match resource chain',
+      id: './src/lib/PathDerived/styles.module.css!=!../../node_modules/@rsbuild/core/compiled/css-loader/index.js??ruleSet[1].rules[3].use[1]!builtin:lightningcss-loader??ruleSet[1].rules[3].use[2]!./src/lib/PathDerived/styles.module.css',
+      expected: './src/lib/PathDerived/styles.module.css',
+    },
+    {
+      name: 'a !!-prefixed loader chain',
+      id: '!!../../node_modules/raw-loader/dist/cjs.js!./src/a.txt',
+      expected: './src/a.txt',
+    },
+    {
+      name: 'a loader chain whose resource carries a query',
+      id: '../../node_modules/some-loader/index.js!./src/icon.svg?raw',
+      expected: './src/icon.svg',
+    },
+    {
+      // The escape NUL is the file's, not a proxy marker: resolveStatsPath strips it later.
+      name: 'a loader chain whose resource is NUL-escaped',
+      id: '../../node_modules/x-loader/index.js!./node_modules/es5-ext/array/\0#/e-index-of.js',
+      expected: './node_modules/es5-ext/array/\0#/e-index-of.js',
+    },
   ])('folds $name onto the file it stands for', ({ id, expected }) => {
     expect(foldStatsId(id)).toBe(expected);
   });
@@ -311,10 +360,6 @@ describe('foldStatsId', () => {
   });
 
   it.each([
-    [
-      'a webpack loader chain',
-      '../../node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./src/lib/PathDerived/styles.module.css',
-    ],
     [
       'an rsbuild context name with a negative lookahead',
       String.raw`./src sync ^\.\/(?!.*node_modules).*\.stories\.tsx$?query`,

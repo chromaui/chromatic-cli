@@ -118,7 +118,7 @@ const FOLDABLE_NUL_PREFIXES = [`${NUL}./`, `${NUL}../`];
 // ` nonrecursive` before the glob only when recursion is off; webpack 4 omits the slash before the
 // space (`./src sync`). The modes are sync, eager, weak, async-weak, lazy and lazy-once, and rspack
 // delimits the same mode markers with pipes (`./src|lazy|`). A context name is a glob expression
-// rather than a file path, so its `?` starts no query.
+// rather than a file path, so neither its `?` nor its `!` is folded.
 const CONTEXT_MODES = ['sync', 'eager', 'weak', 'async-weak', 'lazy', 'lazy-once'];
 // Story detection only reads lazy contexts, and only the plain lazy mode: lazy-once resolves its
 // group once up front rather than per story.
@@ -217,6 +217,12 @@ function prefixInProjectPath(relativePath: FilePath): FilePath {
  * Storybook builder-vite plugin relativizes a NUL id only when the path it strips to is a module
  * in the graph, so a raw rooted id in the stats has no file behind it.
  *
+ * Webpack and rspack name a module run through loaders by its loader chain followed by the
+ * resource (`css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./src/styles.module.css`), and
+ * an inline match resource adds a prefix before `!=!`. The resource after the last `!` is the file
+ * that was loaded, so the id folds onto it. A require-context name is a glob expression whose
+ * include regex can hold `!` and `?` (`(?!.*node_modules)`), so it passes through unchanged.
+ *
  * Every stats id is folded exactly once, where it enters the graph (see {@link canonicalFileNames},
  * {@link canonicalImporters} and the on-disk locator in statsGraph). The shared normalizers never
  * fold: they also key real disk paths, where a `?` is part of the filename.
@@ -226,35 +232,42 @@ function prefixInProjectPath(relativePath: FilePath): FilePath {
  * @returns The path of the file the id stands for, or the id unchanged when synthetic.
  */
 export function foldStatsId(statsPath: FilePath): FilePath {
-  if (isSyntheticFile(statsPath)) {
+  if (isSyntheticFile(statsPath) || CONTEXT_MARKER.test(statsPath)) {
     return statsPath;
   }
 
   // A NUL proxy for a relative path stands for that path, without the NUL or the query.
   const unproxied = statsPath.startsWith(NUL) ? statsPath.slice(NUL.length) : statsPath;
-  return stripQuery(unproxied);
+  return stripQuery(stripLoaderChain(unproxied));
+}
+
+/**
+ * Strips a webpack loader chain from a stats id, leaving the resource it loads. The resource is
+ * whatever follows the last `!`, which covers plain chains, the `!`, `!!` and `-!` prefixes and the
+ * `matchResource!=!loaders!resource` form alike. A path with a literal `!` is mis-read the same way
+ * by webpack itself, which splits every request on `!`.
+ *
+ * @param statsPath The module name from the stats file.
+ *
+ * @returns The loaded resource, or the name unchanged when it has no chain.
+ */
+function stripLoaderChain(statsPath: FilePath): FilePath {
+  return statsPath.slice(statsPath.lastIndexOf('!') + 1);
 }
 
 /**
  * Strips a builder's query from a stats id, leaving the file named. Vite suffixes the ids of the
- * module blocks and CommonJS interop files it extracts; the query is the builder's, not the file's.
- * A `?` survives when the name is not a plain file query: a loader chain reads up to `!`, so
- * stripping would hash the loader instead of the loaded file, and a require-context name is a glob
- * expression rather than a file.
+ * module blocks and CommonJS interop files it extracts, and a webpack resource can carry one after
+ * its loader chain (`./icon.svg?raw`); the query is the builder's, not the file's. The caller keeps
+ * require-context names away from here, since their `?` belongs to a glob rather than a query.
  *
- * @param statsPath The module name from the stats file.
+ * @param statsPath The module name from the stats file, without a loader chain.
  *
- * @returns The file name without the query, or the name unchanged when its `?` must survive.
+ * @returns The file name without the query.
  */
 function stripQuery(statsPath: FilePath): FilePath {
   const queryStart = statsPath.indexOf('?');
-  if (queryStart === -1) {
-    return statsPath;
-  }
-  if (statsPath.includes('!') || CONTEXT_MARKER.test(statsPath)) {
-    return statsPath;
-  }
-  return statsPath.slice(0, queryStart);
+  return queryStart === -1 ? statsPath : statsPath.slice(0, queryStart);
 }
 
 /**
