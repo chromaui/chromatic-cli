@@ -4,7 +4,7 @@ import path from 'path';
 
 import { Context } from '..';
 import wroteReport from '../ui/messages/info/wroteReport';
-import { redact } from './utilities';
+import { redact, redactValues } from './utilities';
 
 const { writeFile } = jsonfile;
 
@@ -48,6 +48,24 @@ export function removeChromaticDiagnostics(ctx: Context) {
 }
 
 /**
+ * Collect every credential value the run resolved, so serialization can scrub them from
+ * places key-based redaction cannot see into (like the plain strings of originalArgv).
+ *
+ * @param ctx The context set when executing the CLI.
+ *
+ * @returns The credential values to scrub from serialized output.
+ */
+function getSecretValues(ctx: Context) {
+  return [
+    ctx.options?.projectToken,
+    ctx.env?.CHROMATIC_PROJECT_TOKEN,
+    ctx.options?.userToken,
+    ctx.build?.reportToken,
+    ctx.announcedBuild?.reportToken,
+  ].filter((value): value is string => typeof value === 'string' && value.length > 0);
+}
+
+/**
  * Extract diagnostic information for the Chromatic diagnostics file.
  *
  * @param ctx The context set when executing the CLI.
@@ -55,9 +73,15 @@ export function removeChromaticDiagnostics(ctx: Context) {
  * @returns An object containing all information for the Chromatic diagnostics file.
  */
 export function getDiagnostics(ctx: Context) {
-  // Drop some fields that are not useful to have and redact sensitive fields
-  const { argv, client, env, help, http, log, pkg, title, ...rest } = ctx;
-  const data = redact(rest, 'projectToken', 'reportToken', 'userToken');
+  // Collect credentials before redacting, so the value backstop can scrub them wherever
+  // they appear (e.g. inside the plain strings of options.originalArgv).
+  const secrets = getSecretValues(ctx);
+
+  // Drop fields that are not useful to serialize: argv, clients, env, logger, etc. The
+  // analytics client in particular is a live handle that references the GraphQL client —
+  // and through it the env and auth headers — so it must never be serialized.
+  const { analytics, argv, client, env, help, http, log, pkg, title, ...rest } = ctx;
+  const data = redactValues(redact(rest, 'projectToken', 'reportToken', 'userToken'), secrets);
 
   // Sort top-level fields alphabetically
   return Object.fromEntries(

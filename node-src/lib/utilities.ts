@@ -96,12 +96,57 @@ export const isPackageLockFile = (filePath: string) =>
 export const isPackageMetadataFile = (filePath: string) =>
   isPackageManifestFile(filePath) || isPackageLockFile(filePath);
 
+const REDACTED = '<redacted>';
+const SENSITIVE_KEY_PATTERN = /(token|authorization)/i;
+const BEARER_VALUE_PATTERN = /^bearer /i;
+
+/**
+ * Remove values under sensitive keys at any depth: keys in the explicit list, plus any key
+ * matching the sensitive-name pattern (token/authorization, case-insensitive) as a backstop
+ * for credential keys that are not in the list.
+ *
+ * @param value The value to walk.
+ * @param fields Keys to redact explicitly.
+ *
+ * @returns The value with sensitive keys removed.
+ */
 export const redact = <T>(value: T, ...fields: string[]): T => {
   if (value === null || typeof value !== 'object') return value;
   if (Array.isArray(value)) return value.map((item) => redact(item, ...fields)) as T;
   const object = { ...value };
   for (const key of Object.keys(object)) {
-    object[key] = fields.includes(key) ? undefined : redact(object[key], ...fields);
+    const sensitive = fields.includes(key) || SENSITIVE_KEY_PATTERN.test(key);
+    object[key] = sensitive ? undefined : redact(object[key], ...fields);
   }
   return object;
+};
+
+/**
+ * Replace known secret values inside strings, wherever they appear — the value backstop for
+ * plain string collections (like options.originalArgv) that key-based redaction cannot see
+ * into. Bearer authorization values are replaced wholesale; each occurrence of a collected
+ * secret is replaced in place, so surrounding text (e.g. flag names) stays intact.
+ *
+ * @param value The value to walk.
+ * @param secrets The collected secret values to scrub.
+ *
+ * @returns The value with secrets replaced.
+ */
+export const redactValues = <T>(value: T, secrets: string[]): T => {
+  if (typeof value === 'string') {
+    if (BEARER_VALUE_PATTERN.test(value)) return REDACTED as T;
+    let result: string = value;
+    for (const secret of secrets) {
+      result = result.replaceAll(secret, REDACTED);
+    }
+    return result as T;
+  }
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map((item) => redactValues(item, secrets)) as T;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+      key,
+      redactValues(item, secrets),
+    ])
+  ) as T;
 };
