@@ -99,6 +99,9 @@ export const isPackageMetadataFile = (filePath: string) =>
 const REDACTED = '<redacted>';
 const SENSITIVE_KEY_PATTERN = /(token|authorization)/i;
 const BEARER_VALUE_PATTERN = /^bearer /i;
+// Anchored on the header name so harmless mentions of "bearer" stay untouched; the scheme
+// (basic/bearer) is kept readable while the credential after it is replaced.
+const EMBEDDED_AUTHORIZATION_PATTERN = /\b(authorization\s*:\s*(?:basic|bearer)\s+)[^\s"',;]+/gi;
 
 /**
  * Remove values under sensitive keys at any depth: keys in the explicit list, plus any key
@@ -124,8 +127,12 @@ export const redact = <T>(value: T, ...fields: string[]): T => {
 /**
  * Replace known secret values inside strings, wherever they appear — the value backstop for
  * plain string collections (like options.originalArgv) that key-based redaction cannot see
- * into. Bearer authorization values are replaced wholesale; each occurrence of a collected
- * secret is replaced in place, so surrounding text (e.g. flag names) stays intact.
+ * into. Bearer authorization values are replaced wholesale, embedded Authorization
+ * header credentials (Authorization: Bearer/Basic, e.g. inside package.json scripts) are
+ * redacted in place, and each occurrence of a collected secret is replaced in place, so
+ * surrounding text (e.g. flag names) stays intact. Secrets are deduplicated and replaced
+ * longest-first so a shorter value that is a prefix of a longer one cannot leave the
+ * longer secret's suffix exposed.
  *
  * @param value The value to walk.
  * @param secrets The collected secret values to scrub.
@@ -135,8 +142,8 @@ export const redact = <T>(value: T, ...fields: string[]): T => {
 export const redactValues = <T>(value: T, secrets: string[]): T => {
   if (typeof value === 'string') {
     if (BEARER_VALUE_PATTERN.test(value)) return REDACTED as T;
-    let result: string = value;
-    for (const secret of secrets) {
+    let result: string = value.replaceAll(EMBEDDED_AUTHORIZATION_PATTERN, '$1<redacted>');
+    for (const secret of [...new Set(secrets)].sort((a, b) => b.length - a.length)) {
       result = result.replaceAll(secret, REDACTED);
     }
     return result as T;

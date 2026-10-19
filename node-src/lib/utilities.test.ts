@@ -123,12 +123,35 @@ describe('redactValues', () => {
   });
 
   it('replaces bearer values wholesale', () => {
-    expect(redactValues({ h: 'Bearer abc.def.ghi', note: 'mentions bearer mid-string' }, [])).toEqual(
-      {
-        h: '<redacted>',
-        note: 'mentions bearer mid-string',
-      }
-    );
+    expect(
+      redactValues({ h: 'Bearer abc.def.ghi', note: 'mentions bearer mid-string' }, [])
+    ).toEqual({
+      h: '<redacted>',
+      note: 'mentions bearer mid-string',
+    });
+  });
+
+  it('redacts embedded Authorization header credentials in strings', () => {
+    expect(
+      redactValues(
+        {
+          script: 'curl -H "Authorization: Bearer abc.def.ghi" https://example.com',
+          basic: 'curl -H "Authorization: Basic dXNlcjpwYXNz" https://example.com',
+          mention: 'mentions bearer mid-string',
+        },
+        []
+      )
+    ).toEqual({
+      script: 'curl -H "Authorization: Bearer <redacted>" https://example.com',
+      basic: 'curl -H "Authorization: Basic <redacted>" https://example.com',
+      mention: 'mentions bearer mid-string',
+    });
+  });
+
+  it('replaces longer secrets before shorter prefixes of them', () => {
+    expect(redactValues({ v: 'XYZextra-suffix' }, ['XYZ', 'XYZextra'])).toEqual({
+      v: '<redacted>-suffix',
+    });
   });
 
   it('leaves non-string values and structures untouched', () => {
