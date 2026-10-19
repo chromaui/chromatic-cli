@@ -1,3 +1,5 @@
+/* eslint-disable max-lines -- the file grew past 500 lines pinning the snapshot routing (review request) */
+
 import waitForBuildToComplete, {
   NotifyConnectionError,
   NotifyServiceAuthenticationError,
