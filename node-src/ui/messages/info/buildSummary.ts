@@ -21,23 +21,20 @@ export default (ctx: Context, log: SummaryLog) => {
   const url = isOnboarding ? build.app.setupUrl : build.webUrl;
   const ignoredLine = ignoredTests({ ignoredCount: build.ignoredCount, url, isOnboarding });
 
-  // The routing in tasks/snapshot decides why the command exits 0: `passed` for clean or
-  // auto-accepted builds, `exitZeroOnChanges` when the flag forces a successful exit over
-  // unreviewed changes. This is the one place that words that reason.
-  const exitZeroLine =
-    log === 'exitZeroOnChanges'
-      ? `${info} Exit code is 0 because of --exit-zero-on-changes.`
-      : undefined;
+  // Why the command exits 0 is decided by the routing in tasks/snapshot.ts; this words that reason.
+  const exitZero = log === 'exitZeroOnChanges';
+  const exitZeroLine = exitZero
+    ? `${info} Exit code is 0 because of --exit-zero-on-changes.`
+    : undefined;
 
   if (isOnboarding) {
     const { snapshots, components, stories, e2eTests } = stats({ build });
     const foundString = isE2EBuild(ctx.options)
       ? `We found ${e2eTests} and captured ${snapshots}.`
       : `We found ${components} with ${stories} and captured ${snapshots}.`;
-    const headline =
-      log === 'exitZeroOnChanges'
-        ? 'Build completed. Welcome to Chromatic!'
-        : 'Build passed. Welcome to Chromatic!';
+    const headline = exitZero
+      ? 'Build completed. Welcome to Chromatic!'
+      : 'Build passed. Welcome to Chromatic!';
 
     return dedent(chalk`
       ${success} {bold ${headline}}
@@ -46,10 +43,7 @@ export default (ctx: Context, log: SummaryLog) => {
     `);
   }
 
-  const headline =
-    log === 'exitZeroOnChanges'
-      ? `Build ${build.number} completed`
-      : `Build ${build.number} passed!`;
+  const headline = exitZero ? `Build ${build.number} completed` : `Build ${build.number} passed!`;
 
   return dedent(chalk`
     ${success} {bold ${headline}}

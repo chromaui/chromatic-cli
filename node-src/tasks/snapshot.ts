@@ -12,7 +12,7 @@ import { delay, throttle } from '../lib/utilities';
 import { Context, Deps, TaskResult } from '../types';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';
-import buildSummaryMessage from '../ui/messages/info/buildSummary';
+import buildSummaryMessage, { SummaryLog } from '../ui/messages/info/buildSummary';
 import speedUpCI from '../ui/messages/info/speedUpCI';
 import { pending } from '../ui/tasks/snapshot';
 
@@ -65,7 +65,7 @@ interface BuildQueryResult {
 export interface SnapshotOutput {
   exitCode: number;
   userError: boolean;
-  log?: 'passed' | 'exitZeroOnChanges' | 'changes' | 'errors';
+  log?: SummaryLog | 'changes' | 'errors';
   build: Context['build'];
 }
 
