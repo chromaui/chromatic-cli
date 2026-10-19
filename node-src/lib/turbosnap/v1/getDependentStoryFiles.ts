@@ -235,9 +235,12 @@ export async function getDependentStoryFiles(
       reasonsById.set(member.id, reasons);
 
       // Concatenated modules ("a.js + 1 modules") register their inner module names so they can
-      // be traced too.
+      // be traced too, unless a group owns that name: rsbuild also emits the inner modules on
+      // their own, and the container must not replace their representative (its id would become
+      // an `onlyStoryFiles` key that matches no story).
       for (const m of member.modules || []) {
-        modulesByName.set(normalize(m.name), representative);
+        const innerName = normalize(m.name);
+        if (!membersByName.has(innerName)) modulesByName.set(innerName, representative);
       }
 
       trackNodeModules(member.name, name);
