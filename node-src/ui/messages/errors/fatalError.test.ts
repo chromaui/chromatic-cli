@@ -10,36 +10,31 @@ const token = 'chpt_fatal-error-test-token';
 // message list, the stack traces, and the debug info.
 const error = new Error(invalidProjectToken({ projectToken: token }));
 
-const setupContext = (ctx: Record<string, unknown> = {}) =>
-  ctx as unknown as Parameters<typeof fatalError>[0];
-
-const baseContext = (overrides: Record<string, unknown> = {}) => ({
-  sessionId: 'session-test',
-  pkg: {
-    name: 'chromatic',
-    version: '0.0.0-test',
-    bugs: { email: 'support@example.com' },
-    docs: 'https://www.chromatic.com/docs',
-  },
-  packageJson: {},
-  env: {},
-  git: {
-    version: 'git version 2.51.0',
-    branch: 'main',
-    slug: 'chromaui/chromatic-cli',
-    fromCI: false,
-  },
-  exitCode: 202,
-  exitCodeKey: 'BUILD_FAILED',
-  ...overrides,
-});
+const context = (overrides: Record<string, unknown> = {}) =>
+  ({
+    sessionId: 'session-test',
+    pkg: {
+      name: 'chromatic',
+      version: '0.0.0-test',
+      bugs: { email: 'support@example.com' },
+      docs: 'https://www.chromatic.com/docs',
+    },
+    packageJson: {},
+    env: {},
+    git: {
+      version: 'git version 2.51.0',
+      branch: 'main',
+      slug: 'chromaui/chromatic-cli',
+      fromCI: false,
+    },
+    exitCode: 202,
+    exitCodeKey: 'BUILD_FAILED',
+    ...overrides,
+  }) as unknown as Parameters<typeof fatalError>[0];
 
 describe('fatalError credential redaction', () => {
   it('scrubs a flag-supplied project token from the message, stack, and debug info', () => {
-    const output = fatalError(
-      setupContext(baseContext({ flags: { projectToken: [token] } })),
-      error
-    );
+    const output = fatalError(context({ flags: { projectToken: [token] } }), error);
 
     expect(output).not.toContain(token);
     expect(output).toContain('<redacted>');
@@ -48,10 +43,7 @@ describe('fatalError credential redaction', () => {
   });
 
   it('scrubs a project token supplied only through the environment', () => {
-    const output = fatalError(
-      setupContext(baseContext({ env: { CHROMATIC_PROJECT_TOKEN: token } })),
-      error
-    );
+    const output = fatalError(context({ env: { CHROMATIC_PROJECT_TOKEN: token } }), error);
 
     expect(output).not.toContain(token);
     expect(output).toContain('<redacted>');
