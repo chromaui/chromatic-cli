@@ -12,7 +12,7 @@ import { delay, throttle } from '../lib/utilities';
 import { Context, Deps, TaskResult } from '../types';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';
-import buildPassedMessage from '../ui/messages/info/buildPassed';
+import buildSummaryMessage from '../ui/messages/info/buildSummary';
 import speedUpCI from '../ui/messages/info/speedUpCI';
 import { pending } from '../ui/tasks/snapshot';
 
@@ -280,7 +280,7 @@ export const applySnapshotOutput = (ctx: Context, output: SnapshotOutput) => {
 
   switch (output.log) {
     case 'passed':
-      ctx.log.info(buildPassedMessage(ctx));
+      ctx.log.info(buildSummaryMessage(ctx));
       return;
     case 'changes':
       ctx.log.error(buildHasChanges(ctx));
