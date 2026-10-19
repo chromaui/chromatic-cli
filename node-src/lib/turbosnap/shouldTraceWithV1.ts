@@ -13,13 +13,13 @@ export function isTurboSnapV1Enabled(ctx: Pick<Context, 'turboSnap'>) {
 }
 
 /**
- * Whether TurboSnap v1 will actually trace the changed files. A rebuild rerun disables TurboSnap
- * before computing the changed-file list and a first build has no ancestor build, so neither
- * traces even though the lib still collects hashes in both cases.
+ * Whether TurboSnap v1 is enabled and a changed-file list is available for tracing.
+ * An empty list permits tracing; an undefined list skips it, as on rebuilds and first builds.
+ * Hash collection may still run when this returns false.
  *
  * @param ctx The context set when executing the CLI.
  *
- * @returns True when the changed files will be traced.
+ * @returns True when v1 is enabled and the changed-file list is defined, even if it is empty.
  */
 export function shouldTraceWithV1(ctx: Pick<Context, 'turboSnap' | 'git'>) {
   return isTurboSnapV1Enabled(ctx) && !!ctx.git.changedFiles;

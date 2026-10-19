@@ -15,10 +15,15 @@ import { realProjectFiles } from './v2/projectFiles';
 /**
  * Determines which story files are affected by the changed git files, bailing out of TurboSnap
  * when necessary.
+ * Also attempts to write and upload a v2 hash manifest when hash collection is enabled, even
+ * when v1 tracing is skipped. V2 failures do not prevent v1 tracing.
  *
  * @param ctx The context set when executing the CLI.
  *
  * @returns The trace result: skipped, bailed, or traced with the affected story files.
+ *
+ * @throws {Error} If v1 is enabled without a stats path, or if reading or parsing the stats file
+ * or v1 tracing fails.
  */
 export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFilesResult> {
   if (!ctx.fileInfo?.statsPath) {
