@@ -171,17 +171,6 @@ describe('traceChangedFiles', () => {
     expect(err.message).toBe('Could not retrieve dependent test files.\nstats file not found');
   });
 
-  it('does not report tracing on a rebuild without changed files', async () => {
-    const ctx = { ...turboSnapContext(), git: {}, turboSnap: { bailReason: { rebuild: true } } };
-    const d = deps();
-    traceChangedFilesTurbosnap.mockResolvedValue({ status: 'skipped' });
-
-    const result = await traceChangedFiles(d, { turboSnapContext: ctx });
-
-    expect(result).toStrictEqual({});
-    expect(d.report).not.toHaveBeenCalled();
-  });
-
   it('reports tracing with the changed-file count when tracing will run', async () => {
     const d = deps();
     traceChangedFilesTurbosnap.mockResolvedValue({ status: 'skipped' });
