@@ -5,6 +5,7 @@ import { readStatsFile } from '../../tasks/readStatsFile';
 import { Context, Stats } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import { isHashCollectionDisabled } from './isHashCollectionDisabled';
+import { isTurboSnapV1Enabled, shouldTraceWithV1 } from './shouldTraceWithV1';
 import { TraceChangedFilesResult } from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
@@ -14,16 +15,19 @@ import { realProjectFiles } from './v2/projectFiles';
 /**
  * Determines which story files are affected by the changed git files, bailing out of TurboSnap
  * when necessary.
+ * Also attempts to write and upload a v2 hash manifest when hash collection is enabled, even
+ * when v1 tracing is skipped. V2 failures do not prevent v1 tracing.
  *
  * @param ctx The context set when executing the CLI.
  *
  * @returns The trace result: skipped, bailed, or traced with the affected story files.
+ *
+ * @throws {Error} If v1 is enabled without a stats path, or if reading or parsing the stats file
+ * or v1 tracing fails.
  */
 export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFilesResult> {
-  const runTurboSnapV1 = !!ctx.turboSnap && !ctx.turboSnap.unavailable;
-
   if (!ctx.fileInfo?.statsPath) {
-    if (runTurboSnapV1) {
+    if (isTurboSnapV1Enabled(ctx)) {
       throw missingStatsFileError(ctx);
     }
 
@@ -32,7 +36,7 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
   }
 
   const collectHashes = shouldCollectHashes(ctx);
-  const traceWithV1 = runTurboSnapV1 && !!ctx.git.changedFiles;
+  const traceWithV1 = shouldTraceWithV1(ctx);
   if (!collectHashes && !traceWithV1) {
     return { status: 'skipped' };
   }

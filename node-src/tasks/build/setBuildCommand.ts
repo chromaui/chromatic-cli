@@ -4,6 +4,7 @@ import { getE2EBuildCommand } from '../../lib/e2e';
 import { isE2EBuild } from '../../lib/e2eUtils';
 import { getPackageManagerRunCommand } from '../../lib/getPackageManager';
 import { isHashCollectionDisabled } from '../../lib/turbosnap/isHashCollectionDisabled';
+import { isTurboSnapV1Enabled } from '../../lib/turbosnap/shouldTraceWithV1';
 import { Context, Deps } from '../../types';
 import { resolveE2EFramework } from './resolveE2EFramework';
 
@@ -30,10 +31,6 @@ const getStatsFlag = (storybook?: Context['storybook']) => {
     : '--webpack-stats-json';
 };
 
-function isTurboSnapRequested(turboSnap?: Context['turboSnap']) {
-  return Boolean(turboSnap && !turboSnap.unavailable);
-}
-
 /**
  * Decide whether the build command gets the stats flag. Each condition after the TurboSnap check
  * blocks the always-on path only: a user who asked for TurboSnap keeps the flag in every case,
@@ -54,7 +51,7 @@ function shouldAddStatsFlag(
     return false;
   }
 
-  if (isTurboSnapRequested(input.turboSnap)) {
+  if (isTurboSnapV1Enabled(input)) {
     return true;
   }
 
@@ -73,6 +70,19 @@ function shouldAddStatsFlag(
   return true;
 }
 
+/**
+ * Resolves a custom, E2E, or package script build command with applicable output and stats flags.
+ * Custom commands receive no `--output-dir` flag.
+ *
+ * @param deps Options and environment used to select the command and stats flags, plus the logger.
+ * @param input Build settings; a nonempty `flags.buildCommand` overrides `options.buildCommand`.
+ * @param input.sourceDir The directory used for output and stats flags.
+ *
+ * @returns The resolved build command, or undefined if package-manager resolution yields no command.
+ *
+ * @throws {Error} If no custom or E2E command applies and no build script is configured, or command
+ * resolution fails. Outside the GitHub Action, a missing E2E package propagates a `TaskFailure`.
+ */
 export const setBuildCommand = async (
   deps: SetBuildCommandDeps,
   input: SetBuildCommandInput
@@ -86,7 +96,7 @@ export const setBuildCommand = async (
 
   if (shouldAddStatsFlag(deps, input, buildCommand)) {
     buildCommandOptions.push(`${getStatsFlag(input.storybook)}=${input.sourceDir}`);
-  } else if (isTurboSnapRequested(input.turboSnap)) {
+  } else if (isTurboSnapV1Enabled(input)) {
     deps.log.warn('Storybook version 6.2.0 or later is required to use the --only-changed flag');
   }
 
