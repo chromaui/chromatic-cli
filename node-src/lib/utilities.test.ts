@@ -7,6 +7,8 @@ import {
   isPackageManifestFile,
   isPackageMetadataFile,
   matchesFile,
+  redact,
+  redactValues,
 } from './utilities';
 
 chalk.level = 0;
@@ -69,6 +71,69 @@ describe('groupUntracedFilesByGlob', () => {
       { filepath: 'package.json', glob: '**/package.json' },
     ]);
     expect(result).toBe('Files matching **/package.json:\n→ package.json');
+  });
+});
+
+describe('redact', () => {
+  it('redacts exact-name keys at any depth', () => {
+    const input = { a: { projectToken: 'x', b: [{ userToken: 'y' }] }, reportToken: 'z' };
+    expect(redact(input, 'projectToken', 'reportToken', 'userToken')).toEqual({
+      a: { projectToken: undefined, b: [{ userToken: undefined }] },
+      reportToken: undefined,
+    });
+  });
+
+  it('redacts keys matching the sensitive-name pattern case-insensitively', () => {
+    const input = {
+      CHROMATIC_PROJECT_TOKEN: 'a',
+      myToken: 'b',
+      authorization: 'c',
+      Authorization: 'd',
+      keepMe: 'e',
+      nested: { sessionTOKEN: 'f' },
+    };
+    expect(redact(input)).toEqual({
+      CHROMATIC_PROJECT_TOKEN: undefined,
+      myToken: undefined,
+      authorization: undefined,
+      Authorization: undefined,
+      keepMe: 'e',
+      nested: { sessionTOKEN: undefined },
+    });
+  });
+
+  it('leaves non-sensitive keys untouched', () => {
+    const input = { keep: 'x', nested: { alsoKeep: ['y'] } };
+    expect(redact(input, 'projectToken')).toEqual(input);
+  });
+});
+
+describe('redactValues', () => {
+  it('replaces each occurrence of a secret and preserves surrounding text', () => {
+    const input = { argv: ['-t', 'shhh', '-t=shhh', '--project-token=shhh', 'keep'] };
+    expect(redactValues(input, ['shhh'])).toEqual({
+      argv: ['-t', '<redacted>', '-t=<redacted>', '--project-token=<redacted>', 'keep'],
+    });
+  });
+
+  it('handles multiple secrets and repeated occurrences', () => {
+    expect(redactValues('a shhh and shhh plus sekrit', ['shhh', 'sekrit'])).toBe(
+      'a <redacted> and <redacted> plus <redacted>'
+    );
+  });
+
+  it('replaces bearer values wholesale', () => {
+    expect(redactValues({ h: 'Bearer abc.def.ghi', note: 'mentions bearer mid-string' }, [])).toEqual(
+      {
+        h: '<redacted>',
+        note: 'mentions bearer mid-string',
+      }
+    );
+  });
+
+  it('leaves non-string values and structures untouched', () => {
+    const input = { n: 1, b: true, nil: null, nested: { s: 'ok', arr: [1, 'ok'] } };
+    expect(redactValues(input, ['nothere'])).toEqual(input);
   });
 });
 
