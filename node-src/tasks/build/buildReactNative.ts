@@ -10,7 +10,11 @@ import { generateManifest } from '../../lib/react-native/generateManifest';
 import { exitCodes, TaskFailure } from '../../lib/setExitCode';
 import { Context, Deps } from '../../types';
 import { reactNativeBuildFailed } from '../../ui/messages/errors/buildFailed';
-import { failedNoValidPlatforms, pendingAndroid, pendingIOS } from '../../ui/tasks/buildReactNative';
+import {
+  failedNoValidPlatforms,
+  pendingAndroid,
+  pendingIOS,
+} from '../../ui/tasks/buildReactNative';
 
 type BuildReactNativeDeps = Pick<Deps, 'options' | 'log' | 'report'>;
 
@@ -41,7 +45,7 @@ async function readLastLines(filePath: string, lineCount: number): Promise<strin
 
 const runPlatformCommand = async (
   deps: BuildReactNativeDeps,
-  sourceDir: string,
+  sourceDirectory: string,
   command: string,
   logStream: WriteStream
 ) => {
@@ -51,7 +55,7 @@ const runPlatformCommand = async (
     await execWithBuildEnvironment(
       cmd,
       args,
-      { env: { CHROMATIC_ARTIFACT_DIRECTORY: sourceDir } },
+      { env: { CHROMATIC_ARTIFACT_DIRECTORY: sourceDirectory } },
       logStream
     );
   } catch (err) {
@@ -60,14 +64,12 @@ const runPlatformCommand = async (
 };
 
 const resolvePlatforms = (browsers?: string[]) => {
-  return (browsers ?? []).filter(
-    (b): b is 'ios' | 'android' => b === 'ios' || b === 'android'
-  );
+  return (browsers ?? []).filter((b): b is 'ios' | 'android' => b === 'ios' || b === 'android');
 };
 
 const buildAndroidArtifact = async (
   deps: BuildReactNativeDeps,
-  sourceDir: string,
+  sourceDirectory: string,
   logStream: WriteStream
 ) => {
   const { title, output } = pendingAndroid(deps.options.reactNative);
@@ -78,15 +80,19 @@ const buildAndroidArtifact = async (
     if (androidBuildArchitectures?.length) {
       deps.log.debug('androidBuildArchitectures is ignored when androidBuildCommand is set');
     }
-    await runPlatformCommand(deps, sourceDir, androidBuildCommand, logStream);
+    await runPlatformCommand(deps, sourceDirectory, androidBuildCommand, logStream);
   } else {
-    await buildAndroid(path.join(sourceDir, 'storybook.apk'), logStream, androidBuildArchitectures);
+    await buildAndroid(
+      path.join(sourceDirectory, 'storybook.apk'),
+      logStream,
+      androidBuildArchitectures
+    );
   }
 };
 
 const buildIosArtifact = async (
   deps: BuildReactNativeDeps,
-  sourceDir: string,
+  sourceDirectory: string,
   logStream: WriteStream
 ) => {
   const { title, output } = pendingIOS(deps.options.reactNative);
@@ -94,10 +100,10 @@ const buildIosArtifact = async (
   const { iosBuildCommand } = deps.options.reactNative ?? {};
   deps.log.debug({ iosBuildCommand }, 'Running iOS build');
   if (iosBuildCommand) {
-    await runPlatformCommand(deps, sourceDir, iosBuildCommand, logStream);
+    await runPlatformCommand(deps, sourceDirectory, iosBuildCommand, logStream);
   } else {
     const config = await readExpoConfig();
-    await buildIos(config.name, path.join(sourceDir, 'storybook.app'), logStream);
+    await buildIos(config.name, path.join(sourceDirectory, 'storybook.app'), logStream);
   }
 };
 
@@ -118,7 +124,11 @@ export const buildArtifacts = async (
   }
 
   mkdirSync(path.join(input.sourceDir, '.chromatic'), { recursive: true });
-  const reactNativeBuildLogFile = path.join(input.sourceDir, '.chromatic', 'react-native-build.log');
+  const reactNativeBuildLogFile = path.join(
+    input.sourceDir,
+    '.chromatic',
+    'react-native-build.log'
+  );
 
   const logStream = await openLogFileStream(reactNativeBuildLogFile);
 

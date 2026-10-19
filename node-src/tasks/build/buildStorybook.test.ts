@@ -3,8 +3,8 @@ import * as Sentry from '@sentry/node';
 import { execa as execaDefault, parseCommandString } from 'execa';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import TestLogger from '../../lib/testLogger';
 import { exitCodes, TaskFailure } from '../../lib/setExitCode';
+import TestLogger from '../../lib/testLogger';
 import { buildStorybook } from './buildStorybook';
 
 vi.mock('execa', async (importOriginal) => {
