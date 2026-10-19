@@ -32,7 +32,8 @@ jobs:
           # change, including to workflows or config, runs the full suite.
           skippable='\.md$|^docs/|^\.obvious/|^\.agents/|^LICENSE$'
 
-          changed="$(git diff --name-only "$BASE_SHA" HEAD)"
+          # --no-renames lists both paths of a rename, so moving code into docs/ still runs tests.
+          changed="$(git diff --no-renames --name-only "$BASE_SHA" HEAD)"
           echo "Changed files:"
           echo "$changed"
 
