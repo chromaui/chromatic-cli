@@ -301,6 +301,40 @@ describe('resolveConfigFileName', () => {
     });
   });
 
+  it('specified file that does not exist while a default exists', async () => {
+    mockedExistsSync.mockImplementation((path: PathLike) => {
+      if (path === 'chromatic.config.json') {
+        return true;
+      }
+
+      return false;
+    });
+    mockedReadFile.mockImplementation(() => {
+      throw new Error('ENOENT');
+    });
+
+    await expect(getConfiguration('missing.json')).rejects.toThrow(/could not be found/);
+
+    expect(mockedReadFile).toHaveBeenCalledWith('missing.json', 'utf8');
+    expect(mockedReadFile).not.toHaveBeenCalledWith('chromatic.config.json', 'utf8');
+  });
+
+  it('specified file takes precedence over defaults', async () => {
+    mockedExistsSync.mockImplementation((path: PathLike) => {
+      if (path === 'test.file' || path === 'chromatic.config.json') {
+        return true;
+      }
+
+      return false;
+    });
+    mockedReadFile.mockReturnValue(JSON.stringify({ projectToken: 'json-file-token' }));
+
+    await getConfiguration('test.file');
+
+    expect(mockedReadFile).toHaveBeenCalledWith('test.file', 'utf8');
+    expect(mockedReadFile).not.toHaveBeenCalledWith('chromatic.config.json', 'utf8');
+  });
+
   it('returns nothing if there is no config file and it was not specified', async () => {
     mockedReadFile.mockImplementation(() => {
       throw new Error('ENOENT');
