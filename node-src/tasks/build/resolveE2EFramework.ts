@@ -1,11 +1,11 @@
 import { Context } from '../../types';
 
 /**
- * Resolve which E2E framework the build integrates with, preferring an explicit option.
+ * Pick the E2E framework to build with: Playwright or Vitest when flagged, otherwise Cypress.
  *
- * @param options Resolved user options, consulted for an explicit Playwright or Vitest choice.
+ * @param options Resolved user options, read for the `--playwright` and `--vitest` flags.
  *
- * @returns The name of the E2E framework to use.
+ * @returns The E2E framework name.
  */
 export function resolveE2EFramework(options: Context['options']) {
   if (options.playwright) {
