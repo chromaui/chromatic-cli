@@ -1500,6 +1500,113 @@ describe('getDependentStoryFiles', () => {
     ]);
     expect(result.turboSnap.bailReason).toBeUndefined();
   });
+
+  // CAP-5104: the Vite builder (storybookjs/storybook#36345) reports `project-annotations.js` as
+  // the importer of every `previewAnnotations` entry and addon or framework `preview.js`. Those
+  // apply to every story, so a change reaching them must bail, not report them as story files.
+  describe.each([
+    '/virtual:/@storybook/builder-vite/project-annotations.js',
+    'virtual:@storybook/builder-vite/project-annotations.js',
+  ])('with Vite project annotations (%s)', (projectAnnotations) => {
+    const viteApp = '/virtual:/@storybook/builder-vite/vite-app.js';
+    const storiesEntry = '/virtual:/@storybook/builder-vite/storybook-stories.js';
+    const a11yPreview = './node_modules/@storybook/addon-a11y/dist/preview.js';
+    const reactEntryPreview = './node_modules/@storybook/react/dist/entry-preview.js';
+    const modules = [
+      buildModule(viteApp),
+      buildModule(storiesEntry, viteApp),
+      buildModule(projectAnnotations, viteApp),
+      buildModule('./.storybook/preview.tsx', projectAnnotations),
+      buildModule('./src/stories/components/index.js', projectAnnotations),
+      buildModule(a11yPreview, projectAnnotations),
+      buildModule(reactEntryPreview, projectAnnotations),
+      buildModule('./node_modules/axe-core/axe.js', a11yPreview),
+      buildModule('./node_modules/react/index.js', reactEntryPreview, './src/Button.jsx'),
+      buildModule('./src/Button.stories.jsx', storiesEntry),
+      buildModule(
+        './src/Button.jsx',
+        './src/Button.stories.jsx',
+        './src/stories/components/index.js'
+      ),
+      buildModule('./src/Header.jsx', './src/Header.stories.jsx'),
+      buildModule('./src/Header.stories.jsx', storiesEntry),
+    ];
+    const trace = (changedFiles: string[], changedDependencies: string[] = []) =>
+      getDependentStoryFiles(
+        getContext(),
+        { modules },
+        statsPath,
+        changedFiles,
+        changedDependencies
+      );
+
+    it('bails on a changed preview annotation outside the config dir', async () => {
+      const result = await trace(['src/stories/components/index.js']);
+      expect(result.status).toBe('bailed');
+      expect(result.turboSnap.bailReason).toEqual({
+        changedStorybookFiles: ['src/stories/components/index.js'],
+      });
+      expect(result.turboSnap.bailPath).toEqual(['src/stories/components/index.js']);
+      expect(result.turboSnap.globs).not.toContain(projectAnnotations);
+    });
+
+    it('bails on a changed file imported by a story and a preview annotation', async () => {
+      const result = await trace(['src/Button.jsx']);
+      expect(result.status).toBe('bailed');
+      expect(result.turboSnap.bailPath).toEqual([
+        'src/Button.jsx',
+        'src/stories/components/index.js',
+      ]);
+    });
+
+    it('bails on a dependency of an addon preview', async () => {
+      const result = await trace([], ['axe-core']);
+      expect(result.status).toBe('bailed');
+      expect(result.turboSnap.bailReason).toEqual({
+        changedStorybookFiles: ['node_modules/@storybook/addon-a11y/dist/preview.js'],
+      });
+      expect(result.turboSnap.bailPath).toEqual([
+        'node_modules/axe-core/axe.js',
+        'node_modules/@storybook/addon-a11y/dist/preview.js',
+      ]);
+    });
+
+    it('bails on a dependency of the framework preview', async () => {
+      const result = await trace([], ['react']);
+      expect(result.status).toBe('bailed');
+      expect(result.turboSnap.bailReason).toEqual({
+        changedStorybookFiles: ['node_modules/@storybook/react/dist/entry-preview.js'],
+      });
+    });
+
+    it('still bails on the config dir preview with its usual reason', async () => {
+      const result = await trace(['.storybook/preview.tsx']);
+      expect(result.turboSnap.bailReason).toEqual({
+        changedStorybookFiles: ['.storybook/preview.tsx'],
+      });
+    });
+
+    it('still traces a component only stories import', async () => {
+      const result = await trace(['src/Header.jsx']);
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: { './src/Header.stories.jsx': ['src/Header.stories.jsx'] },
+      });
+    });
+
+    it('does not bail on an untraced preview annotation', async () => {
+      const result = await getDependentStoryFiles(
+        getContext({ untraced: ['src/stories/components/**'] }),
+        { modules },
+        statsPath,
+        ['src/Button.jsx']
+      );
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: { './src/Button.stories.jsx': ['src/Button.stories.jsx'] },
+      });
+    });
+  });
 });
 
 describe('normalizePath', () => {

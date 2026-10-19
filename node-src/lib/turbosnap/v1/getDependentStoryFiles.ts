@@ -164,11 +164,24 @@ export async function getDependentStoryFiles(
     `./storybook-config-entry.js`,
   ].map((file) => normalize(file));
 
+  // Builder-generated modules that import the preview annotations (`previewAnnotations` entries,
+  // addon and framework `preview.js` files) for every story. Their direct importers apply to every
+  // story, so a change that reaches one bails like a change to `.storybook/preview.*`. They must
+  // not become CSF globs, or those importers would be reported as story files matching no story.
+  // V2 treats the same modules as global roots (see `VITE_COMPOSITION_ROOTS` in `v2/statsGraph.ts`).
+  const globalRootFiles = [
+    `/virtual:/@storybook/builder-vite/project-annotations.js`,
+    `virtual:@storybook/builder-vite/project-annotations.js`,
+  ].map((file) => normalize(file));
+  const isGlobalRoot = (name: NormalizedName) =>
+    globalRootFiles.some((prefix) => name.startsWith(prefix));
+
   const modulesByName = new Map<NormalizedName, Module>();
   const nodeModules = new Map<string, NormalizedName[]>();
   const namesById = new Map<Module['id'], NormalizedName>();
   const reasonsById = new Map<Module['id'], NormalizedName[]>();
   const csfGlobsByName = new Set<NormalizedName>();
+  const annotationFilesByName = new Set<NormalizedName>();
 
   const isStorybookFile = (name: string) =>
     name &&
@@ -245,8 +258,13 @@ export async function getDependentStoryFiles(
 
     modulesByName.set(name, representative);
 
+    if (reasons.some((reason) => isGlobalRoot(reason))) {
+      annotationFilesByName.add(name);
+    }
+
     if (
       !isStorybookFile(name) &&
+      !isGlobalRoot(name) &&
       reasons.some((reason) => storiesEntryFiles.some((prefix) => reason.startsWith(prefix))) // match module names that include a "+ N modules"
     ) {
       csfGlobsByName.add(name);
@@ -354,7 +372,7 @@ export async function getDependentStoryFiles(
       return true;
     }
 
-    if (isStorybookFile(moduleName)) {
+    if (isStorybookFile(moduleName) || annotationFilesByName.has(moduleName)) {
       turboSnap.bailReason = { changedStorybookFiles: files(moduleName) };
       turboSnap.bailPath = buildBailPath(moduleName, tracePath);
       return true;
