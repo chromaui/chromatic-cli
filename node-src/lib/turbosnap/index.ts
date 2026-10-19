@@ -5,6 +5,7 @@ import { readStatsFile } from '../../tasks/readStatsFile';
 import { Context, Stats } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import { isHashCollectionDisabled } from './isHashCollectionDisabled';
+import { isTurboSnapV1Enabled, shouldTraceWithV1 } from './shouldTraceWithV1';
 import { TraceChangedFilesResult } from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
@@ -20,10 +21,8 @@ import { realProjectFiles } from './v2/projectFiles';
  * @returns The trace result: skipped, bailed, or traced with the affected story files.
  */
 export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFilesResult> {
-  const runTurboSnapV1 = !!ctx.turboSnap && !ctx.turboSnap.unavailable;
-
   if (!ctx.fileInfo?.statsPath) {
-    if (runTurboSnapV1) {
+    if (isTurboSnapV1Enabled(ctx)) {
       throw missingStatsFileError(ctx);
     }
 
@@ -32,7 +31,7 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
   }
 
   const collectHashes = shouldCollectHashes(ctx);
-  const traceWithV1 = runTurboSnapV1 && !!ctx.git.changedFiles;
+  const traceWithV1 = shouldTraceWithV1(ctx);
   if (!collectHashes && !traceWithV1) {
     return { status: 'skipped' };
   }

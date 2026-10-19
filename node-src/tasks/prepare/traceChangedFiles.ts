@@ -1,5 +1,6 @@
 import * as turbosnap from '@cli/turbosnap';
 
+import { isTurboSnapV1Enabled, shouldTraceWithV1 } from '../../lib/turbosnap/shouldTraceWithV1';
 import { groupUntracedFilesByGlob, rewriteErrorMessage } from '../../lib/utilities';
 import { Context, Deps } from '../../types';
 import { bailed, traced, tracing } from '../../ui/tasks/prepare';
@@ -39,14 +40,7 @@ export async function traceChangedFiles(
 ): Promise<TraceChangedFilesOutput> {
   const ctx = input.turboSnapContext;
 
-  // The lib still collects hashes when this is false, and that build must stay silent and must
-  // never fail because of it.
-  const runTurboSnapV1 = !!ctx.turboSnap && !ctx.turboSnap.unavailable;
-
-  // Mirror the lib's own trace condition (`traceWithV1` in lib/turbosnap) so the progress line
-  // only prints when the traversal will actually run, not on rebuilds where no changed-file
-  // list was computed.
-  if (runTurboSnapV1 && !!ctx.git.changedFiles) {
+  if (shouldTraceWithV1(ctx)) {
     deps.report(tracing({ git: ctx.git, options: deps.options }));
   }
 
@@ -92,7 +86,9 @@ export async function traceChangedFiles(
     deps.report(traced({ options: deps.options, onlyStoryFiles: escaped }));
     return { onlyStoryFiles: escaped };
   } catch (err) {
-    if (!runTurboSnapV1) {
+    // The lib still collects hashes when TurboSnap v1 is disabled, and that build must stay
+    // silent and must never fail because of it.
+    if (!isTurboSnapV1Enabled(ctx)) {
       return {};
     }
 
