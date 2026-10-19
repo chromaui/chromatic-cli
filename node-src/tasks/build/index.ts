@@ -42,7 +42,7 @@ async function buildReactNativeProject(
     };
   }
 
-  const sourceDir = await setSourceDirectory(
+  const sourceDirectory = await setSourceDirectory(
     { options: deps.options },
     { sourceDir: storybookBuildDir ?? input.sourceDir, storybook: input.storybook }
   );
@@ -52,18 +52,25 @@ async function buildReactNativeProject(
   if (!storybookBuildDir) {
     const artifacts = await buildArtifacts(
       { options: deps.options, log: deps.log, report: deps.report },
-      { sourceDir, browsers: input.browsers, runtimeMetadata: input.runtimeMetadata }
+      {
+        sourceDir: sourceDirectory,
+        browsers: input.browsers,
+        runtimeMetadata: input.runtimeMetadata,
+      }
     );
     reactNativeBuildLogFile = artifacts.reactNativeBuildLogFile;
   }
 
   const { title, output } = pendingManifest();
   deps.report({ title, output });
-  await generateManifestStep({ options: deps.options, log: deps.log }, { sourceDir });
+  await generateManifestStep(
+    { options: deps.options, log: deps.log },
+    { sourceDir: sourceDirectory }
+  );
 
   return {
     kind: 'continue',
-    output: { sourceDir, skippedWithPrebuilt: false, reactNativeBuildLogFile },
+    output: { sourceDir: sourceDirectory, skippedWithPrebuilt: false, reactNativeBuildLogFile },
   };
 }
 
@@ -78,7 +85,7 @@ async function buildWebProject(deps: Deps, input: BuildInput): Promise<TaskResul
     };
   }
 
-  const sourceDir = await setSourceDirectory(
+  const sourceDirectory = await setSourceDirectory(
     { options: deps.options },
     { sourceDir: input.sourceDir, storybook: input.storybook }
   );
@@ -86,7 +93,7 @@ async function buildWebProject(deps: Deps, input: BuildInput): Promise<TaskResul
   const buildCommand = await setBuildCommand(
     { options: deps.options, log: deps.log, env: deps.env },
     {
-      sourceDir,
+      sourceDir: sourceDirectory,
       flags: input.flags,
       storybook: input.storybook,
       turboSnap: input.turboSnap,
@@ -114,7 +121,7 @@ async function buildWebProject(deps: Deps, input: BuildInput): Promise<TaskResul
 
   return {
     kind: 'continue',
-    output: { sourceDir, skippedWithPrebuilt: false, buildCommand, buildLogFile },
+    output: { sourceDir: sourceDirectory, skippedWithPrebuilt: false, buildCommand, buildLogFile },
   };
 }
 
