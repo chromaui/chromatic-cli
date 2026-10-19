@@ -61,14 +61,13 @@ const configurationSchema = z
 export type Configuration = z.infer<typeof configurationSchema>;
 
 function resolveConfigFileName(configFile?: string): string {
-  const usedConfigFile = [
-    configFile,
-    'chromatic.config.json',
-    'chromatic.config.jsonc',
-    'chromatic.config.json5',
-  ].find((f?: string) => f && existsSync(f));
+  if (configFile) return configFile;
 
-  return usedConfigFile || 'chromatic.config.json';
+  return (
+    ['chromatic.config.json', 'chromatic.config.jsonc', 'chromatic.config.json5'].find((f) =>
+      existsSync(f)
+    ) || 'chromatic.config.json'
+  );
 }
 /**
  * Parse configuration details from a local config file (typically chromatic.config.json, but can
