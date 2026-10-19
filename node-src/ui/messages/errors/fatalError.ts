@@ -40,42 +40,39 @@ export default function fatalError(
     buildCommand,
   } = ctx;
 
-  const debugInfo = redact(
-    {
-      timestamp,
-      sessionId,
-      gitVersion: git?.version,
-      gitBranch: git?.branch,
-      gitSlug: git?.slug,
-      fromCI: git?.fromCI,
-      ciService: git?.ciService,
-      nodePlatform: process?.platform,
-      nodeVersion: process?.versions?.node,
-      ...runtimeMetadata,
-      packageName: pkg.name,
-      packageVersion: pkg.version,
-      ...(storybook ? { storybook } : {}),
-      flags,
-      ...(extraOptions && { extraOptions }),
-      ...(configuration && { configuration }),
-      ...('options' in ctx && ctx.options?.isLocalBuild
-        ? { isLocalBuild: ctx.options.isLocalBuild }
-        : {}),
-      ...('options' in ctx && ctx.options?.buildScriptName
-        ? { buildScript: scripts[ctx.options.buildScriptName] }
-        : {}),
-      ...(buildCommand && { buildCommand }),
-      exitCode,
-      exitCodeKey,
-      errorType: errors.map((err) => err.name).join('\n'),
-      errorMessage: stripAnsi(errors[0].message.split('\n')[0].trim()),
-      ...(build && { build: buildFields(build) }),
-    },
-    ctx.env
-  );
+  const debugInfo = {
+    timestamp,
+    sessionId,
+    gitVersion: git?.version,
+    gitBranch: git?.branch,
+    gitSlug: git?.slug,
+    fromCI: git?.fromCI,
+    ciService: git?.ciService,
+    nodePlatform: process?.platform,
+    nodeVersion: process?.versions?.node,
+    ...runtimeMetadata,
+    packageName: pkg.name,
+    packageVersion: pkg.version,
+    ...(storybook ? { storybook } : {}),
+    flags,
+    ...(extraOptions && { extraOptions }),
+    ...(configuration && { configuration }),
+    ...('options' in ctx && ctx.options?.isLocalBuild
+      ? { isLocalBuild: ctx.options.isLocalBuild }
+      : {}),
+    ...('options' in ctx && ctx.options?.buildScriptName
+      ? { buildScript: scripts[ctx.options.buildScriptName] }
+      : {}),
+    ...(buildCommand && { buildCommand }),
+    exitCode,
+    exitCodeKey,
+    errorType: errors.map((err) => err.name).join('\n'),
+    errorMessage: stripAnsi(errors[0].message.split('\n')[0].trim()),
+    ...(build && { build: buildFields(build) }),
+  };
 
   const stacktraces = errors.map((err) => err.stack).filter(Boolean);
-  return [
+  const output = [
     errors.map((err) => err.message).join('\n'),
     stacktraces.length > 0
       ? chalk`{dim → View the full ${pluralize('stacktrace', stacktraces.length)} below}\n`
@@ -89,6 +86,10 @@ export default function fatalError(
     chalk`{bold ${JSON.stringify(debugInfo, undefined, 2)}}`,
     stacktraces.length > 0 ? chalk`\n{dim ${stacktraces.join('\n\n')}}` : '',
   ].join('\n');
+  // One redaction pass over everything this function prints — the message, the stack
+  // traces, and the debug info — so a credential embedded in an error message (e.g.
+  // invalidProjectToken) is scrubbed from all of its copies, not just one.
+  return redact(output, debugInfo, ctx.env);
 }
 
 function buildFields({
