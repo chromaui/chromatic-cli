@@ -83,7 +83,7 @@ The per-feature recipes are in [`features/`](features/README.md). Read its READM
   - Exit codes can lie. `trim-stats-file` exits 0 even when it fails. Assert on the `Wrote …` line and the file.
   - `--dry-run` is not offline. It still authenticates and, per `node-src/tasks/initialize/announceBuild.ts`, still announces a build to the backend. It skips only upload, verify and snapshot ("Skipped due to --dry-run"). We observed it opening a connection to `index.chromatic.com` even with `--dry-run`. Never use it as a "safe, local" mode.
   - Mocks are allowed only at an existing production boundary. The only one is `CHROMATIC_INDEX_URL`, which selects the backend. Point it at staging (`https://index.staging-chromatic.com`) or dev, never at a hand-rolled fake that you then call proof of a publish.
-- Diagnostics files are not safe to share after a real run. They redact only the `projectToken`, `reportToken` and `userToken` keys. As observed on 2026-10-17 on 18.13.0, they still contain the raw project token at `.analytics.client.client.env.CHROMATIC_PROJECT_TOKEN`, the session JWT at `.analytics.client.headers.Authorization`, and any `-t <token>` in `.options.originalArgv`. See `publish-build` and the `diag-files` journey. Always pass real tokens via `CHROMATIC_PROJECT_TOKEN`, never `-t`, so `command.txt` stays clean. Before keeping or sharing a `d.json` from an authenticated run, scrub it: `jq 'del(.analytics)' d.json > d.tmp && mv d.tmp d.json`.
+- Diagnostics files are not safe to share after a real run. They redact only the `projectToken`, `reportToken` and `userToken` keys. As observed on 2026-10-17 on 18.13.0, they still contain the raw project token at `.analytics.client.client.env.CHROMATIC_PROJECT_TOKEN`, the session JWT at `.analytics.client.headers.Authorization`, and any `-t <token>` in `.options.originalArgv`. See `publish-build` and the `diag-files` journey. Always pass real tokens via `CHROMATIC_PROJECT_TOKEN`, never `-t`. The helper writes a `-t` value to `command.txt` as `REDACTED`, but nothing scrubs it from `.options.originalArgv`. `$S cleanup` deletes `.analytics` from every JSON file in `$EVIDENCE`, so run it before sharing evidence.
 
 ## Cleanup
 
@@ -91,7 +91,7 @@ The per-feature recipes are in [`features/`](features/README.md). Read its READM
 $S cleanup
 ```
 
-It kills only the tmux sessions this `RUN_ID` started, as recorded in `$RUN_DIR/tmux-sessions`. It never kills by process name. It removes `$WORK` (the Storybook build, the fixture, trimmed stats) and then lists the surviving `$EVIDENCE`. Run it after every failed iteration too. It does not touch the repo checkout, `node_modules/` or `dist/`. Those are the developer's, and the next run reuses them.
+It kills only the tmux sessions this `RUN_ID` started, as recorded in `$RUN_DIR/tmux-sessions`. It never kills by process name. It removes `$WORK` (the Storybook build, the fixture, trimmed stats), deletes `.analytics` from every JSON file in `$EVIDENCE`, and then lists the surviving `$EVIDENCE`. Run it after every failed iteration too. It does not touch the repo checkout, `node_modules/` or `dist/`. Those are the developer's, and the next run reuses them.
 
 A real publish (`publish-build`) leaves a build on the Chromatic project. Cleanup cannot undo that. Use a disposable project token or staging.
 
@@ -106,6 +106,6 @@ A real publish (`publish-build`) leaves a build on the Chromatic project. Cleanu
 | `$S fixture` | (Re)create the disposable project at `$FIXTURE`; prints its path |
 | `$S run <label> [--cwd D] -- args` | Non-TTY drive with captured stdout/stderr/exit |
 | `$S tty <label> [--cwd D] [--timeout N] -- args` | TTY drive in an owned tmux session; captured pane + exit |
-| `$S cleanup` | Kill owned sessions, remove `$WORK`, keep `$EVIDENCE` |
+| `$S cleanup` | Kill owned sessions, remove `$WORK`, scrub and keep `$EVIDENCE` |
 
 Keep the feature map honest as the CLI changes. See `/maintain-verification-skill`.

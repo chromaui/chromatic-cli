@@ -4,9 +4,17 @@
 # Every run is scoped by RUN_ID (default: "default"); state lives in $VERIFY_ROOT/$RUN_ID.
 set -euo pipefail
 
+die() { echo "control-chromatic: $*" >&2; exit 2; }
+
+# RUN_ID and labels become path components that cleanup deletes and tmux session names.
+require_safe_name() {
+  [[ "$2" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || die "$1 must contain only letters, digits, '_' or '-' (got '$2')"
+}
+
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO="$(cd "$SKILL_DIR/../../.." && pwd)"
 RUN_ID="${RUN_ID:-default}"
+require_safe_name RUN_ID "$RUN_ID"
 VERIFY_ROOT="${VERIFY_ROOT:-${TMPDIR:-/tmp}/verify-chromatic-cli}"
 RUN_DIR="$VERIFY_ROOT/$RUN_ID"
 WORK="$RUN_DIR/work"            # disposable: removed by cleanup
@@ -22,8 +30,6 @@ SESSIONS_FILE="$RUN_DIR/tmux-sessions"
 export COREPACK_NPM_REGISTRY="${COREPACK_NPM_REGISTRY:-https://registry.npmjs.org}"
 export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 export STORYBOOK_DISABLE_TELEMETRY=1
-
-die() { echo "control-chromatic: $*" >&2; exit 2; }
 
 cmd_env() {
   cat <<EOF
@@ -123,10 +129,30 @@ EOF
   echo "$FIXTURE"
 }
 
+# Evidence gets shared, so a token passed with -t never reaches command.txt verbatim.
+redacted_args() {
+  local redact_next=0 a
+  for a in "$@"; do
+    if (( redact_next )); then printf ' REDACTED'; redact_next=0; continue; fi
+    case "$a" in
+      -t|--project-token) printf ' %q' "$a"; redact_next=1 ;;
+      -t=*|--project-token=*) printf ' %q' "${a%%=*}=REDACTED" ;;
+      *) printf ' %q' "$a" ;;
+    esac
+  done
+}
+
+# record_command <out dir> <cwd> <mode suffix> <cli args...>
+record_command() {
+  local out="$1" cwd="$2" mode="$3"; shift 3
+  printf 'cwd: %s\ncommand%s: node %s%s\n' "$cwd" "$mode" "$CLI" "$(redacted_args "$@")" > "$out/command.txt"
+}
+
 # run <label> [--cwd DIR] -- <cli args...>
 cmd_run() {
   local label="${1:-}"; shift || true
   [[ -n "$label" ]] || die "run needs a label"
+  require_safe_name label "$label"
   local cwd="$REPO"
   while [[ $# -gt 0 && "$1" != "--" ]]; do
     case "$1" in
@@ -136,8 +162,7 @@ cmd_run() {
   done
   [[ "${1:-}" == "--" ]] && shift
   local out="$EVIDENCE/$label"; mkdir -p "$out"
-  printf 'cwd: %s\ncommand: node %s' "$cwd" "$CLI" > "$out/command.txt"
-  printf ' %q' "$@" >> "$out/command.txt"; echo >> "$out/command.txt"
+  record_command "$out" "$cwd" "" "$@"
   set +e
   # stdin is an empty pipe (non-TTY, never /dev/null) so the CLI takes its non-interactive path.
   (cd "$cwd" && : | node "$CLI" "$@" > "$out/stdout.txt" 2> "$out/stderr.txt")
@@ -153,6 +178,7 @@ cmd_run() {
 cmd_tty() {
   local label="${1:-}"; shift || true
   [[ -n "$label" ]] || die "tty needs a label"
+  require_safe_name label "$label"
   local cwd="$REPO" timeout=120
   while [[ $# -gt 0 && "$1" != "--" ]]; do
     case "$1" in
@@ -164,7 +190,7 @@ cmd_tty() {
   [[ "${1:-}" == "--" ]] && shift
   local out="$EVIDENCE/$label" session="${TMUX_PREFIX}${label}"; mkdir -p "$out"
   local argstr; argstr="$(printf ' %q' "$@")"
-  printf 'cwd: %s\ncommand (tty):node %s%s\n' "$cwd" "$CLI" "$argstr" > "$out/command.txt"
+  record_command "$out" "$cwd" " (tty)" "$@"
   mkdir -p "$RUN_DIR"; echo "$session" >> "$SESSIONS_FILE"
   tmux new-session -d -s "$session" -x 120 -y 50 -c "$cwd" \
     "node '$CLI'$argstr; echo __VERIFY_EXIT=\$?; sleep 3600"
@@ -180,12 +206,24 @@ cmd_tty() {
   grep -v '^$' "$out/pane.txt" | head -40
 }
 
+# Diagnostics from an authenticated run hold the raw project token and session JWT
+# under .analytics (CAP-5317), so strip it before evidence outlives the run.
+scrub_evidence() {
+  local f
+  while IFS= read -r -d '' f; do
+    jq -e 'type == "object" and has("analytics")' "$f" > /dev/null 2>&1 || continue
+    jq 'del(.analytics)' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+    echo "scrubbed .analytics from $f"
+  done < <(find "$EVIDENCE" -name '*.json' -type f -print0 2>/dev/null)
+}
+
 cmd_cleanup() {
   if [[ -s "$SESSIONS_FILE" ]]; then
     while read -r s; do tmux kill-session -t "$s" 2>/dev/null || true; done < "$SESSIONS_FILE"
     rm -f "$SESSIONS_FILE"
   fi
   rm -rf "$WORK"
+  scrub_evidence
   echo "cleaned RUN_ID=$RUN_ID (removed $WORK; evidence kept)"
   if [[ -d "$EVIDENCE" ]]; then echo "evidence: $EVIDENCE"; ls "$EVIDENCE"; fi
 }

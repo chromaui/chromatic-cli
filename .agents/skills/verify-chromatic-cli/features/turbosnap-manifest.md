@@ -33,4 +33,4 @@ Preconditions:
 - The manifest is large, about 100 KB for this repo. `$S run` prints only the first 40 lines, so always inspect `stdout.txt` with `jq`.
 - `--externals 'static/*.css'` matches nothing here because the CSS lives in `static/css/`. An empty `{}` usually means a glob that is too narrow, not a bug.
 - `-u/--untraced` with a story-local glob did not change `storyFiles` or `skippedFiles` counts in this repo. Do not cite that as proof of untraced behavior without a case that changes the output.
-- Hashes come from files on disk, not the stats. If you edit a file to prove a hash changes, restore it with `git -C "$REPO" checkout -- <file>` afterwards.
+- Hashes come from files on disk, not the stats. To prove a hash changes, edit only a file with no uncommitted changes (`git -C "$REPO" status --short -- <file>` prints nothing), so restoring it with `git -C "$REPO" checkout -- <file>` afterward discards only your edit.
