@@ -1,8 +1,8 @@
 import { Context } from '../../types';
 
 /**
- * Whether TurboSnap v1 tracing is enabled: the user asked for `--only-changed` and the detected
- * Storybook version supports it.
+ * Whether TurboSnap v1 tracing is enabled: the user asked for `--only-changed` and TurboSnap is
+ * available for this project.
  *
  * @param ctx The context set when executing the CLI.
  *
