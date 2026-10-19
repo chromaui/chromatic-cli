@@ -60,16 +60,25 @@ const configurationSchema = z
 
 export type Configuration = z.infer<typeof configurationSchema>;
 
-function resolveConfigFileName(configFile?: string): string {
-  const usedConfigFile = [
-    configFile,
-    'chromatic.config.json',
-    'chromatic.config.jsonc',
-    'chromatic.config.json5',
-  ].find((f?: string) => f && existsSync(f));
-
-  return usedConfigFile || 'chromatic.config.json';
+/**
+ * An explicit path always wins, even if it doesn't exist; otherwise the first
+ * default that exists, or undefined.
+ *
+ * @param configFile The path to a custom config file (outside of the normal chromatic.config.json
+ * file)
+ *
+ * @returns The name of the config file to use, or undefined if none was specified and no default
+ * exists
+ */
+function resolveConfigFileName(configFile?: string): string | undefined {
+  return (
+    configFile ||
+    ['chromatic.config.json', 'chromatic.config.jsonc', 'chromatic.config.json5'].find((f) =>
+      existsSync(f)
+    )
+  );
 }
+
 /**
  * Parse configuration details from a local config file (typically chromatic.config.json, but can
  * also use the JSON5 .jsonc and .json5 extensions. If more than one file is present, then the .json
@@ -84,6 +93,9 @@ export async function getConfiguration(
   configFile?: string
 ): Promise<Configuration & { configFile?: string }> {
   const usedConfigFile = resolveConfigFileName(configFile);
+  // No explicit config file and no default config file exists
+  if (!usedConfigFile) return {};
+
   try {
     const rawJson = readFileSync(usedConfigFile, 'utf8');
     const configuration = configurationSchema.parse(JSON5.parse(rawJson));
@@ -91,13 +103,7 @@ export async function getConfiguration(
   } catch (err) {
     // Config file does not exist
     if (errIsNotExists(err)) {
-      // The user passed no configFile option so it's OK for the file not to exist
-      if (!configFile) {
-        return {};
-      }
-      if (configFile) {
-        throw new Error(missingConfigurationFile(configFile));
-      }
+      throw new Error(missingConfigurationFile(usedConfigFile));
     }
     if (err instanceof SyntaxError) {
       throw new TypeError(unparseableConfigurationFile(usedConfigFile, err));
