@@ -11,6 +11,7 @@ export const BuildPassed = () =>
     ...ctx,
     build: {
       number: 42,
+      status: 'PASSED',
       webUrl: 'https://www.chromatic.com/build?appId=59c59bd0183bd100364e1d57&number=42',
       pendingCount: 0,
     },
@@ -33,6 +34,7 @@ export const FirstBuildPassed = () =>
     isOnboarding: true,
     build: {
       number: 1,
+      status: 'PASSED',
       testCount: 10,
       componentCount: 5,
       specCount: 8,
