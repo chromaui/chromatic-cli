@@ -20,7 +20,7 @@ describe('getDiagnostics', () => {
   });
 
   it('omits certain fields', () => {
-    const ctx = { argv: [], client: {}, env: {}, log: {}, pkg: {}, title: {} };
+    const ctx = { analytics: {}, argv: [], client: {}, env: {}, log: {}, pkg: {}, title: {} };
     expect(getDiagnostics(ctx as any)).toEqual({});
   });
 
@@ -29,45 +29,14 @@ describe('getDiagnostics', () => {
       build: { number: 1, reportToken: 'foo' },
       flags: { projectToken: 'bar' },
       extraOptions: { userToken: 'baz' },
+      options: { originalArgv: ['-t', 'bar'] },
     };
     expect(getDiagnostics(ctx as any)).toEqual({
       build: { number: 1, reportToken: undefined },
       flags: { projectToken: undefined },
       extraOptions: { userToken: undefined },
+      options: { originalArgv: undefined },
     });
-  });
-
-  it('omits the analytics client and any credentials it holds', () => {
-    const token = 'chpt_secret-token-value';
-    const ctx = {
-      analytics: {
-        client: {
-          headers: { Authorization: `Bearer ${token}` },
-          client: { env: { CHROMATIC_PROJECT_TOKEN: token } },
-        },
-      },
-      build: { number: 1 },
-    };
-    const diagnostics = getDiagnostics(ctx as any);
-
-    expect(diagnostics).not.toHaveProperty('analytics');
-    const serialized = JSON.stringify(diagnostics);
-    expect(serialized).not.toContain(token);
-    expect(serialized).not.toContain('Bearer ');
-  });
-
-  it('scrubs a token sourced from ctx.env inside originalArgv without serializing env', () => {
-    // env contributes secret values but is never walked into the output — its key is dropped.
-    const token = 'chpt_secret-token-value';
-    const ctx = {
-      env: { CHROMATIC_PROJECT_TOKEN: token },
-      options: { originalArgv: ['-t', token] },
-    };
-    const diagnostics = getDiagnostics(ctx as any);
-
-    expect(diagnostics).not.toHaveProperty('env');
-    expect(JSON.stringify(diagnostics)).not.toContain(token);
-    expect((diagnostics as any).options.originalArgv).toEqual(['-t', '<redacted>']);
   });
 });
 

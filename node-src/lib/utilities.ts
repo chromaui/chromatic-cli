@@ -95,3 +95,13 @@ export const isPackageLockFile = (filePath: string) =>
 
 export const isPackageMetadataFile = (filePath: string) =>
   isPackageManifestFile(filePath) || isPackageLockFile(filePath);
+
+export const redact = <T>(value: T, ...fields: string[]): T => {
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map((item) => redact(item, ...fields)) as T;
+  const object = { ...value };
+  for (const key of Object.keys(object)) {
+    object[key] = fields.includes(key) ? undefined : redact(object[key], ...fields);
+  }
+  return object;
+};

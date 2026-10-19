@@ -4,7 +4,7 @@ import path from 'path';
 
 import { Context } from '..';
 import wroteReport from '../ui/messages/info/wroteReport';
-import { redact } from './redact';
+import { redact } from './utilities';
 
 const { writeFile } = jsonfile;
 
@@ -55,13 +55,10 @@ export function removeChromaticDiagnostics(ctx: Context) {
  * @returns An object containing all information for the Chromatic diagnostics file.
  */
 export function getDiagnostics(ctx: Context) {
-  // Drop fields that are not useful to serialize: argv, clients, env, logger, etc. The
-  // analytics client in particular is a live handle that references the GraphQL client —
-  // and through it the env and auth headers — so it must never be serialized. `env` joins
-  // the redaction call as a secret source only: its credentials are scrubbed from the
-  // output, but the env object itself is not serialized.
+  // Drop some fields that are not useful to have and redact sensitive fields. The analytics
+  // client holds the authenticated GraphQL client, and originalArgv may contain a raw token.
   const { analytics, argv, client, env, help, http, log, pkg, title, ...rest } = ctx;
-  const data = redact(rest, env);
+  const data = redact(rest, 'originalArgv', 'projectToken', 'reportToken', 'userToken');
 
   // Sort top-level fields alphabetically
   return Object.fromEntries(
