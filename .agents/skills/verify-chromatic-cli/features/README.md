@@ -19,6 +19,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 - Read the CLI's JSON output with `jq`. Do not grep for JSON structure.
 - Never write CLI side files (`chromatic.log`, diagnostics, `chromatic.config.json`, trimmed stats) into the repo checkout. Use `$FIXTURE`, `$WORK` or `$EVIDENCE`.
 - Restore any fixture file you mutate. `$S fixture` recreates the fixture from scratch.
+- Never commit on, reset, or check out over the developer's branch. Journeys that need commits run in `$CHECKOUT` from `$S checkout`, which `$S cleanup` removes.
 
 ## Proof and skip reporting
 

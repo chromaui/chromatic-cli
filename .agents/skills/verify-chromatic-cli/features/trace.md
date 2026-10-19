@@ -34,7 +34,7 @@ Preconditions:
 ## Gotchas
 
 - Without `-s`, trace reads `storybook-static/preview-stats.json` in cwd. That is the repo's shared build dir and may be stale or missing. Always pass `-s "$SB_STATS"`.
-- Changed-file paths are relative to the repo root (cwd). A `./` prefix works. An absolute path silently produces 0 matches, as observed on 2026-10-17. A 0-match result is only a pass for `trace-nomatch`.
+- Changed-file paths are relative to the repo root (cwd). A `./` prefix works. An absolute path silently produces 0 matches. A 0-match result is only a pass for `trace-nomatch`.
 - An unknown file exits `0` with 0 affected stories, not an error. Do not treat exit `0` as proof of a match.
 - Output is colored only on a TTY. `$S run` output is plain text, so assert on it there.
 - Stats reflect the Storybook as it was built. After editing stories or imports, run `$S rebuild --storybook` before tracing.

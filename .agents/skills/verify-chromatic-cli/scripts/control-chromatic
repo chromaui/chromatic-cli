@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # control-chromatic — drive the locally built Chromatic CLI (dist/bin.cjs) and capture proof.
-# Usage: control-chromatic <setup|rebuild|env|doctor|fixture|run|tty|cleanup> [...]
+# Usage: control-chromatic <setup|rebuild|env|doctor|fixture|checkout|checkout-storybook|run|tty|cleanup> [...]
 # Every run is scoped by RUN_ID (default: "default"); state lives in $VERIFY_ROOT/$RUN_ID.
 set -euo pipefail
 
@@ -22,6 +22,9 @@ EVIDENCE="$RUN_DIR/evidence"    # proof: survives cleanup
 SB_DIR="$WORK/storybook-static" # this run's own Storybook build (never the repo's storybook-static/)
 SB_STATS="$SB_DIR/preview-stats.json"
 FIXTURE="$WORK/project"
+CHECKOUT="$WORK/checkout"                  # throwaway git worktree for journeys that commit
+CHECKOUT_BRANCH="vcc-$RUN_ID"
+CHECKOUT_SB_DIR="$WORK/checkout-storybook-static"
 CLI="$REPO/dist/bin.cjs"
 TMUX_PREFIX="vcc-$RUN_ID-"
 SESSIONS_FILE="$RUN_DIR/tmux-sessions"
@@ -42,6 +45,8 @@ export SB_DIR='$SB_DIR'
 export SB_STATS='$SB_STATS'
 export FIXTURE='$FIXTURE'
 export CLI='$CLI'
+export CHECKOUT='$CHECKOUT'
+export CHECKOUT_SB_DIR='$CHECKOUT_SB_DIR'
 EOF
 }
 
@@ -64,15 +69,17 @@ cmd_rebuild() {
   if [[ "${1:-}" == "--storybook" ]]; then build_storybook; fi
 }
 
+# build_storybook [source dir] [output dir]
 build_storybook() {
+  local src="${1:-$REPO}" out="${2:-$SB_DIR}"
   mkdir -p "$WORK"
-  echo "==> yarn build-storybook -o $SB_DIR"
+  echo "==> yarn build-storybook -o $out (in $src)"
   # stdin must be a pipe or TTY: with stdin=/dev/null the repo's clack-capture
   # Storybook plugin crashes with "process.stdin.unref is not a function".
-  (cd "$REPO" && : | yarn build-storybook -o "$SB_DIR" > "$WORK/storybook-build.log" 2>&1) \
+  (cd "$src" && : | yarn build-storybook -o "$out" > "$WORK/storybook-build.log" 2>&1) \
     || { tail -30 "$WORK/storybook-build.log"; die "storybook build failed (log: $WORK/storybook-build.log)"; }
-  [[ -s "$SB_STATS" ]] || die "storybook build finished but $SB_STATS is missing"
-  echo "    stats: $SB_STATS"
+  [[ -s "$out/preview-stats.json" ]] || die "storybook build finished but $out/preview-stats.json is missing"
+  echo "    stats: $out/preview-stats.json"
 }
 
 cmd_doctor() {
@@ -108,6 +115,7 @@ cmd_doctor() {
   if [[ -n "${CHROMATIC_PROJECT_TOKEN:-}" ]]; then info "CHROMATIC_PROJECT_TOKEN is set (value not shown)"; else info "CHROMATIC_PROJECT_TOKEN not set"; fi
 
   if [[ -s "$SESSIONS_FILE" ]]; then info "tmux sessions owned by this run: $(tr '\n' ' ' < "$SESSIONS_FILE")"; fi
+  if [[ -d "$CHECKOUT" ]]; then info "throwaway checkout: $CHECKOUT (branch $CHECKOUT_BRANCH)"; fi
   info "evidence dir: $EVIDENCE"
   return $fail
 }
@@ -129,6 +137,24 @@ EOF
   echo "$FIXTURE"
 }
 
+# A git worktree of HEAD on a throwaway local branch, so journeys that need commits
+# (TurboSnap) never commit on or reset the developer's branch. cleanup removes both.
+cmd_checkout() {
+  [[ -e "$CHECKOUT" ]] && die "$CHECKOUT already exists; run cleanup first"
+  git -C "$REPO" show-ref --verify --quiet "refs/heads/$CHECKOUT_BRANCH" \
+    && die "branch $CHECKOUT_BRANCH already exists; run cleanup first"
+  mkdir -p "$WORK"
+  git -C "$REPO" worktree add -q -b "$CHECKOUT_BRANCH" "$CHECKOUT" HEAD
+  # Share the repo's install instead of installing again; node_modules is gitignored.
+  ln -s "$REPO/node_modules" "$CHECKOUT/node_modules"
+  echo "$CHECKOUT"
+}
+
+cmd_checkout_storybook() {
+  [[ -d "$CHECKOUT" ]] || die "no checkout at $CHECKOUT; run: control-chromatic checkout"
+  build_storybook "$CHECKOUT" "$CHECKOUT_SB_DIR"
+}
+
 # Evidence gets shared, so a token passed with -t never reaches command.txt verbatim.
 redacted_args() {
   local redact_next=0 a
@@ -137,6 +163,7 @@ redacted_args() {
     case "$a" in
       -t|--project-token) printf ' %q' "$a"; redact_next=1 ;;
       -t=*|--project-token=*) printf ' %q' "${a%%=*}=REDACTED" ;;
+      -t?*) printf ' %q' "-tREDACTED" ;;
       *) printf ' %q' "$a" ;;
     esac
   done
@@ -174,6 +201,14 @@ cmd_run() {
   echo "-- stderr ($(wc -l < "$out/stderr.txt") lines, first 20):"; head -20 "$out/stderr.txt"
 }
 
+# kill_tmux <session>: stop the drive's own tmux server and remove the socket it leaves behind.
+kill_tmux() {
+  tmux -L "$1" kill-server 2>/dev/null || true
+  local sock="${TMUX_TMPDIR:-/tmp}/tmux-$(id -u)/$1"
+  [[ -S "$sock" ]] && rm -f "$sock"
+  return 0
+}
+
 # tty <label> [--cwd DIR] [--timeout SECS] -- <cli args...>
 cmd_tty() {
   local label="${1:-}"; shift || true
@@ -192,37 +227,62 @@ cmd_tty() {
   local argstr; argstr="$(printf ' %q' "$@")"
   record_command "$out" "$cwd" " (tty)" "$@"
   mkdir -p "$RUN_DIR"; echo "$session" >> "$SESSIONS_FILE"
-  tmux new-session -d -s "$session" -x 120 -y 50 -c "$cwd" \
+  # Each drive gets its own tmux server (socket named after the session). A new session on
+  # an already-running server gets that server's environment, not ours, so a shared server
+  # could hand the CLI a stale CHROMATIC_PROJECT_TOKEN or CHROMATIC_INDEX_URL.
+  local t=(tmux -L "$session")
+  kill_tmux "$session"
+  "${t[@]}" new-session -d -s "$session" -x 120 -y 50 -c "$cwd" \
     "node '$CLI'$argstr; echo __VERIFY_EXIT=\$?; sleep 3600"
   local waited=0
-  until tmux capture-pane -p -t "$session" -S - | grep -q '__VERIFY_EXIT='; do
+  until "${t[@]}" capture-pane -p -t "$session" -S - | grep -q '__VERIFY_EXIT='; do
     sleep 1; waited=$((waited + 1))
-    (( waited < timeout )) || { tmux capture-pane -p -t "$session" -S - > "$out/pane.txt"; die "tty $label timed out after ${timeout}s (pane: $out/pane.txt)"; }
+    (( waited < timeout )) || { "${t[@]}" capture-pane -p -t "$session" -S - > "$out/pane.txt"; die "tty $label timed out after ${timeout}s (pane: $out/pane.txt; attach: tmux -L $session attach)"; }
   done
-  tmux capture-pane -p -t "$session" -S - > "$out/pane.txt"
+  "${t[@]}" capture-pane -p -t "$session" -S - > "$out/pane.txt"
   grep -o '__VERIFY_EXIT=[0-9]*' "$out/pane.txt" | tail -1 | cut -d= -f2 > "$out/exit_code"
-  tmux kill-session -t "$session"
+  kill_tmux "$session"
   echo "== $label (tty): exit $(cat "$out/exit_code")  (evidence: $out/pane.txt)"
   grep -v '^$' "$out/pane.txt" | head -40
 }
 
-# Diagnostics from an authenticated run hold the raw project token and session JWT
-# under .analytics (CAP-5317), so strip it before evidence outlives the run.
+# Until CAP-5317 ships, diagnostics hold the raw project token and session JWT under
+# .analytics and any -t value in .options.originalArgv, so scrub both before evidence
+# outlives the run.
+SCRUB_JQ='
+  def token_flag: . == "-t" or . == "--project-token";
+  del(.analytics)
+  | if (.options.originalArgv | type) == "array" then
+      .options.originalArgv |= (. as $argv | [range(length) as $i | $argv[$i]
+        | if $i > 0 and ($argv[$i - 1] | token_flag) then "REDACTED"
+          elif test("^(-t|--project-token)=") then sub("=.*"; "=REDACTED")
+          elif test("^-t.") then "-tREDACTED"
+          else . end])
+    else . end'
 scrub_evidence() {
   local f
   while IFS= read -r -d '' f; do
-    jq -e 'type == "object" and has("analytics")' "$f" > /dev/null 2>&1 || continue
-    jq 'del(.analytics)' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
-    echo "scrubbed .analytics from $f"
+    jq -e 'type == "object" and (has("analytics") or (.options.originalArgv | type) == "array")' "$f" > /dev/null 2>&1 || continue
+    jq "$SCRUB_JQ" "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+    echo "scrubbed .analytics and -t values from $f"
   done < <(find "$EVIDENCE" -name '*.json' -type f -print0 2>/dev/null)
 }
 
 cmd_cleanup() {
   if [[ -s "$SESSIONS_FILE" ]]; then
-    while read -r s; do tmux kill-session -t "$s" 2>/dev/null || true; done < "$SESSIONS_FILE"
+    while read -r s; do kill_tmux "$s"; done < "$SESSIONS_FILE"
     rm -f "$SESSIONS_FILE"
   fi
+  if [[ -d "$CHECKOUT" ]]; then
+    rm -f "$CHECKOUT/node_modules"
+    git -C "$REPO" worktree remove --force "$CHECKOUT" || true
+  fi
   rm -rf "$WORK"
+  git -C "$REPO" worktree prune
+  if git -C "$REPO" show-ref --verify --quiet "refs/heads/$CHECKOUT_BRANCH"; then
+    git -C "$REPO" branch -q -D "$CHECKOUT_BRANCH"
+    echo "deleted throwaway branch $CHECKOUT_BRANCH"
+  fi
   scrub_evidence
   echo "cleaned RUN_ID=$RUN_ID (removed $WORK; evidence kept)"
   if [[ -d "$EVIDENCE" ]]; then echo "evidence: $EVIDENCE"; ls "$EVIDENCE"; fi
@@ -235,6 +295,8 @@ case "$sub" in
   env) cmd_env ;;
   doctor) cmd_doctor ;;
   fixture) cmd_fixture ;;
+  checkout) cmd_checkout ;;
+  checkout-storybook) cmd_checkout_storybook ;;
   run) cmd_run "$@" ;;
   tty) cmd_tty "$@" ;;
   cleanup) cmd_cleanup ;;
