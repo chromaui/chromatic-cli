@@ -18,7 +18,6 @@ export default [
       'dist/**',
       'action/**',
       'bin/**',
-      '**/build/*',
       '.storybook/**',
       'storybook-static/**',
       'storybook-out/**',

@@ -14,6 +14,12 @@ Work often starts from a Linear ticket or bug report that contains private detai
 - Logs, stack traces, or screenshots from customer builds
 - Links to Linear, Slack, Intercom, Zendesk, or other internal tools (Linear URLs embed the issue title)
 
+**Exception: Obvious links.** PR bodies may link to Obvious project, thread, and PR-artifact pages (`app.obvious.ai/...`). Those pages are restricted to Chromatic users, and reviewers need them to trace a PR back to the thread that produced it. The carve-out is narrow:
+
+- PR bodies only. Not in branch names, commit messages, code comments, test fixtures, or CHANGELOG entries.
+- The URL itself is public even though the page is not. Obvious builds URLs from the ticket title (e.g. `cap-1234-short-summary`), so the slug must meet the same bar as a branch name. If the title names a customer or anything else on the list above, use a neutral project name or leave the link out.
+- Never quote or summarize the thread's content in the PR, since that content was written under the assumption that it stays private.
+
 Instead:
 
 - **Reference tickets by identifier only**, e.g. `CAP-1234`. Linear's GitHub integration links it automatically.
