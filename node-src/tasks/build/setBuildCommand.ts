@@ -39,11 +39,11 @@ function isTurboSnapRequested(turboSnap?: Context['turboSnap']) {
  * blocks the always-on path only: a user who asked for TurboSnap keeps the flag in every case,
  * because without the stats file `turbosnap/index.ts` throws `missingStatsFile`.
  *
- * @param deps
- * @param input
- * @param buildCommand
+ * @param deps Narrow set of dependencies used to inspect options and environment.
+ * @param input The build input carrying the Storybook version and TurboSnap settings.
+ * @param buildCommand A user-provided build command, when one exists.
  *
- * @returns
+ * @returns Whether the stats-file flag should be appended to the build command.
  */
 function shouldAddStatsFlag(
   deps: SetBuildCommandDeps,
