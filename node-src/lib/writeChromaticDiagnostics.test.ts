@@ -100,11 +100,34 @@ describe('getDiagnostics', () => {
     expect((diagnostics as any).build.note).toBe('deployed with <redacted> just now');
   });
 
-  it('replaces Bearer authorization values with the placeholder', () => {
+  it('redacts Bearer authorization values, keeping the scheme', () => {
     const ctx = { extraOptions: { someHeader: 'Bearer eyJhbGciOi.some.signature' } };
     const diagnostics = getDiagnostics(ctx as any);
 
-    expect((diagnostics as any).extraOptions.someHeader).toBe('<redacted>');
+    expect((diagnostics as any).extraOptions.someHeader).toBe('Bearer <redacted>');
+  });
+
+  it('scrubs every repeated flag value in originalArgv, not just the last one', () => {
+    // Repeated --project-token flags keep every value in flags.projectToken while
+    // options.projectToken only keeps the last; the collection walk must catch all of them.
+    const ctx = {
+      flags: { projectToken: ['chpt_first-token', 'chpt_second-token'] },
+      options: {
+        projectToken: 'chpt_second-token',
+        originalArgv: ['-t', 'chpt_first-token', '-t', 'chpt_second-token'],
+      },
+    };
+    const diagnostics = getDiagnostics(ctx as any);
+
+    const serialized = JSON.stringify(diagnostics);
+    expect(serialized).not.toContain('chpt_first-token');
+    expect(serialized).not.toContain('chpt_second-token');
+    expect((diagnostics as any).options.originalArgv).toEqual([
+      '-t',
+      '<redacted>',
+      '-t',
+      '<redacted>',
+    ]);
   });
 });
 

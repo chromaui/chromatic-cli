@@ -98,62 +98,77 @@ export const isPackageMetadataFile = (filePath: string) =>
 
 const REDACTED = '<redacted>';
 const SENSITIVE_KEY_PATTERN = /(token|authorization)/i;
-const BEARER_VALUE_PATTERN = /^bearer /i;
-// Anchored on the header name so harmless mentions of "bearer" stay untouched; the scheme
-// (basic/bearer) is kept readable while the credential after it is replaced.
-const EMBEDDED_AUTHORIZATION_PATTERN = /\b(authorization\s*:\s*(?:basic|bearer)\s+)[^\s"',;]+/gi;
+// Anchored on the header name (or the start of a raw header value) so harmless mentions of
+// "bearer" stay untouched; the scheme stays readable while the credential after it is replaced.
+const AUTHORIZATION_CREDENTIAL_PATTERN =
+  /((?:authorization\s*:\s*|^\s*)(?:basic|bearer)\s+)[^\s"',;]+/gi;
 
 /**
- * Remove values under sensitive keys at any depth: keys in the explicit list, plus any key
- * matching the sensitive-name pattern (token/authorization, case-insensitive) as a backstop
- * for credential keys that are not in the list.
+ * Replace the credential of an embedded or bare Authorization/Bearer/Basic value, then scrub
+ * every collected secret from the string.
  *
- * @param value The value to walk.
- * @param fields Keys to redact explicitly.
+ * @param value The string to scrub.
+ * @param secrets The collected secret values to replace.
  *
- * @returns The value with sensitive keys removed.
+ * @returns The scrubbed string.
  */
-export const redact = <T>(value: T, ...fields: string[]): T => {
-  if (value === null || typeof value !== 'object') return value;
-  if (Array.isArray(value)) return value.map((item) => redact(item, ...fields)) as T;
-  const object = { ...value };
-  for (const key of Object.keys(object)) {
-    const sensitive = fields.includes(key) || SENSITIVE_KEY_PATTERN.test(key);
-    object[key] = sensitive ? undefined : redact(object[key], ...fields);
+const scrubString = (value: string, secrets: string[]): string => {
+  let result: string = value.replaceAll(AUTHORIZATION_CREDENTIAL_PATTERN, `$1${REDACTED}`);
+  for (const secret of secrets) {
+    result = result.replaceAll(secret, REDACTED);
   }
-  return object;
+  return result;
 };
 
 /**
- * Replace known secret values inside strings, wherever they appear — the value backstop for
- * plain string collections (like options.originalArgv) that key-based redaction cannot see
- * into. Bearer authorization values are replaced wholesale, embedded Authorization
- * header credentials (Authorization: Bearer/Basic, e.g. inside package.json scripts) are
- * redacted in place, and each occurrence of a collected secret is replaced in place, so
- * surrounding text (e.g. flag names) stays intact. Secrets are deduplicated and replaced
- * longest-first so a shorter value that is a prefix of a longer one cannot leave the
+ * Collect the strings this walk treats as secret: every string inside a subtree under a
+ * sensitive key, arrays included (repeated --project-token flags land in flags.projectToken
+ * as an array). Strings outside those subtrees are not secrets.
+ *
+ * @param node The node to walk.
+ * @param sensitive Whether an ancestor key already matched the sensitive-name pattern.
+ *
+ * @returns The collected secret strings.
+ */
+const collectStrings = (node: unknown, sensitive: boolean): string[] => {
+  if (typeof node === 'string') return sensitive ? [node] : [];
+  if (Array.isArray(node)) return node.flatMap((item) => collectStrings(item, sensitive));
+  if (node === null || typeof node !== 'object') return [];
+  return Object.entries(node as Record<string, unknown>).flatMap(([key, item]) =>
+    collectStrings(item, sensitive || SENSITIVE_KEY_PATTERN.test(key))
+  );
+};
+
+/**
+ * Remove values under sensitive keys at any depth — any key matching the sensitive-name
+ * pattern (token/authorization, case-insensitive) — and scrub the values collected from
+ * those same keys out of every remaining string, so a credential survives in no string
+ * form: not under its key, not repeated in plain string collections like
+ * options.originalArgv, and not inside embedded Authorization headers. `secretSources`
+ * contribute their sensitive values to the collection without being walked into the output
+ * (e.g. ctx.env, whose key the caller drops). Secrets are deduplicated and replaced
+ * longest-first, so a shorter value that is a prefix of a longer one cannot leave the
  * longer secret's suffix exposed.
  *
  * @param value The value to walk.
- * @param secrets The collected secret values to scrub.
+ * @param secretSources Extra values to collect secrets from, excluded from the output.
  *
- * @returns The value with secrets replaced.
+ * @returns The value with sensitive keys removed and secrets scrubbed.
  */
-export const redactValues = <T>(value: T, secrets: string[]): T => {
-  if (typeof value === 'string') {
-    if (BEARER_VALUE_PATTERN.test(value)) return REDACTED as T;
-    let result: string = value.replaceAll(EMBEDDED_AUTHORIZATION_PATTERN, '$1<redacted>');
-    for (const secret of [...new Set(secrets)].sort((a, b) => b.length - a.length)) {
-      result = result.replaceAll(secret, REDACTED);
-    }
-    return result as T;
-  }
-  if (value === null || typeof value !== 'object') return value;
-  if (Array.isArray(value)) return value.map((item) => redactValues(item, secrets)) as T;
-  return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>).map(([key, item]) => [
-      key,
-      redactValues(item, secrets),
-    ])
-  ) as T;
+export const redact = <T>(value: T, ...secretSources: unknown[]): T => {
+  const secrets = [
+    ...new Set([value, ...secretSources].flatMap((node) => collectStrings(node, false))),
+  ].sort((a, b) => b.length - a.length);
+  const walk = (node: unknown): unknown => {
+    if (typeof node === 'string') return scrubString(node, secrets);
+    if (node === null || typeof node !== 'object') return node;
+    if (Array.isArray(node)) return node.map((item) => walk(item));
+    return Object.fromEntries(
+      Object.entries(node as Record<string, unknown>).map(([key, item]) => [
+        key,
+        SENSITIVE_KEY_PATTERN.test(key) ? undefined : walk(item),
+      ])
+    );
+  };
+  return walk(value) as T;
 };

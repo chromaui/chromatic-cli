@@ -8,7 +8,6 @@ import {
   isPackageMetadataFile,
   matchesFile,
   redact,
-  redactValues,
 } from './utilities';
 
 chalk.level = 0;
@@ -75,9 +74,9 @@ describe('groupUntracedFilesByGlob', () => {
 });
 
 describe('redact', () => {
-  it('redacts exact-name keys at any depth', () => {
+  it('redacts sensitive keys at any depth', () => {
     const input = { a: { projectToken: 'x', b: [{ userToken: 'y' }] }, reportToken: 'z' };
-    expect(redact(input, 'projectToken', 'reportToken', 'userToken')).toEqual({
+    expect(redact(input)).toEqual({
       a: { projectToken: undefined, b: [{ userToken: undefined }] },
       reportToken: undefined,
     });
@@ -104,43 +103,76 @@ describe('redact', () => {
 
   it('leaves non-sensitive keys untouched', () => {
     const input = { keep: 'x', nested: { alsoKeep: ['y'] } };
-    expect(redact(input, 'projectToken')).toEqual(input);
+    expect(redact(input)).toEqual(input);
   });
-});
 
-describe('redactValues', () => {
+  it('scrubs values collected from sensitive-keyed subtrees everywhere, arrays included', () => {
+    // Repeated flags keep every value in flags.projectToken while options.projectToken only
+    // keeps the last — the collection walk must catch all of them inside originalArgv.
+    const input = {
+      flags: { projectToken: ['first-secret', 'second-secret'] },
+      options: {
+        projectToken: 'second-secret',
+        originalArgv: ['-t', 'first-secret', '-t', 'second-secret'],
+      },
+    };
+    expect(redact(input)).toEqual({
+      flags: { projectToken: undefined },
+      options: {
+        projectToken: undefined,
+        originalArgv: ['-t', '<redacted>', '-t', '<redacted>'],
+      },
+    });
+  });
+
+  it('scrubs secrets contributed by secret sources without serializing the source', () => {
+    expect(
+      redact(
+        { options: { originalArgv: ['--project-token=env-secret-value'] } },
+        { CHROMATIC_PROJECT_TOKEN: 'env-secret-value' }
+      )
+    ).toEqual({ options: { originalArgv: ['--project-token=<redacted>'] } });
+  });
+
+  it('replaces longer secrets before shorter prefixes of them', () => {
+    expect(redact({ projectToken: 'XYZ', reportToken: 'XYZextra', v: 'XYZextra-suffix' })).toEqual({
+      projectToken: undefined,
+      reportToken: undefined,
+      v: '<redacted>-suffix',
+    });
+  });
+
   it('replaces each occurrence of a secret and preserves surrounding text', () => {
-    const input = { argv: ['-t', 'shhh', '-t=shhh', '--project-token=shhh', 'keep'] };
-    expect(redactValues(input, ['shhh'])).toEqual({
+    const input = {
+      projectToken: 'shhh',
+      argv: ['-t', 'shhh', '-t=shhh', '--project-token=shhh', 'keep'],
+    };
+    expect(redact(input)).toEqual({
+      projectToken: undefined,
       argv: ['-t', '<redacted>', '-t=<redacted>', '--project-token=<redacted>', 'keep'],
     });
   });
 
-  it('handles multiple secrets and repeated occurrences', () => {
-    expect(redactValues('a shhh and shhh plus sekrit', ['shhh', 'sekrit'])).toBe(
-      'a <redacted> and <redacted> plus <redacted>'
-    );
+  it('scrubs a plain string using secrets from secret sources', () => {
+    expect(
+      redact('a shhh and shhh plus sekrit', { projectToken: 'shhh', reportToken: 'sekrit' })
+    ).toBe('a <redacted> and <redacted> plus <redacted>');
   });
 
-  it('replaces bearer values wholesale', () => {
-    expect(
-      redactValues({ h: 'Bearer abc.def.ghi', note: 'mentions bearer mid-string' }, [])
-    ).toEqual({
-      h: '<redacted>',
+  it('redacts the credential of a bare Bearer value, keeping the scheme', () => {
+    expect(redact({ h: 'Bearer abc.def.ghi', note: 'mentions bearer mid-string' })).toEqual({
+      h: 'Bearer <redacted>',
       note: 'mentions bearer mid-string',
     });
   });
 
   it('redacts embedded Authorization header credentials in strings', () => {
     expect(
-      redactValues(
-        {
-          script: 'curl -H "Authorization: Bearer abc.def.ghi" https://example.com',
-          basic: 'curl -H "Authorization: Basic dXNlcjpwYXNz" https://example.com',
-          mention: 'mentions bearer mid-string',
-        },
-        []
-      )
+      redact({
+        script: 'curl -H "Authorization: Bearer abc.def.ghi" https://example.com',
+        basic: 'curl -H "Authorization: Basic dXNlcjpwYXNz" https://example.com',
+        mention: 'mentions bearer mid-string',
+      })
     ).toEqual({
       script: 'curl -H "Authorization: Bearer <redacted>" https://example.com',
       basic: 'curl -H "Authorization: Basic <redacted>" https://example.com',
@@ -148,15 +180,9 @@ describe('redactValues', () => {
     });
   });
 
-  it('replaces longer secrets before shorter prefixes of them', () => {
-    expect(redactValues({ v: 'XYZextra-suffix' }, ['XYZ', 'XYZextra'])).toEqual({
-      v: '<redacted>-suffix',
-    });
-  });
-
   it('leaves non-string values and structures untouched', () => {
     const input = { n: 1, b: true, nil: null, nested: { s: 'ok', arr: [1, 'ok'] } };
-    expect(redactValues(input, ['nothere'])).toEqual(input);
+    expect(redact(input)).toEqual(input);
   });
 });
 
