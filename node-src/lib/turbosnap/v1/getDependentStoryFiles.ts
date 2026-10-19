@@ -20,6 +20,7 @@ import {
   isPackageManifestFile,
   matchesFile,
 } from '../../utilities';
+import { stripFoldableNul } from '../nulIds';
 import { TraceChangedFilesResult } from '../types';
 
 type FilePath = string;
@@ -124,9 +125,11 @@ export async function getDependentStoryFiles(
   const normalize = (posixPath: FilePath): NormalizedName => {
     const CSF_REGEX = /\s+(sync|lazy)\s+/g;
     const URL_PARAM_REGEX = /(\?.*)/g;
-    // Strip the virtual-module (NUL) prefix first, so CommonJS proxy ids like
-    // `\0./node_modules/react/index.js?commonjs-es-import` normalize to the file they proxy
-    const name = posixPath.codePointAt(0) === 0 ? posixPath.slice(1) : posixPath;
+    // Strip the NUL from proxies of a relative path first, so CommonJS proxy ids like
+    // `\0./node_modules/react/index.js?commonjs-es-import` normalize to the file they proxy.
+    // Opaque NUL ids (`\0commonjsHelpers.js`, `\0vite/preload-helper.js`) name no file, so they
+    // keep the NUL and can never match a changed file.
+    const name = stripFoldableNul(posixPath);
     const newPath = normalizePath(name, rootPath, projectRoot);
     // Trim query params such as `?ngResource` which are sometimes present
     return URL_PARAM_REGEX.test(newPath) && !CSF_REGEX.test(newPath)
