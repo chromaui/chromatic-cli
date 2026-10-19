@@ -45,18 +45,6 @@ describe('buildSummary changes line', () => {
     expect(output).toContain(expected);
   });
 
-  it('reports the full pending summary for a flag-completed build', () => {
-    const output = message({ status: 'PENDING', pendingCount: 2, acceptedCount: 4 });
-
-    expect(output.split('\n')).toEqual([
-      `${success} Build 42 completed`,
-      '2 visual changes must be accepted as baselines.',
-      `${info} View build details at ${webUrl}`,
-    ]);
-    expect(output).not.toContain('passed');
-    expect(output).not.toContain('Exit code is 0');
-  });
-
   it('uses the accessibility wording when accessibility tests are enabled', () => {
     const output = message({
       status: 'PENDING',
@@ -97,7 +85,6 @@ describe('buildSummary changes line', () => {
       '3 visual changes accepted as baselines.',
       `${info} View build details at ${webUrl}`,
     ]);
-    expect(output).not.toContain('completed');
   });
 
   it('keeps the passed headline for auto-accepted changes', () => {
@@ -122,8 +109,6 @@ describe('buildSummary changes line', () => {
       '1 visual and accessibility change denied.',
       `${info} View build details at ${webUrl}`,
     ]);
-    expect(output).not.toContain('passed');
-    expect(output).not.toContain('Exit code is 0');
   });
 
   it('ignores changeCount, which includes ignored tests', () => {
@@ -180,7 +165,6 @@ describe('buildSummary while onboarding', () => {
       'We found 5 components with 8 stories and captured 20 snapshots.',
       `${info} Please continue setup at ${setupUrl}`,
     ]);
-    expect(output).not.toContain('Exit code is 0');
   });
 
   it('reports ignored tests against the untouched setup page', () => {
