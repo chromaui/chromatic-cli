@@ -1,3 +1,5 @@
+/* eslint-disable max-lines -- the file grew past 500 lines pinning the snapshot routing (review request) */
+
 import waitForBuildToComplete, {
   NotifyConnectionError,
   NotifyServiceAuthenticationError,
@@ -130,7 +132,7 @@ describe('snapshotProject', () => {
     expect(ctx.exitCode).toBe(1);
   });
 
-  it('sets exitCode to 0 when build has changes but --exit-zero-on-changes is set with `true` string', async () => {
+  it('sets exitCode to 0 and routes to the passed log when build has changes but --exit-zero-on-changes is set with `true` string', async () => {
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = {
       ...createBaseTestContext(),
@@ -144,9 +146,62 @@ describe('snapshotProject', () => {
       app: { build: { changeCount: 2, status: 'PENDING', completedAt: 1 } },
     });
 
-    await runSnapshot(ctx);
+    const { result } = await runSnapshot(ctx);
     expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'PENDING', completedAt: 1 });
     expect(ctx.exitCode).toBe(0);
+    expect(result).toMatchObject({ kind: 'continue', output: { log: 'passed' } });
+  });
+
+  it('routes to the passed log when the branch-glob form of --exit-zero-on-changes matches', async () => {
+    const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
+    const ctx = {
+      ...createBaseTestContext(),
+      git: { matchesBranch: (branch: string) => branch === 'release/*' },
+      options: { exitZeroOnChanges: 'release/*' },
+      build,
+      announcedBuild: build,
+    } as any;
+
+    ctx.client.runQuery.mockReturnValueOnce({
+      app: { build: { changeCount: 2, status: 'PENDING', completedAt: 1 } },
+    });
+
+    const { result } = await runSnapshot(ctx);
+    expect(ctx.exitCode).toBe(0);
+    expect(result).toMatchObject({ kind: 'continue', output: { log: 'passed' } });
+  });
+
+  it('routes to the passed log for auto-accepted builds even with --exit-zero-on-changes set', async () => {
+    const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
+    const ctx = {
+      ...createBaseTestContext(),
+      options: { exitZeroOnChanges: 'true' },
+      build,
+      announcedBuild: build,
+    } as any;
+
+    ctx.client.runQuery.mockReturnValueOnce({
+      app: {
+        build: { changeCount: 2, status: 'ACCEPTED', autoAcceptChanges: true, completedAt: 1 },
+      },
+    });
+
+    const { result } = await runSnapshot(ctx);
+    expect(ctx.exitCode).toBe(0);
+    expect(result).toMatchObject({ kind: 'continue', output: { log: 'passed' } });
+  });
+
+  it('logs the changes reason for accepted builds with neither auto-accept nor --exit-zero-on-changes', async () => {
+    const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
+    const ctx = { ...createBaseTestContext(), build, announcedBuild: build } as any;
+
+    ctx.client.runQuery.mockReturnValueOnce({
+      app: { build: { changeCount: 2, status: 'ACCEPTED', completedAt: 1 } },
+    });
+
+    const { result } = await runSnapshot(ctx);
+    expect(ctx.exitCode).toBe(1);
+    expect(result).toMatchObject({ kind: 'continue', output: { log: 'changes' } });
   });
 
   it('sets exitCode to 2 when build is broken (capture error)', async () => {
@@ -494,5 +549,21 @@ describe('applySnapshotOutput', () => {
     expect(ctx.exitCode).toBe(1);
     expect(ctx.userError).toBe(true);
     expect(ctx.log.error).toHaveBeenCalled();
+  });
+
+  it('logs the completed-build summary for a pending build', () => {
+    const build = { number: 1, changeCount: 2, status: 'PENDING', webUrl: 'https://x' } as any;
+    const ctx = { log, options: {} } as any;
+    const output: SnapshotOutput = {
+      exitCode: 0,
+      userError: false,
+      log: 'passed',
+      build,
+    };
+
+    applySnapshotOutput(ctx, output);
+
+    expect(ctx.exitCode).toBe(0);
+    expect(ctx.log.info).toHaveBeenCalledWith(expect.stringContaining('Build 1 completed'));
   });
 });
