@@ -39,10 +39,22 @@ describe('buildPassed changes line', () => {
   it.each([
     [1, '1 visual change must be accepted as baseline.'],
     [2, '2 visual changes must be accepted as baselines.'],
-  ])('reports %i pending changes that passed via --exit-zero-on-changes', (count, expected) => {
-    expect(message({ status: 'PENDING', pendingCount: count, acceptedCount: 4 })).toContain(
-      expected
-    );
+  ])('reports %i pending changes via --exit-zero-on-changes', (count, expected) => {
+    const output = message({ status: 'PENDING', pendingCount: count, acceptedCount: 4 });
+
+    expect(output).toContain('Build 42 completed (exit 0 because of --exit-zero-on-changes)');
+    expect(output).not.toContain('passed');
+    expect(output).toContain(expected);
+  });
+
+  it('reports the full pending summary via --exit-zero-on-changes', () => {
+    const output = message({ status: 'PENDING', pendingCount: 2, acceptedCount: 4 });
+
+    expect(output.split('\n')).toEqual([
+      `${success} Build 42 completed (exit 0 because of --exit-zero-on-changes)`,
+      '2 visual changes must be accepted as baselines.',
+      `${info} View build details at ${webUrl}`,
+    ]);
   });
 
   it('uses the accessibility wording when accessibility tests are enabled', () => {
@@ -80,17 +92,30 @@ describe('buildPassed changes line', () => {
   it('reports accepted changes that passed via --exit-zero-on-changes', () => {
     const output = message({ status: 'ACCEPTED', acceptedCount: 3 });
 
+    expect(output).toContain(`${success} Build 42 passed!`);
     expect(output).toContain('3 visual changes accepted as baselines.');
     expect(output).not.toContain('must be accepted');
   });
 
-  it('reports denied changes that passed via --exit-zero-on-changes', () => {
+  it('keeps the passed headline for auto-accepted changes', () => {
+    const output = message({
+      status: 'ACCEPTED',
+      autoAcceptChanges: true,
+      acceptedCount: 3,
+    });
+
+    expect(output).toContain(`${success} Build 42 passed!`);
+  });
+
+  it('reports denied changes via --exit-zero-on-changes', () => {
     const output = message({
       status: 'DENIED',
       deniedCount: 1,
       features: { ...features, accessibilityTests: { enabled: true } },
     });
 
+    expect(output).toContain('Build 42 completed (exit 0 because of --exit-zero-on-changes)');
+    expect(output).not.toContain('passed');
     expect(output).toContain('1 visual and accessibility change denied.');
     expect(output).not.toContain('must be accepted');
   });
@@ -134,6 +159,20 @@ describe('buildPassed while onboarding', () => {
     expect(output.split('\n')).toEqual([
       `${success} Build passed. Welcome to Chromatic!`,
       'We found 5 components with 8 stories and captured 20 snapshots.',
+      `${info} Please continue setup at ${setupUrl}`,
+    ]);
+  });
+
+  it('welcomes the user without claiming a pass when changes must be reviewed', () => {
+    const output = message(
+      { ...onboarding, status: 'PENDING', pendingCount: 1 },
+      { isOnboarding: true }
+    );
+
+    expect(output.split('\n')).toEqual([
+      `${success} Build completed. Welcome to Chromatic!`,
+      'We found 5 components with 8 stories and captured 20 snapshots.',
+      `${info} Exit code is 0 because of --exit-zero-on-changes.`,
       `${info} Please continue setup at ${setupUrl}`,
     ]);
   });

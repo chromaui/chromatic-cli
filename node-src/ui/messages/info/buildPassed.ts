@@ -19,21 +19,35 @@ export default (ctx: Context) => {
   const url = isOnboarding ? build.app.setupUrl : build.webUrl;
   const ignoredLine = ignoredTests({ ignoredCount: build.ignoredCount, url, isOnboarding });
 
+  // PENDING and DENIED builds reach this message only through the forced
+  // --exit-zero-on-changes path, so the build completed but did not pass.
+  const changesNeedReview = build.status === 'PENDING' || build.status === 'DENIED';
+
   if (isOnboarding) {
     const { snapshots, components, stories, e2eTests } = stats({ build });
     const foundString = isE2EBuild(ctx.options)
       ? `We found ${e2eTests} and captured ${snapshots}.`
       : `We found ${components} with ${stories} and captured ${snapshots}.`;
+    const headline = changesNeedReview
+      ? 'Build completed. Welcome to Chromatic!'
+      : 'Build passed. Welcome to Chromatic!';
+    const exitZeroLine = changesNeedReview
+      ? `${info} Exit code is 0 because of --exit-zero-on-changes.`
+      : undefined;
 
     return dedent(chalk`
-      ${success} {bold Build passed. Welcome to Chromatic!}
-      ${[foundString, ignoredLine].filter(Boolean).join('\n')}
+      ${success} {bold ${headline}}
+      ${[foundString, ignoredLine, exitZeroLine].filter(Boolean).join('\n')}
       ${info} Please continue setup at ${link(build.app.setupUrl)}
     `);
   }
 
+  const headline = changesNeedReview
+    ? `Build ${build.number} completed (exit 0 because of --exit-zero-on-changes)`
+    : `Build ${build.number} passed!`;
+
   return dedent(chalk`
-    ${success} {bold Build ${build.number} passed!}
+    ${success} {bold ${headline}}
     ${[changesLine(build), ignoredLine].filter(Boolean).join('\n')}
     ${info} View build details at ${link(build.webUrl)}
   `);
