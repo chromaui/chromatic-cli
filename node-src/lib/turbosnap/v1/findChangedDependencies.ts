@@ -255,9 +255,7 @@ async function getAddedWorkspace(
   if (!changes.some((change) => change.status === 'added' && change.path === manifestPath)) {
     throw error;
   }
-  const manifest: unknown = JSON.parse(
-    fs.readFileSync(path.resolve(rootPath, manifestPath), 'utf8')
-  );
+  const manifest = readAddedManifest(rootPath, manifestPath, error);
   if (
     !manifest ||
     typeof manifest !== 'object' ||
@@ -267,4 +265,32 @@ async function getAddedWorkspace(
     throw error;
   }
   return { name: manifest.name, error };
+}
+
+/**
+ * Read an added manifest only when its resolved target stays inside the repository.
+ *
+ * @param rootPath Repository root.
+ * @param manifestPath Repository-relative manifest path from Git.
+ * @param error Original checkout failure to preserve for paths outside the repository.
+ *
+ * @returns The manifest contents for name validation.
+ */
+function readAddedManifest(
+  rootPath: string,
+  manifestPath: string,
+  error: BaselineCheckoutFailedError
+): unknown {
+  // Resolve symlinks in both paths before comparing, including symlinked checkouts.
+  const realRoot = fs.realpathSync(rootPath);
+  const realManifest = fs.realpathSync(path.resolve(realRoot, manifestPath));
+  const relativePath = path.relative(realRoot, realManifest);
+  if (
+    relativePath === '..' ||
+    relativePath.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativePath)
+  ) {
+    throw error;
+  }
+  return JSON.parse(fs.readFileSync(realManifest, 'utf8'));
 }
