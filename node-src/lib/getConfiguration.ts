@@ -60,13 +60,12 @@ const configurationSchema = z
 
 export type Configuration = z.infer<typeof configurationSchema>;
 
-function resolveConfigFileName(configFile?: string): string {
-  if (configFile) return configFile;
-
+function resolveConfigFileName(configFile?: string) {
   return (
+    configFile ||
     ['chromatic.config.json', 'chromatic.config.jsonc', 'chromatic.config.json5'].find((f) =>
       existsSync(f)
-    ) || 'chromatic.config.json'
+    )
   );
 }
 /**
@@ -83,6 +82,9 @@ export async function getConfiguration(
   configFile?: string
 ): Promise<Configuration & { configFile?: string }> {
   const usedConfigFile = resolveConfigFileName(configFile);
+  // No explicit config file and no default config file exists
+  if (!usedConfigFile) return {};
+
   try {
     const rawJson = readFileSync(usedConfigFile, 'utf8');
     const configuration = configurationSchema.parse(JSON5.parse(rawJson));
@@ -90,13 +92,7 @@ export async function getConfiguration(
   } catch (err) {
     // Config file does not exist
     if (errIsNotExists(err)) {
-      // The user passed no configFile option so it's OK for the file not to exist
-      if (!configFile) {
-        return {};
-      }
-      if (configFile) {
-        throw new Error(missingConfigurationFile(configFile));
-      }
+      throw new Error(missingConfigurationFile(usedConfigFile));
     }
     if (err instanceof SyntaxError) {
       throw new TypeError(unparseableConfigurationFile(usedConfigFile, err));

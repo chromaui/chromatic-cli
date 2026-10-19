@@ -10,6 +10,8 @@ const mockedExistsSync = vi.mocked(existsSync);
 beforeEach(() => {
   mockedReadFile.mockReset();
   mockedExistsSync.mockReset();
+  // Most tests exercise parsing of an existing default config file
+  mockedExistsSync.mockReturnValue(true);
 });
 
 it('reads basic JSON configuration successfully', async () => {
@@ -200,7 +202,11 @@ it('handles other side of union options', async () => {
 describe('resolveConfigFileName', () => {
   describe('when no other config files exist', () => {
     beforeEach(() => {
-      mockedExistsSync.mockImplementation((_path: PathLike) => {
+      mockedExistsSync.mockImplementation((path: PathLike) => {
+        if (path === 'chromatic.config.json') {
+          return true;
+        }
+
         return false;
       });
     });
@@ -276,10 +282,10 @@ describe('resolveConfigFileName', () => {
     });
   });
 
-  describe('when a config file is specified and exists on the file system', () => {
+  describe('when a config file is specified and a default also exists', () => {
     beforeEach(() => {
       mockedExistsSync.mockImplementation((path: PathLike) => {
-        if (path === 'test.file') {
+        if (path === 'chromatic.config.json') {
           return true;
         }
 
@@ -298,6 +304,7 @@ describe('resolveConfigFileName', () => {
       await getConfiguration('test.file');
 
       expect(mockedReadFile).toHaveBeenCalledWith('test.file', 'utf8');
+      expect(mockedReadFile).not.toHaveBeenCalledWith('chromatic.config.json', 'utf8');
     });
   });
 
@@ -319,23 +326,8 @@ describe('resolveConfigFileName', () => {
     expect(mockedReadFile).not.toHaveBeenCalledWith('chromatic.config.json', 'utf8');
   });
 
-  it('specified file takes precedence over defaults', async () => {
-    mockedExistsSync.mockImplementation((path: PathLike) => {
-      if (path === 'test.file' || path === 'chromatic.config.json') {
-        return true;
-      }
-
-      return false;
-    });
-    mockedReadFile.mockReturnValue(JSON.stringify({ projectToken: 'json-file-token' }));
-
-    await getConfiguration('test.file');
-
-    expect(mockedReadFile).toHaveBeenCalledWith('test.file', 'utf8');
-    expect(mockedReadFile).not.toHaveBeenCalledWith('chromatic.config.json', 'utf8');
-  });
-
   it('returns nothing if there is no config file and it was not specified', async () => {
+    mockedExistsSync.mockReturnValue(false);
     mockedReadFile.mockImplementation(() => {
       throw new Error('ENOENT');
     });

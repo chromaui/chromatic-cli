@@ -59,7 +59,11 @@ vi.mock('fs', async (importOriginal) => {
       if (path.endsWith('package.json')) return originalModule.statSync(path);
       return { isDirectory: () => false, size: 42 };
     }),
-    existsSync: vi.fn(() => true),
+    existsSync: vi.fn((path) => {
+      // No chromatic config file exists in the test environment
+      if (String(path).startsWith('chromatic.config.json')) return false;
+      return true;
+    }),
   };
 });
 
