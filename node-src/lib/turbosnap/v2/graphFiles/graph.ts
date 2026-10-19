@@ -62,7 +62,7 @@ export function rollUpFileHashes(
 }
 
 /**
- * Walks the dependency graph from a file, collecting it and every file it transitively depends on.
+ * Walks the stats graph from a file, collecting it and every file it transitively depends on.
  *
  * @param files The map of files to their hashes and dependencies.
  * @param filePath The file to collect the transitive dependencies of.
