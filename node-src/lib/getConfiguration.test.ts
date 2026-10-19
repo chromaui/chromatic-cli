@@ -200,7 +200,7 @@ it('handles other side of union options', async () => {
 });
 
 describe('resolveConfigFileName', () => {
-  describe('when no other config files exist', () => {
+  describe('when only chromatic.config.json exists', () => {
     beforeEach(() => {
       mockedExistsSync.mockImplementation((path: PathLike) => {
         if (path === 'chromatic.config.json') {
@@ -308,7 +308,7 @@ describe('resolveConfigFileName', () => {
     });
   });
 
-  it('specified file that does not exist while a default exists', async () => {
+  it('errors when the specified file does not exist, even if a default exists', async () => {
     mockedExistsSync.mockImplementation((path: PathLike) => {
       if (path === 'chromatic.config.json') {
         return true;
@@ -328,19 +328,9 @@ describe('resolveConfigFileName', () => {
 
   it('returns nothing if there is no config file and it was not specified', async () => {
     mockedExistsSync.mockReturnValue(false);
-    mockedReadFile.mockImplementation(() => {
-      throw new Error('ENOENT');
-    });
 
     expect(await getConfiguration()).toEqual({});
-  });
-
-  it('returns nothing if there is no config file and it was specified', async () => {
-    mockedReadFile.mockImplementation(() => {
-      throw new Error('ENOENT');
-    });
-
-    await expect(getConfiguration('test.file')).rejects.toThrow(/could not be found/);
+    expect(mockedReadFile).not.toHaveBeenCalled();
   });
 
   it('errors if config file contains invalid data', async () => {

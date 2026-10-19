@@ -60,7 +60,17 @@ const configurationSchema = z
 
 export type Configuration = z.infer<typeof configurationSchema>;
 
-function resolveConfigFileName(configFile?: string) {
+/**
+ * An explicit path always wins, even if it doesn't exist; otherwise the first
+ * default that exists, or undefined.
+ *
+ * @param configFile The path to a custom config file (outside of the normal chromatic.config.json
+ * file)
+ *
+ * @returns The name of the config file to use, or undefined if none was specified and no default
+ * exists
+ */
+function resolveConfigFileName(configFile?: string): string | undefined {
   return (
     configFile ||
     ['chromatic.config.json', 'chromatic.config.jsonc', 'chromatic.config.json5'].find((f) =>
@@ -68,6 +78,7 @@ function resolveConfigFileName(configFile?: string) {
     )
   );
 }
+
 /**
  * Parse configuration details from a local config file (typically chromatic.config.json, but can
  * also use the JSON5 .jsonc and .json5 extensions. If more than one file is present, then the .json
