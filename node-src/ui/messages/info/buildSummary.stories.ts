@@ -1,5 +1,5 @@
 import { Context } from '../../../types';
-import buildSummary, { SummaryLog } from './buildSummary';
+import buildSummary from './buildSummary';
 
 export default {
   title: 'CLI/Messages/Info',
@@ -17,28 +17,25 @@ const firstBuild = {
 };
 
 const story =
-  (build: Partial<Context['build']>, ctx: Partial<Context> = {}, log: SummaryLog = 'passed') =>
+  (build: Partial<Context['build']>, ctx: Partial<Context> = {}) =>
   () =>
-    buildSummary(
-      {
-        options: {},
-        ...ctx,
-        build: {
-          number: 42,
-          status: 'PASSED',
-          pendingCount: 0,
-          acceptedCount: 0,
-          deniedCount: 0,
-          ignoredCount: 0,
-          autoAcceptChanges: false,
-          webUrl,
-          features,
-          app: { setupUrl },
-          ...build,
-        },
-      } as Context,
-      log
-    );
+    buildSummary({
+      options: {},
+      ...ctx,
+      build: {
+        number: 42,
+        status: 'PASSED',
+        pendingCount: 0,
+        acceptedCount: 0,
+        deniedCount: 0,
+        ignoredCount: 0,
+        autoAcceptChanges: false,
+        webUrl,
+        features,
+        app: { setupUrl },
+        ...build,
+      },
+    } as Context);
 
 export const BuildPassed = story({});
 
@@ -48,33 +45,26 @@ export const BuildAutoAccepted = story({
   acceptedCount: 2,
 });
 
-export const BuildCompletedViaExitZeroWithPendingChanges = story(
-  { status: 'PENDING', pendingCount: 2 },
-  {},
-  'exitZeroOnChanges'
-);
+export const BuildPassedViaExitZeroWithAcceptedChanges = story({
+  status: 'ACCEPTED',
+  acceptedCount: 3,
+});
 
-export const BuildCompletedViaExitZeroWithAcceptedChanges = story(
-  { status: 'ACCEPTED', acceptedCount: 3 },
-  {},
-  'exitZeroOnChanges'
-);
+export const BuildCompletedViaExitZeroWithPendingChanges = story({
+  status: 'PENDING',
+  pendingCount: 2,
+});
 
-export const BuildCompletedViaExitZeroWithDeniedChanges = story(
-  { status: 'DENIED', deniedCount: 1 },
-  {},
-  'exitZeroOnChanges'
-);
+export const BuildCompletedViaExitZeroWithDeniedChanges = story({
+  status: 'DENIED',
+  deniedCount: 1,
+});
 
-export const BuildCompletedViaExitZeroWithPendingAccessibilityChanges = story(
-  {
-    status: 'PENDING',
-    pendingCount: 2,
-    features: { ...features, accessibilityTests: { enabled: true } },
-  },
-  {},
-  'exitZeroOnChanges'
-);
+export const BuildCompletedViaExitZeroWithPendingAccessibilityChanges = story({
+  status: 'PENDING',
+  pendingCount: 2,
+  features: { ...features, accessibilityTests: { enabled: true } },
+});
 
 export const BuildPassedWithIgnoredTests = story({ ignoredCount: 3 });
 
@@ -87,6 +77,5 @@ export const FirstBuildPassedWithIgnoredTests = story(
 
 export const FirstBuildCompletedViaExitZeroWithPendingChanges = story(
   { ...firstBuild, status: 'PENDING', pendingCount: 1 },
-  { isOnboarding: true },
-  'exitZeroOnChanges'
+  { isOnboarding: true }
 );

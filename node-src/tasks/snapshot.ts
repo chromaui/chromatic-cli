@@ -12,7 +12,7 @@ import { delay, throttle } from '../lib/utilities';
 import { Context, Deps, TaskResult } from '../types';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';
-import buildSummaryMessage, { SummaryLog } from '../ui/messages/info/buildSummary';
+import buildSummaryMessage from '../ui/messages/info/buildSummary';
 import speedUpCI from '../ui/messages/info/speedUpCI';
 import { pending } from '../ui/tasks/snapshot';
 
@@ -65,7 +65,7 @@ interface BuildQueryResult {
 export interface SnapshotOutput {
   exitCode: number;
   userError: boolean;
-  log?: SummaryLog | 'changes' | 'errors';
+  log?: 'passed' | 'changes' | 'errors';
   build: Context['build'];
 }
 
@@ -78,16 +78,6 @@ export interface SnapshotInput {
 }
 
 export type SnapshotDeps = Pick<Deps, 'client' | 'log' | 'env' | 'options' | 'report'>;
-
-// The boolean spelling of `--exit-zero-on-changes` is handled by `ctx.git.matchesBranch`; this
-// folds both forms into the one predicate the terminal routing branches on.
-const exitsZeroOnChanges = (
-  options: SnapshotDeps['options'],
-  matchesBranch?: Context['git']['matchesBranch']
-): boolean =>
-  Boolean(
-    options?.exitZeroOnChanges === 'true' || matchesBranch?.(options?.exitZeroOnChanges || false)
-  );
 
 /**
  * Poll Chromatic until the published build finishes, reporting snapshot-count progress, then map the
@@ -185,39 +175,30 @@ export async function snapshotProject(
     case 'ACCEPTED':
     case 'PENDING':
     case 'DENIED': {
-      // Each successful exit names its reason: auto-accept really passed, the flag merely
-      // completed the build. The summary message words exactly this reason.
-      if (completedBuild.autoAcceptChanges) {
-        return {
-          kind: 'continue',
-          output: {
-            exitCode: exitCodes.OK,
-            userError: false,
-            log: 'passed',
-            build: completedBuild,
-          },
-        };
-      }
-      if (exitsZeroOnChanges(options, matchesBranch)) {
-        return {
-          kind: 'continue',
-          output: {
-            exitCode: exitCodes.OK,
-            userError: false,
-            log: 'exitZeroOnChanges',
-            build: completedBuild,
-          },
-        };
-      }
-      return {
-        kind: 'continue',
-        output: {
-          exitCode: exitCodes.BUILD_HAS_CHANGES,
-          userError: true,
-          log: 'changes',
-          build: completedBuild,
-        },
-      };
+      const passed =
+        completedBuild.autoAcceptChanges ||
+        // The boolean version of this check is handled by ctx.git.matchesBranch
+        options?.exitZeroOnChanges === 'true' ||
+        matchesBranch?.(options?.exitZeroOnChanges || false);
+      return passed
+        ? {
+            kind: 'continue',
+            output: {
+              exitCode: exitCodes.OK,
+              userError: false,
+              log: 'passed',
+              build: completedBuild,
+            },
+          }
+        : {
+            kind: 'continue',
+            output: {
+              exitCode: exitCodes.BUILD_HAS_CHANGES,
+              userError: true,
+              log: 'changes',
+              build: completedBuild,
+            },
+          };
     }
 
     case 'BROKEN':
@@ -299,8 +280,7 @@ export const applySnapshotOutput = (ctx: Context, output: SnapshotOutput) => {
 
   switch (output.log) {
     case 'passed':
-    case 'exitZeroOnChanges':
-      ctx.log.info(buildSummaryMessage(ctx, output.log));
+      ctx.log.info(buildSummaryMessage(ctx));
       return;
     case 'changes':
       ctx.log.error(buildHasChanges(ctx));

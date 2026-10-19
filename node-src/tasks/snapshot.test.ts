@@ -132,7 +132,7 @@ describe('snapshotProject', () => {
     expect(ctx.exitCode).toBe(1);
   });
 
-  it('sets exitCode to 0 and logs the exit-zero reason when build has changes but --exit-zero-on-changes is set with `true` string', async () => {
+  it('sets exitCode to 0 and routes to the passed log when build has changes but --exit-zero-on-changes is set with `true` string', async () => {
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = {
       ...createBaseTestContext(),
@@ -149,10 +149,10 @@ describe('snapshotProject', () => {
     const { result } = await runSnapshot(ctx);
     expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'PENDING', completedAt: 1 });
     expect(ctx.exitCode).toBe(0);
-    expect(result).toMatchObject({ kind: 'continue', output: { log: 'exitZeroOnChanges' } });
+    expect(result).toMatchObject({ kind: 'continue', output: { log: 'passed' } });
   });
 
-  it('logs the exit-zero reason when the branch-glob form of --exit-zero-on-changes matches', async () => {
+  it('routes to the passed log when the branch-glob form of --exit-zero-on-changes matches', async () => {
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = {
       ...createBaseTestContext(),
@@ -168,10 +168,10 @@ describe('snapshotProject', () => {
 
     const { result } = await runSnapshot(ctx);
     expect(ctx.exitCode).toBe(0);
-    expect(result).toMatchObject({ kind: 'continue', output: { log: 'exitZeroOnChanges' } });
+    expect(result).toMatchObject({ kind: 'continue', output: { log: 'passed' } });
   });
 
-  it('logs the passed reason for auto-accepted builds even with --exit-zero-on-changes set', async () => {
+  it('routes to the passed log for auto-accepted builds even with --exit-zero-on-changes set', async () => {
     const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
     const ctx = {
       ...createBaseTestContext(),
@@ -551,13 +551,13 @@ describe('applySnapshotOutput', () => {
     expect(ctx.log.error).toHaveBeenCalled();
   });
 
-  it('logs the completed-build summary for the exit-zero reason', () => {
-    const build = { number: 1, changeCount: 2, webUrl: 'https://x' } as any;
+  it('logs the completed-build summary for a pending build', () => {
+    const build = { number: 1, changeCount: 2, status: 'PENDING', webUrl: 'https://x' } as any;
     const ctx = { log, options: {} } as any;
     const output: SnapshotOutput = {
       exitCode: 0,
       userError: false,
-      log: 'exitZeroOnChanges',
+      log: 'passed',
       build,
     };
 

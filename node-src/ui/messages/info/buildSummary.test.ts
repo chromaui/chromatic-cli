@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Context } from '../../../types';
 import { info, success } from '../../components/icons';
-import buildSummary, { SummaryLog } from './buildSummary';
+import buildSummary from './buildSummary';
 
 const webUrl = 'https://www.chromatic.com/build?appId=59c59bd0183bd100364e1d57&number=42';
 const setupUrl = 'https://www.chromatic.com/setup?appId=59c59bd0183bd100364e1d57';
@@ -22,11 +22,8 @@ const baseBuild = {
   app: { setupUrl },
 };
 
-const message = (
-  build: Partial<Context['build']>,
-  ctx: Partial<Context> = {},
-  log: SummaryLog = 'passed'
-) => buildSummary({ options: {}, ...ctx, build: { ...baseBuild, ...build } } as Context, log);
+const message = (build: Partial<Context['build']>, ctx: Partial<Context> = {}) =>
+  buildSummary({ options: {}, ...ctx, build: { ...baseBuild, ...build } } as Context);
 
 describe('buildSummary changes line', () => {
   it('reports no changes on a clean build', () => {
@@ -42,42 +39,30 @@ describe('buildSummary changes line', () => {
   it.each([
     [1, '1 visual change must be accepted as baseline.'],
     [2, '2 visual changes must be accepted as baselines.'],
-  ])('reports %i pending changes via --exit-zero-on-changes', (count, expected) => {
-    const output = message(
-      { status: 'PENDING', pendingCount: count, acceptedCount: 4 },
-      {},
-      'exitZeroOnChanges'
-    );
+  ])('reports %i pending changes on a flag-completed build', (count, expected) => {
+    const output = message({ status: 'PENDING', pendingCount: count, acceptedCount: 4 });
 
     expect(output).toContain(expected);
   });
 
-  it('reports the full pending summary via --exit-zero-on-changes', () => {
-    const output = message(
-      { status: 'PENDING', pendingCount: 2, acceptedCount: 4 },
-      {},
-      'exitZeroOnChanges'
-    );
+  it('reports the full pending summary for a flag-completed build', () => {
+    const output = message({ status: 'PENDING', pendingCount: 2, acceptedCount: 4 });
 
     expect(output.split('\n')).toEqual([
       `${success} Build 42 completed`,
       '2 visual changes must be accepted as baselines.',
-      `${info} Exit code is 0 because of --exit-zero-on-changes.`,
       `${info} View build details at ${webUrl}`,
     ]);
     expect(output).not.toContain('passed');
+    expect(output).not.toContain('Exit code is 0');
   });
 
   it('uses the accessibility wording when accessibility tests are enabled', () => {
-    const output = message(
-      {
-        status: 'PENDING',
-        pendingCount: 2,
-        features: { ...features, accessibilityTests: { enabled: true } },
-      },
-      {},
-      'exitZeroOnChanges'
-    );
+    const output = message({
+      status: 'PENDING',
+      pendingCount: 2,
+      features: { ...features, accessibilityTests: { enabled: true } },
+    });
 
     expect(output).toContain('2 visual and accessibility changes must be accepted as baselines.');
   });
@@ -104,16 +89,15 @@ describe('buildSummary changes line', () => {
     expect(output).toContain('Auto-accepted 2 visual and accessibility changes.');
   });
 
-  it('reports accepted changes via --exit-zero-on-changes', () => {
-    const output = message({ status: 'ACCEPTED', acceptedCount: 3 }, {}, 'exitZeroOnChanges');
+  it('keeps the passed headline for an accepted build under --exit-zero-on-changes', () => {
+    const output = message({ status: 'ACCEPTED', acceptedCount: 3 });
 
     expect(output.split('\n')).toEqual([
-      `${success} Build 42 completed`,
+      `${success} Build 42 passed!`,
       '3 visual changes accepted as baselines.',
-      `${info} Exit code is 0 because of --exit-zero-on-changes.`,
       `${info} View build details at ${webUrl}`,
     ]);
-    expect(output).not.toContain('passed');
+    expect(output).not.toContain('completed');
   });
 
   it('keeps the passed headline for auto-accepted changes', () => {
@@ -126,24 +110,20 @@ describe('buildSummary changes line', () => {
     expect(output).toContain(`${success} Build 42 passed!`);
   });
 
-  it('reports denied changes via --exit-zero-on-changes', () => {
-    const output = message(
-      {
-        status: 'DENIED',
-        deniedCount: 1,
-        features: { ...features, accessibilityTests: { enabled: true } },
-      },
-      {},
-      'exitZeroOnChanges'
-    );
+  it('reports denied changes for a flag-completed build', () => {
+    const output = message({
+      status: 'DENIED',
+      deniedCount: 1,
+      features: { ...features, accessibilityTests: { enabled: true } },
+    });
 
     expect(output.split('\n')).toEqual([
       `${success} Build 42 completed`,
       '1 visual and accessibility change denied.',
-      `${info} Exit code is 0 because of --exit-zero-on-changes.`,
       `${info} View build details at ${webUrl}`,
     ]);
     expect(output).not.toContain('passed');
+    expect(output).not.toContain('Exit code is 0');
   });
 
   it('ignores changeCount, which includes ignored tests', () => {
@@ -192,16 +172,15 @@ describe('buildSummary while onboarding', () => {
   it('welcomes the user without claiming a pass when changes must be reviewed', () => {
     const output = message(
       { ...onboarding, status: 'PENDING', pendingCount: 1 },
-      { isOnboarding: true },
-      'exitZeroOnChanges'
+      { isOnboarding: true }
     );
 
     expect(output.split('\n')).toEqual([
       `${success} Build completed. Welcome to Chromatic!`,
       'We found 5 components with 8 stories and captured 20 snapshots.',
-      `${info} Exit code is 0 because of --exit-zero-on-changes.`,
       `${info} Please continue setup at ${setupUrl}`,
     ]);
+    expect(output).not.toContain('Exit code is 0');
   });
 
   it('reports ignored tests against the untouched setup page', () => {
