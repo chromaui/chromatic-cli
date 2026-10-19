@@ -1370,6 +1370,32 @@ describe('getDependentStoryFiles', () => {
     expect(result.turboSnap.bailReason).toBeUndefined();
   });
 
+  // CAP-5336: only a NUL proxy for a relative path stands for a file. Stripping the NUL from an
+  // opaque id turned it into a phantom project file that a real changed file could match.
+  it.each([
+    '\0commonjsHelpers.js',
+    '\0vite/preload-helper.js',
+    '\0plugin-vue:export-helper',
+    '\0/@data-uri/data:text/javascript,export default 1',
+  ])('does not trace a changed file through the opaque NUL module %j', async (helperId) => {
+    const ctx = getContext({ storybookBaseDir: 'packages/ui' });
+    // The name the id had when the NUL was stripped
+    const phantomFile = normalizePath(
+      helperId.slice(1),
+      '/path/to/project',
+      ctx.storybook.projectRoot
+    );
+    const modules = [
+      buildModule(helperId, './src/foo.js'),
+      buildModule('./src/foo.js', './src/foo.stories.js'),
+      reactStory,
+      csfGlobModule,
+    ];
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, [phantomFile]);
+    expect(result).toMatchObject({ status: 'traced', onlyStoryFiles: {} });
+    expect(result.turboSnap.modules).not.toContain(phantomFile);
+  });
+
   it('does not throw for an entry module with empty reasons', async () => {
     const modules = [
       buildModule('./storybook-stories.js'),
