@@ -23,17 +23,3 @@ Instead:
 - **Rewrite rather than quote** error messages and logs: keep the part that comes from this CLI, and replace anything that comes from the customer's project with a placeholder.
 
 If you are unsure whether something is identifying, leave it out. If a ticket title itself names a customer, write a neutral title of your own.
-
-## Development
-
-Node.js >= 22 and Yarn 4 (via corepack). Common commands, run from the repo root:
-
-| Purpose   | Command                    |
-| --------- | -------------------------- |
-| Install   | `yarn install --immutable` |
-| Build     | `yarn build`               |
-| Lint      | `yarn lint`                |
-| Typecheck | `yarn typescript:check`    |
-| Test      | `yarn test`                |
-
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for local setup, running against staging or dev environments, and releasing.
