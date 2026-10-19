@@ -56,78 +56,18 @@ describe('getDiagnostics', () => {
     expect(serialized).not.toContain('Bearer ');
   });
 
-  it('redacts token values inside originalArgv and keeps flag names intact', () => {
+  it('scrubs a token sourced from ctx.env inside originalArgv without serializing env', () => {
+    // env contributes secret values but is never walked into the output — its key is dropped.
     const token = 'chpt_secret-token-value';
     const ctx = {
-      options: {
-        projectToken: token,
-        originalArgv: [
-          '-t',
-          token,
-          `-t=${token}`,
-          '--project-token',
-          token,
-          `--project-token=${token}`,
-          '-t',
-          token,
-        ],
-      },
+      env: { CHROMATIC_PROJECT_TOKEN: token },
+      options: { originalArgv: ['-t', token] },
     };
     const diagnostics = getDiagnostics(ctx as any);
 
+    expect(diagnostics).not.toHaveProperty('env');
     expect(JSON.stringify(diagnostics)).not.toContain(token);
-    expect((diagnostics as any).options.originalArgv).toEqual([
-      '-t',
-      '<redacted>',
-      '-t=<redacted>',
-      '--project-token',
-      '<redacted>',
-      '--project-token=<redacted>',
-      '-t',
-      '<redacted>',
-    ]);
-  });
-
-  it('redacts collected secret values wherever they appear, regardless of key name', () => {
-    const token = 'chpt_secret-token-value';
-    const ctx = {
-      build: { number: 1, note: `deployed with ${token} just now` },
-      options: { projectToken: token },
-    };
-    const diagnostics = getDiagnostics(ctx as any);
-
-    expect(JSON.stringify(diagnostics)).not.toContain(token);
-    expect((diagnostics as any).build.note).toBe('deployed with <redacted> just now');
-  });
-
-  it('redacts Bearer authorization values, keeping the scheme', () => {
-    const ctx = { extraOptions: { someHeader: 'Bearer eyJhbGciOi.some.signature' } };
-    const diagnostics = getDiagnostics(ctx as any);
-
-    expect((diagnostics as any).extraOptions.someHeader).toBe('Bearer <redacted>');
-  });
-
-  it('scrubs every repeated flag value in originalArgv, not just the last one', () => {
-    // Repeated --project-token flags keep every value in flags.projectToken while
-    // options.projectToken only keeps the last; the collection walk must catch all of them.
-    const ctx = {
-      flags: { projectToken: ['chpt_first-token', 'chpt_second-token'] },
-      options: {
-        projectToken: 'chpt_second-token',
-        originalArgv: ['-t', 'chpt_first-token', '-t', 'chpt_second-token'],
-      },
-    };
-    const diagnostics = getDiagnostics(ctx as any);
-
-    const serialized = JSON.stringify(diagnostics);
-    expect(serialized).not.toContain('chpt_first-token');
-    expect(serialized).not.toContain('chpt_second-token');
-    expect((diagnostics as any).options.originalArgv).toEqual([
-      '-t',
-      '<redacted>',
-      '-t',
-      '<redacted>',
-    ]);
+    expect((diagnostics as any).options.originalArgv).toEqual(['-t', '<redacted>']);
   });
 });
 

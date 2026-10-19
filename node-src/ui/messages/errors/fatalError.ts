@@ -4,7 +4,7 @@ import stripAnsi from 'strip-ansi';
 import { dedent } from 'ts-dedent';
 
 import { Context, InitialContext } from '../../..';
-import { redact } from '../../../lib/utilities';
+import { redact } from '../../../lib/redact';
 import link from '../../components/link';
 
 /**
@@ -40,36 +40,39 @@ export default function fatalError(
     buildCommand,
   } = ctx;
 
-  const debugInfo = redact({
-    timestamp,
-    sessionId,
-    gitVersion: git?.version,
-    gitBranch: git?.branch,
-    gitSlug: git?.slug,
-    fromCI: git?.fromCI,
-    ciService: git?.ciService,
-    nodePlatform: process?.platform,
-    nodeVersion: process?.versions?.node,
-    ...runtimeMetadata,
-    packageName: pkg.name,
-    packageVersion: pkg.version,
-    ...(storybook ? { storybook } : {}),
-    flags,
-    ...(extraOptions && { extraOptions }),
-    ...(configuration && { configuration }),
-    ...('options' in ctx && ctx.options?.isLocalBuild
-      ? { isLocalBuild: ctx.options.isLocalBuild }
-      : {}),
-    ...('options' in ctx && ctx.options?.buildScriptName
-      ? { buildScript: scripts[ctx.options.buildScriptName] }
-      : {}),
-    ...(buildCommand && { buildCommand }),
-    exitCode,
-    exitCodeKey,
-    errorType: errors.map((err) => err.name).join('\n'),
-    errorMessage: stripAnsi(errors[0].message.split('\n')[0].trim()),
-    ...(build && { build: buildFields(build) }),
-  });
+  const debugInfo = redact(
+    {
+      timestamp,
+      sessionId,
+      gitVersion: git?.version,
+      gitBranch: git?.branch,
+      gitSlug: git?.slug,
+      fromCI: git?.fromCI,
+      ciService: git?.ciService,
+      nodePlatform: process?.platform,
+      nodeVersion: process?.versions?.node,
+      ...runtimeMetadata,
+      packageName: pkg.name,
+      packageVersion: pkg.version,
+      ...(storybook ? { storybook } : {}),
+      flags,
+      ...(extraOptions && { extraOptions }),
+      ...(configuration && { configuration }),
+      ...('options' in ctx && ctx.options?.isLocalBuild
+        ? { isLocalBuild: ctx.options.isLocalBuild }
+        : {}),
+      ...('options' in ctx && ctx.options?.buildScriptName
+        ? { buildScript: scripts[ctx.options.buildScriptName] }
+        : {}),
+      ...(buildCommand && { buildCommand }),
+      exitCode,
+      exitCodeKey,
+      errorType: errors.map((err) => err.name).join('\n'),
+      errorMessage: stripAnsi(errors[0].message.split('\n')[0].trim()),
+      ...(build && { build: buildFields(build) }),
+    },
+    ctx.env
+  );
 
   const stacktraces = errors.map((err) => err.stack).filter(Boolean);
   return [
