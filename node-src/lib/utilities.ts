@@ -98,10 +98,12 @@ export const isPackageMetadataFile = (filePath: string) =>
 
 const REDACTED = '<redacted>';
 const SENSITIVE_KEY_PATTERN = /(token|authorization)/i;
-// Anchored on the header name (or the start of a raw header value) so harmless mentions of
-// "bearer" stay untouched; the scheme stays readable while the credential after it is replaced.
+// Anchored on the header name (or the start of a raw Bearer value) so harmless mentions of
+// "bearer" stay untouched; the scheme stays readable while the credential after it is
+// replaced. "Basic" is an ordinary word at the start of a string, so it only matches behind
+// the header anchor; a bare Bearer value at string start still has its credential redacted.
 const AUTHORIZATION_CREDENTIAL_PATTERN =
-  /((?:authorization\s*:\s*|^\s*)(?:basic|bearer)\s+)[^\s"',;]+/gi;
+  /(authorization\s*:\s*(?:basic|bearer)\s+|^\s*bearer\s+)[^\s"',;]+/gi;
 
 /**
  * Replace the credential of an embedded or bare Authorization/Bearer/Basic value, then scrub
@@ -131,7 +133,9 @@ const scrubString = (value: string, secrets: string[]): string => {
  * @returns The collected secret strings.
  */
 const collectStrings = (node: unknown, sensitive: boolean): string[] => {
-  if (typeof node === 'string') return sensitive ? [node] : [];
+  // An empty string is not a secret — and replaceAll('') would wedge the placeholder between
+  // every character of the output — so empty values under sensitive keys are skipped.
+  if (typeof node === 'string') return sensitive && node.length > 0 ? [node] : [];
   if (Array.isArray(node)) return node.flatMap((item) => collectStrings(item, sensitive));
   if (node === null || typeof node !== 'object') return [];
   return Object.entries(node as Record<string, unknown>).flatMap(([key, item]) =>

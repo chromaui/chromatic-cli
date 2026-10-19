@@ -134,6 +134,21 @@ describe('redact', () => {
     ).toEqual({ options: { originalArgv: ['--project-token=<redacted>'] } });
   });
 
+  it('skips empty strings under sensitive keys so the output is not mangled', () => {
+    // An exported-but-empty env var or `-t ""` yields '' under a sensitive key;
+    // collecting it would make replaceAll('') wedge the placeholder between every character.
+    expect(
+      redact(
+        { projectToken: '', text: 'plain text', options: { originalArgv: ['-t'] } },
+        { CHROMATIC_PROJECT_TOKEN: '' }
+      )
+    ).toEqual({
+      projectToken: undefined,
+      text: 'plain text',
+      options: { originalArgv: ['-t'] },
+    });
+  });
+
   it('replaces longer secrets before shorter prefixes of them', () => {
     expect(redact({ projectToken: 'XYZ', reportToken: 'XYZextra', v: 'XYZextra-suffix' })).toEqual({
       projectToken: undefined,
@@ -177,6 +192,15 @@ describe('redact', () => {
       script: 'curl -H "Authorization: Bearer <redacted>" https://example.com',
       basic: 'curl -H "Authorization: Basic <redacted>" https://example.com',
       mention: 'mentions bearer mid-string',
+    });
+  });
+
+  it('leaves ordinary strings starting with Basic untouched', () => {
+    // "Basic" is an ordinary word; only a bare Bearer value at string start is redacted,
+    // so Basic stays intact without the authorization: anchor.
+    expect(redact({ story: 'Basic usage', message: 'Basic auth support' })).toEqual({
+      story: 'Basic usage',
+      message: 'Basic auth support',
     });
   });
 
