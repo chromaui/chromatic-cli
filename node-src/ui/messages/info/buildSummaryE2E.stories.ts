@@ -1,0 +1,51 @@
+import buildSummary from './buildSummary';
+
+export default {
+  title: 'CLI/Messages/Info/E2E',
+};
+
+const ctx = { options: { playwright: true } } as any;
+
+export const BuildPassed = () =>
+  buildSummary(
+    {
+      ...ctx,
+      build: {
+        number: 42,
+        webUrl: 'https://www.chromatic.com/build?appId=59c59bd0183bd100364e1d57&number=42',
+        pendingCount: 0,
+      },
+    } as any,
+    'passed'
+  );
+
+export const BuildCompletedViaExitZeroWithChanges = () =>
+  buildSummary(
+    {
+      ...ctx,
+      build: {
+        number: 42,
+        webUrl: 'https://www.chromatic.com/build?appId=59c59bd0183bd100364e1d57&number=42',
+        status: 'PENDING',
+        pendingCount: 2,
+      },
+    } as any,
+    'exitZeroOnChanges'
+  );
+
+export const FirstBuildPassed = () =>
+  buildSummary(
+    {
+      ...ctx,
+      isOnboarding: true,
+      build: {
+        number: 1,
+        testCount: 10,
+        componentCount: 5,
+        specCount: 8,
+        actualCaptureCount: 20,
+        app: { setupUrl: 'https://www.chromatic.com/setup?appId=59c59bd0183bd100364e1d57' },
+      },
+    } as any,
+    'passed'
+  );

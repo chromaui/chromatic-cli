@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Context } from '../../../types';
 import { info, success } from '../../components/icons';
-import buildPassed from './buildPassed';
+import buildSummary, { SummaryLog } from './buildSummary';
 
 const webUrl = 'https://www.chromatic.com/build?appId=59c59bd0183bd100364e1d57&number=42';
 const setupUrl = 'https://www.chromatic.com/setup?appId=59c59bd0183bd100364e1d57';
@@ -22,10 +22,13 @@ const baseBuild = {
   app: { setupUrl },
 };
 
-const message = (build: Partial<Context['build']>, ctx: Partial<Context> = {}) =>
-  buildPassed({ options: {}, ...ctx, build: { ...baseBuild, ...build } } as Context);
+const message = (
+  build: Partial<Context['build']>,
+  ctx: Partial<Context> = {},
+  log: SummaryLog = 'passed'
+) => buildSummary({ options: {}, ...ctx, build: { ...baseBuild, ...build } } as Context, log);
 
-describe('buildPassed changes line', () => {
+describe('buildSummary changes line', () => {
   it('reports no changes on a clean build', () => {
     const output = message({});
 
@@ -40,29 +43,41 @@ describe('buildPassed changes line', () => {
     [1, '1 visual change must be accepted as baseline.'],
     [2, '2 visual changes must be accepted as baselines.'],
   ])('reports %i pending changes via --exit-zero-on-changes', (count, expected) => {
-    const output = message({ status: 'PENDING', pendingCount: count, acceptedCount: 4 });
+    const output = message(
+      { status: 'PENDING', pendingCount: count, acceptedCount: 4 },
+      {},
+      'exitZeroOnChanges'
+    );
 
-    expect(output).toContain('Build 42 completed (exit 0 because of --exit-zero-on-changes)');
-    expect(output).not.toContain('passed');
     expect(output).toContain(expected);
   });
 
   it('reports the full pending summary via --exit-zero-on-changes', () => {
-    const output = message({ status: 'PENDING', pendingCount: 2, acceptedCount: 4 });
+    const output = message(
+      { status: 'PENDING', pendingCount: 2, acceptedCount: 4 },
+      {},
+      'exitZeroOnChanges'
+    );
 
     expect(output.split('\n')).toEqual([
-      `${success} Build 42 completed (exit 0 because of --exit-zero-on-changes)`,
+      `${success} Build 42 completed`,
       '2 visual changes must be accepted as baselines.',
+      `${info} Exit code is 0 because of --exit-zero-on-changes.`,
       `${info} View build details at ${webUrl}`,
     ]);
+    expect(output).not.toContain('passed');
   });
 
   it('uses the accessibility wording when accessibility tests are enabled', () => {
-    const output = message({
-      status: 'PENDING',
-      pendingCount: 2,
-      features: { ...features, accessibilityTests: { enabled: true } },
-    });
+    const output = message(
+      {
+        status: 'PENDING',
+        pendingCount: 2,
+        features: { ...features, accessibilityTests: { enabled: true } },
+      },
+      {},
+      'exitZeroOnChanges'
+    );
 
     expect(output).toContain('2 visual and accessibility changes must be accepted as baselines.');
   });
@@ -89,12 +104,16 @@ describe('buildPassed changes line', () => {
     expect(output).toContain('Auto-accepted 2 visual and accessibility changes.');
   });
 
-  it('reports accepted changes that passed via --exit-zero-on-changes', () => {
-    const output = message({ status: 'ACCEPTED', acceptedCount: 3 });
+  it('reports accepted changes via --exit-zero-on-changes', () => {
+    const output = message({ status: 'ACCEPTED', acceptedCount: 3 }, {}, 'exitZeroOnChanges');
 
-    expect(output).toContain(`${success} Build 42 passed!`);
-    expect(output).toContain('3 visual changes accepted as baselines.');
-    expect(output).not.toContain('must be accepted');
+    expect(output.split('\n')).toEqual([
+      `${success} Build 42 completed`,
+      '3 visual changes accepted as baselines.',
+      `${info} Exit code is 0 because of --exit-zero-on-changes.`,
+      `${info} View build details at ${webUrl}`,
+    ]);
+    expect(output).not.toContain('passed');
   });
 
   it('keeps the passed headline for auto-accepted changes', () => {
@@ -108,16 +127,23 @@ describe('buildPassed changes line', () => {
   });
 
   it('reports denied changes via --exit-zero-on-changes', () => {
-    const output = message({
-      status: 'DENIED',
-      deniedCount: 1,
-      features: { ...features, accessibilityTests: { enabled: true } },
-    });
+    const output = message(
+      {
+        status: 'DENIED',
+        deniedCount: 1,
+        features: { ...features, accessibilityTests: { enabled: true } },
+      },
+      {},
+      'exitZeroOnChanges'
+    );
 
-    expect(output).toContain('Build 42 completed (exit 0 because of --exit-zero-on-changes)');
+    expect(output.split('\n')).toEqual([
+      `${success} Build 42 completed`,
+      '1 visual and accessibility change denied.',
+      `${info} Exit code is 0 because of --exit-zero-on-changes.`,
+      `${info} View build details at ${webUrl}`,
+    ]);
     expect(output).not.toContain('passed');
-    expect(output).toContain('1 visual and accessibility change denied.');
-    expect(output).not.toContain('must be accepted');
   });
 
   it('ignores changeCount, which includes ignored tests', () => {
@@ -128,7 +154,7 @@ describe('buildPassed changes line', () => {
   });
 });
 
-describe('buildPassed ignored tests line', () => {
+describe('buildSummary ignored tests line', () => {
   it('reports ignored tests between the changes line and the build link', () => {
     expect(message({ ignoredCount: 3 }).split('\n')).toEqual([
       `${success} Build 42 passed!`,
@@ -150,7 +176,7 @@ describe('buildPassed ignored tests line', () => {
   });
 });
 
-describe('buildPassed while onboarding', () => {
+describe('buildSummary while onboarding', () => {
   const onboarding = { componentCount: 5, specCount: 8, actualCaptureCount: 20 };
 
   it('welcomes the user and points at the setup page', () => {
@@ -166,7 +192,8 @@ describe('buildPassed while onboarding', () => {
   it('welcomes the user without claiming a pass when changes must be reviewed', () => {
     const output = message(
       { ...onboarding, status: 'PENDING', pendingCount: 1 },
-      { isOnboarding: true }
+      { isOnboarding: true },
+      'exitZeroOnChanges'
     );
 
     expect(output.split('\n')).toEqual([
