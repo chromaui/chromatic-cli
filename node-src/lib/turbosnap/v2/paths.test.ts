@@ -286,6 +286,16 @@ describe('foldStatsId', () => {
       id: './iframe.html?html-proxy&inline-css&index=0.css',
       expected: './iframe.html',
     },
+    {
+      name: 'an ordinary path whose segment ends in a mode token',
+      id: './src/tweak panel.tsx?raw',
+      expected: './src/tweak panel.tsx',
+    },
+    {
+      name: 'an ordinary path whose directory ends in lazy',
+      id: './src/Clazy icons.svg?url',
+      expected: './src/Clazy icons.svg',
+    },
   ])('folds $name onto the file it stands for', ({ id, expected }) => {
     expect(foldStatsId(id)).toBe(expected);
   });
@@ -337,6 +347,30 @@ describe('foldStatsId', () => {
     [
       'a webpack lazy-once context name with a query',
       String.raw`./icons lazy-once nonrecursive ^\.\/.*\.(?:svg)$?query`,
+    ],
+    [
+      'a webpack lazy context whose request ends in a slash',
+      String.raw`./src/lib/ lazy /^\.\/.*$/?query`,
+    ],
+    [
+      'a webpack weak context named after a deep directory',
+      String.raw`./packages/website/containers/ weak ^\.\/.*\.(?:ts|tsx)$?query`,
+    ],
+    [
+      'an rspack eager context name with a query',
+      String.raw`./icons|eager|/^\.\/.*$/|include: /(?:svg)$?query`,
+    ],
+    [
+      'an rspack weak context name with a query',
+      String.raw`./icons|weak|/^\.\/.*$/|include: /(?:svg)$?query`,
+    ],
+    [
+      'an rspack async-weak context name with a query',
+      String.raw`./icons|async-weak|/^\.\/.*$/|include: /(?:svg)$?query`,
+    ],
+    [
+      'an rspack lazy-once context name with a query',
+      String.raw`./icons|lazy-once|/^\.\/.*$/|include: /(?:svg)$?query`,
     ],
   ])('keeps the ? of %s', (_name, id) => {
     expect(foldStatsId(id)).toBe(id);
