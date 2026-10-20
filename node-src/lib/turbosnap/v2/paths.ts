@@ -114,18 +114,19 @@ const NUL = '\0';
 const FOLDABLE_NUL_PREFIXES = [`${NUL}./`, `${NUL}../`];
 
 // Webpack names a require.context by its mode and the include glob, e.g. `./icons lazy ^\\.\\/.*\\.svg`.
-// Webpack 5 appends ` nonrecursive` before the glob only when recursion is off. The modes are sync,
-// eager, weak, async-weak, lazy and lazy-once; rspack delimits the same lazy and sync markers with
-// pipes. A context name is a glob expression rather than a file path, so its `?` starts no query.
+// Webpack 5 writes the mode after a space (`./src sync`, `./src/lib/ lazy`) and appends
+// ` nonrecursive` before the glob only when recursion is off. The modes are sync, eager, weak,
+// async-weak, lazy and lazy-once; rspack delimits the same mode markers with pipes. A context name
+// is a glob expression rather than a file path, so its `?` starts no query.
 const CONTEXT_MODES = ['sync', 'eager', 'weak', 'async-weak', 'lazy', 'lazy-once'];
-// rspack delimits the same lazy and sync markers with pipes instead of spaces.
-const RSPACK_PIPE_MODES = CONTEXT_MODES.filter((mode) => mode === 'lazy' || mode === 'sync');
 // Story detection only reads lazy contexts, and only the plain lazy mode: lazy-once resolves its
 // group once up front rather than per story.
 const LAZY_MODES = CONTEXT_MODES.filter((mode) => mode === 'lazy');
 
-const CONTEXT_PATTERN = `(?:${CONTEXT_MODES.join('|')}) |\\|(?:${RSPACK_PIPE_MODES.join('|')})\\|`;
-const LAZY_PATTERN = ` (?:${LAZY_MODES.join('|')}) |\\|lazy\\|`;
+// The leading space anchors the space form to webpack's spelling: without it a path segment that
+// merely ends in a mode token (`./src/tweak panel.tsx`) reads as a context name and keeps its `?`.
+const CONTEXT_PATTERN = ` (?:${CONTEXT_MODES.join('|')}) |\\|(?:${CONTEXT_MODES.join('|')})\\|`;
+const LAZY_PATTERN = ` (?:${LAZY_MODES.join('|')}) |\\|(?:${LAZY_MODES.join('|')})\\|`;
 
 // eslint-disable-next-line security/detect-non-literal-regexp -- the pattern only interpolates the hardcoded mode lists above
 const CONTEXT_MARKER = new RegExp(CONTEXT_PATTERN);

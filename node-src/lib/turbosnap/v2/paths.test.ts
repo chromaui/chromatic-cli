@@ -341,6 +341,50 @@ describe('foldStatsId', () => {
   ])('keeps the ? of %s', (_name, id) => {
     expect(foldStatsId(id)).toBe(id);
   });
+
+  it.each([
+    [
+      'a webpack lazy context whose request ends in a slash',
+      String.raw`./src/lib/ lazy /^\.\/.*$/?query`,
+    ],
+    [
+      'a webpack weak context named after a deep directory',
+      String.raw`./packages/website/containers/ weak ^\.\/.*\.(?:ts|tsx)$?query`,
+    ],
+    [
+      'an rspack eager context name with a query',
+      String.raw`./icons|eager|/^\.\/.*$/|include: /(?:svg)$?query`,
+    ],
+    [
+      'an rspack weak context name with a query',
+      String.raw`./icons|weak|/^\.\/.*$/|include: /(?:svg)$?query`,
+    ],
+    [
+      'an rspack async-weak context name with a query',
+      String.raw`./icons|async-weak|/^\.\/.*$/|include: /(?:svg)$?query`,
+    ],
+    [
+      'an rspack lazy-once context name with a query',
+      String.raw`./icons|lazy-once|/^\.\/.*$/|include: /(?:svg)$?query`,
+    ],
+  ])('keeps the ? of %s under the tightened markers', (_name, id) => {
+    expect(foldStatsId(id)).toBe(id);
+  });
+
+  it.each([
+    [
+      'a path segment that ends in a mode token',
+      './src/tweak panel.tsx?raw',
+      './src/tweak panel.tsx',
+    ],
+    [
+      'a path segment whose directory ends in lazy',
+      './src/Clazy icons.svg?url',
+      './src/Clazy icons.svg',
+    ],
+  ])('strips the query of %s, not a context name', (_name, id, expected) => {
+    expect(foldStatsId(id)).toBe(expected);
+  });
 });
 
 describe('resolveStatsPath', () => {
