@@ -88,7 +88,8 @@ export interface Logger {
   getLevel: () => keyof typeof LOG_LEVELS;
   setLevel: (value: keyof typeof LOG_LEVELS) => void;
   setInteractive: (value: boolean) => void;
-  setLogFile: (path: string | undefined, secrets?: string[]) => void;
+  setLogFile: (path: string | undefined) => void;
+  setSecrets: (secrets: string[]) => void;
   removeLogFile: () => void;
 }
 
@@ -96,6 +97,7 @@ const fileLogger = {
   queue: [] as string[],
   stream: undefined as ReturnType<typeof createWriteStream> | undefined,
   filepath: undefined as string | undefined,
+  secrets: [] as string[],
   paused: false,
   append(...messages: string[]) {
     this.queue.push(...messages, '\n');
@@ -129,7 +131,7 @@ const fileLogger = {
       this.paused = false;
     }
   },
-  initialize(filepath: string, onError: LogFunction, secrets: string[]) {
+  initialize(filepath: string, onError: LogFunction) {
     rm(filepath, { force: true }, (err) => {
       if (err) {
         this.disable();
@@ -144,7 +146,7 @@ const fileLogger = {
           const line = messages
             .reduce((result, message) => result + message + (message === '\n' ? '' : ' '), '')
             .trim();
-          this.stream?.write(scrubSecrets(line, secrets) + '\n');
+          this.stream?.write(scrubSecrets(line, this.secrets) + '\n');
         };
         if (this.queue.length > 0) this.append(...this.queue);
         this.queue = [];
@@ -213,9 +215,13 @@ export const createLogger = (flags?: Flags, options?: Partial<Options>) => {
     setInteractive(value: boolean) {
       interactive = !!value;
     },
-    setLogFile(path: string | undefined, secrets: string[] = []) {
-      if (path) fileLogger.initialize(path, log('error'), secrets);
+    setLogFile(path: string | undefined) {
+      if (path) fileLogger.initialize(path, log('error'));
       else fileLogger.disable();
+    },
+    // Replace these values with <redacted> in everything written to the log file.
+    setSecrets(secrets: string[]) {
+      fileLogger.secrets = secrets;
     },
     removeLogFile() {
       fileLogger.remove();

@@ -204,7 +204,8 @@ describe('log file', () => {
   it('redacts secrets from the file', () => {
     const writes = captureFileWrites();
     const logger = createLogger({ logLevel: 'info' });
-    logger.setLogFile('chromatic.log', ['secret-token']);
+    logger.setSecrets(['secret-token']);
+    logger.setLogFile('chromatic.log');
 
     logger.error("No app with code 'secret-token' found");
 

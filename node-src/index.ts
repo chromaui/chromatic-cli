@@ -149,7 +149,7 @@ export async function run({
  * @returns A promise that resolves when all steps are completed.
  */
 // TODO: refactor this function
-// eslint-disable-next-line complexity
+// eslint-disable-next-line complexity, max-statements
 export async function runAll(initialContext: InitialContext) {
   const onError = (err: Error | Error[]) => {
     initialContext.log.info('');
@@ -185,7 +185,8 @@ export async function runAll(initialContext: InitialContext) {
     ctx = initialContext as Context;
     ctx.options = getOptions(ctx, partialOptions);
     ctx.runtime = { forceRebuild: ctx.options.forceRebuild };
-    ctx.log.setLogFile(ctx.options.logFile, getSecrets(ctx));
+    ctx.log.setSecrets(getSecrets(ctx));
+    ctx.log.setLogFile(ctx.options.logFile);
 
     setExitCode(ctx, exitCodes.OK);
   } catch (err) {

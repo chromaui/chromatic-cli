@@ -20,6 +20,7 @@ export default class TestLogger implements Logger {
   setLevel: Mock;
   setInteractive: Mock;
   setLogFile: Mock;
+  setSecrets: Mock;
   removeLogFile: Mock;
   getLevel: Mock;
   pause: Mock;
@@ -58,6 +59,7 @@ export default class TestLogger implements Logger {
     this.setLevel = vi.fn();
     this.setInteractive = vi.fn();
     this.setLogFile = vi.fn();
+    this.setSecrets = vi.fn();
     this.removeLogFile = vi.fn();
     this.getLevel = vi.fn();
     this.pause = vi.fn();

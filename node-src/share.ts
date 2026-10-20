@@ -153,7 +153,8 @@ async function setupShareContext(shareOptions: ShareOptions): Promise<Context> {
   const ctx = initialContext as Context;
   ctx.options = getOptions(initialContext);
   ctx.options.logFile = logFile;
-  ctx.log.setLogFile(ctx.options.logFile, getSecrets(ctx));
+  ctx.log.setSecrets(getSecrets(ctx));
+  ctx.log.setLogFile(ctx.options.logFile);
   ctx.runtime = { forceRebuild: ctx.options.forceRebuild };
   return ctx;
 }
