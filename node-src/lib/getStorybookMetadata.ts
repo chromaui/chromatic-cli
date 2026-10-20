@@ -12,9 +12,13 @@ import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
 import { builders } from './builders';
 import { viewLayers } from './viewLayers';
 
+// The timer is unref'd so a lookup that wins the race doesn't keep the process alive until it fires.
 const timeout = (ms: number) =>
   new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('Timeout while resolving Storybook view layer package')), ms);
+    setTimeout(
+      () => reject(new Error('Timeout while resolving Storybook view layer package')),
+      ms
+    ).unref();
   });
 
 /**
