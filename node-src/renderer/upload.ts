@@ -5,7 +5,7 @@ import {
   uploadProject,
 } from '../tasks/upload';
 import { Context } from '../types';
-import { dryRun, initial, starting, success } from '../ui/tasks/upload';
+import { dryRun, initial, starting, success, turboSnapped } from '../ui/tasks/upload';
 import { fallbackFailureState, runTask } from './engine';
 import { clackProgressBarRenderer } from './engine/clack/progressRenderer';
 import { getRenderer } from './engine/getRenderer';
@@ -25,7 +25,7 @@ export async function renderUpload(ctx: Context): Promise<void> {
         pending: starting,
         success,
         skipped: dryRun,
-        partial: (context: Context) => starting(context),
+        partial: turboSnapped,
         failure: (context: Context, error: Error) =>
           fallbackFailureState(
             context.isReactNativeApp
