@@ -1,5 +1,5 @@
 import { Context } from '../../../types';
-import buildPassed from './buildPassed';
+import buildSummary from './buildSummary';
 
 export default {
   title: 'CLI/Messages/Info',
@@ -19,7 +19,7 @@ const firstBuild = {
 const story =
   (build: Partial<Context['build']>, ctx: Partial<Context> = {}) =>
   () =>
-    buildPassed({
+    buildSummary({
       options: {},
       ...ctx,
       build: {
@@ -45,13 +45,22 @@ export const BuildAutoAccepted = story({
   acceptedCount: 2,
 });
 
-export const BuildPassedWithPendingChanges = story({ status: 'PENDING', pendingCount: 2 });
+export const BuildPassedViaExitZeroWithAcceptedChanges = story({
+  status: 'ACCEPTED',
+  acceptedCount: 3,
+});
 
-export const BuildPassedWithAcceptedChanges = story({ status: 'ACCEPTED', acceptedCount: 3 });
+export const BuildCompletedViaExitZeroWithPendingChanges = story({
+  status: 'PENDING',
+  pendingCount: 2,
+});
 
-export const BuildPassedWithDeniedChanges = story({ status: 'DENIED', deniedCount: 1 });
+export const BuildCompletedViaExitZeroWithDeniedChanges = story({
+  status: 'DENIED',
+  deniedCount: 1,
+});
 
-export const BuildPassedWithPendingAccessibilityChanges = story({
+export const BuildCompletedViaExitZeroWithPendingAccessibilityChanges = story({
   status: 'PENDING',
   pendingCount: 2,
   features: { ...features, accessibilityTests: { enabled: true } },
@@ -63,5 +72,10 @@ export const FirstBuildPassed = story(firstBuild, { isOnboarding: true });
 
 export const FirstBuildPassedWithIgnoredTests = story(
   { ...firstBuild, ignoredCount: 1 },
+  { isOnboarding: true }
+);
+
+export const FirstBuildCompletedViaExitZeroWithPendingChanges = story(
+  { ...firstBuild, status: 'PENDING', pendingCount: 1 },
   { isOnboarding: true }
 );

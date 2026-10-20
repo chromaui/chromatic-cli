@@ -170,4 +170,20 @@ describe('traceChangedFiles', () => {
     expect(ctx.turboSnap.bailReason).toBeUndefined();
     expect(err.message).toBe('Could not retrieve dependent test files.\nstats file not found');
   });
+
+  it('reports tracing with the changed-file count when tracing will run', async () => {
+    const d = deps();
+    traceChangedFilesTurbosnap.mockResolvedValue({ status: 'skipped' });
+
+    const result = await traceChangedFiles(d, { turboSnapContext: turboSnapContext() });
+
+    expect(result).toStrictEqual({});
+    expect(d.report).toHaveBeenCalledWith(
+      expect.objectContaining({
+        output: expect.stringContaining(
+          'Traversing dependencies for 1 file that changed since the last build'
+        ),
+      })
+    );
+  });
 });

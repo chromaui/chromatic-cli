@@ -13,6 +13,13 @@ async function main() {
 
   const { stdout: nextVersion } = await $`auto shipit --dry-run --quiet`;
 
+  // `auto` returns an empty version when there is nothing to release, e.g. when every PR merged
+  // since the last release is labeled `skip-release`.
+  if (!nextVersion) {
+    console.info('⏭️ Nothing to release, skipping');
+    return;
+  }
+
   await build(nextVersion);
   await $({ stdout: 'inherit', stderr: 'inherit' })`auto shipit`;
 

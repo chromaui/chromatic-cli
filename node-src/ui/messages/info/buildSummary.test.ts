@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Context } from '../../../types';
 import { info, success } from '../../components/icons';
-import buildPassed from './buildPassed';
+import buildSummary from './buildSummary';
 
 const webUrl = 'https://www.chromatic.com/build?appId=59c59bd0183bd100364e1d57&number=42';
 const setupUrl = 'https://www.chromatic.com/setup?appId=59c59bd0183bd100364e1d57';
@@ -23,9 +23,9 @@ const baseBuild = {
 };
 
 const message = (build: Partial<Context['build']>, ctx: Partial<Context> = {}) =>
-  buildPassed({ options: {}, ...ctx, build: { ...baseBuild, ...build } } as Context);
+  buildSummary({ options: {}, ...ctx, build: { ...baseBuild, ...build } } as Context);
 
-describe('buildPassed changes line', () => {
+describe('buildSummary changes line', () => {
   it('reports no changes on a clean build', () => {
     const output = message({});
 
@@ -39,10 +39,10 @@ describe('buildPassed changes line', () => {
   it.each([
     [1, '1 visual change must be accepted as baseline.'],
     [2, '2 visual changes must be accepted as baselines.'],
-  ])('reports %i pending changes that passed via --exit-zero-on-changes', (count, expected) => {
-    expect(message({ status: 'PENDING', pendingCount: count, acceptedCount: 4 })).toContain(
-      expected
-    );
+  ])('reports %i pending changes on a flag-completed build', (count, expected) => {
+    const output = message({ status: 'PENDING', pendingCount: count, acceptedCount: 4 });
+
+    expect(output).toContain(expected);
   });
 
   it('uses the accessibility wording when accessibility tests are enabled', () => {
@@ -77,22 +77,38 @@ describe('buildPassed changes line', () => {
     expect(output).toContain('Auto-accepted 2 visual and accessibility changes.');
   });
 
-  it('reports accepted changes that passed via --exit-zero-on-changes', () => {
+  it('keeps the passed headline for an accepted build under --exit-zero-on-changes', () => {
     const output = message({ status: 'ACCEPTED', acceptedCount: 3 });
 
-    expect(output).toContain('3 visual changes accepted as baselines.');
-    expect(output).not.toContain('must be accepted');
+    expect(output.split('\n')).toEqual([
+      `${success} Build 42 passed!`,
+      '3 visual changes accepted as baselines.',
+      `${info} View build details at ${webUrl}`,
+    ]);
   });
 
-  it('reports denied changes that passed via --exit-zero-on-changes', () => {
+  it('keeps the passed headline for auto-accepted changes', () => {
+    const output = message({
+      status: 'ACCEPTED',
+      autoAcceptChanges: true,
+      acceptedCount: 3,
+    });
+
+    expect(output).toContain(`${success} Build 42 passed!`);
+  });
+
+  it('reports denied changes for a flag-completed build', () => {
     const output = message({
       status: 'DENIED',
       deniedCount: 1,
       features: { ...features, accessibilityTests: { enabled: true } },
     });
 
-    expect(output).toContain('1 visual and accessibility change denied.');
-    expect(output).not.toContain('must be accepted');
+    expect(output.split('\n')).toEqual([
+      `${success} Build 42 completed`,
+      '1 visual and accessibility change denied.',
+      `${info} View build details at ${webUrl}`,
+    ]);
   });
 
   it('ignores changeCount, which includes ignored tests', () => {
@@ -103,7 +119,7 @@ describe('buildPassed changes line', () => {
   });
 });
 
-describe('buildPassed ignored tests line', () => {
+describe('buildSummary ignored tests line', () => {
   it('reports ignored tests between the changes line and the build link', () => {
     expect(message({ ignoredCount: 3 }).split('\n')).toEqual([
       `${success} Build 42 passed!`,
@@ -125,7 +141,7 @@ describe('buildPassed ignored tests line', () => {
   });
 });
 
-describe('buildPassed while onboarding', () => {
+describe('buildSummary while onboarding', () => {
   const onboarding = { componentCount: 5, specCount: 8, actualCaptureCount: 20 };
 
   it('welcomes the user and points at the setup page', () => {
@@ -133,6 +149,19 @@ describe('buildPassed while onboarding', () => {
 
     expect(output.split('\n')).toEqual([
       `${success} Build passed. Welcome to Chromatic!`,
+      'We found 5 components with 8 stories and captured 20 snapshots.',
+      `${info} Please continue setup at ${setupUrl}`,
+    ]);
+  });
+
+  it('welcomes the user without claiming a pass when changes must be reviewed', () => {
+    const output = message(
+      { ...onboarding, status: 'PENDING', pendingCount: 1 },
+      { isOnboarding: true }
+    );
+
+    expect(output.split('\n')).toEqual([
+      `${success} Build completed. Welcome to Chromatic!`,
       'We found 5 components with 8 stories and captured 20 snapshots.',
       `${info} Please continue setup at ${setupUrl}`,
     ]);

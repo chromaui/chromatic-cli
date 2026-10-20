@@ -1,4 +1,4 @@
-import buildPassed from './buildPassed';
+import buildSummary from './buildSummary';
 
 export default {
   title: 'CLI/Messages/Info/E2E',
@@ -7,17 +7,18 @@ export default {
 const ctx = { options: { playwright: true } } as any;
 
 export const BuildPassed = () =>
-  buildPassed({
+  buildSummary({
     ...ctx,
     build: {
       number: 42,
+      status: 'PASSED',
       webUrl: 'https://www.chromatic.com/build?appId=59c59bd0183bd100364e1d57&number=42',
       pendingCount: 0,
     },
   } as any);
 
-export const BuildPassedWithChanges = () =>
-  buildPassed({
+export const BuildCompletedViaExitZeroWithChanges = () =>
+  buildSummary({
     ...ctx,
     build: {
       number: 42,
@@ -28,11 +29,12 @@ export const BuildPassedWithChanges = () =>
   } as any);
 
 export const FirstBuildPassed = () =>
-  buildPassed({
+  buildSummary({
     ...ctx,
     isOnboarding: true,
     build: {
       number: 1,
+      status: 'PASSED',
       testCount: 10,
       componentCount: 5,
       specCount: 8,
