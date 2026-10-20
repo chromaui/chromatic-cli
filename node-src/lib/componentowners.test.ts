@@ -21,9 +21,11 @@ describe('trySetComponentOwnersIfPresent', () => {
     await rm(rootPath, { recursive: true, force: true });
   });
 
-  const setOwners = () =>
+  const setOwners = ({ interactive = false } = {}) =>
     trySetComponentOwnersIfPresent(
-      { client, log } as unknown as Parameters<typeof trySetComponentOwnersIfPresent>[0],
+      { client, log, options: { interactive } } as unknown as Parameters<
+        typeof trySetComponentOwnersIfPresent
+      >[0],
       rootPath,
       'build-id'
     );
@@ -43,12 +45,38 @@ describe('trySetComponentOwnersIfPresent', () => {
     }
   );
 
-  it('skips the mutation silently when the file is absent', async () => {
-    await expect(setOwners()).resolves.toBeUndefined();
+  it('confirms the upload in the log file only when interactive', async () => {
+    await writeFile(path.join(rootPath, 'COMPONENTOWNERS'), 'Forms/* alice@example.com', 'utf8');
 
-    expect(client.runQuery).not.toHaveBeenCalled();
-    expect(log.warn).not.toHaveBeenCalled();
+    await setOwners({ interactive: true });
+
+    expect(log.file).toHaveBeenCalledExactlyOnceWith('Uploaded COMPONENTOWNERS');
+    expect(log.info).not.toHaveBeenCalled();
   });
+
+  it('confirms the upload in the regular output when non-interactive', async () => {
+    await writeFile(path.join(rootPath, 'COMPONENTOWNERS'), 'Forms/* alice@example.com', 'utf8');
+
+    await setOwners({ interactive: false });
+
+    expect(log.info).toHaveBeenCalledExactlyOnceWith('Uploaded COMPONENTOWNERS');
+    expect(log.file).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])(
+    'skips the mutation and only logs at debug level when the file is absent (interactive: %s)',
+    async (interactive) => {
+      await expect(setOwners({ interactive })).resolves.toBeUndefined();
+
+      expect(client.runQuery).not.toHaveBeenCalled();
+      expect(log.warn).not.toHaveBeenCalled();
+      expect(log.info).not.toHaveBeenCalled();
+      expect(log.file).not.toHaveBeenCalled();
+      expect(log.debug).toHaveBeenCalledExactlyOnceWith(
+        expect.stringContaining('No COMPONENTOWNERS file found')
+      );
+    }
+  );
 
   it('warns instead of throwing when the file cannot be read', async () => {
     await mkdir(path.join(rootPath, 'COMPONENTOWNERS'));
@@ -73,5 +101,6 @@ describe('trySetComponentOwnersIfPresent', () => {
       'Unable to set component owners.',
       mutationError
     );
+    expect(log.info).not.toHaveBeenCalled();
   });
 });
