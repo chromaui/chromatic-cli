@@ -1,6 +1,6 @@
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { mkdtemp, rm } from 'fs/promises';
-import { readJsonSync } from 'fs-extra';
+import { readJson } from 'fs-extra';
 import { tmpdir } from 'os';
 import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
@@ -11,6 +11,12 @@ import {
   MainConfigReader,
   readMainConfig,
 } from './getStorybookMetadata';
+
+// Passes through to the real implementation unless a test makes a package lookup hang.
+vi.mock('fs-extra', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs-extra')>();
+  return { ...actual, readJson: vi.fn(actual.readJson) };
+});
 
 function makeConfig(returnValue: any): MainConfigReader {
   return { readField: vi.fn().mockReturnValue(returnValue) };
@@ -269,7 +275,7 @@ describe('getStorybookMetadata view layer lookup in node_modules', () => {
   it('reports the version of an installed view layer even though others are missing', async () => {
     const installed = ['@storybook/react', '@storybook/react-vite', '@storybook/html']
       .filter((pkg) => existsSync(`node_modules/${pkg}/package.json`))
-      .map((pkg) => readJsonSync(`node_modules/${pkg}/package.json`).version);
+      .map((pkg) => JSON.parse(readFileSync(`node_modules/${pkg}/package.json`, 'utf8')).version);
     expect(installed).not.toHaveLength(0);
 
     const metadata = await getStorybookMetadata(
@@ -296,6 +302,27 @@ describe('getStorybookMetadata view layer lookup in node_modules', () => {
     } finally {
       cwd.mockRestore();
       await rm(emptyDirectory, { recursive: true });
+    }
+  });
+
+  it('gives up with a timeout error when a package lookup hangs', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] });
+    vi.mocked(readJson).mockImplementation(() => new Promise(() => {}));
+    try {
+      const deps = { ...getDeps('js-cjs'), env: {} };
+      const pending = getStorybookMetadata(deps, projectRootOf('js-cjs'));
+      await vi.waitFor(() => expect(readJson).toHaveBeenCalled());
+      await vi.advanceTimersByTimeAsync(10_000);
+      const metadata = await pending;
+
+      expect(metadata.version).toBeUndefined();
+      const [versionLookup] = deps.log.debug.mock.calls.find(([info]) => Array.isArray(info))[0];
+      expect(versionLookup.reason.message).toBe(
+        'Timeout while resolving Storybook view layer package'
+      );
+    } finally {
+      vi.mocked(readJson).mockRestore();
+      vi.useRealTimers();
     }
   });
 });
