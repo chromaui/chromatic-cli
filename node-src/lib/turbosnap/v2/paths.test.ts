@@ -286,6 +286,16 @@ describe('foldStatsId', () => {
       id: './iframe.html?html-proxy&inline-css&index=0.css',
       expected: './iframe.html',
     },
+    {
+      name: 'an ordinary path whose segment ends in a mode token',
+      id: './src/tweak panel.tsx?raw',
+      expected: './src/tweak panel.tsx',
+    },
+    {
+      name: 'an ordinary path whose directory ends in lazy',
+      id: './src/Clazy icons.svg?url',
+      expected: './src/Clazy icons.svg',
+    },
   ])('folds $name onto the file it stands for', ({ id, expected }) => {
     expect(foldStatsId(id)).toBe(expected);
   });
@@ -338,11 +348,6 @@ describe('foldStatsId', () => {
       'a webpack lazy-once context name with a query',
       String.raw`./icons lazy-once nonrecursive ^\.\/.*\.(?:svg)$?query`,
     ],
-  ])('keeps the ? of %s', (_name, id) => {
-    expect(foldStatsId(id)).toBe(id);
-  });
-
-  it.each([
     [
       'a webpack lazy context whose request ends in a slash',
       String.raw`./src/lib/ lazy /^\.\/.*$/?query`,
@@ -367,23 +372,8 @@ describe('foldStatsId', () => {
       'an rspack lazy-once context name with a query',
       String.raw`./icons|lazy-once|/^\.\/.*$/|include: /(?:svg)$?query`,
     ],
-  ])('keeps the ? of %s under the tightened markers', (_name, id) => {
+  ])('keeps the ? of %s', (_name, id) => {
     expect(foldStatsId(id)).toBe(id);
-  });
-
-  it.each([
-    [
-      'a path segment that ends in a mode token',
-      './src/tweak panel.tsx?raw',
-      './src/tweak panel.tsx',
-    ],
-    [
-      'a path segment whose directory ends in lazy',
-      './src/Clazy icons.svg?url',
-      './src/Clazy icons.svg',
-    ],
-  ])('strips the query of %s, not a context name', (_name, id, expected) => {
-    expect(foldStatsId(id)).toBe(expected);
   });
 });
 
