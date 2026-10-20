@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+# TurboSnap tests read historical package manifests, just as CI needs full history.
+if [[ "$(git rev-parse --is-shallow-repository)" == true ]]; then
+  echo '==> Fetching repository history'
+  time timeout 120s git fetch --quiet --unshallow origin
+fi
+
+export PATH="$HOME/.local/bin:$PATH"
+if ! command -v mise >/dev/null 2>&1; then
+  echo '==> Installing mise'
+  curl --fail --location --silent --show-error --connect-timeout 15 --max-time 120 \
+    https://mise.run | MISE_VERSION=v2026.10.15 timeout 120s sh
+fi
+mise_bin="$(command -v mise)"
+
+echo '==> Installing the toolchain from .tool-versions'
+time timeout 300s "$mise_bin" install --yes
+eval "$("$mise_bin" env --shell bash)"
+
+# Non-interactive login shells do not run mise's interactive prompt hook.
+profile="$HOME/.bash_profile"
+profile_marker="# Chromatic CLI toolchain: $PWD"
+if [[ ! -e "$profile" ]]; then
+  cat > "$profile" <<'EOF_PROFILE'
+# Preserve Bash's previous login initialization.
+if [[ -r "$HOME/.bash_login" ]]; then
+  source "$HOME/.bash_login"
+elif [[ -r "$HOME/.profile" ]]; then
+  source "$HOME/.profile"
+fi
+EOF_PROFILE
+fi
+if ! grep -Fqx "$profile_marker" "$profile"; then
+  cat >> "$profile" <<EOF_PROFILE
+
+$profile_marker
+if [[ -x "$mise_bin" && ( "\$PWD" == "$PWD" || "\$PWD" == "$PWD/"* ) ]]; then
+  eval "\$("$mise_bin" env --shell bash)"
+fi
+EOF_PROFILE
+fi
+
+# Corepack reads packageManager from package.json; do not duplicate its version here.
+echo '==> Enabling the pinned package manager'
+time timeout 30s corepack enable
+time timeout 120s corepack install
+
+echo '==> Installing immutable dependencies'
+time CI=1 timeout 600s yarn install --immutable
+
+echo '==> Installed toolchain'
+node --version
+yarn --version
