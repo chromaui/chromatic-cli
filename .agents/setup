@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+# TurboSnap tests read historical package manifests, just as CI needs full history.
+if [[ "$(git rev-parse --is-shallow-repository)" == true ]]; then
+  echo '==> Fetching repository history'
+  time timeout 120s git fetch --quiet --unshallow origin
+fi
+
+readonly MISE_VERSION='v2026.8.14'
+readonly MISE_SHA256='7cd12d6002d5b3c83a89cad79023712faf2a36f9e8b2ee2061dac5135b3de0ed'
+readonly MISE_BIN="$HOME/.local/bin/mise"
+
+echo "==> Installing mise $MISE_VERSION"
+mkdir -p -- "$(dirname "$MISE_BIN")"
+if [[ ! -x "$MISE_BIN" ]] || [[ "$("$MISE_BIN" --version | awk '{print $1}')" != "${MISE_VERSION#v}" ]]; then
+  mise_tmp="$(mktemp)"
+  trap 'rm -f -- "$mise_tmp"' EXIT
+  timeout 90s curl --fail --location --silent --show-error \
+    --connect-timeout 15 --max-time 75 --retry 2 \
+    "https://github.com/jdx/mise/releases/download/$MISE_VERSION/mise-$MISE_VERSION-linux-x64" \
+    --output "$mise_tmp"
+  printf '%s  %s\n' "$MISE_SHA256" "$mise_tmp" | sha256sum --check --status
+  install -m 0755 -- "$mise_tmp" "$MISE_BIN"
+  rm -f -- "$mise_tmp"
+  trap - EXIT
+fi
+
+# Future agent and service login shells must use the repository's toolchain too.
+profile="$HOME/.bash_profile"
+repo_root="$PWD"
+profile_marker="# Chromatic CLI toolchain: $repo_root"
+if [[ ! -f "$profile" ]]; then
+  cat > "$profile" <<'EOF_PROFILE'
+# Preserve Bash's previous login initialization before adding orb-specific setup.
+if [[ -f "$HOME/.bash_login" ]]; then
+  source "$HOME/.bash_login"
+elif [[ -f "$HOME/.profile" ]]; then
+  source "$HOME/.profile"
+fi
+EOF_PROFILE
+fi
+if ! grep -Fqx "$profile_marker" "$profile"; then
+  cat >> "$profile" <<EOF_PROFILE
+
+$profile_marker
+if [[ -x "$MISE_BIN" && ( "\$PWD" == "$repo_root" || "\$PWD" == "$repo_root/"* ) ]]; then
+  eval "\$("$MISE_BIN" env --shell bash)"
+fi
+EOF_PROFILE
+fi
+
+echo '==> Installing the toolchain from .tool-versions'
+time timeout 300s "$MISE_BIN" install --yes
+
+# Corepack reads packageManager from package.json; do not duplicate its version here.
+echo '==> Enabling the pinned package manager'
+time timeout 30s "$MISE_BIN" exec -- corepack enable
+time timeout 120s "$MISE_BIN" exec -- corepack install
+
+echo '==> Installing immutable dependencies'
+time CI=1 timeout 600s "$MISE_BIN" exec -- yarn install --immutable
+
+echo '==> Installed toolchain'
+"$MISE_BIN" exec -- node --version
+"$MISE_BIN" exec -- yarn --version
