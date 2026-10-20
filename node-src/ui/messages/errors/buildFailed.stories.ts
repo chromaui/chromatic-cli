@@ -1,3 +1,4 @@
+/* eslint-disable no-secrets/no-secrets -- sample build logs */
 import { buildFailed, reactNativeBuildFailed } from './buildFailed';
 
 export default {

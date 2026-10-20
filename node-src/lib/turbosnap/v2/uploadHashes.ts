@@ -24,6 +24,7 @@ const BuildUploadHashesMutation = `
 /** How the Index decided `onlyStoryFiles`. Absent means it did not decide by hash. */
 type TurboSnapMechanism = 'GIT_BASED' | 'HASH_BASED';
 
+// eslint-disable-next-line no-secrets/no-secrets -- GraphQL type name
 /**
  * The `BuildUploadHashesInput` the CLI sends. It mirrors the Index's input type so a schema change
  * on that side surfaces here as a type error rather than a runtime rejection.

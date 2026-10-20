@@ -18,6 +18,7 @@ import { pending } from '../ui/tasks/snapshot';
 
 // `pendingCount`, `acceptedCount` and `deniedCount` are counted by test status, so IGNORED tests are
 // excluded by construction. `changeCount` is counted by test result and includes ignored tests.
+// eslint-disable-next-line no-secrets/no-secrets -- GraphQL query
 const SnapshotBuildQuery = `
   query SnapshotBuildQuery($number: Int!) {
     app {

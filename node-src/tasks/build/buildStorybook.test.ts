@@ -71,6 +71,7 @@ describe('buildStorybook', () => {
     );
   });
 
+  // eslint-disable-next-line no-secrets/no-secrets -- exit code name
   it('throws a TaskFailure carrying the NPM_BUILD_STORYBOOK_FAILED exit code', async () => {
     const deps = {
       options: {},

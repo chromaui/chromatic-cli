@@ -1320,12 +1320,14 @@ describe('uploadProject', () => {
 
 describe('sentinel handling', () => {
   it('dedupes sentinel URLs before awaiting them', async () => {
+    /* eslint-disable no-secrets/no-secrets -- sample upload URLs */
     const sentinelUrls = [
       'https://chromatic-builds.s3.us-west-2.amazonaws.com/59c59bd0183bd100364e1d57-pbxunskvpo/.chromatic/files-copied.txt?foo',
       'https://chromatic-builds.s3.us-west-2.amazonaws.com/59c59bd0183bd100364e1d57-pbxunskvpo/.chromatic/zip-unpacked.txt?bar',
       'https://chromatic-builds.s3.us-west-2.amazonaws.com/59c59bd0183bd100364e1d57-pbxunskvpo/.chromatic/zip-unpacked.txt?baz',
       'https://chromatic-builds.s3.us-west-2.amazonaws.com/59c59bd0183bd100364e1d57-pbxunskvpo/.chromatic/files-copied.txt?baz',
     ];
+    /* eslint-enable no-secrets/no-secrets */
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({
       uploadBuild: {

@@ -183,7 +183,16 @@ export default [
     rules: {
       'no-secrets/no-secrets': [
         'error',
-        { ignoreContent: '^(https://www.chromatic.com/|/var/folders/)*' },
+        {
+          // The plugin skips a whole string when any pattern matches, so keep these anchored.
+          ignoreContent: [
+            String.raw`^(https://www\.chromatic\.com/|/var/folders/)`,
+            // Published Storybook URLs (app ID and build hash)
+            String.raw`^https://[\da-f]{24}-[a-z]{10}\.chromatic\.com/`,
+            // Permalinks to this repository
+            String.raw`^https://github\.com/chromaui/chromatic-cli/blob/[\da-f]{40}/`,
+          ],
+        },
       ],
     },
   },
