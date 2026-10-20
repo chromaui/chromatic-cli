@@ -44,6 +44,11 @@ const getPackageName = (modulePath: string) => {
   return unscopedName;
 };
 
+// Rank: plain `./` id (3) > plain bare id (2) > `./` facet (1) > anything else (0). A plain id has
+// no NUL virtual prefix, no `?query`, and no `+ N modules` suffix.
+const rank = (memberName: string) =>
+  (/^\0|\?| \+ /.test(memberName) ? 0 : 2) + (memberName.startsWith('./') ? 1 : 0);
+
 /**
  * Converts a module path found in the webpack stats to be relative to the (git) root path. Module
  * paths can be relative (`./module.js`) or absolute (`/path/to/project/module.js`). The webpack
@@ -116,7 +121,12 @@ export async function getDependentStoryFiles(
   const normalize = (posixPath: FilePath): NormalizedName => {
     const CSF_REGEX = /\s+(sync|lazy)\s+/g;
     const URL_PARAM_REGEX = /(\?.*)/g;
-    const newPath = normalizePath(posixPath, rootPath, projectRoot);
+    // Strip the NUL from proxies of a relative path first, so CommonJS proxy ids like
+    // `\0./node_modules/react/index.js?commonjs-es-import` normalize to the file they proxy.
+    // Opaque NUL ids (`\0commonjsHelpers.js`, `\0vite/preload-helper.js`) name no file, so they
+    // keep the NUL and can never match a changed file.
+    const name = /^\0\.\.?\//.test(posixPath) ? posixPath.slice(1) : posixPath;
+    const newPath = normalizePath(name, rootPath, projectRoot);
     // Trim query params such as `?ngResource` which are sometimes present
     return URL_PARAM_REGEX.test(newPath) && !CSF_REGEX.test(newPath)
       ? newPath.replaceAll(URL_PARAM_REGEX, '')
@@ -153,11 +163,24 @@ export async function getDependentStoryFiles(
     `./storybook-config-entry.js`,
   ].map((file) => normalize(file));
 
+  // Builder-generated modules that import the preview annotations (`previewAnnotations` entries,
+  // addon and framework `preview.js` files) for every story. Their direct importers apply to every
+  // story, so a change that reaches one bails like a change to `.storybook/preview.*`. They must
+  // not become CSF globs, or those importers would be reported as story files matching no story.
+  // V2 treats the same modules as global roots (see `VITE_COMPOSITION_ROOTS` in `v2/statsGraph.ts`).
+  const globalRootFiles = [
+    `/virtual:/@storybook/builder-vite/project-annotations.js`,
+    `virtual:@storybook/builder-vite/project-annotations.js`,
+  ].map((file) => normalize(file));
+  const isGlobalRoot = (name: NormalizedName) =>
+    globalRootFiles.some((prefix) => name.startsWith(prefix));
+
   const modulesByName = new Map<NormalizedName, Module>();
   const nodeModules = new Map<string, NormalizedName[]>();
   const namesById = new Map<Module['id'], NormalizedName>();
   const reasonsById = new Map<Module['id'], NormalizedName[]>();
   const csfGlobsByName = new Set<NormalizedName>();
+  const annotationFilesByName = new Set<NormalizedName>();
 
   const isStorybookFile = (name: string) =>
     name &&
@@ -165,48 +188,81 @@ export async function getDependentStoryFiles(
     !storiesEntryFiles.includes(name) &&
     !isDocumentationFile(name);
 
-  stats.modules
-    .filter((module_) => isUserModule(module_))
-    // TODO: refactor this function
-    // eslint-disable-next-line complexity
-    .map((module_) => {
-      const normalizedName = normalize(module_.name);
-      modulesByName.set(normalizedName, module_);
-      namesById.set(module_.id, normalizedName);
+  // Distinct modules can normalize to one name: Vue/Svelte compile a component into several
+  // modules (the component plus its `<style>` facets), CommonJS interop rewrites imports into
+  // NUL-proxied ids, and rsbuild emits bare-path stubs next to `./`-prefixed ids. Tracing must
+  // treat them as one module, or the importers of the overwritten ones become unreachable and
+  // changed components or styles trace to no stories.
+  const membersByName = new Map<NormalizedName, Module[]>();
+  for (const module_ of stats.modules) {
+    if (!isUserModule(module_)) continue;
+    const name = normalize(module_.name);
+    const members = membersByName.get(name);
+    if (members) members.push(module_);
+    else membersByName.set(name, [module_]);
+  }
 
-      const packageName = getPackageName(module_.name);
-      if (packageName) {
-        // Track all modules from any node_modules directory by their package name, so we can mark
-        // all those files "changed" if a dependency (version) changes, while still being able to
-        // "untrace" certain files (or globs) in those packages.
-        if (!nodeModules.has(packageName)) nodeModules.set(packageName, []);
-        nodeModules.get(packageName)?.push(normalizedName);
-      }
+  for (const [name, members] of membersByName) {
+    // Represent each group by its "plainest" member: a plain path id beats a facet id (one with
+    // a NUL prefix or `?query`), and a `./`-prefixed id beats a bare one (the backend matches
+    // `onlyStoryFiles` keys against stories' `parameters.filename` values with picomatch, where
+    // a pattern without `./` does not match a filename that has it). Ties resolve to the last
+    // member, preserving the previous last-write-wins behavior.
+    let representative = members[0];
+    for (const member of members) {
+      if (rank(member.name) >= rank(representative.name)) representative = member;
+    }
 
-      if (module_.modules) {
-        for (const m of module_.modules) {
-          modulesByName.set(normalize(m.name), module_);
-        }
-      }
+    // Grouping amplifies duplicate reasons (an SFC and its style facet often share importers),
+    // and duplicates cost extra `untrace` calls and repeat entries in `--trace-changed` output.
+    const reasons = [
+      ...new Set(
+        members
+          .flatMap((member) =>
+            (member.reasons || [])
+              .map((reason) => reason.moduleName)
+              .filter((moduleName): moduleName is FilePath => typeof moduleName === 'string')
+              .map((moduleName) => normalize(moduleName))
+          )
+          .filter((reasonName) => reasonName && reasonName !== name)
+      ),
+    ];
 
-      const normalizedReasons = module_.reasons
-        ?.map((reason) => reason.moduleName)
-        .filter((moduleName): moduleName is FilePath => typeof moduleName === 'string')
-        .map((moduleName) => normalize(moduleName))
-        .filter((reasonName) => reasonName && reasonName !== normalizedName);
-      if (normalizedReasons) {
-        reasonsById.set(module_.id, normalizedReasons);
-      }
+    // Tracing only ever reaches a group through its representative, so only its id needs entries.
+    modulesByName.set(name, representative);
+    namesById.set(representative.id, name);
+    reasonsById.set(representative.id, reasons);
 
-      if (
-        !isStorybookFile(normalizedName) &&
-        reasonsById
-          .get(module_.id)
-          ?.some((reason) => storiesEntryFiles.some((prefix) => reason.startsWith(prefix))) // match module names that include a "+ N modules"
-      ) {
-        csfGlobsByName.add(normalizedName);
-      }
-    });
+    // Concatenated modules ("a.js + 1 modules") register their inner module names so they can be
+    // traced too, unless a group owns that name: rsbuild also emits the inner modules on their
+    // own, and the container must not replace their representative (its id would become an
+    // `onlyStoryFiles` key that matches no story).
+    for (const m of members.flatMap((member) => member.modules || [])) {
+      const innerName = normalize(m.name);
+      if (!membersByName.has(innerName)) modulesByName.set(innerName, representative);
+    }
+
+    // Track all modules from any node_modules directory by their package name, so we can mark
+    // all those files "changed" if a dependency (version) changes, while still being able to
+    // "untrace" certain files (or globs) in those packages.
+    for (const packageName of new Set(members.map((member) => getPackageName(member.name)))) {
+      if (!packageName) continue;
+      if (!nodeModules.has(packageName)) nodeModules.set(packageName, []);
+      nodeModules.get(packageName)?.push(name);
+    }
+
+    if (reasons.some((reason) => isGlobalRoot(reason))) {
+      annotationFilesByName.add(name);
+    }
+
+    if (
+      !isStorybookFile(name) &&
+      !isGlobalRoot(name) &&
+      reasons.some((reason) => storiesEntryFiles.some((prefix) => reason.startsWith(prefix))) // match module names that include a "+ N modules"
+    ) {
+      csfGlobsByName.add(name);
+    }
+  }
 
   if (csfGlobsByName.size === 0) {
     // Check for misconfigured Storybook configDir. Only applicable to v6 store because v7 store
@@ -309,7 +365,7 @@ export async function getDependentStoryFiles(
       return true;
     }
 
-    if (isStorybookFile(moduleName)) {
+    if (isStorybookFile(moduleName) || annotationFilesByName.has(moduleName)) {
       turboSnap.bailReason = { changedStorybookFiles: files(moduleName) };
       turboSnap.bailPath = buildBailPath(moduleName, tracePath);
       return true;

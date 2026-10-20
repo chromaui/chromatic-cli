@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+# TurboSnap tests read historical package manifests, just as CI needs full history.
+if [[ "$(git rev-parse --is-shallow-repository)" == true ]]; then
+  echo '==> Fetching repository history'
+  time timeout 120s git fetch --quiet --unshallow origin
+fi
+
+export PATH="$HOME/.local/bin:$PATH"
+if ! command -v mise >/dev/null 2>&1; then
+  echo '==> Installing mise'
+  curl --fail --location --silent --show-error --connect-timeout 15 --max-time 120 \
+    https://mise.run | MISE_VERSION=v2026.10.15 timeout 120s sh
+fi
+mise_bin="$(command -v mise)"
+
+echo '==> Installing the toolchain from .tool-versions'
+time timeout 300s "$mise_bin" install --yes
+eval "$("$mise_bin" env --shell bash)"
+
+# Corepack reads packageManager from package.json; do not duplicate its version here.
+echo '==> Enabling the pinned package manager'
+time timeout 30s corepack enable
+time timeout 120s corepack install
+
+# Amp reloads PATH after setup. Expose mise's selected tools on that standard
+# PATH so they also work without shell activation or a repository working directory.
+wrapper="$(mktemp)"
+trap 'rm -f -- "$wrapper"' EXIT
+for binary in node npm npx corepack yarn yarnpkg; do
+  # Execute rather than symlink: mise's npm wrapper resolves files relative to itself.
+  printf '#!/usr/bin/env bash\nexec %q "$@"\n' "$("$mise_bin" which "$binary")" > "$wrapper"
+  install -m 0755 "$wrapper" "/usr/local/bin/$binary"
+done
+rm -f -- "$wrapper"
+trap - EXIT
+
+echo '==> Installing immutable dependencies'
+time CI=1 timeout 600s yarn install --immutable
+
+echo '==> Installed toolchain'
+node --version
+yarn --version
