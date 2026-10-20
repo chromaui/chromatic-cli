@@ -208,11 +208,11 @@ describe('hashOutOfGraphFiles skipped files', () => {
 
     const { files, skippedFiles } = await hashOutOfGraphFiles(
       makeInput(disk, { staticDirs: [`${projectRoot}/public`] }),
-      (candidate) => (candidate.endsWith('bundle.css') ? 'gitignored' : undefined)
+      (candidate) => (candidate.endsWith('bundle.css') ? 'untracked' : undefined)
     );
 
     expect([...files.staticFiles.keys()]).toEqual(['./public/logo.svg']);
-    expect([...skippedFiles]).toEqual([['./public/bundle.css', 'gitignored']]);
+    expect([...skippedFiles]).toEqual([['./public/bundle.css', 'untracked']]);
   });
 
   it('drops a config file the rule skips from the config section and records it', async () => {

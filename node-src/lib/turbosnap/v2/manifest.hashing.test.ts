@@ -58,8 +58,8 @@ describe('buildManifest leaf inclusion', () => {
     );
   });
 
-  it('leaves the story hash alone when a leaf dependency git ignores changes content', async () => {
-    const { disk, input } = createFixture({ isIgnored: (candidate) => candidate === leaf });
+  it('leaves the story hash alone when an untracked leaf dependency changes content', async () => {
+    const { disk, input } = createFixture({ isUntracked: (candidate) => candidate === leaf });
     disk.fileHashes = { [story]: 'S', [leaf]: 'T1' };
     const before = await buildManifest(stats, input);
 
@@ -89,12 +89,56 @@ describe('buildManifest leaf inclusion', () => {
   });
 });
 
-describe('buildManifest of a story file git ignores', () => {
+describe('buildManifest of a file git does not track, ignored or not', () => {
+  const story = '/repo/packages/ui/src/Button.stories.tsx';
+  const preview = '/repo/packages/ui/.storybook/preview.ts';
+  const buildInfo = '/repo/packages/ui/src/generated/build-info.json';
+
+  // A CI step writes build-info.json before the Storybook build, with a fresh timestamp each time,
+  // and no one commits it or lists it in .gitignore. The preview imports it. v1's `git diff` never
+  // sees it, so neither should the config roll-up, until it is committed.
+  const stats: Stats = {
+    modules: [
+      { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+      { id: 2, name: preview, reasons: [{ moduleName: './storybook-config-entry.js' }] },
+      { id: 3, name: buildInfo, reasons: [{ moduleName: preview }] },
+    ],
+  };
+
+  it('leaves the config hashes alone while it is untracked, and moves the preview once it is tracked', async () => {
+    let untracked = true;
+    const { disk, input } = createFixture({
+      isUntracked: (candidate) => untracked && candidate === buildInfo,
+    });
+
+    disk.fileHashes = { [story]: 'S', [preview]: 'P', [buildInfo]: 'B1' };
+    const before = await buildManifest(stats, input);
+    disk.fileHashes = { [story]: 'S', [preview]: 'P', [buildInfo]: 'B2' };
+    const after = await buildManifest(stats, input);
+
+    expect([...after.storybookConfigHashes]).toEqual([...before.storybookConfigHashes]);
+    expect([...after.skippedFiles]).toEqual([['./src/generated/build-info.json', 'untracked']]);
+
+    untracked = false;
+    disk.fileHashes = { [story]: 'S', [preview]: 'P', [buildInfo]: 'B1' };
+    const trackedBefore = await buildManifest(stats, input);
+    disk.fileHashes = { [story]: 'S', [preview]: 'P', [buildInfo]: 'B2' };
+    const trackedAfter = await buildManifest(stats, input);
+
+    expect(trackedAfter.storybookConfigHashes.get('preview')).not.toBe(
+      trackedBefore.storybookConfigHashes.get('preview')
+    );
+  });
+});
+
+describe('buildManifest of a story file git does not track', () => {
   const story = '/repo/packages/ui/src/generated/Button.stories.tsx';
   const button = '/repo/packages/ui/src/Button.tsx';
 
-  // The story file is generated and git ignores it, but it is still a story file, and the tracked
-  // Button.tsx it imports is what its hash must follow.
+  // Git does not track the story file: it is generated, or not yet added. It is still a story file,
+  // so a new one is captured for having no baseline, and the tracked Button.tsx it imports is what
+  // its hash must follow. Its own edits go unseen until it is tracked, as v1's `git diff` never
+  // lists it either.
   const stats: Stats = {
     modules: [
       { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
@@ -103,7 +147,7 @@ describe('buildManifest of a story file git ignores', () => {
   };
 
   it('changes the story hash when a tracked import changes content, and not when the story file does', async () => {
-    const { disk, input } = createFixture({ isIgnored: (candidate) => candidate === story });
+    const { disk, input } = createFixture({ isUntracked: (candidate) => candidate === story });
     disk.fileHashes = { [story]: 'S1', [button]: 'B1' };
     const before = await buildManifest(stats, input);
 
@@ -134,7 +178,7 @@ describe('buildManifest through a file git ignores', () => {
   };
 
   it('changes the story hash when a tracked file behind the ignored file changes content', async () => {
-    const { disk, input } = createFixture({ isIgnored: (candidate) => candidate === barrel });
+    const { disk, input } = createFixture({ isUntracked: (candidate) => candidate === barrel });
     disk.fileHashes = { [story]: 'S', [barrel]: 'G', [button]: 'B1' };
     const before = await buildManifest(stats, input);
 
@@ -148,7 +192,7 @@ describe('buildManifest through a file git ignores', () => {
 
   it('leaves the story hash alone when the ignored file is removed from the import graph', async () => {
     // Button.tsx is still imported, now directly. The barrel contributed nothing, not even its path.
-    const { disk, input } = createFixture({ isIgnored: (candidate) => candidate === barrel });
+    const { disk, input } = createFixture({ isUntracked: (candidate) => candidate === barrel });
     disk.fileHashes = { [story]: 'S', [barrel]: 'G', [button]: 'B' };
     const before = await buildManifest(stats, input);
 
@@ -182,7 +226,7 @@ describe("buildManifest through a workspace package's build output", () => {
   };
 
   it("leaves the story hash alone when the build output changes content, since git ignores it, and keeps the story's edge to it", async () => {
-    const { disk, input } = createFixture({ isIgnored: (candidate) => candidate === built });
+    const { disk, input } = createFixture({ isUntracked: (candidate) => candidate === built });
     disk.fileHashes = { [story]: 'S', [built]: 'D1' };
     const before = await buildManifest(stats, input);
 
@@ -192,7 +236,7 @@ describe("buildManifest through a workspace package's build output", () => {
     expect(after.storyFileHashes.get('./src/Button.stories.tsx')).toBe(
       before.storyFileHashes.get('./src/Button.stories.tsx')
     );
-    expect([...after.skippedFiles]).toEqual([['../icons/dist/index.js', 'gitignored']]);
+    expect([...after.skippedFiles]).toEqual([['../icons/dist/index.js', 'untracked']]);
     expect(
       after.files.get('./src/Button.stories.tsx')?.dependencies.has('../icons/dist/index.js')
     ).toBe(true);
@@ -216,7 +260,7 @@ describe("buildManifest through a sibling package's tracked source", () => {
   };
 
   it("leaves the story hash alone when the sibling's gitignored generated file changes content, and moves it when the tracked import does", async () => {
-    const { disk, input } = createFixture({ isIgnored: (candidate) => candidate === generated });
+    const { disk, input } = createFixture({ isUntracked: (candidate) => candidate === generated });
     disk.fileHashes = { [story]: 'S', [index]: 'I1', [generated]: 'G1' };
     const before = await buildManifest(stats, input);
 

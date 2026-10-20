@@ -10,12 +10,12 @@ export type SkipContext = Pick<ManifestInput, 'gitRoot' | 'untraced' | 'projectF
 
 /**
  * Why v2 skipped hashing a file. A skipped file's own bytes feed no roll-up either way; the reasons
- * differ in what happens to its imports. A gitignored file keeps its dependency edges, so a tracked
+ * differ in what happens to its imports. An untracked file keeps its dependency edges, so a tracked
  * file imported through a generated barrel still rolls up into the story. An untraced file is a wall,
  * as in v1: its edges are severed too, so a change beneath it reaches a story only through another
  * import path; see `readStatsGraph`.
  */
-export type SkipReason = 'gitignored' | 'untraced';
+export type SkipReason = 'untracked' | 'untraced';
 
 /**
  * Why TurboSnap v2 skips hashing the file at a path, or undefined when it hashes the file; see
@@ -51,7 +51,7 @@ export function partitionSkipped(
 
 /**
  * Builds the rule for which files TurboSnap v2 skips hashing: the files the user untraced, and the
- * files git ignores anywhere in the repository (see {@link ignoredFileCheck}). Built once per
+ * files git does not track anywhere in the repository (see {@link untrackedFileCheck}). Built once per
  * manifest, since it asks git once, and then answers synchronously for every file the graph and the
  * out-of-graph sweep hold.
  *
@@ -60,7 +60,7 @@ export function partitionSkipped(
  * package, and inside the Storybook config directory, since the documented recipe untraces the
  * global decorators kept there. The glob is matched as v1 matches it (see
  * {@link gitRootGlobMatcher}), so the one flag means the same thing in both. A file both untraced
- * and ignored is recorded as untraced, since that is the user's own say. Two files are out of the
+ * and untracked is recorded as untraced, since that is the user's own say. Two files are out of the
  * rule's reach: an external, which v1 checks before it applies `--untraced`, and the main Storybook
  * config, which the config sweep hashes regardless; see `hashOutOfGraphFiles`.
  *
@@ -75,56 +75,60 @@ export function partitionSkipped(
  */
 export async function buildSkipRule(context: SkipContext): Promise<SkipRule> {
   const isUntraced = gitRootGlobMatcher(context.gitRoot, context.untraced);
-  const isIgnoredFile = await ignoredFileCheck(context);
+  const isUntrackedFile = await untrackedFileCheck(context);
 
   return (absolutePath) => {
     const realPath = context.projectFiles.realPath(absolutePath);
     if (isUntraced(realPath)) return 'untraced';
-    if (isIgnoredFile(realPath)) return 'gitignored';
+    if (isUntrackedFile(realPath)) return 'untracked';
     return undefined;
   };
 }
 
 /**
- * Builds the check for whether git ignores a real path. "Ignored" is git's answer; "skipped" is
- * our policy on top of it.
+ * Builds the check for whether git does not track a real path. "Untracked" is git's answer;
+ * "skipped" is our policy on top of it.
  *
- * We lean on git because generated files are often ignored by git and they can be non-deterministic.
- * Recapturing based on those hashing changes would be more "correct" but a much worse experience, so
- * we opted to match TurboSnap v1's behavior, which draws its changed files from `git diff` and never
- * sees a gitignored file either.
+ * We lean on git because generated files are often left out of git, ignored or merely uncommitted,
+ * and they can be non-deterministic: a build stamp or a manifest written by a CI step before the
+ * Storybook build. Recapturing based on those hashing changes would be more "correct" but a much
+ * worse experience, so we opted to match TurboSnap v1's behavior, which draws its changed files
+ * from `git diff` and never sees an untracked file, ignored or not. A tracked file with uncommitted
+ * edits is still hashed, since v1 sees it through the working-tree diff. The same holds for an
+ * untracked story file: it is still a story, but its own edits go unseen until it is tracked, as in
+ * v1.
  *
- * Git's answer is taken for the whole repository, as v1 sees it: a file git ignores in any workspace
- * package is skipped, not just the Storybook package's own. The accepted cost: a workspace package
- * the graph holds only through its gitignored `dist` — the bundler resolves the `node_modules` link
- * to it, so its source never appears — is no longer hashed, which is v1's behavior today.
- * `--externals` does not rescue such a `dist`: `listExternalFiles` walks the git index, and git
- * never lists an ignored file, so a glob like `packages/icons/dist/**` matches nothing — the same
- * reason v1's `git diff` never sees the `dist`, which is why the flag needs no change. The hatch
- * that works is a glob on the sibling's tracked source: any change there recaptures Storybook-wide,
- * which detects changes to the built `dist` too.
+ * Git's answer is taken for the whole repository, as v1 sees it: a file git does not track in any
+ * workspace package is skipped, not just the Storybook package's own. The accepted cost: a workspace
+ * package the graph holds only through its gitignored `dist` — the bundler resolves the
+ * `node_modules` link to it, so its source never appears — is no longer hashed, which is v1's
+ * behavior today. `--externals` does not rescue such a `dist`: `listExternalFiles` walks the git
+ * index, which never holds an untracked file, so a glob like `packages/icons/dist/**` matches
+ * nothing — the same reason v1's `git diff` never sees the `dist`, which is why the flag needs no
+ * change. The hatch that works is a glob on the sibling's tracked source: any change there
+ * recaptures Storybook-wide, which detects changes to the built `dist` too.
  *
  * Two exceptions. An installed package under `node_modules` keeps a real change visible: it is in
  * nearly every `.gitignore`, yet a dependency upgrade is a real change. The exemption covers only
  * installed packages, not the directories build tools generate under `node_modules` (such as
  * `.federation`; see {@link isInstalledPackagePath}): their output can change on every
- * build, and v1 never sees it either. The Storybook config directory gets no exemption: a
- * gitignored file there is generated like any other, and hashing it over-captures just the same;
+ * build, and v1 never sees it either. The Storybook config directory gets no exemption: an
+ * untracked file there is generated like any other, and hashing it over-captures just the same;
  * the main config is the one file hashed regardless, by the config sweep; see
  * `hashOutOfGraphFiles`.
  *
  * The check takes a real path because that is how git names files; see
- * {@link ProjectFiles.ignoredPaths}.
+ * {@link ProjectFiles.untrackedPaths}.
  *
  * @param context Where the repository is, and how to ask git and the disk.
  *
  * @returns The check, by real path.
  */
-async function ignoredFileCheck(
+async function untrackedFileCheck(
   context: SkipContext
 ): Promise<(realPath: AbsolutePath) => boolean> {
   const { projectFiles } = context;
-  const ignored = await projectFiles.ignoredPaths();
+  const untracked = await projectFiles.untrackedPaths();
 
-  return (realPath) => !isInstalledPackagePath(realPath) && ignored.has(realPath);
+  return (realPath) => !isInstalledPackagePath(realPath) && untracked.has(realPath);
 }

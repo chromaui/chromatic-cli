@@ -124,14 +124,14 @@ describe('buildManifest storybookFiles', () => {
     // survive, so the tracked helper it imports still moves the preview hash.
     const { disk, input } = createFixture({
       fileHashes: { ...baseHashes },
-      isIgnored: (candidate) => candidate === preview,
+      isUntracked: (candidate) => candidate === preview,
     });
     const before = await buildManifest(makeStats(), input);
 
     disk.fileHashes = { ...baseHashes, [previewHelper]: 'PT2' };
     const after = await buildManifest(makeStats(), input);
 
-    expect([...before.skippedFiles]).toEqual([['./.storybook/preview.ts', 'gitignored']]);
+    expect([...before.skippedFiles]).toEqual([['./.storybook/preview.ts', 'untracked']]);
     expect([...before.attribution.previewSubtree]).toEqual(['./.storybook/theme.ts']);
     expect(before.attribution.storybookGlobals.has('./.storybook/theme.ts')).toBe(false);
     expect(after.storybookConfigHashes.get(previewKey)).not.toBe(
@@ -142,7 +142,7 @@ describe('buildManifest storybookFiles', () => {
   it('leaves the preview hash alone when the gitignored preview itself changes', async () => {
     const { disk, input } = createFixture({
       fileHashes: { ...baseHashes },
-      isIgnored: (candidate) => candidate === preview,
+      isUntracked: (candidate) => candidate === preview,
     });
     const before = await buildManifest(makeStats(), input);
 
@@ -303,7 +303,7 @@ describe('buildManifest attribution of files git ignores', () => {
     return createFixture({
       fileHashes: { [story]: 'S', [preview]: 'P' },
       isAbsent: syntheticAbsent,
-      isIgnored: (candidate) => candidate.includes('generated'),
+      isUntracked: (candidate) => candidate.includes('generated'),
     });
   }
 
@@ -525,7 +525,7 @@ describe('buildManifest of files build tools generate under node_modules', () =>
   function fixture() {
     return createFixture({
       fileHashes: { ...baseHashes },
-      isIgnored: (candidate) => candidate.includes('/node_modules/'),
+      isUntracked: (candidate) => candidate.includes('/node_modules/'),
     });
   }
 
@@ -537,7 +537,7 @@ describe('buildManifest of files build tools generate under node_modules', () =>
 
     expect([...after.storybookConfigHashes]).toEqual([...before.storybookConfigHashes]);
     expect(after.storybookHash).toBe(before.storybookHash);
-    expect(after.skippedFiles.get(secondEntry)).toBe('gitignored');
+    expect(after.skippedFiles.get(secondEntry)).toBe('untracked');
   });
 
   it('moves the globals hash when an installed package changes, though git ignores it too', async () => {

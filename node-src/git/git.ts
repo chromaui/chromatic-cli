@@ -572,41 +572,42 @@ export async function getRepositoryRoot(deps: GitDeps) {
 }
 
 /**
- * The paths git ignores, answered by absolute path; see {@link getIgnoredPaths}. The match is exact,
- * as git names paths, so a caller resolves symlinks before asking.
+ * The paths git does not track, answered by absolute path; see {@link getUntrackedPaths}. The match
+ * is exact, as git names paths, so a caller resolves symlinks before asking.
  */
-export interface IgnoredPaths {
+export interface UntrackedPaths {
   has(absolutePath: string): boolean;
 }
 
 /**
- * Lists what git ignores: every untracked path in the repository that `.gitignore` or another exclude
- * source matches. A tracked file is never ignored, whatever the patterns say, and nor is any path
- * outside the repository.
+ * Lists what git does not track: every path in the repository's working tree that is not in the
+ * index, whether or not `.gitignore` or another exclude source matches it. A tracked file is never
+ * untracked, even with uncommitted edits, and nor is any path outside the repository or inside a
+ * submodule, whose files the superproject never lists.
  *
- * The listing is bounded by the repository's tracked shape rather than by what the ignored
- * directories hold: a directory with nothing but ignored content comes back as one entry, so
+ * The listing is bounded by the repository's tracked shape rather than by what the untracked
+ * directories hold: a directory with nothing tracked beneath it comes back as one entry, so
  * `node_modules` is one line, not a hundred thousand. That is what makes one listing cheaper than
- * one `git check-ignore` call, which also refuses any path that passes through a symlink.
+ * one git call per path.
  *
  * @param deps Function dependencies.
  *
  * @returns The listing, queried by absolute path.
  */
-export async function getIgnoredPaths(deps: GitDeps): Promise<IgnoredPaths> {
+export async function getUntrackedPaths(deps: GitDeps): Promise<UntrackedPaths> {
   const repositoryRoot = await getRepositoryRoot(deps);
   // `--full-name` with the `:/` pathspec lists the whole repository, not just the directory the CLI
   // runs in. Only stdout is parsed, so a stderr warning can't masquerade as a path. The listing is
   // unbounded, so it stays out of the debug log.
   const output = await execGitCommand(
     deps,
-    'git ls-files --others --ignored --exclude-standard --directory -z --full-name -- :/',
+    'git ls-files --others --directory -z --full-name -- :/',
     { all: false, logResult: false }
   );
 
-  // A wholly ignored directory keeps its trailing slash, which `path.join` preserves as the native
+  // A wholly untracked directory keeps its trailing slash, which `path.join` preserves as the native
   // separator, so an entry ending in a separator covers everything beneath it.
-  const ignored = new Set(
+  const untracked = new Set(
     output
       .split(NULL_BYTE)
       .filter(Boolean)
@@ -615,14 +616,14 @@ export async function getIgnoredPaths(deps: GitDeps): Promise<IgnoredPaths> {
 
   return {
     has: (absolutePath) => {
-      if (ignored.has(absolutePath)) {
+      if (untracked.has(absolutePath)) {
         return true;
       }
 
       // Only a directory inside the repository can be in the listing, so the walk up stops there.
       let directory = path.dirname(absolutePath);
       while (directory.startsWith(repositoryRoot + path.sep)) {
-        if (ignored.has(directory + path.sep)) {
+        if (untracked.has(directory + path.sep)) {
           return true;
         }
         directory = path.dirname(directory);
