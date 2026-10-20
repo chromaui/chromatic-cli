@@ -20,7 +20,6 @@ import {
   isPackageManifestFile,
   matchesFile,
 } from '../../utilities';
-import { stripFoldableNul } from '../nulIds';
 import { TraceChangedFilesResult } from '../types';
 
 type FilePath = string;
@@ -45,13 +44,10 @@ const getPackageName = (modulePath: string) => {
   return unscopedName;
 };
 
-// True for a "plain" path id: no NUL virtual prefix, no `?query`, and no `+ N modules` suffix.
-const isPlainId = (name: string) =>
-  name.codePointAt(0) !== 0 && !name.includes('?') && !name.includes(' + ');
-
-// Rank: plain `./` id (3) > plain bare id (2) > `./` facet (1) > anything else (0).
+// Rank: plain `./` id (3) > plain bare id (2) > `./` facet (1) > anything else (0). A plain id has
+// no NUL virtual prefix, no `?query`, and no `+ N modules` suffix.
 const rank = (memberName: string) =>
-  (isPlainId(memberName) ? 2 : 0) + (memberName.startsWith('./') ? 1 : 0);
+  (/^\0|\?| \+ /.test(memberName) ? 0 : 2) + (memberName.startsWith('./') ? 1 : 0);
 
 /**
  * Converts a module path found in the webpack stats to be relative to the (git) root path. Module
@@ -129,7 +125,7 @@ export async function getDependentStoryFiles(
     // `\0./node_modules/react/index.js?commonjs-es-import` normalize to the file they proxy.
     // Opaque NUL ids (`\0commonjsHelpers.js`, `\0vite/preload-helper.js`) name no file, so they
     // keep the NUL and can never match a changed file.
-    const name = stripFoldableNul(posixPath);
+    const name = /^\0\.\.?\//.test(posixPath) ? posixPath.slice(1) : posixPath;
     const newPath = normalizePath(name, rootPath, projectRoot);
     // Trim query params such as `?ngResource` which are sometimes present
     return URL_PARAM_REGEX.test(newPath) && !CSF_REGEX.test(newPath)
@@ -206,20 +202,6 @@ export async function getDependentStoryFiles(
     else membersByName.set(name, [module_]);
   }
 
-  // Track all modules from any node_modules directory by their package name, so we can mark
-  // all those files "changed" if a dependency (version) changes, while still being able to
-  // "untrace" certain files (or globs) in those packages.
-  const trackNodeModules = (memberName: string, name: NormalizedName) => {
-    const packageName = getPackageName(memberName);
-    if (!packageName) return;
-    const names = nodeModules.get(packageName);
-    if (names) {
-      if (!names.includes(name)) names.push(name);
-    } else {
-      nodeModules.set(packageName, [name]);
-    }
-  };
-
   for (const [name, members] of membersByName) {
     // Represent each group by its "plainest" member: a plain path id beats a facet id (one with
     // a NUL prefix or `?query`), and a `./`-prefixed id beats a bare one (the backend matches
@@ -259,7 +241,15 @@ export async function getDependentStoryFiles(
         if (!membersByName.has(innerName)) modulesByName.set(innerName, representative);
       }
 
-      trackNodeModules(member.name, name);
+      // Track all modules from any node_modules directory by their package name, so we can mark
+      // all those files "changed" if a dependency (version) changes, while still being able to
+      // "untrace" certain files (or globs) in those packages.
+      const packageName = getPackageName(member.name);
+      if (packageName) {
+        const names = nodeModules.get(packageName) ?? [];
+        if (!names.includes(name)) names.push(name);
+        nodeModules.set(packageName, names);
+      }
     }
 
     modulesByName.set(name, representative);

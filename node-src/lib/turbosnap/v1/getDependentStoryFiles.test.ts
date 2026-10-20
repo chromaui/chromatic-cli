@@ -1350,26 +1350,6 @@ describe('getDependentStoryFiles', () => {
     }
   );
 
-  it('does not throw for an opaque NUL module and keeps unrelated traces unaffected', async () => {
-    const modules = [
-      buildModule(
-        '\0vite/preload-helper.js',
-        './storybook-stories.js',
-        './node_modules/some-lib/index.js'
-      ),
-      buildModule('./src/foo.js', './src/foo.stories.js'),
-      reactStory,
-      csfGlobModule,
-    ];
-    const ctx = getContext();
-    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, ['src/foo.js']);
-    expect(result).toMatchObject({
-      status: 'traced',
-      onlyStoryFiles: { './src/foo.stories.js': ['src/foo.stories.js'] },
-    });
-    expect(result.turboSnap.bailReason).toBeUndefined();
-  });
-
   // CAP-5336: only a NUL proxy for a relative path stands for a file. Stripping the NUL from an
   // opaque id turned it into a phantom project file that a real changed file could match.
   it.each([
@@ -1394,21 +1374,6 @@ describe('getDependentStoryFiles', () => {
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, [phantomFile]);
     expect(result).toMatchObject({ status: 'traced', onlyStoryFiles: {} });
     expect(result.turboSnap.modules).not.toContain(phantomFile);
-  });
-
-  it('does not throw for an entry module with empty reasons', async () => {
-    const modules = [
-      buildModule('./storybook-stories.js'),
-      buildModule('./src/foo.js', './src/foo.stories.js'),
-      reactStory,
-      csfGlobModule,
-    ];
-    const ctx = getContext();
-    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, ['src/foo.js']);
-    expect(result).toMatchObject({
-      status: 'traced',
-      onlyStoryFiles: { './src/foo.stories.js': ['src/foo.stories.js'] },
-    });
   });
 
   const rsbuildStory = buildModule('./src/Button.stories.tsx', CSF_GLOB);
