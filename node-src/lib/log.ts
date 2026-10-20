@@ -7,6 +7,7 @@ import { format } from 'util';
 
 import { Flags, Options } from '../types';
 import { errorSerializer } from './logSerializers';
+import { scrubSecrets } from './utilities';
 
 interface QueueMessage {
   type: LogType;
@@ -87,7 +88,7 @@ export interface Logger {
   getLevel: () => keyof typeof LOG_LEVELS;
   setLevel: (value: keyof typeof LOG_LEVELS) => void;
   setInteractive: (value: boolean) => void;
-  setLogFile: (path: string | undefined) => void;
+  setLogFile: (path: string | undefined, secrets?: string[]) => void;
   removeLogFile: () => void;
 }
 
@@ -128,7 +129,7 @@ const fileLogger = {
       this.paused = false;
     }
   },
-  initialize(filepath: string, onError: LogFunction) {
+  initialize(filepath: string, onError: LogFunction, secrets: string[]) {
     rm(filepath, { force: true }, (err) => {
       if (err) {
         this.disable();
@@ -140,11 +141,10 @@ const fileLogger = {
         this.stream = createWriteStream(filepath, { flags: 'a' });
         this.filepath = filepath;
         this.append = (...messages: string[]) => {
-          this.stream?.write(
-            messages
-              .reduce((result, message) => result + message + (message === '\n' ? '' : ' '), '')
-              .trim() + '\n'
-          );
+          const line = messages
+            .reduce((result, message) => result + message + (message === '\n' ? '' : ' '), '')
+            .trim();
+          this.stream?.write(scrubSecrets(line, secrets) + '\n');
         };
         if (this.queue.length > 0) this.append(...this.queue);
         this.queue = [];
@@ -213,8 +213,8 @@ export const createLogger = (flags?: Flags, options?: Partial<Options>) => {
     setInteractive(value: boolean) {
       interactive = !!value;
     },
-    setLogFile(path: string | undefined) {
-      if (path) fileLogger.initialize(path, log('error'));
+    setLogFile(path: string | undefined, secrets: string[] = []) {
+      if (path) fileLogger.initialize(path, log('error'), secrets);
       else fileLogger.disable();
     },
     removeLogFile() {

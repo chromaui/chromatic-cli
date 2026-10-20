@@ -201,6 +201,17 @@ describe('log file', () => {
     expect(writes.join('')).toContain('still logged to file');
   });
 
+  it('redacts secrets from the file', () => {
+    const writes = captureFileWrites();
+    const logger = createLogger({ logLevel: 'info' });
+    logger.setLogFile('chromatic.log', ['secret-token']);
+
+    logger.error("No app with code 'secret-token' found");
+
+    expect(writes.join('')).toContain("No app with code '<redacted>' found");
+    expect(writes.join('')).not.toContain('secret-token');
+  });
+
   it('does not write to the file when DISABLE_LOGGING is set', () => {
     process.env.DISABLE_LOGGING = 'true';
     const writes = captureFileWrites();

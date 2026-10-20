@@ -4,7 +4,7 @@ import path from 'path';
 
 import { Context } from '..';
 import wroteReport from '../ui/messages/info/wroteReport';
-import { redact } from './utilities';
+import { getSecrets, redact, scrubSecrets } from './utilities';
 
 const { writeFile } = jsonfile;
 
@@ -57,8 +57,12 @@ export function removeChromaticDiagnostics(ctx: Context) {
 export function getDiagnostics(ctx: Context) {
   // Drop some fields that are not useful to have and redact sensitive fields. The analytics
   // client holds the authenticated GraphQL client, and originalArgv may contain a raw token.
+  // Tokens can also appear inside other strings, such as a package.json script.
   const { analytics, argv, client, env, help, http, log, pkg, title, ...rest } = ctx;
-  const data = redact(rest, 'originalArgv', 'projectToken', 'reportToken', 'userToken');
+  const data = scrubSecrets(
+    redact(rest, 'originalArgv', 'projectToken', 'reportToken', 'userToken'),
+    getSecrets(ctx)
+  );
 
   // Sort top-level fields alphabetically
   return Object.fromEntries(

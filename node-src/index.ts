@@ -32,7 +32,7 @@ import NonTTYRenderer from './lib/nonTTYRenderer';
 import parseArguments from './lib/parseArguments';
 import { exitCodes, setExitCode } from './lib/setExitCode';
 import { uploadMetadataFiles } from './lib/uploadMetadataFiles';
-import { rewriteErrorMessage } from './lib/utilities';
+import { getSecrets, rewriteErrorMessage } from './lib/utilities';
 import {
   removeChromaticDiagnostics,
   writeChromaticDiagnostics,
@@ -185,7 +185,7 @@ export async function runAll(initialContext: InitialContext) {
     ctx = initialContext as Context;
     ctx.options = getOptions(ctx, partialOptions);
     ctx.runtime = { forceRebuild: ctx.options.forceRebuild };
-    ctx.log.setLogFile(ctx.options.logFile);
+    ctx.log.setLogFile(ctx.options.logFile, getSecrets(ctx));
 
     setExitCode(ctx, exitCodes.OK);
   } catch (err) {

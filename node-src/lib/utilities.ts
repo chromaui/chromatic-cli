@@ -105,3 +105,23 @@ export const redact = <T>(value: T, ...fields: string[]): T => {
   }
   return object;
 };
+
+// The credentials given to this run, from flags, options and the environment.
+export const getSecrets = ({ env, flags, options }: Partial<Context>) =>
+  [flags?.projectToken, options?.projectToken, options?.userToken, env?.CHROMATIC_PROJECT_TOKEN]
+    .flat()
+    .filter((secret): secret is string => !!secret);
+
+// Replace every occurrence of the given secrets in any string inside value.
+export const scrubSecrets = <T>(value: T, secrets: string[]): T => {
+  if (typeof value === 'string') {
+    let result: string = value;
+    for (const secret of secrets) result = result.replaceAll(secret, '<redacted>');
+    return result as T;
+  }
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map((item) => scrubSecrets(item, secrets)) as T;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [key, scrubSecrets(item, secrets)])
+  ) as T;
+};
