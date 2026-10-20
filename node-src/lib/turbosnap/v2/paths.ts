@@ -170,8 +170,8 @@ export function stripConcatenatedModuleSuffix(statsPath: FilePath): FilePath {
  * Storybook project root. Relative stats paths are first resolved from `statsRoot`, because a
  * builder may name them from the repository root even though manifest keys anchor at the project.
  * Stats ids are folded onto the file they stand for by the caller before they reach here (see
- * {@link foldStatsId}): this function also keys real on-disk paths, where a literal `?` can be
- * part of the filename. Synthetic modules (e.g. Vite's `virtual:` entries and inline `data:` URLs)
+ * {@link foldStatsId}): this function also keys real on-disk paths, where a literal `?` or `!` can
+ * be part of the filename. Synthetic modules (e.g. Vite's `virtual:` entries and inline `data:` URLs)
  * have no on-disk location and are returned unchanged.
  *
  * @param statsPath The module name from the stats file (relative like `./src/x` or absolute).
@@ -225,27 +225,36 @@ function prefixInProjectPath(relativePath: FilePath): FilePath {
  *
  * Every stats id is folded exactly once, where it enters the graph (see {@link canonicalFileNames},
  * {@link canonicalImporters} and the on-disk locator in statsGraph). The shared normalizers never
- * fold: they also key real disk paths, where a `?` is part of the filename.
+ * fold: they also key real disk paths, where a `?` or `!` is part of the filename.
  *
  * @param statsPath The module name from the stats file.
  *
  * @returns The path of the file the id stands for, or the id unchanged when synthetic.
  */
 export function foldStatsId(statsPath: FilePath): FilePath {
+  // The whole id is checked first: a bare data URL can carry a `!` in its payload.
   if (isSyntheticFile(statsPath) || CONTEXT_MARKER.test(statsPath)) {
     return statsPath;
   }
 
+  // The resource a loader chain loads is folded by the same rules as a bare id.
+  const resource = stripLoaderChain(statsPath);
+  if (isSyntheticFile(resource)) {
+    return resource;
+  }
+
   // A NUL proxy for a relative path stands for that path, without the NUL or the query.
-  const unproxied = statsPath.startsWith(NUL) ? statsPath.slice(NUL.length) : statsPath;
-  return stripQuery(stripLoaderChain(unproxied));
+  const unproxied = resource.startsWith(NUL) ? resource.slice(NUL.length) : resource;
+  return stripQuery(unproxied);
 }
 
 /**
  * Strips a webpack loader chain from a stats id, leaving the resource it loads. The resource is
  * whatever follows the last `!`, which covers plain chains, the `!`, `!!` and `-!` prefixes and the
- * `matchResource!=!loaders!resource` form alike. A path with a literal `!` is mis-read the same way
- * by webpack itself, which splits every request on `!`.
+ * `matchResource!=!loaders!resource` form alike. Every `!` is read as a chain separator, so a file
+ * whose own name contains `!` (`./src/!important.css`) folds onto the wrong path. webpack splits
+ * import requests on `!` too, but a Vite id has no loader chain, so there the rule is a known
+ * tradeoff rather than a match for the builder.
  *
  * @param statsPath The module name from the stats file.
  *

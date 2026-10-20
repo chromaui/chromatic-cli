@@ -181,19 +181,6 @@ describe('canonicalImporters', () => {
       expected: ['./src/Foo.vue'],
     },
     {
-      name: 'folds a loader chain reason moduleName onto the loaded resource',
-      module: module({
-        name: '../../node_modules/css-loader/dist/runtime/api.js',
-        reasons: [
-          {
-            moduleName:
-              '../../node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./src/styles.module.css',
-          },
-        ],
-      }),
-      expected: ['./src/styles.module.css'],
-    },
-    {
       name: 'returns nothing when the module has no reasons',
       module: module({ name: './src/Button.tsx' }),
       expected: [],
@@ -345,6 +332,16 @@ describe('foldStatsId', () => {
       id: '../../node_modules/x-loader/index.js!./node_modules/es5-ext/array/\0#/e-index-of.js',
       expected: './node_modules/es5-ext/array/\0#/e-index-of.js',
     },
+    {
+      name: 'a loader chain whose resource is a NUL proxy',
+      id: '../../node_modules/x-loader/index.js!\0./src/a.js?commonjs-module',
+      expected: './src/a.js',
+    },
+    {
+      name: 'a loader chain whose resource is an inline data URL',
+      id: '../../node_modules/url-loader/index.js!data:text/css,a?b',
+      expected: 'data:text/css,a?b',
+    },
   ])('folds $name onto the file it stands for', ({ id, expected }) => {
     expect(foldStatsId(id)).toBe(expected);
   });
@@ -355,6 +352,7 @@ describe('foldStatsId', () => {
     ['an absolute opaque id', '\0/@data-uri/data:text/javascript,export default 1'],
     ['a virtual module', 'virtual:@storybook/builder-vite/vite-app.js'],
     ['an inline data URL', 'data:font/ttf;base64,AAAAAAAAAAAAAAAAAA'],
+    ['an inline data URL with a ! in its payload', 'data:text/javascript,alert("a!b?c")'],
   ])('leaves %s unchanged, since no file stands behind it', (_name, id) => {
     expect(foldStatsId(id)).toBe(id);
   });

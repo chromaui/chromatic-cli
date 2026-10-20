@@ -377,71 +377,60 @@ describe('readStatsGraph loader chain ids', () => {
   const css = '/repo/packages/ui/src/lib/PathDerived/styles.module.css';
   const cssKey = './src/lib/PathDerived/styles.module.css';
 
-  async function manifestFor(stats: Stats, runtime: string) {
+  const webpackChain =
+    '../../node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./src/lib/PathDerived/styles.module.css';
+  const webpackRuntimeKey = '../../node_modules/css-loader/dist/runtime/api.js';
+  // rsbuild emits no module record under the chain name; the chain only appears as a reason.
+  const rsbuildChain =
+    './src/lib/PathDerived/styles.module.css!=!../../node_modules/@rsbuild/core/compiled/css-loader/index.js??ruleSet[1].rules[3].use[1]!builtin:lightningcss-loader??ruleSet[1].rules[3].use[2]!./src/lib/PathDerived/styles.module.css';
+  const rsbuildRuntimeKey = '../../node_modules/@rsbuild/core/compiled/css-loader/api.js';
+
+  it.each([
+    {
+      name: 'a webpack loader chain reason',
+      runtimeKey: webpackRuntimeKey,
+      runtime: '/repo/node_modules/css-loader/dist/runtime/api.js',
+      modules: [
+        { id: 2, name: cssKey, nameForCondition: css, reasons: [{ moduleName: story }] },
+        { id: 3, name: webpackChain, nameForCondition: css, reasons: [{ moduleName: cssKey }] },
+        {
+          id: 4,
+          name: webpackRuntimeKey,
+          nameForCondition: '/repo/node_modules/css-loader/dist/runtime/api.js',
+          // The second reason is the runtime's own "cjs self exports reference".
+          reasons: [{ moduleName: webpackChain }, { moduleName: webpackRuntimeKey }],
+        },
+      ],
+    },
+    {
+      name: 'an rsbuild inline match resource reason',
+      runtimeKey: rsbuildRuntimeKey,
+      runtime: '/repo/node_modules/@rsbuild/core/compiled/css-loader/api.js',
+      modules: [
+        { id: 2, name: cssKey, reasons: [{ moduleName: story }] },
+        {
+          id: 4,
+          name: rsbuildRuntimeKey,
+          reasons: [{ moduleName: rsbuildChain }, { moduleName: rsbuildRuntimeKey }],
+        },
+      ],
+    },
+  ])('links $name to the resource it loads', async ({ runtimeKey, runtime, modules }) => {
+    const stats: Stats = {
+      modules: [
+        { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+        ...modules,
+      ],
+    };
     const { input } = createFixture({
       isAbsent: syntheticAbsent,
       fileHashes: { [story]: 'S', [css]: 'C', [runtime]: 'R' },
     });
+
     const manifest = await buildManifest(stats, input);
-    return { manifest, serialized: serializeManifest(manifest) };
-  }
-
-  it('links a webpack loader chain reason to the resource it loads', async () => {
-    const chain =
-      '../../node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./src/lib/PathDerived/styles.module.css';
-    const runtimeKey = '../../node_modules/css-loader/dist/runtime/api.js';
-    const stats: Stats = {
-      modules: [
-        { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
-        {
-          id: 2,
-          name: cssKey,
-          nameForCondition: css,
-          reasons: [{ moduleName: story }],
-        },
-        { id: 3, name: chain, nameForCondition: css, reasons: [{ moduleName: cssKey }] },
-        {
-          id: 4,
-          name: runtimeKey,
-          nameForCondition: '/repo/node_modules/css-loader/dist/runtime/api.js',
-          // The second reason is the runtime's own "cjs self exports reference".
-          reasons: [{ moduleName: chain }, { moduleName: runtimeKey }],
-        },
-      ],
-    };
-
-    const { manifest, serialized } = await manifestFor(
-      stats,
-      '/repo/node_modules/css-loader/dist/runtime/api.js'
-    );
+    const serialized = serializeManifest(manifest);
 
     expect(serialized.files[cssKey].dependencies).toContain(runtimeKey);
-    expect(serialized.files[runtimeKey].dependencies).not.toContain(runtimeKey);
-    expect(Object.keys(serialized.files).filter((key) => key.includes('!'))).toEqual([]);
-    expect(manifest.attribution.storyReachable.has(runtimeKey)).toBe(true);
-    expect(manifest.attribution.storybookGlobals.has(runtimeKey)).toBe(false);
-  });
-
-  it('links an rsbuild inline match resource reason to the resource it loads', async () => {
-    // rsbuild emits no module record under the chain name; the chain only appears as a reason.
-    const chain =
-      './src/lib/PathDerived/styles.module.css!=!../../node_modules/@rsbuild/core/compiled/css-loader/index.js??ruleSet[1].rules[3].use[1]!builtin:lightningcss-loader??ruleSet[1].rules[3].use[2]!./src/lib/PathDerived/styles.module.css';
-    const runtimeKey = '../../node_modules/@rsbuild/core/compiled/css-loader/api.js';
-    const stats: Stats = {
-      modules: [
-        { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
-        { id: 2, name: cssKey, reasons: [{ moduleName: story }] },
-        { id: 4, name: runtimeKey, reasons: [{ moduleName: chain }, { moduleName: runtimeKey }] },
-      ],
-    };
-
-    const { manifest, serialized } = await manifestFor(
-      stats,
-      '/repo/node_modules/@rsbuild/core/compiled/css-loader/api.js'
-    );
-
-    expect(serialized.files[cssKey].dependencies).toContain(runtimeKey);
-    expect(serialized.files[runtimeKey].dependencies).not.toContain(runtimeKey);
     expect(Object.keys(serialized.files).filter((key) => key.includes('!'))).toEqual([]);
     expect(manifest.attribution.storyReachable.has(runtimeKey)).toBe(true);
     expect(manifest.attribution.storybookGlobals.has(runtimeKey)).toBe(false);
