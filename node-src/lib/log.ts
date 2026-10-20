@@ -7,6 +7,7 @@ import { format } from 'util';
 
 import { Flags, Options } from '../types';
 import { errorSerializer } from './logSerializers';
+import { scrubSecrets } from './utilities';
 
 interface QueueMessage {
   type: LogType;
@@ -88,6 +89,7 @@ export interface Logger {
   setLevel: (value: keyof typeof LOG_LEVELS) => void;
   setInteractive: (value: boolean) => void;
   setLogFile: (path: string | undefined) => void;
+  setSecrets: (secrets: string[]) => void;
   removeLogFile: () => void;
 }
 
@@ -95,6 +97,7 @@ const fileLogger = {
   queue: [] as string[],
   stream: undefined as ReturnType<typeof createWriteStream> | undefined,
   filepath: undefined as string | undefined,
+  secrets: [] as string[],
   paused: false,
   append(...messages: string[]) {
     this.queue.push(...messages, '\n');
@@ -140,11 +143,10 @@ const fileLogger = {
         this.stream = createWriteStream(filepath, { flags: 'a' });
         this.filepath = filepath;
         this.append = (...messages: string[]) => {
-          this.stream?.write(
-            messages
-              .reduce((result, message) => result + message + (message === '\n' ? '' : ' '), '')
-              .trim() + '\n'
-          );
+          const line = messages
+            .reduce((result, message) => result + message + (message === '\n' ? '' : ' '), '')
+            .trim();
+          this.stream?.write(scrubSecrets(line, this.secrets) + '\n');
         };
         if (this.queue.length > 0) this.append(...this.queue);
         this.queue = [];
@@ -216,6 +218,10 @@ export const createLogger = (flags?: Flags, options?: Partial<Options>) => {
     setLogFile(path: string | undefined) {
       if (path) fileLogger.initialize(path, log('error'));
       else fileLogger.disable();
+    },
+    // Replace these values with <redacted> in everything written to the log file.
+    setSecrets(secrets: string[]) {
+      fileLogger.secrets = secrets;
     },
     removeLogFile() {
       fileLogger.remove();
