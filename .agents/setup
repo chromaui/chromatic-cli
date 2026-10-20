@@ -19,7 +19,8 @@ node_dir="$HOME/.local/share/node/node-v$node_version-$platform"
 
 echo "==> Installing Node.js $node_version from .tool-versions"
 if [[ ! -x "$node_dir/bin/node" ]] || [[ "$("$node_dir/bin/node" --version)" != "v$node_version" ]]; then
-  download_dir="$(mktemp -d)"
+  mkdir -p "$(dirname "$node_dir")"
+  download_dir="$(mktemp -d "$node_dir.tmp.XXXXXX")"
   trap 'rm -rf -- "$download_dir"' EXIT
   archive="node-v$node_version-$platform.tar.xz"
   for file in "$archive" SHASUMS256.txt; do
@@ -28,8 +29,10 @@ if [[ ! -x "$node_dir/bin/node" ]] || [[ "$("$node_dir/bin/node" --version)" != 
       "https://nodejs.org/dist/v$node_version/$file" --output "$download_dir/$file"
   done
   (cd "$download_dir"; grep "  $archive\$" SHASUMS256.txt | sha256sum --check --status)
-  mkdir -p "$node_dir"
-  tar -xJf "$download_dir/$archive" --strip-components=1 -C "$node_dir"
+  mkdir "$download_dir/install"
+  tar -xJf "$download_dir/$archive" --strip-components=1 -C "$download_dir/install"
+  rm -rf -- "$node_dir"
+  mv -- "$download_dir/install" "$node_dir"
   rm -rf -- "$download_dir"
   trap - EXIT
 fi
