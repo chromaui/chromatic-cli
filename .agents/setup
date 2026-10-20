@@ -9,60 +9,45 @@ if [[ "$(git rev-parse --is-shallow-repository)" == true ]]; then
   time timeout 120s git fetch --quiet --unshallow origin
 fi
 
-readonly MISE_VERSION='v2026.8.14'
-readonly MISE_SHA256='7cd12d6002d5b3c83a89cad79023712faf2a36f9e8b2ee2061dac5135b3de0ed'
-readonly MISE_BIN="$HOME/.local/bin/mise"
+node_version="$(awk '$1 == "nodejs" { print $2 }' .tool-versions)"
+case "$(uname -s)/$(uname -m)" in
+  Linux/x86_64) platform=linux-x64 ;;
+  Linux/aarch64) platform=linux-arm64 ;;
+  *) echo 'Expected a Linux x64 or arm64 orb' >&2; exit 1 ;;
+esac
+node_dir="$HOME/.local/share/node/node-v$node_version-$platform"
 
-echo "==> Installing mise $MISE_VERSION"
-mkdir -p -- "$(dirname "$MISE_BIN")"
-if [[ ! -x "$MISE_BIN" ]] || [[ "$("$MISE_BIN" --version | awk '{print $1}')" != "${MISE_VERSION#v}" ]]; then
-  mise_tmp="$(mktemp)"
-  trap 'rm -f -- "$mise_tmp"' EXIT
-  timeout 90s curl --fail --location --silent --show-error \
-    --connect-timeout 15 --max-time 75 --retry 2 \
-    "https://github.com/jdx/mise/releases/download/$MISE_VERSION/mise-$MISE_VERSION-linux-x64" \
-    --output "$mise_tmp"
-  printf '%s  %s\n' "$MISE_SHA256" "$mise_tmp" | sha256sum --check --status
-  install -m 0755 -- "$mise_tmp" "$MISE_BIN"
-  rm -f -- "$mise_tmp"
+echo "==> Installing Node.js $node_version from .tool-versions"
+if [[ ! -x "$node_dir/bin/node" ]] || [[ "$("$node_dir/bin/node" --version)" != "v$node_version" ]]; then
+  download_dir="$(mktemp -d)"
+  trap 'rm -rf -- "$download_dir"' EXIT
+  archive="node-v$node_version-$platform.tar.xz"
+  for file in "$archive" SHASUMS256.txt; do
+    curl --fail --location --silent --show-error \
+      --connect-timeout 15 --max-time 120 --retry 2 \
+      "https://nodejs.org/dist/v$node_version/$file" --output "$download_dir/$file"
+  done
+  (cd "$download_dir"; grep "  $archive\$" SHASUMS256.txt | sha256sum --check --status)
+  mkdir -p "$node_dir"
+  tar -xJf "$download_dir/$archive" --strip-components=1 -C "$node_dir"
+  rm -rf -- "$download_dir"
   trap - EXIT
 fi
 
-# Future agent and service login shells must use the repository's toolchain too.
-profile="$HOME/.bash_profile"
-repo_root="$PWD"
-profile_marker="# Chromatic CLI toolchain: $repo_root"
-if [[ ! -f "$profile" ]]; then
-  cat > "$profile" <<'EOF_PROFILE'
-# Preserve Bash's previous login initialization before adding orb-specific setup.
-if [[ -f "$HOME/.bash_login" ]]; then
-  source "$HOME/.bash_login"
-elif [[ -f "$HOME/.profile" ]]; then
-  source "$HOME/.profile"
-fi
-EOF_PROFILE
-fi
-if ! grep -Fqx "$profile_marker" "$profile"; then
-  cat >> "$profile" <<EOF_PROFILE
-
-$profile_marker
-if [[ -x "$MISE_BIN" && ( "\$PWD" == "$repo_root" || "\$PWD" == "$repo_root/"* ) ]]; then
-  eval "\$("$MISE_BIN" env --shell bash)"
-fi
-EOF_PROFILE
-fi
-
-echo '==> Installing the toolchain from .tool-versions'
-time timeout 300s "$MISE_BIN" install --yes
+# Use the orb's normal PATH so agent and service shells need no profile hooks.
+for binary in node npm npx corepack; do
+  ln -sfn "$node_dir/bin/$binary" "/usr/local/bin/$binary"
+done
+export PATH="/usr/local/bin:$PATH"
 
 # Corepack reads packageManager from package.json; do not duplicate its version here.
 echo '==> Enabling the pinned package manager'
-time timeout 30s "$MISE_BIN" exec -- corepack enable
-time timeout 120s "$MISE_BIN" exec -- corepack install
+time timeout 30s corepack enable --install-directory /usr/local/bin
+time timeout 120s corepack install
 
 echo '==> Installing immutable dependencies'
-time CI=1 timeout 600s "$MISE_BIN" exec -- yarn install --immutable
+time CI=1 timeout 600s yarn install --immutable
 
 echo '==> Installed toolchain'
-"$MISE_BIN" exec -- node --version
-"$MISE_BIN" exec -- yarn --version
+node --version
+yarn --version
