@@ -9,43 +9,44 @@ if [[ "$(git rev-parse --is-shallow-repository)" == true ]]; then
   time timeout 120s git fetch --quiet --unshallow origin
 fi
 
-node_version="$(awk '$1 == "nodejs" { print $2 }' .tool-versions)"
-case "$(uname -s)/$(uname -m)" in
-  Linux/x86_64) platform=linux-x64 ;;
-  Linux/aarch64) platform=linux-arm64 ;;
-  *) echo 'Expected a Linux x64 or arm64 orb' >&2; exit 1 ;;
-esac
-node_dir="$HOME/.local/share/node/node-v$node_version-$platform"
-
-echo "==> Installing Node.js $node_version from .tool-versions"
-if [[ ! -x "$node_dir/bin/node" ]] || [[ "$("$node_dir/bin/node" --version)" != "v$node_version" ]]; then
-  mkdir -p "$(dirname "$node_dir")"
-  download_dir="$(mktemp -d "$node_dir.tmp.XXXXXX")"
-  trap 'rm -rf -- "$download_dir"' EXIT
-  archive="node-v$node_version-$platform.tar.xz"
-  for file in "$archive" SHASUMS256.txt; do
-    curl --fail --location --silent --show-error \
-      --connect-timeout 15 --max-time 120 --retry 2 \
-      "https://nodejs.org/dist/v$node_version/$file" --output "$download_dir/$file"
-  done
-  (cd "$download_dir"; grep "  $archive\$" SHASUMS256.txt | sha256sum --check --status)
-  mkdir "$download_dir/install"
-  tar -xJf "$download_dir/$archive" --strip-components=1 -C "$download_dir/install"
-  rm -rf -- "$node_dir"
-  mv -- "$download_dir/install" "$node_dir"
-  rm -rf -- "$download_dir"
-  trap - EXIT
+export PATH="$HOME/.local/bin:$PATH"
+if ! command -v mise >/dev/null 2>&1; then
+  echo '==> Installing mise'
+  curl --fail --location --silent --show-error --connect-timeout 15 --max-time 120 \
+    https://mise.run | MISE_VERSION=v2026.10.15 timeout 120s sh
 fi
+mise_bin="$(command -v mise)"
 
-# Use the orb's normal PATH so agent and service shells need no profile hooks.
-for binary in node npm npx corepack; do
-  ln -sfn "$node_dir/bin/$binary" "/usr/local/bin/$binary"
-done
-export PATH="/usr/local/bin:$PATH"
+echo '==> Installing the toolchain from .tool-versions'
+time timeout 300s "$mise_bin" install --yes
+eval "$("$mise_bin" env --shell bash)"
+
+# Non-interactive login shells do not run mise's interactive prompt hook.
+profile="$HOME/.bash_profile"
+profile_marker="# Chromatic CLI toolchain: $PWD"
+if [[ ! -e "$profile" ]]; then
+  cat > "$profile" <<'EOF_PROFILE'
+# Preserve Bash's previous login initialization.
+if [[ -r "$HOME/.bash_login" ]]; then
+  source "$HOME/.bash_login"
+elif [[ -r "$HOME/.profile" ]]; then
+  source "$HOME/.profile"
+fi
+EOF_PROFILE
+fi
+if ! grep -Fqx "$profile_marker" "$profile"; then
+  cat >> "$profile" <<EOF_PROFILE
+
+$profile_marker
+if [[ -x "$mise_bin" && ( "\$PWD" == "$PWD" || "\$PWD" == "$PWD/"* ) ]]; then
+  eval "\$("$mise_bin" env --shell bash)"
+fi
+EOF_PROFILE
+fi
 
 # Corepack reads packageManager from package.json; do not duplicate its version here.
 echo '==> Enabling the pinned package manager'
-time timeout 30s corepack enable --install-directory /usr/local/bin
+time timeout 30s corepack enable
 time timeout 120s corepack install
 
 echo '==> Installing immutable dependencies'
