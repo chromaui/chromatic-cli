@@ -1,5 +1,6 @@
 import * as turbosnap from '@cli/turbosnap';
 
+import { isTurboSnapV1Enabled, shouldTraceWithV1 } from '../../lib/turbosnap/shouldTraceWithV1';
 import { groupUntracedFilesByGlob, rewriteErrorMessage } from '../../lib/utilities';
 import { Context, Deps } from '../../types';
 import { bailed, traced, tracing } from '../../ui/tasks/prepare';
@@ -27,9 +28,12 @@ export interface TraceChangedFilesOutput {
  * @param deps - Logger, options, and the mid-task reporter.
  * @param input - The CLI context the TurboSnap lib reads; trace results are written back to it.
  *
- * @returns The affected story files, or none when TurboSnap was not requested or bailed.
+ * @returns An object with picomatch-escaped affected module IDs in `onlyStoryFiles`, or `{}` when
+ * tracing is skipped, bails, or fails while TurboSnap v1 is disabled. An empty `onlyStoryFiles`
+ * array means no stories are affected.
  *
- * @throws {Error} if stats file is missing or tracing fails
+ * @throws {Error} When TurboSnap v1 is enabled and stats loading or tracing fails. The error
+ * message is prefixed with context about retrieving dependent files.
  */
 // TODO: refactor this function
 // eslint-disable-next-line complexity
@@ -39,11 +43,7 @@ export async function traceChangedFiles(
 ): Promise<TraceChangedFilesOutput> {
   const ctx = input.turboSnapContext;
 
-  // The lib still collects hashes when this is false, and that build must stay silent and must
-  // never fail because of it.
-  const runTurboSnapV1 = !!ctx.turboSnap && !ctx.turboSnap.unavailable;
-
-  if (runTurboSnapV1) {
+  if (shouldTraceWithV1(ctx)) {
     deps.report(tracing({ git: ctx.git, options: deps.options }));
   }
 
@@ -89,7 +89,9 @@ export async function traceChangedFiles(
     deps.report(traced({ options: deps.options, onlyStoryFiles: escaped }));
     return { onlyStoryFiles: escaped };
   } catch (err) {
-    if (!runTurboSnapV1) {
+    // The lib still collects hashes when TurboSnap v1 is disabled, and that build must stay
+    // silent and must never fail because of it.
+    if (!isTurboSnapV1Enabled(ctx)) {
       return {};
     }
 

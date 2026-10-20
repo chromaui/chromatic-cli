@@ -1,7 +1,7 @@
 import { environment, options } from '../../renderer/storybook/fixtures';
 import task from '../components/task';
 import { BuildHasChangesNotOnboarding } from '../messages/errors/buildHasChanges.stories';
-import { BuildPassed, FirstBuildPassed } from '../messages/info/buildPassed.stories';
+import { BuildPassed, FirstBuildPassed } from '../messages/info/buildSummary.stories';
 import { Intro } from '../messages/info/intro.stories';
 import { StorybookPublished } from '../messages/info/storybookPublished.stories';
 import { authenticated, authenticating, initial } from '../tasks/auth';

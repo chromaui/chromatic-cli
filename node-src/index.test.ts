@@ -302,7 +302,9 @@ vi.mock('fs', async (importOriginal) => {
       if (path.endsWith('/package.json')) return fsStatSync(path); // for meow
       return { isDirectory: () => false, size: 42 };
     }),
-    existsSync: vi.fn((_path) => {
+    existsSync: vi.fn((path) => {
+      // No chromatic config file exists in the test environment
+      if (String(path).startsWith('chromatic.config.json')) return false;
       return true;
     }),
     access: vi.fn((_path, callback) => Promise.resolve(callback(undefined))),
