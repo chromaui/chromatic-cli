@@ -4102,7 +4102,6 @@ __metadata:
     env-ci: "npm:^11.1.0"
     eslint: "npm:^9.39.4"
     eslint-plugin-jsdoc: "npm:^62.4.1"
-    eslint-plugin-no-secrets: "npm:^2.2.1"
     eslint-plugin-prettier: "npm:^5.5.5"
     eslint-plugin-security: "npm:^3.0.1"
     eslint-plugin-simple-import-sort: "npm:^12.1.1"
@@ -5058,15 +5057,6 @@ __metadata:
   peerDependencies:
     eslint: ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0
   checksum: 10c0/c3a9abbe3a5dacf585dba8953f155910f9d69341d432cb0edd1fcb3ed9762e642a95f8b4aac24603a2319d5d892a2fba875b55c50367e8dd2330c4caefb115c0
-  languageName: node
-  linkType: hard
-
-"eslint-plugin-no-secrets@npm:^2.2.1":
-  version: 2.3.3
-  resolution: "eslint-plugin-no-secrets@npm:2.3.3"
-  peerDependencies:
-    eslint: ">=5"
-  checksum: 10c0/c31ff296570360e93ac2409598d631c1e4177879f11c73305f9757352ff3471ed73e71b9eafc3d3601d16463f5dad2334ab7f3be0bed1dfa99f13a97ada4fba0
   languageName: node
   linkType: hard
 
