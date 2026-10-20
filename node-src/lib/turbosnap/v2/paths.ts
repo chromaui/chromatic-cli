@@ -113,12 +113,12 @@ export function isNodeModulesPath(filePath: string): boolean {
 const NUL = '\0';
 const FOLDABLE_NUL_PREFIXES = [`${NUL}./`, `${NUL}../`];
 
-// Webpack names a require.context by its mode and the include glob, e.g. `./icons lazy ^\\.\\/.*\\.svg`.
+// Webpack names a require.context by its mode and the include glob, e.g. `./icons/ lazy ^\\.\\/.*\\.svg`.
 // Webpack writes the mode after a space (`./src/ sync`, `./src/lib/ lazy`) and appends
-// ` nonrecursive` before the glob only when recursion is off; older webpack and rsbuild context
-// names omit the slash before the space. The modes are sync, eager, weak, async-weak, lazy and
-// lazy-once, and rspack delimits the same mode markers with pipes. A context name is a glob
-// expression rather than a file path, so its `?` starts no query.
+// ` nonrecursive` before the glob only when recursion is off; older webpack omits the slash
+// before the space. The modes are sync, eager, weak, async-weak, lazy and lazy-once, and rspack
+// delimits the same mode markers with pipes. A context name is a glob expression rather than a
+// file path, so its `?` starts no query.
 const CONTEXT_MODES = ['sync', 'eager', 'weak', 'async-weak', 'lazy', 'lazy-once'];
 // Story detection only reads lazy contexts, and only the plain lazy mode: lazy-once resolves its
 // group once up front rather than per story.
