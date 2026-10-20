@@ -207,8 +207,8 @@ function prefixInProjectPath(relativePath: FilePath): FilePath {
  * NUL-prefixed proxy for CommonJS interop and framework blocks (`\0./x.js?commonjs-module`), and
  * the plain path with a builder query (`./src/Foo.vue?vue&type=script`). Folding every spelling
  * onto the one file is what keeps a module and its dependency edges in the manifest under a key
- * that names a real file. V1 does not fold (its fix is CAP-5106): it joins these ids as-is, query
- * included, so its keys for them differ from the folded ones.
+ * that names a real file. V1 applies the same NUL and query rule when it groups colliding modules
+ * (see `getDependentStoryFiles`).
  *
  * A NUL followed by anything but `./` or `../` — an absolute or otherwise opaque id such as
  * `\0/@data-uri/data:text/javascript,...` — is synthetic and passes through unchanged: the
