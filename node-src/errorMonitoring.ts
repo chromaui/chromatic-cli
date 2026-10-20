@@ -47,7 +47,6 @@ export function filterBreadcrumb(breadcrumb: Sentry.Breadcrumb) {
 }
 
 Sentry.init({
-  // eslint-disable-next-line no-secrets/no-secrets -- Sentry DSNs are public
   dsn: 'https://4fa173db2ef3fb073b8ea153a5466d28@o4504181686599680.ingest.us.sentry.io/4507930289373184',
   release: process.env.SENTRY_RELEASE || process.env.npm_package_version,
   dist: process.env.SENTRY_DIST,

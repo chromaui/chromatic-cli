@@ -1,4 +1,3 @@
-/* eslint-disable no-secrets/no-secrets -- sample stack traces */
 import brokenStorybook from './brokenStorybook';
 
 export default {

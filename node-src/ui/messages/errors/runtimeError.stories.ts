@@ -1,4 +1,3 @@
-/* eslint-disable no-secrets/no-secrets -- sample stack traces */
 import runtimeError from './runtimeError';
 
 export default {

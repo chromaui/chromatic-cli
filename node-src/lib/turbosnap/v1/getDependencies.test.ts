@@ -75,7 +75,6 @@ describe('getDependencies', () => {
     const dependencyNames = dependencies.getDepPkgs().map((pkg) => pkg.name);
     expect(dependencyNames).toEqual(
       expect.arrayContaining([
-        // eslint-disable-next-line no-secrets/no-secrets -- permalink
         // @see https://github.com/chromaui/chromatic-cli/blob/e61c2688597a6fda61a7057c866ebfabde955784/package.json#L75-L170
         '@discoveryjs/json-ext',
         '@types/webpack-env',

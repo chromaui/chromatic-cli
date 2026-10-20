@@ -1,7 +1,6 @@
 import eslint from '@eslint/js';
 import comments from '@eslint-community/eslint-plugin-eslint-comments/configs';
 import jsdoc from 'eslint-plugin-jsdoc';
-import noSecrets from 'eslint-plugin-no-secrets';
 import prettier from 'eslint-plugin-prettier';
 import security from 'eslint-plugin-security';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
@@ -175,27 +174,6 @@ export default [
       'security/detect-unsafe-regex': 'off',
     },
   },
-  {
-    files: ['**/*.js', '**/*.ts'],
-    plugins: {
-      'no-secrets': noSecrets,
-    },
-    rules: {
-      'no-secrets/no-secrets': [
-        'error',
-        {
-          // The plugin skips a whole string when any pattern matches, so keep these anchored.
-          ignoreContent: [
-            String.raw`^(https://www\.chromatic\.com/|/var/folders/)`,
-            // Published Storybook URLs (app ID and build hash)
-            String.raw`^https://[\da-f]{24}-[a-z]{10}\.chromatic\.com/`,
-            // Permalinks to this repository
-            String.raw`^https://github\.com/chromaui/chromatic-cli/blob/[\da-f]{40}/`,
-          ],
-        },
-      ],
-    },
-  },
   // run prettier and expose problems as linting errors
   // NOTE: This does slow down eslint (about 25% slower)
   // If this becomes problematic, we can discuss removing it
@@ -277,7 +255,6 @@ export default [
   {
     files: ['**/*.test.*'],
     rules: {
-      'no-secrets/no-secrets': 'warn',
       'max-lines': 'warn',
       'jsdoc/require-jsdoc': 'off',
       'unicorn/no-null': 'off', // GraphQL returns `null` when there is no value

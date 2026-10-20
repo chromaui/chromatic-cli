@@ -7,7 +7,6 @@ import { commitExists, getVisitedCommitDetails } from './git';
 
 export const FETCH_N_INITIAL_BUILD_COMMITS = 20;
 
-// eslint-disable-next-line no-secrets/no-secrets -- GraphQL query
 const FirstCommittedAtQuery = gql`
   query FirstCommittedAtQuery($branch: String!, $localBuilds: LocalBuildsSpecifierInput!) {
     app {
@@ -33,7 +32,6 @@ interface FirstCommittedAtQueryResult {
   };
 }
 
-// eslint-disable-next-line no-secrets/no-secrets -- GraphQL query
 const HasBuildsWithCommitsQuery = gql`
   query HasBuildsWithCommitsQuery($commits: [String!]!, $localBuilds: LocalBuildsSpecifierInput!) {
     app {

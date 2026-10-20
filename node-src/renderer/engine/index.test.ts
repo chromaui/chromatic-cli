@@ -279,7 +279,6 @@ describe('runTask', () => {
     await expect(runTask(ctx, config, renderer)).rejects.toThrow('Command failed');
 
     expect(ctx.exitCode).toBe(exitCodes.NPM_BUILD_STORYBOOK_FAILED);
-    // eslint-disable-next-line no-secrets/no-secrets -- exit code name
     expect(ctx.exitCodeKey).toBe('NPM_BUILD_STORYBOOK_FAILED');
     expect(ctx.userError).toBe(true);
     expect(calls.some((c) => c.hook === 'fail')).toBe(true);

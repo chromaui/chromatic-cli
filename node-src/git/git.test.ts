@@ -172,11 +172,9 @@ describe('getSlug', () => {
     execGitCommand.mockResolvedValue('https://dev.azure.com/org/My%20Project/_git/My%20Repo');
     expect(await getSlug(ctx)).toBe('my project/my repo');
 
-    // eslint-disable-next-line no-secrets/no-secrets -- sample remote URL
     execGitCommand.mockResolvedValue('git@ssh.dev.azure.com:v3/org/My%20Project/My%20Repo');
     expect(await getSlug(ctx)).toBe('my project/my repo');
 
-    // eslint-disable-next-line no-secrets/no-secrets -- sample remote URL
     execGitCommand.mockResolvedValue('https://org.visualstudio.com/My%20Project/_git/My%20Repo');
     expect(await getSlug(ctx)).toBe('my project/my repo');
   });
@@ -569,7 +567,6 @@ describe('getCloneDepth', () => {
   });
 });
 
-// eslint-disable-next-line no-secrets/no-secrets -- function name
 describe('getShallowBoundaryCommits', () => {
   it('returns the boundary commits listed in the shallow file', async () => {
     execGitCommandOneLine.mockResolvedValue('/path/to/.git/shallow');

@@ -46,7 +46,6 @@ describe('matchesFile', () => {
   });
 });
 
-// eslint-disable-next-line no-secrets/no-secrets -- function name
 describe('groupUntracedFilesByGlob', () => {
   it('groups files matched by the same glob together', () => {
     const result = groupUntracedFilesByGlob([

@@ -1,4 +1,3 @@
-/* eslint-disable no-secrets/no-secrets -- sample stack traces and a fake user token */
 import { invalidReactNative } from '../../tasks/prepare';
 import fatalError from './fatalError';
 

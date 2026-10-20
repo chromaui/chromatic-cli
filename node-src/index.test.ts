@@ -177,7 +177,6 @@ vi.mock('node-fetch', () => ({
         };
       }
 
-      // eslint-disable-next-line no-secrets/no-secrets -- query name
       if (query?.match('SnapshotBuildQuery')) {
         return {
           data: {
@@ -190,7 +189,6 @@ vi.mock('node-fetch', () => ({
         return { data: { app: { firstBuild: { committedAt: null } } } };
       }
 
-      // eslint-disable-next-line no-secrets/no-secrets -- query name
       if (query?.match('HasBuildsWithCommitsQuery')) {
         return { data: { app: { hasBuildsWithCommits: [] } } };
       }
@@ -496,7 +494,6 @@ it('passes options error to experimental_onTaskError', async () => {
   expect(ctx.extraOptions?.experimental_onTaskError).toHaveBeenCalledWith(
     expect.anything(), // Context
     expect.objectContaining({
-      // eslint-disable-next-line no-secrets/no-secrets -- permalink
       formattedError: expect.stringContaining('Missing project token'), // Long formatted error fatalError https://github.com/chromaui/chromatic-cli/blob/217e77671179748eb4ddb8becde78444db93d067/node-src/ui/messages/errors/fatalError.ts#L11
       originalError: expect.any(Error),
     })

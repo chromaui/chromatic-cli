@@ -294,7 +294,6 @@ describe('getCommitAndBranch', () => {
   describe('with mergeQueue branch', () => {
     it('passes the merge queue branch name through unchanged', async () => {
       const mergeQueueBranch =
-        // eslint-disable-next-line no-secrets/no-secrets -- branch name with a commit SHA
         'gh-readonly-queue/main/pr-4-48e0c83fadbf504c191bc868040b7a969a4f1feb';
       const info = await getCommitAndBranch(ctx, { branchName: mergeQueueBranch });
       expect(info).toMatchObject({ branch: mergeQueueBranch });

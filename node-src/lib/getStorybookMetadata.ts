@@ -387,7 +387,6 @@ function getDependencyInfo(
 }
 
 async function findStorybookVersion({ env, log, options, packageJson }: StorybookInfoDeps) {
-  // eslint-disable-next-line no-secrets/no-secrets -- example value
   // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='@storybook/react@4.0-alpha.8' for unusual cases
   if (env.CHROMATIC_STORYBOOK_VERSION) {
     const [, p, v] = env.CHROMATIC_STORYBOOK_VERSION.match(/(.+)@(.+)$/) || [];

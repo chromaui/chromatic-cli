@@ -24,7 +24,6 @@ vi.mock('execa', async (importOriginal) => {
   };
 });
 
-// eslint-disable-next-line no-secrets/no-secrets -- function name
 describe('addChromaticScriptToPackageJson', () => {
   it('outputs updated package.json with only chromatic script if Framework is Storybook', async () => {
     await addChromaticScriptToPackageJson({

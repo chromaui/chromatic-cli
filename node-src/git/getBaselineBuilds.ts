@@ -3,7 +3,6 @@ import gql from 'fake-tag';
 import { localBuildsSpecifier } from '../lib/localBuildsSpecifier';
 import { BaselineBuild, Deps, Git } from '../types';
 
-// eslint-disable-next-line no-secrets/no-secrets -- GraphQL query
 const BaselineCommitsQuery = gql`
   query BaselineCommitsQuery(
     $branch: String!

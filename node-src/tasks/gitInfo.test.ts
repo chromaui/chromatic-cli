@@ -593,7 +593,6 @@ describe('gatherGitInfo clone detection', () => {
     expect(result.output.git.cloneFilter).toBeUndefined();
   });
 
-  // eslint-disable-next-line no-secrets/no-secrets -- function name
   it('continues when getShallowBoundaryCommits fails', async () => {
     getCloneDepth.mockResolvedValue('shallow');
     getShallowBoundaryCommits.mockRejectedValue(new Error('could not read shallow file'));

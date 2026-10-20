@@ -170,7 +170,6 @@ export default async function getCommitAndBranch(
       notHead(prBranch) ||
       notHead(ciBranch) ||
       notHead(process.env.HEAD) || // https://www.netlify.com/docs/continuous-deployment/
-      // eslint-disable-next-line no-secrets/no-secrets -- documentation link
       notHead(process.env.GERRIT_BRANCH) || // https://wiki.jenkins.io/display/JENKINS/Gerrit+Trigger
       notHead(process.env.GITHUB_REF) || // https://docs.github.com/en/free-pro-team@latest/actions/reference/environment-variables#default-environment-variables
       notHead(process.env.CI_BRANCH) ||

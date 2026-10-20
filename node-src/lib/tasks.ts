@@ -101,7 +101,6 @@ async function runLegacyTask(
   }
 }
 
-// eslint-disable-next-line no-secrets/no-secrets -- type signature
 /**
  * Creates a Listr task wrapper that supports two config shapes: a legacy `steps[]` shape
  * for unmigrated tasks, and a typed `(deps, input) => Promise<TaskResult<output>>` shape
