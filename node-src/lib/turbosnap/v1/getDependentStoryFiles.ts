@@ -228,31 +228,28 @@ export async function getDependentStoryFiles(
       ),
     ];
 
-    for (const member of members) {
-      namesById.set(member.id, name);
-      reasonsById.set(member.id, reasons);
+    // Tracing only ever reaches a group through its representative, so only its id needs entries.
+    modulesByName.set(name, representative);
+    namesById.set(representative.id, name);
+    reasonsById.set(representative.id, reasons);
 
-      // Concatenated modules ("a.js + 1 modules") register their inner module names so they can
-      // be traced too, unless a group owns that name: rsbuild also emits the inner modules on
-      // their own, and the container must not replace their representative (its id would become
-      // an `onlyStoryFiles` key that matches no story).
-      for (const m of member.modules || []) {
-        const innerName = normalize(m.name);
-        if (!membersByName.has(innerName)) modulesByName.set(innerName, representative);
-      }
-
-      // Track all modules from any node_modules directory by their package name, so we can mark
-      // all those files "changed" if a dependency (version) changes, while still being able to
-      // "untrace" certain files (or globs) in those packages.
-      const packageName = getPackageName(member.name);
-      if (packageName) {
-        const names = nodeModules.get(packageName) ?? [];
-        if (!names.includes(name)) names.push(name);
-        nodeModules.set(packageName, names);
-      }
+    // Concatenated modules ("a.js + 1 modules") register their inner module names so they can be
+    // traced too, unless a group owns that name: rsbuild also emits the inner modules on their
+    // own, and the container must not replace their representative (its id would become an
+    // `onlyStoryFiles` key that matches no story).
+    for (const m of members.flatMap((member) => member.modules || [])) {
+      const innerName = normalize(m.name);
+      if (!membersByName.has(innerName)) modulesByName.set(innerName, representative);
     }
 
-    modulesByName.set(name, representative);
+    // Track all modules from any node_modules directory by their package name, so we can mark
+    // all those files "changed" if a dependency (version) changes, while still being able to
+    // "untrace" certain files (or globs) in those packages.
+    for (const packageName of new Set(members.map((member) => getPackageName(member.name)))) {
+      if (!packageName) continue;
+      if (!nodeModules.has(packageName)) nodeModules.set(packageName, []);
+      nodeModules.get(packageName)?.push(name);
+    }
 
     if (reasons.some((reason) => isGlobalRoot(reason))) {
       annotationFilesByName.add(name);
