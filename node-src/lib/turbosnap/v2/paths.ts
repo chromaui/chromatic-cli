@@ -108,6 +108,34 @@ export function isNodeModulesPath(filePath: string): boolean {
   return NODE_MODULES_SEGMENT.test(filePath);
 }
 
+// A directory build tools write directly under any `node_modules` directory, matched on whole
+// segments with either separator. Each holds generated output rather than an installed package, and
+// its contents can change on every build:
+//
+// - `.cache`: build caches of loaders, Babel, Storybook and its builders (including builder entries).
+// - `.federation`: module federation's generated entries, renamed by content hash on every build.
+// - `.vite`: Vite's pre-bundled dependency cache.
+// - `.vite-temp`: Vite's compiled config files.
+//
+// Never add a package store: `.pnpm`, `.bun` and `.deno` hold real packages, and treating them as
+// generated would hide a dependency upgrade. When unsure, leave a directory out: hashing generated
+// output only costs recaptures, while skipping a package misses visual changes.
+const GENERATED_NODE_MODULES_SEGMENT =
+  /(?:^|[\\/])node_modules[\\/](?:\.cache|\.federation|\.vite|\.vite-temp)(?:[\\/]|$)/;
+
+/**
+ * Whether a path lies inside an installed package: it passes through a `node_modules` directory,
+ * and no `node_modules` segment along it leads into a directory build tools generate there (such as
+ * `.cache` or `.federation`). Package stores like pnpm's `.pnpm` count as installed packages.
+ *
+ * @param filePath The path to test, raw or canonical.
+ *
+ * @returns Whether the path is inside an installed package.
+ */
+export function isInstalledPackagePath(filePath: string): boolean {
+  return isNodeModulesPath(filePath) && !GENERATED_NODE_MODULES_SEGMENT.test(filePath);
+}
+
 // A Rollup proxy id: a NUL byte before the id of a module a builder created to stand for a real
 // file (CommonJS interop, framework SFC blocks). Only a proxy for a relative path names a file.
 const NUL = '\0';

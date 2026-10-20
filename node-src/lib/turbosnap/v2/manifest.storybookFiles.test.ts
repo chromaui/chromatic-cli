@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
@@ -480,5 +481,89 @@ describe('buildManifest out-of-graph inputs', () => {
     const after = await buildManifest(stats, input);
 
     expect(after.storybookHash).not.toBe(before.storybookHash);
+  });
+});
+
+describe('buildManifest of files build tools generate under node_modules', () => {
+  // An rsbuild-style project: the builder writes its stories and config entries under
+  // `node_modules/.cache`, and module federation writes a content-hashed entry under
+  // `node_modules/.federation` that no story reaches. Git ignores all of `node_modules`.
+  const storiesEntry = './node_modules/.cache/storybook-rsbuild-builder/storybook-stories.js';
+  const configEntry = './node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js';
+  const story = '/repo/packages/ui/src/Button.stories.tsx';
+  const preview = '/repo/packages/ui/.storybook/preview.ts';
+  const entryPreview = '/repo/packages/ui/node_modules/@storybook/react/dist/entry-preview.js';
+  const reactDom =
+    '/repo/packages/ui/node_modules/.pnpm/react-dom@19.0.0/node_modules/react-dom/index.js';
+
+  function makeStats(federationEntry: string): Stats {
+    return {
+      modules: [
+        { id: 1, name: storiesEntry, reasons: [{ moduleName: configEntry }] },
+        { id: 2, name: configEntry, reasons: [] },
+        { id: 3, name: story, reasons: [{ moduleName: storiesEntry }] },
+        { id: 4, name: preview, reasons: [{ moduleName: configEntry }] },
+        { id: 5, name: entryPreview, reasons: [{ moduleName: configEntry }] },
+        { id: 6, name: reactDom, reasons: [{ moduleName: entryPreview }] },
+        { id: 7, name: federationEntry, reasons: [] },
+      ],
+    };
+  }
+
+  const firstEntry = './node_modules/.federation/entry.3f2a1b.js';
+  const secondEntry = './node_modules/.federation/entry.9c8d7e.js';
+  const baseHashes = {
+    [`/repo/packages/ui/${storiesEntry.slice(2)}`]: 'SE',
+    [`/repo/packages/ui/${configEntry.slice(2)}`]: 'CE',
+    [story]: 'S',
+    [preview]: 'P',
+    [entryPreview]: 'EP',
+    [reactDom]: 'RD',
+    [`/repo/packages/ui/${firstEntry.slice(2)}`]: 'F1',
+    [`/repo/packages/ui/${secondEntry.slice(2)}`]: 'F2',
+  };
+
+  function fixture() {
+    return createFixture({
+      fileHashes: { ...baseHashes },
+      isIgnored: (candidate) => candidate.includes('/node_modules/'),
+    });
+  }
+
+  it('leaves the Storybook-wide hashes alone when the federation entry is renamed and rewritten', async () => {
+    const { input } = fixture();
+
+    const before = await buildManifest(makeStats(firstEntry), input);
+    const after = await buildManifest(makeStats(secondEntry), input);
+
+    expect([...after.storybookConfigHashes]).toEqual([...before.storybookConfigHashes]);
+    expect(after.storybookHash).toBe(before.storybookHash);
+    expect(after.skippedFiles.get(secondEntry)).toBe('gitignored');
+  });
+
+  it('moves the globals hash when an installed package changes, though git ignores it too', async () => {
+    const { disk, input } = fixture();
+    const before = await buildManifest(makeStats(firstEntry), input);
+
+    disk.fileHashes = { ...baseHashes, [reactDom]: 'RD2' };
+    const after = await buildManifest(makeStats(firstEntry), input);
+
+    expect(after.storybookConfigHashes.get('storybookGlobals')).not.toBe(
+      before.storybookConfigHashes.get('storybookGlobals')
+    );
+  });
+
+  it('still finds the stories through the skipped builder entries under node_modules/.cache', async () => {
+    const manifest = await buildManifest(makeStats(firstEntry), fixture().input);
+
+    expect([...manifest.storyFileHashes.keys()]).toEqual(['./src/Button.stories.tsx']);
+    expect(manifest.skippedFiles.get(storiesEntry)).toBe('gitignored');
+    expect(manifest.skippedFiles.get(configEntry)).toBe('gitignored');
+    expect(manifest.attribution.previewSubtree.has('./.storybook/preview.ts')).toBe(true);
+    expect(
+      manifest.attribution.storybookGlobals.has(
+        './node_modules/.pnpm/react-dom@19.0.0/node_modules/react-dom/index.js'
+      )
+    ).toBe(true);
   });
 });

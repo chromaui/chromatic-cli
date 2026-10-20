@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from 'vitest';
 
 import { Module } from '../../../types';
@@ -6,6 +7,7 @@ import {
   canonicalImporters,
   foldStatsId,
   gitRootGlobMatcher,
+  isInstalledPackagePath,
   isNodeModulesPath,
   isSyntheticFile,
   moduleFileNames,
@@ -443,6 +445,59 @@ describe('isNodeModulesPath', () => {
     ['an empty path', ''],
   ])('is false for %s', (_description, filePath) => {
     expect(isNodeModulesPath(filePath)).toBe(false);
+  });
+});
+
+describe('isInstalledPackagePath', () => {
+  it.each([
+    ['a hoisted package', './node_modules/react/index.js'],
+    ['an absolute package path', '/repo/node_modules/react/index.js'],
+    [
+      'a package in the pnpm virtual store',
+      './node_modules/.pnpm/react@19.0.0/node_modules/react/index.js',
+    ],
+    [
+      'a package in the Bun isolated store',
+      './node_modules/.bun/react@19.0.0/node_modules/react/index.js',
+    ],
+    [
+      'a package in the Deno store',
+      './node_modules/.deno/react@19.0.0/node_modules/react/index.js',
+    ],
+    ['a nested workspace package', './packages/ui/node_modules/lodash/lodash.js'],
+    ['a package nested in another', './node_modules/a/node_modules/b/index.js'],
+    ['a package whose own directory is named .cache', './node_modules/react/.cache/index.js'],
+    ['a package whose name only starts with .cache', './node_modules/.cache-loader/index.js'],
+    ['a package path with Windows separators', String.raw`C:\repo\node_modules\react\index.js`],
+  ])('is true for %s', (_description, filePath) => {
+    expect(isInstalledPackagePath(filePath)).toBe(true);
+  });
+
+  it.each([
+    ['a module federation entry', './node_modules/.federation/entry.3f2a1b.js'],
+    [
+      'a build cache file',
+      './node_modules/.cache/storybook/default/dev-server/storybook-stories.js',
+    ],
+    ['a Vite pre-bundled dependency', '/repo/node_modules/.vite/deps/react.js'],
+    ['a Vite compiled config', './node_modules/.vite-temp/vite.config.ts.timestamp-1.mjs'],
+    [
+      'a cache in a nested workspace package',
+      './packages/ui/node_modules/.cache/babel-loader/x.json',
+    ],
+    [
+      'a cache inside a pnpm store package',
+      './node_modules/.pnpm/a@1.0.0/node_modules/.cache/x.js',
+    ],
+    [
+      'a federation entry with Windows separators',
+      String.raw`C:\repo\node_modules\.federation\entry.js`,
+    ],
+    ['a project source file', './src/Button.tsx'],
+    ['a .cache directory outside node_modules', './.cache/node_modules-like/x.js'],
+    ['a project directory named .cache', './src/.cache/x.js'],
+  ])('is false for %s', (_description, filePath) => {
+    expect(isInstalledPackagePath(filePath)).toBe(false);
   });
 });
 
