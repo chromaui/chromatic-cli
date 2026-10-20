@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { Stats } from '../../../types';
 import { createFixture, syntheticAbsent } from './__fixtures__/manifestFixtures';
 import { SKIPPED_HASH } from './graph';
+import { buildManifest, serializeManifest } from './manifest';
 import { SkipRule } from './skippedFiles';
 import { countNodeModulesFiles, readStatsGraph } from './statsGraph';
 
@@ -597,5 +598,126 @@ describe('readStatsGraph skipped files', () => {
     });
 
     expect(asked).toEqual([story]);
+  });
+});
+
+describe('readStatsGraph proxy and query ids', () => {
+  it('does not link a folded block id to its own file as a dependency', async () => {
+    // A Vue SFC's script block is a proxy for the SFC file itself: folded, the importer and the
+    // imported are the same file, and the self-edge would otherwise survive serialization.
+    const { input } = createFixture({ fileHashes: { '/repo/packages/ui/src/Foo.vue': 'F' } });
+    const stats: Stats = {
+      modules: [
+        {
+          id: 1,
+          name: './src/Foo.vue?vue&type=script&lang.ts',
+          reasons: [{ moduleName: './src/Foo.vue' }],
+        },
+      ],
+    };
+
+    const graph = await readStatsGraph(stats, input, skipNothing);
+
+    expect(graph.files.get('./src/Foo.vue')?.hash).toBe('F');
+    expect([...(graph.files.get('./src/Foo.vue')?.dependencies ?? [])]).toEqual([]);
+  });
+
+  it('does not link a concatenated member that folds onto the root', async () => {
+    const { input } = createFixture({ fileHashes: { '/repo/packages/ui/src/Foo.vue': 'F' } });
+    const stats: Stats = {
+      modules: [
+        {
+          id: 1,
+          name: './src/Foo.vue?vue&type=script&lang.ts',
+          modules: [{ name: '\0./src/Foo.vue?vue&type=script&lang.ts' }],
+        },
+      ],
+    };
+
+    const graph = await readStatsGraph(stats, input, skipNothing);
+
+    expect(graph.files.has('./src/Foo.vue')).toBe(true);
+    expect([...(graph.files.get('./src/Foo.vue')?.dependencies ?? [])]).toEqual([]);
+  });
+
+  it('never asks the disk about bare-NUL or opaque proxy ids', async () => {
+    const asked: string[] = [];
+    const { input } = createFixture();
+    const ids = [
+      '\0commonjsHelpers.js',
+      '\0vite/preload-helper.js',
+      '\0/@data-uri/data:text/javascript,export default 1',
+    ];
+
+    const graph = await readStatsGraph(
+      { modules: ids.map((name, index) => ({ id: index + 1, name, reasons: [] })) },
+      {
+        ...input,
+        projectFiles: {
+          ...input.projectFiles,
+          isFile: (absolutePath) => {
+            asked.push(absolutePath);
+            return input.projectFiles.isFile(absolutePath);
+          },
+        },
+      },
+      skipNothing
+    );
+
+    expect(asked).toEqual([]);
+    for (const id of ids) {
+      expect(graph.files.get(id)?.hash).toBe('');
+    }
+    expect(graph.hashes.size).toBe(0);
+    // Unfolded, a bare-NUL id would key as a phantom on-disk path; folded, it keeps its raw id.
+    expect(graph.files.has('./commonjsHelpers.js')).toBe(false);
+  });
+
+  it('keeps a CommonJS proxy dependency through serialization', async () => {
+    // The measured regression this fold exists for: Button.tsx imports jsx-runtime through a Rollup
+    // CommonJS proxy id. Unfolded, the proxy keys as a phantom node with no hash, so serialization
+    // drops the edge and editing jsx-runtime.js recaptures nothing.
+    const { input } = createFixture({
+      fileHashes: {
+        '/repo/packages/ui/src/Button.stories.tsx': 'S',
+        '/repo/packages/ui/src/Button.tsx': 'B',
+        '/repo/node_modules/react/jsx-runtime.js': 'J',
+      },
+    });
+    const stats: Stats = {
+      modules: [
+        {
+          id: 1,
+          name: '/repo/packages/ui/src/Button.stories.tsx',
+          reasons: [{ moduleName: './storybook-stories.js' }],
+        },
+        {
+          id: 2,
+          name: '/repo/packages/ui/src/Button.tsx',
+          reasons: [{ moduleName: '/repo/packages/ui/src/Button.stories.tsx' }],
+        },
+        {
+          id: 3,
+          name: '\0./../../node_modules/react/jsx-runtime.js?commonjs-module',
+          reasons: [{ moduleName: '/repo/packages/ui/src/Button.tsx' }],
+        },
+        {
+          id: 4,
+          name: '\0commonjsHelpers.js',
+          reasons: [{ moduleName: '/repo/packages/ui/src/Button.tsx' }],
+        },
+      ],
+    };
+
+    const serialized = serializeManifest(await buildManifest(stats, input));
+
+    expect(serialized.files['./src/Button.tsx'].dependencies).toContain(
+      '../../node_modules/react/jsx-runtime.js'
+    );
+    expect(serialized.files['./src/Button.tsx'].dependencies).not.toContain('\0commonjsHelpers.js');
+    // No phantom key carries the builder's spelling, and synthetic ids keep their raw spelling.
+    expect(
+      Object.keys(serialized.files).filter((key) => key.includes('?') || key.includes('\0'))
+    ).toEqual([]);
   });
 });
