@@ -21,6 +21,11 @@ function identity(input: string): string {
   return input;
 }
 
+// Rolls every file up under its own canonical path; pnpm store paths are manifest.pnpm.test.ts's concern.
+function canonicalPath(filePath: FilePath): FilePath {
+  return filePath;
+}
+
 function makeFiles(graph: Record<FilePath, FilePath[]>): Map<FilePath, TurboSnapFile> {
   return new Map(
     Object.entries(graph).map(([filePath, dependencies]) => [
@@ -51,7 +56,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect([...storybookConfigHashes.keys()]).toContain(STORYBOOK_PREVIEW_KEY);
@@ -74,7 +80,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     // Every extension lands in the one shared `preview` home, so all six show up in its subtree.
@@ -92,7 +99,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect([...storybookConfigHashes.keys()]).toEqual([STORYBOOK_GLOBALS_KEY]);
@@ -111,7 +119,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect([...storybookConfigHashes.keys()]).toEqual([STORYBOOK_GLOBALS_KEY]);
@@ -133,7 +142,8 @@ describe('collectStorybookFiles', () => {
       './src',
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect([...storybookConfigHashes.keys()]).toEqual([STORYBOOK_PREVIEW_KEY]);
@@ -161,7 +171,8 @@ describe('collectStorybookFiles', () => {
       './config',
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect(attribution.previewSubtree.has(shared)).toBe(true);
@@ -186,7 +197,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect([...storybookConfigHashes.keys()]).toEqual([STORYBOOK_PREVIEW_KEY]);
@@ -205,7 +217,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect([...storybookConfigHashes.keys()]).toEqual([STORYBOOK_GLOBALS_KEY]);
@@ -225,7 +238,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect([...storybookConfigHashes.keys()]).toEqual([]);
@@ -241,7 +255,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect([...attribution.storybookGlobals]).toEqual(['./src/inlined.ts']);
@@ -264,7 +279,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     const homed = new Set([
@@ -291,7 +307,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect(attribution.storyReachable.has(shared)).toBe(true);
@@ -315,7 +332,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect([...attribution.storyReachable]).toEqual(['./src/a.stories.tsx']);
@@ -332,7 +350,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect([...storybookConfigHashes.keys()]).toEqual([]);
@@ -354,7 +373,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     const changedHashes = makeHashes([...files.keys()]);
@@ -366,7 +386,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect(before.attribution.storyReachable.has(react)).toBe(true);
@@ -398,7 +419,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect([...attribution.storybookGlobals]).toEqual(['./node_modules/@storybook/core/entry.js']);
@@ -424,7 +446,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect(attribution.storyReachable.has(button)).toBe(true);
@@ -449,7 +472,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect([...attribution.storybookGlobals]).toEqual(['./node_modules/@storybook/core/entry.js']);
@@ -473,7 +497,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect([...attribution.storybookGlobals].sort()).toEqual([
@@ -497,7 +522,8 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
 
     expect([...attribution.storybookGlobals]).toEqual(['./node_modules/react-dom/index.js']);
@@ -525,7 +551,8 @@ describe('collectStorybookFiles behind an untraced wall', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       new Set([barrel, button]),
-      identity
+      identity,
+      canonicalPath
     );
 
     expect([...storybookConfigHashes.keys()]).not.toContain(STORYBOOK_GLOBALS_KEY);
@@ -553,7 +580,8 @@ describe('collectStorybookFiles behind an untraced wall', () => {
       DEFAULT_CONFIG_DIR,
       new Set([configEntry]),
       new Set([barrel, button]),
-      identity
+      identity,
+      canonicalPath
     );
 
     expect([...attribution.storybookGlobals]).toEqual([button]);
@@ -591,7 +619,8 @@ describe('collectStorybookFiles with a detected global composition root', () => 
       DEFAULT_CONFIG_DIR,
       new Set([configEntry]),
       NO_UNTRACED,
-      identity
+      identity,
+      canonicalPath
     );
   }
 

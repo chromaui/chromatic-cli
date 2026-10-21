@@ -108,6 +108,78 @@ export function isNodeModulesPath(filePath: string): boolean {
   return NODE_MODULES_SEGMENT.test(filePath);
 }
 
+// A file inside pnpm's virtual store: `<prefix>node_modules/.pnpm/<store dir>/node_modules/<package>/<subpath>`.
+// The store directory encodes the package's version and its resolved peers
+// (`storybook@10.6.3_@types+react@19.2.2_react@19.2.0`), so a peer bump renames it with no byte changed.
+// The prefix is greedy, so a store nested inside another package's store matches at the innermost `.pnpm`.
+const PNPM_STORE_PATH =
+  /^(?<prefix>(?:.*\/)?node_modules\/)\.pnpm\/(?<storeDir>[^/]+)\/node_modules\/(?<package>@[^/]+\/[^/]+|[^/]+)\/(?<subpath>.+)$/;
+
+// A file inside a package reached through a plain `node_modules` directory, such as pnpm's top-level
+// symlink to a store copy. Its package root is the spelling a normalized store path takes.
+const NODE_MODULES_PACKAGE_PATH =
+  /^(?<prefix>(?:.*\/)?node_modules\/)(?<package>@[^/]+\/[^/]+|[^/]+)\//;
+
+/**
+ * Builds the path each file contributes to a roll-up, so a pnpm peer-dependency rename does not move
+ * every hash. A file in pnpm's virtual store rolls up as `<prefix>node_modules/<package>/<subpath>`,
+ * without the store directory, but only when the build bundles exactly one copy of that package.
+ *
+ * The single-copy condition is what keeps this safe. When a peer split leaves two copies of a package
+ * in the build (say, two `@emotion/react` instances that no longer share a theme context), the copies
+ * can land in different roll-ups (preview and story), so normalizing each to the same path would hide
+ * a real rendering change. Packages with more than one copy keep their real paths, so the split
+ * itself moves the hashes. A real version bump is still caught: the bytes change.
+ *
+ * A bundler can also name a package through a plain `node_modules/<package>/` path, such as pnpm's
+ * top-level symlink, and load it as a module instance separate from the store copy. That path is
+ * already the spelling a normalized store path would take, so it counts as one more copy.
+ *
+ * Only roll-ups use this. Manifest keys (`files`, `storyFiles`, `skippedFiles`) keep real paths.
+ * Layouts the pattern does not recognize roll up under their real paths: a custom `virtualStoreDir`,
+ * pnpm's global virtual store, and Bun or Yarn PnP installs.
+ *
+ * @param filePaths Every canonical path in the build.
+ *
+ * @returns The roll-up path of a canonical path.
+ */
+export function buildPnpmRollUpPath(
+  filePaths: Iterable<FilePath>
+): (filePath: FilePath) => FilePath {
+  const { copies, storeFiles } = countPackageCopies(filePaths);
+
+  // Resolved once here rather than per lookup: every story's roll-up asks again for the same files.
+  const rollUpPaths = new Map<FilePath, FilePath>();
+  for (const [filePath, { prefix, package: packageName, subpath }] of storeFiles) {
+    if (copies.get(prefix + packageName)?.size === 1) {
+      rollUpPaths.set(filePath, `${prefix}${packageName}/${subpath}`);
+    }
+  }
+  return (filePath) => rollUpPaths.get(filePath) ?? filePath;
+}
+
+/**
+ * Counts the copies of each `<prefix>node_modules/<package>` root in the build, by store directory.
+ * A plain `node_modules` path counts as a copy under the empty name, which no store directory has.
+ *
+ * @param filePaths Every canonical path in the build.
+ *
+ * @returns The store directories per package root, and the parts of every store path.
+ */
+function countPackageCopies(filePaths: Iterable<FilePath>) {
+  const copies = new Map<string, Set<string>>();
+  const storeFiles: [FilePath, Record<string, string>][] = [];
+  for (const filePath of filePaths) {
+    const store = PNPM_STORE_PATH.exec(filePath)?.groups;
+    const match = store ?? NODE_MODULES_PACKAGE_PATH.exec(filePath)?.groups;
+    if (!match) continue;
+    const packageRoot = match.prefix + match.package;
+    copies.set(packageRoot, (copies.get(packageRoot) ?? new Set()).add(store?.storeDir ?? ''));
+    if (store) storeFiles.push([filePath, store]);
+  }
+  return { copies, storeFiles };
+}
+
 // A Rollup proxy id: a NUL byte before the id of a module a builder created to stand for a real
 // file (CommonJS interop, framework SFC blocks). Only a proxy for a relative path names a file.
 const NUL = '\0';
