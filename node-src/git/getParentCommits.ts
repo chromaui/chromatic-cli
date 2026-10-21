@@ -116,11 +116,13 @@ async function nextCommits(
   // The output of the above rev-list commit includes possibly commits with builds so filter them.
   // NOTE: this list can include irrelevant commits during earlier iterations of step() when we
   // don't yet have an accurate list of commitsWithBuilds, however we only use it in the final step.
-  const visitedCommitsWithoutBuilds = commits?.filter((c) => !commitsWithBuilds.includes(c));
+  const commitsWithBuildsSet = new Set(commitsWithBuilds);
+  const visitedCommitsWithoutBuilds = commits?.filter((c) => !commitsWithBuildsSet.has(c));
 
   // No sense in checking commits we already know about
+  const commitsWithoutBuildsSet = new Set(commitsWithoutBuilds);
   const candidateCommits = visitedCommitsWithoutBuilds
-    ?.filter((c) => !commitsWithoutBuilds.includes(c))
+    ?.filter((c) => !commitsWithoutBuildsSet.has(c))
     .slice(0, limit);
 
   return { visitedCommitsWithoutBuilds, candidateCommits };
