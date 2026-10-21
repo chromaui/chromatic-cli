@@ -39,24 +39,28 @@ export interface TurboSnapFile {
  * @param hashes The hash of every on-disk file, keyed by canonical path, or `SKIPPED_HASH` for a file v2 skipped.
  * @param filePaths The files to roll up.
  * @param h64ToString The hash function.
+ * @param rollUpPath The path each file contributes to the roll-up, which is its canonical path unless
+ * pnpm's store directory is dropped from it; see `buildPnpmRollUpPath`.
  *
  * @returns The rolled-up hash.
  */
 export function rollUpFileHashes(
   hashes: Map<FilePath, FileHash>,
   filePaths: Iterable<FilePath>,
-  h64ToString: (input: string) => string
+  h64ToString: (input: string) => string,
+  rollUpPath: (filePath: FilePath) => FilePath
 ): FileHash {
   const entries = [...filePaths].flatMap((filePath): [FilePath, FileHash][] => {
     const hash = hashes.get(filePath) ?? '';
-    return hash === SKIPPED_HASH ? [] : [[filePath, hash]];
+    return hash === SKIPPED_HASH ? [] : [[rollUpPath(filePath), hash]];
   });
   return rollUpEntryHashes(entries, h64ToString);
 }
 
 /**
  * Rolls path/content-hash pairs up into a single hash. Entries are sorted so the result doesn't
- * depend on iteration order.
+ * depend on iteration order. The path is the file's roll-up path, not necessarily its manifest key;
+ * see `buildPnpmRollUpPath`.
  *
  * Every roll-up depends on both content and path, because a file's path can impact the output of
  * where the story is served from Storybook.
