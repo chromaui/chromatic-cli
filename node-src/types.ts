@@ -585,6 +585,11 @@ export type TaskReporter = (update: TaskUpdate) => void;
 export interface Reason {
   // An entry module's reason carries a null moduleName, so treat it as optional.
   moduleName: string | null;
+  // The module that makes the import, before concatenation. Raw webpack 5 and rspack 1.7 stats name
+  // the member here while `moduleName` names its concatenation group. Absent on Vite, and on
+  // storybook-builder-rsbuild 3.3+, whose stats writer keeps only `moduleName` (already rewritten
+  // from the group to the member). Null on entry reasons.
+  resolvedModule?: string | null;
 }
 
 export interface Module {

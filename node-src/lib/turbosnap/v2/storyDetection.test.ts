@@ -153,6 +153,27 @@ describe('detectStoryFiles through a config-entry require-context', () => {
   it('does not treat a real file imported directly by the config entry as a story', () => {
     expect([...detect(stats, onDiskFiles)]).not.toContain('./.storybook/preview.ts');
   });
+
+  it('detects the stories when resolvedModule names a stories entry the catalogue lacks', () => {
+    // The context is imported by the stories entry concatenated into the config entry's group.
+    // Only the group's root, in `moduleName`, is a catalogued entry here.
+    const cacheDirectory = './node_modules/.cache/storybook/storybook-rsbuild-builder';
+    const reason = {
+      moduleName: `${cacheDirectory}/storybook-config-entry.js + 1 modules`,
+      resolvedModule: `${cacheDirectory}/storybook-stories.js`,
+    };
+    const storyFiles = detect(
+      {
+        modules: [
+          { id: 1, name: glob, reasons: [reason] },
+          { id: 2, name: story, reasons: [{ moduleName: glob, resolvedModule: glob }] },
+        ],
+      },
+      ['./src/lib/Button.stories.tsx']
+    );
+
+    expect([...storyFiles]).toEqual(['./src/lib/Button.stories.tsx']);
+  });
 });
 
 describe('detectStoryFiles when the builder omits the `./` prefix', () => {

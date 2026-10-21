@@ -61,6 +61,32 @@ describe('readStatsGraph concatenated modules', () => {
     expect(graph.hashes.get('./src/Button.tsx')).toBe('B');
   });
 
+  it('still links a member whose own record carries only a reason naming itself', async () => {
+    // rspack gives a CommonJS module a reason naming itself. That draws no import edge, so the
+    // member is reached only if its root links it.
+    const selfReasoned: Stats = {
+      modules: [
+        ...concatenatedStory.modules,
+        {
+          id: null,
+          name: '/repo/packages/ui/src/Button.tsx',
+          reasons: [
+            {
+              moduleName: '/repo/packages/ui/src/Button.tsx',
+              resolvedModule: '/repo/packages/ui/src/Button.tsx',
+            },
+          ],
+        },
+      ],
+    };
+    const { input } = createFixture();
+    const graph = await readStatsGraph(selfReasoned, input, skipNothing);
+
+    expect([...(graph.files.get('./src/Button.stories.tsx')?.dependencies ?? [])]).toEqual([
+      './src/Button.tsx',
+    ]);
+  });
+
   // `storybook-builder-rsbuild` 3.3.0/3.3.1 fill `modules` with the record's require-contexts rather
   // than its concatenated files, and omit the root file. Reading the root from `modules` then yields
   // a glob, which has no file on disk, so the whole record is promoted to a story importer and every

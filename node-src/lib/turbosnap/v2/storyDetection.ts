@@ -132,7 +132,15 @@ function processModules(context: StoryDetectionContext, stats: Stats): Processed
       continue;
     }
 
-    const importers = canonicalImporters(module, context);
+    // Each reason's `moduleName` counts too. A context imported inside a group is named by its
+    // member in `resolvedModule`, but by the group's root, a config entry, in `moduleName`; an
+    // entry the catalogue lacks must not hide the context when the other name is catalogued.
+    const importers = [
+      ...new Set([
+        ...canonicalImporters(module, context),
+        ...canonicalImporters(module, context, (reason) => reason.moduleName),
+      ]),
+    ];
 
     processed.push({
       rawName: module.name,

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from 'vitest';
 
 import { Module } from '../../../types';
@@ -179,6 +180,28 @@ describe('canonicalImporters', () => {
         reasons: [{ moduleName: '\0./src/Foo.vue?vue&type=script&lang.ts' }],
       }),
       expected: ['./src/Foo.vue'],
+    },
+    {
+      name: 'prefers the resolvedModule member over the concatenated group the moduleName spells',
+      module: module({
+        reasons: [
+          {
+            moduleName: './src/Button.stories.tsx + 2 modules',
+            resolvedModule: './src/Button.tsx',
+          },
+        ],
+      }),
+      expected: ['./src/Button.tsx'],
+    },
+    {
+      name: 'drops an entry reason whose moduleName and resolvedModule are both null',
+      module: module({
+        reasons: [
+          { moduleName: null, resolvedModule: null },
+          { moduleName: './src/Button.tsx', resolvedModule: null },
+        ],
+      }),
+      expected: ['./src/Button.tsx'],
     },
     {
       name: 'returns nothing when the module has no reasons',

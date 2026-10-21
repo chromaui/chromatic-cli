@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { AbsolutePath, Module } from '../../../types';
+import { AbsolutePath, Module, Reason } from '../../../types';
 import { relativeTo } from '../../getStorybookProjectRoot';
 import { matchesFile } from '../../utilities';
 import { FilePath } from './graph';
@@ -60,19 +60,39 @@ export function canonicalFileNames(module: Module, roots: StatsRoots): FilePath[
 }
 
 /**
- * The canonical paths that import a stats module: its `reasons` mapped to `moduleName`, entry reasons
- * (null `moduleName`) dropped, each folded onto the file it stands for (see {@link foldStatsId})
- * and normalized. The single place the "canonical importers" rule lives,
- * so `readStatsGraph` and story detection cannot drift apart.
+ * The raw name of the module a reason's import sits in. Webpack and rspack blame an import made
+ * inside a concatenation group on the group (`moduleName` is `<root> + N modules`) while
+ * `resolvedModule` names the member that makes it, so the member is preferred. Vite emits only
+ * `moduleName`.
+ *
+ * @param reason The stats reason.
+ *
+ * @returns The importer's raw name, or null/undefined for an entry reason.
+ */
+export function reasonImporter(reason: Reason): string | null | undefined {
+  return reason.resolvedModule ?? reason.moduleName;
+}
+
+/**
+ * The canonical paths that import a stats module: its `reasons` mapped to the module each import
+ * sits in (see {@link reasonImporter}), entry reasons (no importer) dropped, each folded onto the
+ * file it stands for (see {@link foldStatsId}) and normalized. The single place the "canonical
+ * importers" rule lives, so `readStatsGraph` and story detection cannot drift apart.
  *
  * @param module The stats module.
  * @param roots The roots to anchor against. See {@link StatsRoots}.
+ * @param importerOf Which name of a reason to read; {@link reasonImporter} unless the caller needs
+ * the raw `moduleName`.
  *
  * @returns The canonical importer paths.
  */
-export function canonicalImporters(module: Module, roots: StatsRoots): FilePath[] {
+export function canonicalImporters(
+  module: Module,
+  roots: StatsRoots,
+  importerOf: (reason: Reason) => string | null | undefined = reasonImporter
+): FilePath[] {
   return (module.reasons ?? [])
-    .map((reason) => reason.moduleName)
+    .map((reason) => importerOf(reason))
     .filter((name): name is FilePath => typeof name === 'string')
     .map((name) => normalizeStatsPath(foldStatsId(name), roots.projectRoot, roots.statsRoot));
 }

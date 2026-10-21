@@ -15,6 +15,7 @@ import {
   isSyntheticFile,
   moduleFileNames,
   normalizeStatsPath,
+  reasonImporter,
   resolveStatsPath,
   StatsRoots,
 } from './paths';
@@ -107,24 +108,37 @@ export async function readStatsGraph(
   const storyFiles = detectStoryFiles({ ...roots, onDiskFiles }, stats);
 
   const files = new Map<FilePath, TurboSnapFile>();
+  const groups: FilePath[][] = [];
   for (const module of stats.modules) {
     // A module may bundle several real files (webpack/rspack module concatenation), so resolve its
     // canonical file paths, root first. Modules with no usable name (e.g. externals) are skipped.
     const fileNames = canonicalFileNames(module, roots);
     if (fileNames.length === 0) continue;
-    const [sourceFilePath, ...concatenated] = fileNames;
+    const [sourceFilePath] = fileNames;
+    ensureFile(files, sourceFilePath, hashes);
+    if (fileNames.length > 1) groups.push(fileNames);
 
     // Canonicalised so a dependency edge names the same key wherever the builder spells it.
-    const importers = canonicalImporters(module, roots);
-
-    linkConcatenatedFiles(files, sourceFilePath, concatenated, hashes);
-
-    for (const importer of importers) {
+    for (const importer of canonicalImporters(module, roots)) {
       // Folding can make the importer and the imported the same file (Foo.vue importing its own
       // script block): a self-edge carries no information and would survive serialization.
       if (importer === sourceFilePath) continue;
       ensureFile(files, importer, hashes).dependencies.add(sourceFilePath);
     }
+  }
+
+  // A concatenation root links only the members no file in its group imports, so it cannot reach a
+  // member around the untraced member that imports it. An edge from outside the group says nothing
+  // about how the member is reached inside it. Every group is decided before any is linked, so the
+  // edges a root gains cannot count as imports.
+  const links = groups.map(([rootPath, ...concatenated]) => {
+    const imported = new Set(
+      [rootPath, ...concatenated].flatMap((file) => [...(files.get(file)?.dependencies ?? [])])
+    );
+    return { rootPath, unreached: concatenated.filter((member) => !imported.has(member)) };
+  });
+  for (const { rootPath, unreached } of links) {
+    linkConcatenatedFiles(files, rootPath, unreached, hashes);
   }
 
   const untracedSubtrees = wallOffUntracedFiles(files, skippedFiles);
@@ -214,13 +228,13 @@ function detectGlobalRoots(files: Map<FilePath, TurboSnapFile>, roots: StatsRoot
 }
 
 /**
- * Records the internal edges of a concatenated module: webpack/rspack bundle several real files into
- * one module, so the other files become dependencies of the concatenation root. Each of them also gets
- * an entry of its own, so no dependency reference names a file the serialized graph omits.
+ * Links a concatenation root to the members of its group that no import edge inside the group
+ * reaches (see `readStatsGraph`). Each of them also gets an entry of its own, so no dependency
+ * reference names a file the serialized graph omits.
  *
  * @param files The map of files to their hashes and dependencies, mutated in place.
  * @param rootPath The canonical path of the concatenation root.
- * @param concatenated The canonical paths of the other files bundled into the same module.
+ * @param concatenated The canonical paths of the unreached members of the group.
  * @param hashes The hash of every on-disk file, keyed by canonical path, or `SKIPPED_HASH` for a file v2 skipped.
  */
 function linkConcatenatedFiles(
@@ -302,7 +316,8 @@ function locateOnDiskFiles(
   projectFiles: ProjectFiles
 ): Map<FilePath, AbsolutePath> {
   // Collect every referenced stats id once, folded onto the file it stands for and expanded into
-  // concatenated real files, skipping importers with a null moduleName. Folding at insertion makes
+  // concatenated real files, with each reason's importer (see `reasonImporter`; entry reasons have
+  // none). Folding at insertion makes
   // the dedupe canonical: every spelling of one file stats the disk and keys the node once.
   const fileIds = new Set<FilePath>();
   for (const module of stats.modules) {
@@ -310,7 +325,8 @@ function locateOnDiskFiles(
       fileIds.add(foldStatsId(name));
     }
     for (const reason of module.reasons ?? []) {
-      if (reason.moduleName) fileIds.add(foldStatsId(reason.moduleName));
+      const importer = reasonImporter(reason);
+      if (importer) fileIds.add(foldStatsId(importer));
     }
   }
 
