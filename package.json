@@ -90,6 +90,7 @@
     "typescript:check": "tsc --project ./tsconfig.json --noEmit",
     "prepare": "yarn run build",
     "dev": "tsdown --watch",
+    "fixture": "node e2e/prepare.mjs",
     "clean:sourcemaps": "rm -f dist/*.map && rm -f action/*.map"
   },
   "resolutions": {

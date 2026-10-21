@@ -1,0 +1,17 @@
+{
+  "name": "react-webpack5",
+  "private": true,
+  "scripts": {
+    "build-storybook": "storybook build"
+  },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@storybook/addon-webpack5-compiler-swc": "4.0.3",
+    "@storybook/react-webpack5": "10.6.1",
+    "storybook": "10.6.1",
+    "typescript": "5.9.3"
+  }
+}
