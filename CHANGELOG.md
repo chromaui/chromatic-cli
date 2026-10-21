@@ -1,3 +1,17 @@
+# v18.13.2 (Wed Oct 21 2026)
+
+#### 🐛 Bug Fix
+
+- [git] Speed up baseline commit filtering [#1561](https://github.com/chromaui/chromatic-cli/pull/1561) ([@sharmila-oai](https://github.com/sharmila-oai))
+- Fold webpack loader-chain stats ids onto their resource [#1550](https://github.com/chromaui/chromatic-cli/pull/1550) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Sharmila ([@sharmila-oai](https://github.com/sharmila-oai))
+
+---
+
 # v18.13.1 (Wed Oct 21 2026)
 
 #### 🐛 Bug Fix
