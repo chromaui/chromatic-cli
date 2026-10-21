@@ -17,7 +17,15 @@ const publishAction = async ({ major, version, repo }) => {
 
   const { path, cleanup } = await tmp.dir({ unsafeCleanup: true, prefix: `chromatic-action-` });
 
-  await $`git clone https://${process.env.GH_TOKEN}@github.com/${repo}.git ${path}`;
+  // GitHub sometimes redirects the push. After a redirect, git can lose credentials embedded in the
+  // remote URL and fall back to an interactive prompt, which fails in CI. A credential helper is
+  // consulted whenever git needs credentials, so it survives redirects. It reads GH_TOKEN from the
+  // environment so the token never lands in the URL, the git config, or error output.
+  // The helper is scoped to https://github.com so a redirect to another host can't receive the
+  // token, and the empty `credential.helper` drops inherited helpers so none of them stores it.
+  const credentialHelper =
+    '!f() { test "$1" = get && echo username=x-access-token && echo "password=$GH_TOKEN"; }; f';
+  await $`git clone --config credential.helper= --config credential.https://github.com.helper=${credentialHelper} https://github.com/${repo}.git ${path}`;
 
   await $`yarn clean-package`;
   await copy(

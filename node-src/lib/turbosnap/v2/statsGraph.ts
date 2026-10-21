@@ -10,6 +10,7 @@ import { ManifestInput } from './manifestInput';
 import {
   canonicalFileNames,
   canonicalImporters,
+  foldStatsId,
   isNodeModulesPath,
   isSyntheticFile,
   moduleFileNames,
@@ -119,6 +120,9 @@ export async function readStatsGraph(
     linkConcatenatedFiles(files, sourceFilePath, concatenated, hashes);
 
     for (const importer of importers) {
+      // Folding can make the importer and the imported the same file (Foo.vue importing its own
+      // script block): a self-edge carries no information and would survive serialization.
+      if (importer === sourceFilePath) continue;
       ensureFile(files, importer, hashes).dependencies.add(sourceFilePath);
     }
   }
@@ -227,6 +231,9 @@ function linkConcatenatedFiles(
 ) {
   const rootFile = ensureFile(files, rootPath, hashes);
   for (const dependency of concatenated) {
+    // A member may fold onto the root (the root names the block, a member its NUL proxy): skip the
+    // self-edge the same way the importer linking does.
+    if (dependency === rootPath) continue;
     rootFile.dependencies.add(dependency);
     ensureFile(files, dependency, hashes);
   }
@@ -264,19 +271,19 @@ function ensureFile(
  * {@link ProjectFiles.isFile}. Skipping a name with no file loses no evidence, because such a name is
  * never a source file and so can never be edited as one.
  *
- * @param rawPath The module name from the stats file.
+ * @param id The folded stats id; see {@link foldStatsId}.
  * @param statsRoot The directory relative stats paths are named from.
  * @param projectFiles How to read the disk.
  *
  * @returns The absolute path to hash, or undefined if there is no hashable file.
  */
 function hashableAbsolutePath(
-  rawPath: FilePath,
+  id: FilePath,
   statsRoot: string,
   projectFiles: ProjectFiles
 ): string | undefined {
-  if (isSyntheticFile(rawPath)) return undefined;
-  const absolutePath = resolveStatsPath(rawPath, statsRoot);
+  if (isSyntheticFile(id)) return undefined;
+  const absolutePath = resolveStatsPath(id, statsRoot);
   return projectFiles.isFile(absolutePath) ? absolutePath : undefined;
 }
 
@@ -294,26 +301,24 @@ function locateOnDiskFiles(
   roots: StatsRoots,
   projectFiles: ProjectFiles
 ): Map<FilePath, AbsolutePath> {
-  // Collect every referenced module path once, expanding concatenated modules into their real
-  // files and skipping importers with a null moduleName.
-  const rawPaths = new Set<FilePath>();
+  // Collect every referenced stats id once, folded onto the file it stands for and expanded into
+  // concatenated real files, skipping importers with a null moduleName. Folding at insertion makes
+  // the dedupe canonical: every spelling of one file stats the disk and keys the node once.
+  const fileIds = new Set<FilePath>();
   for (const module of stats.modules) {
     for (const name of moduleFileNames(module)) {
-      rawPaths.add(name);
+      fileIds.add(foldStatsId(name));
     }
     for (const reason of module.reasons ?? []) {
-      if (reason.moduleName) rawPaths.add(reason.moduleName);
+      if (reason.moduleName) fileIds.add(foldStatsId(reason.moduleName));
     }
   }
 
   const onDiskFiles = new Map<FilePath, AbsolutePath>();
-  for (const rawPath of rawPaths) {
-    const absolutePath = hashableAbsolutePath(rawPath, roots.statsRoot, projectFiles);
+  for (const id of fileIds) {
+    const absolutePath = hashableAbsolutePath(id, roots.statsRoot, projectFiles);
     if (absolutePath) {
-      onDiskFiles.set(
-        normalizeStatsPath(rawPath, roots.projectRoot, roots.statsRoot),
-        absolutePath
-      );
+      onDiskFiles.set(normalizeStatsPath(id, roots.projectRoot, roots.statsRoot), absolutePath);
     }
   }
   return onDiskFiles;

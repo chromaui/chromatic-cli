@@ -847,7 +847,7 @@ const PROBABLE_SQUASH_MERGE_RE = /\(#\d+\)/;
  * Fetch parent SHAs and compute squash-merge likelihood for each of the given commits in a
  * single git call.
  *
- * Uses `git log --no-walk=unsorted` so git reads only the listed objects with no ancestor
+ * Uses `git log --no-walk=unsorted --stdin` so git reads only the listed objects with no ancestor
  * traversal. The commit subject is used to compute `isProbableSquashMerge` but is not
  * included in the returned objects. The `hasBuild` and `isMergePoint` fields are left as
  * `false` here; callers are responsible for annotating them from their own data.
@@ -856,7 +856,7 @@ const PROBABLE_SQUASH_MERGE_RE = /\(#\d+\)/;
  * @param commits The commit SHAs to look up.
  *
  * @returns One entry per commit containing its direct parent SHAs and squash-merge flag.
- *   Returns an empty array when `commits` is empty.
+ *   Returns an empty array when `commits` is empty or the git call fails.
  */
 export async function getVisitedCommitDetails(
   deps: GitDeps,
@@ -867,10 +867,20 @@ export async function getVisitedCommitDetails(
   // %H = full SHA, %P = space-separated parent SHAs, %s = subject line (first line of message)
   // %x00 = NUL field separator (safe even with special chars in subject)
   // --no-walk=unsorted shows only the listed objects, no ancestor traversal
-  const result = await execGitCommand(
-    deps,
-    `git log --no-walk=unsorted --format=%H%x00%P%x00%s%x00 ${commits.join(' ')}`
-  );
+  // The SHAs are passed via stdin rather than as arguments, since a long ancestor walk can visit
+  // enough commits to exceed the OS limit on command line length (E2BIG).
+  // This data is only used for diagnostics, so a failure here must never fail the build.
+  let result: string;
+  try {
+    result = await execGitCommand(
+      deps,
+      'git log --no-walk=unsorted --stdin --format=%H%x00%P%x00%s%x00',
+      { input: commits.join('\n') }
+    );
+  } catch (error) {
+    deps.log.debug(`Failed to retrieve visited commit details, skipping: ${error}`);
+    return [];
+  }
   if (!result?.trim()) return [];
 
   // Output is a sequence of: <sha>\0<parents>\0<subject>\0 per commit
