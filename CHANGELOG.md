@@ -1,3 +1,40 @@
+# v18.13.1 (Wed Oct 21 2026)
+
+#### 🐛 Bug Fix
+
+- Confirm COMPONENTOWNERS upload outside the interactive UI [#1551](https://github.com/chromaui/chromatic-cli/pull/1551) ([@justin-thurman](https://github.com/justin-thurman))
+- [TurboSnap v2] Tighten context-marker matching [#1554](https://github.com/chromaui/chromatic-cli/pull/1554) ([@ObviousApp](https://github.com/ObviousApp) [@codykaup](https://github.com/codykaup) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Authenticate action publish pushes with a credential helper [#1552](https://github.com/chromaui/chromatic-cli/pull/1552) ([@justin-thurman](https://github.com/justin-thurman))
+- Remove `no-secrets` lint rule [#1555](https://github.com/chromaui/chromatic-cli/pull/1555) ([@codykaup](https://github.com/codykaup))
+- [TurboSnap v2]: fold NUL-prefixed and query-suffixed stats ids into the file they stand for [#1529](https://github.com/chromaui/chromatic-cli/pull/1529) ([@ObviousApp](https://github.com/ObviousApp) [@codykaup](https://github.com/codykaup) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Keep credentials out of the diagnostics and log files [#1536](https://github.com/chromaui/chromatic-cli/pull/1536) ([@ObviousApp](https://github.com/ObviousApp) [@codykaup](https://github.com/codykaup) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Merge TurboSnap V1 modules that normalize to one name [#1530](https://github.com/chromaui/chromatic-cli/pull/1530) ([@ObviousApp](https://github.com/ObviousApp) [@codykaup](https://github.com/codykaup) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Skip tests on PRs that only change docs and agent files [#1540](https://github.com/chromaui/chromatic-cli/pull/1540) ([@codykaup](https://github.com/codykaup))
+- Skip release when there is nothing to release [#1545](https://github.com/chromaui/chromatic-cli/pull/1545) ([@codykaup](https://github.com/codykaup))
+- fix: preserve orb toolchain selection after environment reload [#1549](https://github.com/chromaui/chromatic-cli/pull/1549) ([@justin-thurman](https://github.com/justin-thurman))
+- Add CLI verification skills [#1533](https://github.com/chromaui/chromatic-cli/pull/1533) ([@codykaup](https://github.com/codykaup))
+- Add amp orb setup scripts [#1548](https://github.com/chromaui/chromatic-cli/pull/1548) ([@justin-thurman](https://github.com/justin-thurman))
+- Merge pull request #1547 from chromaui/cody/cap-5335-turbosnap-v1-rsbuild-concatenated-story-module-becomes-the [#1547](https://github.com/chromaui/chromatic-cli/pull/1547) ([@codykaup](https://github.com/codykaup))
+- Merge pull request #1546 from chromaui/cody/cap-5336-turbosnap-v1-opaque-nul-ids-0commonjshelpersjs-0vitepreload [#1546](https://github.com/chromaui/chromatic-cli/pull/1546) ([@codykaup](https://github.com/codykaup))
+- Merge pull request #1544 from chromaui/cody/cap-5104 [#1544](https://github.com/chromaui/chromatic-cli/pull/1544) ([@codykaup](https://github.com/codykaup))
+- Fix "Build passed" output for exit-zero builds with pending or denied changes [#1535](https://github.com/chromaui/chromatic-cli/pull/1535) ([@ObviousApp](https://github.com/ObviousApp) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Don't log "Traversing dependencies" when TurboSnap tracing will not run [#1539](https://github.com/chromaui/chromatic-cli/pull/1539) ([@ObviousApp](https://github.com/ObviousApp) [@coderabbitai[bot]](https://github.com/coderabbitai[bot]) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Fail fast when an explicit `--config-file` does not exist [#1534](https://github.com/chromaui/chromatic-cli/pull/1534) ([@ObviousApp](https://github.com/ObviousApp) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Remove `**/build/*` ESLint ignore [#1538](https://github.com/chromaui/chromatic-cli/pull/1538) ([@ObviousApp](https://github.com/ObviousApp) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Add AGENTS.md with public-repository guidance for agents [#1532](https://github.com/chromaui/chromatic-cli/pull/1532) ([@codykaup](https://github.com/codykaup))
+- Pass visited commit SHAs to git log via stdin to avoid E2BIG [#1531](https://github.com/chromaui/chromatic-cli/pull/1531) ([@b-pm](https://github.com/b-pm))
+
+#### Authors: 6
+
+- [@coderabbitai[bot]](https://github.com/coderabbitai[bot])
+- [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot])
+- B. ([@b-pm](https://github.com/b-pm))
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+- Obvious ([@ObviousApp](https://github.com/ObviousApp))
+
+---
+
 # v18.13.0 (Fri Oct 16 2026)
 
 #### 🚀 Enhancement
