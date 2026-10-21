@@ -24,7 +24,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 ## Proof and skip reporting
 
 - CLI proof includes `command.txt`, `stdout.txt`, `stderr.txt` (or `pane.txt` for TTY), and `exit_code`.
-- Pair every exit code with the message or file that explains it. `trim-stats-file` exits 0 on failure.
+- Pair every exit code with the message or file that explains it.
 - File-writing proof includes the written file copied into the evidence label dir and a read-only inspection of it with `jq`, `wc` or `ls`.
 - Record the feature ID and entry point with every artifact. The evidence label carries the ID.
 - Report an unreachable path with the attempted command and the unmet precondition. A blocked backend is a precondition failure, not a pass.
@@ -45,7 +45,7 @@ Keep implementation details out of the map. Name only user paths, stable handles
 
 - [Trace changed files to stories](./trace.md) covers `chromatic trace` in default, compact and expanded modes, the no-match case, and a missing stats file.
 - [TurboSnap manifest](./turbosnap-manifest.md) covers `chromatic turbosnap-manifest`, its JSON shape, and the `--externals` and `--static-dir` options.
-- [Trim stats file](./trim-stats-file.md) covers `chromatic trim-stats-file` output placement and its misleading exit code on failure.
+- [Trim stats file](./trim-stats-file.md) covers `chromatic trim-stats-file` output placement, its exit code on failure, and its `--help` text.
 - [Preflight and configuration](./preflight-and-config.md) covers the main command's offline option validation, the config file, and diagnostics and log files.
 - [Publish a build](./publish-build.md) covers the networked main command: prebuilt publish, exit once uploaded, dry run, skip, and JUnit report. It needs a token and a reachable backend.
 - [TurboSnap on a real build](./turbosnap-only-changed.md) covers `--only-changed` against a real baseline: a fully skipped build, one changed story file, the strict exit code, `--trace-changed`, the automatic metadata upload, and the same-commit rebuild fallback. It needs a token, a reachable backend, and a local-only commit.

@@ -3,7 +3,7 @@ import { stat, writeFileSync } from 'fs';
 import path from 'path';
 import { withFile } from 'tmp-promise';
 
-import { main as trimStatsFile } from '../../bin-src/trimStatsFile';
+import { trimStatsFile } from '../../bin-src/trimStatsFile';
 import { Context, FileDesc } from '../types';
 import metadataHtml from '../ui/html/metadata.html';
 import uploadingMetadata from '../ui/messages/info/uploadingMetadata';
@@ -44,7 +44,8 @@ export async function uploadMetadataFiles(ctx: Context) {
         await findStorybookConfigFile(ctx.options.storybookConfigDir, PREVIEW_CONFIG_PATTERN).catch(
           () => undefined
         ),
-        ctx.fileInfo?.statsPath && (await trimStatsFile([ctx.fileInfo.statsPath])),
+        ctx.fileInfo?.statsPath &&
+          (await trimStatsFile(ctx.fileInfo.statsPath).catch(() => undefined)),
       ].filter((m): m is string => !!m);
 
       const unfilteredFiles = await Promise.all(
