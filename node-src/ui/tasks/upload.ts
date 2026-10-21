@@ -60,6 +60,12 @@ export const success = (ctx: Context) => {
   };
 };
 
+// The build was fully TurboSnapped, so nothing was uploaded. The TurboSnap messages explain why.
+export const turboSnapped = () => ({
+  status: 'skipped',
+  title: 'Publish skipped',
+});
+
 export const failed = (ctx: Context, { path }: { path: string }) => ({
   status: 'error',
   title: `Publishing your built ${buildType(ctx)}`,
