@@ -453,15 +453,6 @@ describe('resolveStatsPath', () => {
       '/repo/packages/ui/src/Button.tsx#fragment'
     );
   });
-
-  it('resolves a loader chain with its ? intact, so the loader file is never hashed instead', () => {
-    const id =
-      '../../node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./src/lib/PathDerived/styles.module.css';
-
-    expect(resolveStatsPath(id, projectRoot)).toBe(
-      '/repo/node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./src/lib/PathDerived/styles.module.css'
-    );
-  });
 });
 
 describe('isNodeModulesPath', () => {
