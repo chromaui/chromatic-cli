@@ -65,7 +65,11 @@ describe('buildStorybook', () => {
     const input = { ...baseInput, buildCommand: 'npm run build:storybook --script-args' };
 
     execa.mockReturnValue(new Promise((resolve) => setTimeout(resolve, 100)) as any);
-    await expect(buildStorybook(deps, input)).rejects.toThrow('Command failed');
+    await expect(buildStorybook(deps, input)).rejects.toMatchObject({
+      name: 'TaskFailure',
+      exitCode: exitCodes.STORYBOOK_BUILD_TIMEOUT,
+      userError: true,
+    });
     expect(deps.log.error).toHaveBeenCalledWith(
       expect.stringContaining('Command timed out after 0ms')
     );
