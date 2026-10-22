@@ -45,7 +45,10 @@ export async function uploadMetadataFiles(ctx: Context) {
           () => undefined
         ),
         ctx.fileInfo?.statsPath &&
-          (await trimStatsFile(ctx.fileInfo.statsPath).catch(() => undefined)),
+          (await trimStatsFile(ctx.fileInfo.statsPath).catch((err) => {
+            ctx.log.debug(`Failed to trim stats file: ${err}`);
+            return undefined;
+          })),
       ].filter((m): m is string => !!m);
 
       const unfilteredFiles = await Promise.all(
