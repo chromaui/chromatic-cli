@@ -112,16 +112,16 @@ export function isNodeModulesPath(filePath: string): boolean {
 // segments with either separator. Each holds generated output rather than an installed package, and
 // its contents can change on every build:
 //
-// - `.cache`: build caches of loaders, Babel, Storybook and its builders (including builder entries).
+// - `.cache`: build caches, including the Storybook builder entries story detection recognizes.
 // - `.federation`: module federation's generated entries, renamed by content hash on every build.
-// - `.vite`: Vite's pre-bundled dependency cache.
-// - `.vite-temp`: Vite's compiled config files.
 //
-// Never add a package store: `.pnpm`, `.bun` and `.deno` hold real packages, and treating them as
-// generated would hide a dependency upgrade. When unsure, leave a directory out: hashing generated
-// output only costs recaptures, while skipping a package misses visual changes.
+// Add a directory only once it has been seen in a real stats graph. Never add a package store:
+// `.pnpm`, `.bun` and `.deno` hold real packages, and treating them as generated would hide a
+// dependency upgrade. Likewise `.vite/deps` holds pre-bundled copies of real packages. When unsure,
+// leave a directory out: hashing generated output only costs recaptures, while skipping a package
+// misses visual changes.
 const GENERATED_NODE_MODULES_SEGMENT =
-  /(?:^|[\\/])node_modules[\\/](?:\.cache|\.federation|\.vite|\.vite-temp)(?:[\\/]|$)/;
+  /(?:^|[\\/])node_modules[\\/](?:\.cache|\.federation)(?:[\\/]|$)/;
 
 /**
  * Whether a path lies inside an installed package: it passes through a `node_modules` directory,

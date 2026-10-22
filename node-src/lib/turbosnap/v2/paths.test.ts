@@ -469,6 +469,7 @@ describe('isInstalledPackagePath', () => {
     ['a package whose own directory is named .cache', './node_modules/react/.cache/index.js'],
     ['a package whose name only starts with .cache', './node_modules/.cache-loader/index.js'],
     ['a package path with Windows separators', String.raw`C:\repo\node_modules\react\index.js`],
+    ['a Vite pre-bundled copy of a package', '/repo/node_modules/.vite/deps/react.js'],
   ])('is true for %s', (_description, filePath) => {
     expect(isInstalledPackagePath(filePath)).toBe(true);
   });
@@ -479,8 +480,6 @@ describe('isInstalledPackagePath', () => {
       'a build cache file',
       './node_modules/.cache/storybook/default/dev-server/storybook-stories.js',
     ],
-    ['a Vite pre-bundled dependency', '/repo/node_modules/.vite/deps/react.js'],
-    ['a Vite compiled config', './node_modules/.vite-temp/vite.config.ts.timestamp-1.mjs'],
     [
       'a cache in a nested workspace package',
       './packages/ui/node_modules/.cache/babel-loader/x.json',
