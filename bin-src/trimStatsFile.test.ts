@@ -39,4 +39,13 @@ describe('Trim Stats File', () => {
     await main(['./nope.json']);
     expect(process.exitCode).toBe(1);
   });
+
+  it('rejects unknown flags instead of treating the next argument as their value', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(process, 'exit').mockImplementation((code) => {
+      throw new Error(`exit ${code}`);
+    });
+    await expect(main(['--verbose', './stats.json/preview-stats.json'])).rejects.toThrow('exit 2');
+    expect(existsSync('./storybook-static/preview-stats.trimmed.json')).toBe(false);
+  });
 });

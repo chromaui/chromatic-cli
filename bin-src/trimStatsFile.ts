@@ -71,7 +71,9 @@ export async function main(argv: string[]) {
     `,
     {
       argv,
+      allowUnknownFlags: false,
       description: 'Trim a stats file down to user code, for debugging TurboSnap',
+      flags: { help: { type: 'boolean' } },
     }
   );
 
