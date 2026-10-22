@@ -2,6 +2,8 @@ import path from 'path';
 import xxHashWasm from 'xxhash-wasm';
 
 import { Stats } from '../../../types';
+import { ConfigAnalysis } from './configAnalysis';
+import { selectConfigCoverage } from './configCoverage';
 import {
   collectTransitiveDependencies,
   FileHash,
@@ -28,6 +30,8 @@ type StorybookVersion = string;
  * is uploaded as a static file to S3 for debugging purposes.
  */
 export interface TurboSnapManifest {
+  /** Explains the selected config coverage; only the hash categories drive capture selection. */
+  configAnalysis: ConfigAnalysis;
   /* The rolled-up hash of the entire Storybook, covering every file located in the manifest. */
   storybookHash: string;
   /**
@@ -69,6 +73,7 @@ export interface TurboSnapManifest {
  * use JSON-safe types like arrays and objects instead of sets and maps.
  */
 interface ManifestFile {
+  configAnalysis: ConfigAnalysis;
   storybookHash: string;
   storybookConfigHashes: Record<FilePath, FileHash | StorybookVersion>;
   storybookConfigFiles: Record<FilePath, FileHash>;
@@ -134,12 +139,26 @@ export async function buildManifest(
   // upgrade there. Track the version instead; it is a plain string, not a hash.
   storybookConfigHashes.set(STORYBOOK_VERSION_KEY, resolveStorybookVersion(input));
 
-  // Storybook's config directory, static assets and the user's externals are never bundler inputs, so
-  // nothing above can see them change. They get their own roll-ups; see rollUpOutOfGraphFiles.
-  const { files: outOfGraphFiles, skippedFiles: skippedSweptFiles } = await hashOutOfGraphFiles(
+  // Main config, static assets and externals can affect rendering without appearing in the preview
+  // graph. Sweep first; only verified builder evidence can remove story-only files from coverage.
+  const { files: sweptFiles, skippedFiles: skippedSweptFiles } = await hashOutOfGraphFiles(
     input,
     skipRule
   );
+  const {
+    analysis: configAnalysis,
+    files: outOfGraphFiles,
+    hashes: buildHashes,
+  } = await selectConfigCoverage(
+    stats,
+    input,
+    skipRule,
+    attribution,
+    globalRoots,
+    sweptFiles,
+    h64ToString
+  );
+  for (const [key, hash] of buildHashes) storybookConfigHashes.set(key, hash);
   for (const [key, hash] of rollUpOutOfGraphFiles(outOfGraphFiles, h64ToString)) {
     storybookConfigHashes.set(key, hash);
   }
@@ -153,6 +172,13 @@ export async function buildManifest(
     `Hashed ${outOfGraphFiles.externals.size} external files from ${input.externals.length} --externals globs`
   );
   const skippedFiles = new Map([...skippedGraphFiles, ...skippedSweptFiles]);
+  input.log.debug('TurboSnap v2 config-directory coverage', {
+    mode: configAnalysis.mode,
+    reason: configAnalysis.reason,
+    storyScopedCandidates: configAnalysis.storyScopedCandidates.length,
+    globalFiles: configAnalysis.globalFiles.length,
+    unattributedFiles: configAnalysis.unattributedFiles.length,
+  });
   input.log.debug(
     `Skipped hashing ${skippedFiles.size} files; the manifest's skippedFiles lists each with its reason`
   );
@@ -166,6 +192,7 @@ export async function buildManifest(
 
   return {
     storybookHash,
+    configAnalysis,
     storybookConfigHashes,
     storyFileHashes,
     attribution,
@@ -186,6 +213,7 @@ export async function buildManifest(
  */
 export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
   return {
+    configAnalysis: manifest.configAnalysis,
     storybookHash: manifest.storybookHash,
     storybookConfigHashes: sortByKey(Object.fromEntries(manifest.storybookConfigHashes)),
     storybookConfigFiles: sortByKey(

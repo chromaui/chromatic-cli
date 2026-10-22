@@ -599,6 +599,8 @@ export interface Module {
 
 export interface Stats {
   modules: Module[];
+  /** Optional builder evidence, validated by TurboSnap 2 before it can narrow config coverage. */
+  turbosnapConfig?: unknown;
 }
 
 export interface FileDesc {

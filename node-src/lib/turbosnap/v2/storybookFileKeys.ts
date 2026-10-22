@@ -32,6 +32,12 @@ export const STORYBOOK_GLOBALS_KEY = 'storybookGlobals';
  */
 export const STORYBOOK_VERSION_KEY = 'storybookVersion';
 
+/** Verified builder inputs and environment, independent of story-only source fingerprints. */
+export const BUILD_CONFIGURATION_KEY = 'buildConfiguration';
+/** Incompatible selectors must not inherit captures from one another. */
+export const CONFIG_DEPENDENCY_VERSION_KEY = 'configDependencyVersion';
+export const CONFIG_DEPENDENCY_VERSION = '1';
+
 /**
  * The Storybook config directory and the static directories: Storybook inputs that are never bundler
  * inputs, so no module hash can see them change.
@@ -59,6 +65,8 @@ export const EXTERNALS_KEY = 'externals';
  * so none of these bare names can collide with one; see the note at the top of this file.
  */
 export type StorybookFileKey =
+  | typeof BUILD_CONFIGURATION_KEY
+  | typeof CONFIG_DEPENDENCY_VERSION_KEY
   | typeof STORYBOOK_PREVIEW_KEY
   | typeof STORYBOOK_GLOBALS_KEY
   | typeof STORYBOOK_VERSION_KEY

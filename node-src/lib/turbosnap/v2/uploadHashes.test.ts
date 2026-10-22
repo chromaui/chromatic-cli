@@ -9,6 +9,15 @@ const client = { runQuery: vi.fn() };
 const graphqlClient = client as unknown as GraphQLClient;
 
 const manifest: TurboSnapManifest = {
+  configAnalysis: {
+    mode: 'directory',
+    reason: 'build-dependencies-unavailable',
+    buildFiles: [],
+    entryFiles: [],
+    storyScopedCandidates: [],
+    globalFiles: [],
+    unattributedFiles: [],
+  },
   files: new Map(),
   storyFileHashes: new Map([['./src/Button.stories.ts', 'story-hash']]),
   storybookConfigHashes: new Map([

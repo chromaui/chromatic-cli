@@ -1,4 +1,6 @@
+import { createHash } from 'crypto';
 import {
+  createReadStream,
   existsSync,
   mkdirSync,
   readdirSync,
@@ -41,6 +43,8 @@ export interface ProjectFiles {
     absolutePaths: AbsolutePath[],
     concurrency?: number
   ): Promise<Record<AbsolutePath, FileHash>>;
+  /** SHA256 binding to builder-produced evidence; never used as a capture hash. */
+  sha256(absolutePath: AbsolutePath): Promise<string>;
   /**
    * Follows symlinks, names files by the link path, terminates on a cycle, empty when absent. A path
    * that names a single file lists that file alone. Throws when the path itself cannot be stat'd for
@@ -93,6 +97,14 @@ export function realProjectFiles(deps: GitDeps): ProjectFiles {
     packageVersion: (fromDirectory: AbsolutePath, packageName: string) =>
       readPackageVersion(log, fromDirectory, packageName),
     hashAll: hashFileContents,
+    sha256: (absolutePath) =>
+      new Promise((resolve, reject) => {
+        const hash = createHash('sha256');
+        createReadStream(absolutePath)
+          .on('data', (chunk: Buffer) => hash.update(chunk))
+          .on('error', reject)
+          .on('end', () => resolve(hash.digest('hex')));
+      }),
     listTree: (absolutePath: AbsolutePath) => listTree(log, absolutePath),
     trackedFiles: (gitRoot: AbsolutePath) => trackedFiles(deps, gitRoot),
     writeFile: (absolutePath: AbsolutePath, contents: string) => {
