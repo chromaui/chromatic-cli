@@ -27,6 +27,7 @@ function isUnsupportedUsageField(error: unknown, query: string): boolean {
   // Production redacts validation messages. Require the exact validation code and
   // a source location pointing at one of our new root fields, never an unrelated field.
   return (
+    message === "Your query doesn't match the schema. Try double-checking it!" &&
     extensions?.code === 'GRAPHQL_VALIDATION_FAILED' &&
     !!locations?.length &&
     locations.every(({ line, column }) =>

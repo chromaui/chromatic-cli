@@ -64,4 +64,19 @@ describe('runUsageQuery', () => {
       expect(queryMock).toHaveBeenCalledTimes(1);
     }
   );
+
+  it('does not retry a different validation refusal at an advisory field', async () => {
+    const { client, queryMock } = makeClient();
+    const error = {
+      message: 'Budget exceeded',
+      extensions: { code: 'GRAPHQL_VALIDATION_FAILED' },
+      locations: [{ line: 2, column: 3 }],
+    };
+    queryMock.mockRejectedValue(error);
+
+    await expect(
+      runUsageQuery(client, () => 'query {\n  usageStatus { dataStatus }\n}', {}, {})
+    ).rejects.toBe(error);
+    expect(queryMock).toHaveBeenCalledTimes(1);
+  });
 });
