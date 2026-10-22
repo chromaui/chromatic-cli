@@ -1,7 +1,8 @@
 import retry from 'async-retry';
+import { z } from 'zod';
 
 import { InitialContext } from '..';
-import HTTPClient, { HTTPClientOptions } from './httpClient';
+import HTTPClient, { HTTPClientError, HTTPClientOptions } from './httpClient';
 
 const RETRYABLE_ERROR_CODE = 'RETRYABLE_ERROR_CODE';
 
@@ -17,6 +18,21 @@ export interface GraphQLError {
 
 const errorLocation = (error: GraphQLError) =>
   `${error.path?.join('.') || ''} ${error.locations?.map((l) => `${l.line}:${l.column}`).join(', ') || ''}`;
+
+const validationErrorResponse = z.object({
+  // Execution responses may contain partial data. They must never become compatibility retries.
+  data: z.never().optional(),
+  errors: z
+    .array(
+      z.object({
+        message: z.string(),
+        path: z.never().optional(),
+        locations: z.array(z.object({ line: z.number(), column: z.number() })).optional(),
+        extensions: z.object({ code: z.literal('GRAPHQL_VALIDATION_FAILED') }),
+      })
+    )
+    .min(1),
+});
 
 /**
  * Interact with a GraphQL server using fetch and retries.
@@ -52,9 +68,10 @@ export default class GraphQLClient {
               headers: { ...this.headers, ...headers },
               method: 'post',
             },
-            { retries }
+            { retries, noLogErrorBody: true }
           )
           .then((result) => result.json() as any)
+          .catch((error) => this.readValidationError(error))
           .catch(bail);
 
         if (!errors) return data;
@@ -73,5 +90,25 @@ export default class GraphQLClient {
       },
       { retries }
     );
+  }
+
+  private async readValidationError(error: unknown) {
+    if (!(error instanceof HTTPClientError)) throw error;
+    const body = await error.response.text().catch(() => {
+      throw error;
+    });
+    this.client.log.debug(error.message);
+    this.client.log.debug(body);
+    if (error.response.status !== 400) throw error;
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(body);
+    } catch {
+      throw error;
+    }
+    const result = validationErrorResponse.safeParse(parsed);
+    if (!result.success) throw error;
+    return result.data;
   }
 }
