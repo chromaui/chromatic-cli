@@ -10,6 +10,26 @@ const copy = (globs, ...args) => {
   return cpy(globs, ...args);
 };
 
+const PUSH_ATTEMPTS = 5;
+
+// Canary releases from different PRs run concurrently, so another run can push to main between our
+// clone and our push. When that happens, recommit our exact tree on top of the new main and retry.
+// A rebase would be wrong here: it can splice the other run's non-conflicting hunks into our
+// bundled files, so the pinned tag would no longer point at what this run built.
+const pushToMain = async ($$, version) => {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await $$`git push origin HEAD:main`;
+    } catch (error) {
+      if (attempt >= PUSH_ATTEMPTS || !error.stderr?.includes('[rejected]')) throw error;
+      console.info(`⚠️ Push to main was rejected (attempt ${attempt}/${PUSH_ATTEMPTS}). Retrying.`);
+      await $$`git fetch origin main`;
+      await $$`git reset --soft FETCH_HEAD`;
+      await $$`git commit --allow-empty -m v${version}`;
+    }
+  }
+};
+
 const publishAction = async ({ major, version, repo }) => {
   const dryRun = process.argv.includes('--dry-run');
 
@@ -61,11 +81,12 @@ const publishAction = async ({ major, version, repo }) => {
   if (dryRun) {
     console.info('✅ Skipping git push due to --dry-run');
   } else {
+    // Tag only after main is pushed, because a retried push recommits HEAD.
+    await pushToMain($$, version);
     await $$`git tag -a v${version} -m ${`v${version} without automatic upgrades (pinned)`}`;
     await $$`git tag -f -a v${major} -m ${`v${version} with automatic upgrades to v${major}.x.x`}`;
     await $$`git tag -f -a latest -m ${`v${version} with automatic upgrades to all versions`}`;
-    await $$`git push origin HEAD:main`;
-    await $$`git push --tags --force`;
+    await $$`git push --force origin refs/tags/v${version} refs/tags/v${major} refs/tags/latest`;
     console.info('✅ Done');
   }
 
