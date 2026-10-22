@@ -98,10 +98,10 @@ const uploadAndWaitForSentinels = async (
 };
 
 // A bypassed build halts the pipeline early (kind:'partial' sets ctx.skip). The upload frame
-// renders bare; the success message is logged here so it flushes as a free-standing block below the
-// task frames (verify/snapshot never run to log them themselves). The queried skipped-build fields
-// are carried on the partial output so they land on ctx.build for the action outputs, since verify
-// never runs to populate them.
+// shows as skipped; the success message is logged here so it flushes as a free-standing block below
+// the task frames (verify/snapshot never run to log them themselves). The queried skipped-build
+// fields are carried on the partial output so they land on ctx.build for the action outputs, since
+// verify never runs to populate them.
 const skipTurboSnapped = (
   deps: Deps,
   ctx: Context,
