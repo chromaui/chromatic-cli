@@ -108,20 +108,30 @@ export function isNodeModulesPath(filePath: string): boolean {
   return NODE_MODULES_SEGMENT.test(filePath);
 }
 
-// A directory build tools write directly under any `node_modules` directory, matched on whole
-// segments with either separator. Each holds generated output rather than an installed package, and
-// its contents can change on every build:
-//
-// - `.cache`: build caches, including the Storybook builder entries story detection recognizes.
-// - `.federation`: module federation's generated entries, renamed by content hash on every build.
+// Directories build tools write directly under any `node_modules` directory. Each holds generated
+// output rather than an installed package, and its contents can change on every build.
 //
 // Add a directory only once it has been seen in a real stats graph. Never add a package store:
 // `.pnpm`, `.bun` and `.deno` hold real packages, and treating them as generated would hide a
 // dependency upgrade. Likewise `.vite/deps` holds pre-bundled copies of real packages. When unsure,
 // leave a directory out: hashing generated output only costs recaptures, while skipping a package
 // misses visual changes.
-const GENERATED_NODE_MODULES_SEGMENT =
-  /(?:^|[\\/])node_modules[\\/](?:\.cache|\.federation)(?:[\\/]|$)/;
+const GENERATED_NODE_MODULES_DIRECTORIES = new Set([
+  // Build caches, including the Storybook builder entries story detection recognizes.
+  '.cache',
+  // Module federation's generated entries, renamed by content hash on every build.
+  '.federation',
+]);
+
+// Whether any `node_modules` segment of a path leads directly into a generated directory. Matched on
+// whole segments with either separator.
+function isGeneratedNodeModulesPath(filePath: string): boolean {
+  const segments = filePath.split(/[\\/]/);
+  return segments.some(
+    (segment, index) =>
+      segment === 'node_modules' && GENERATED_NODE_MODULES_DIRECTORIES.has(segments[index + 1])
+  );
+}
 
 /**
  * Whether a path lies inside an installed package: it passes through a `node_modules` directory,
@@ -133,7 +143,7 @@ const GENERATED_NODE_MODULES_SEGMENT =
  * @returns Whether the path is inside an installed package.
  */
 export function isInstalledPackagePath(filePath: string): boolean {
-  return isNodeModulesPath(filePath) && !GENERATED_NODE_MODULES_SEGMENT.test(filePath);
+  return isNodeModulesPath(filePath) && !isGeneratedNodeModulesPath(filePath);
 }
 
 // A Rollup proxy id: a NUL byte before the id of a module a builder created to stand for a real
