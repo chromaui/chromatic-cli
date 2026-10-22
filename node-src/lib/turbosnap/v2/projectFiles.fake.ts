@@ -81,10 +81,10 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
   }
 
   return {
-    sha256: async (absolutePath) => {
+    sourceHashes: async (absolutePath) => {
       const hash = disk.sha256Hashes?.[absolutePath];
       if (typeof hash !== 'string') throw new Error(`Could not read ${absolutePath}`);
-      return hash;
+      return { sha256: hash, capture: disk.fileHashes?.[absolutePath] ?? 'x' };
     },
     isFile,
     isDirectory,

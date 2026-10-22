@@ -51,13 +51,14 @@ export async function selectConfigCoverage(
     return { analysis: fallback, files: outOfGraphFiles, hashes };
   }
 
-  const contentHashes = await input.projectFiles.hashAll(evidence.buildFiles);
   // These are literal file paths, not bundler ids: normalizing them through the runtime graph
   // would strip real filename characters such as !, ? and concatenation-like suffixes.
-  const buildHashes = Object.entries(contentHashes).map(([file, hash]): [FilePath, FileHash] => {
-    const relative = relativeTo(input.projectRoot, file);
-    return [relative.startsWith('../') ? relative : `./${relative}`, hash];
-  });
+  const buildHashes = Object.entries(evidence.buildFileHashes).map(
+    ([file, hash]): [FilePath, FileHash] => {
+      const relative = relativeTo(input.projectRoot, file);
+      return [relative.startsWith('../') ? relative : `./${relative}`, hash];
+    }
+  );
   const buildFiles = new Set(buildHashes.map(([file]) => file));
   const analysis = analyzeConfig(configDirectory, outOfGraphFiles, attribution, buildFiles);
   analysis.mode = 'dependencies';

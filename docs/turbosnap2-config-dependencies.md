@@ -44,6 +44,17 @@ falls back to the original directory sweep. Any excluded build dependency also f
 so the opaque environment digest cannot bypass an explicit exclusion. Excluded story helpers retain
 their existing behavior.
 
+Source bindings are constrained to the independently discovered Git repository root before any
+binding contents are read, including unreferenced and excluded records. Both the declared paths and
+resolved symlink targets must stay inside that root. The file reader repeats this check, uses
+no-follow open flags where supported and verifies the opened regular file before streaming its bytes.
+Binding and capture hashes use the same descriptor; capture hashing never reopens a metadata path.
+These checks constrain untrusted metadata on a stable filesystem. They are not an atomic sandbox
+against a local process concurrently replacing ancestor directories.
+Shared sources above the project directory are supported when they remain inside the repository.
+Sources or linked packages outside the repository retain directory coverage with reason
+`outside-repository-build-dependency`; metadata cannot authorize access to another filesystem root.
+
 Validation fingerprints never enter capture hashes. The selected build inputs use the normal capture
 hashes under `buildConfiguration`, together with the producer capability and resolved environment
 hash. `configDependencyVersion` versions this coverage contract. Entering or leaving verified mode
@@ -86,7 +97,8 @@ Keep fixtures and helpers in the config directory; relocating them is not the mi
 
 Consumer tests cover story-local and dual-use files, global inputs, exclusions, custom config roots,
 contract transitions and byte-identical fallback. Real-filesystem tests cover source deletion,
-new implicit configs and identical-byte symlink retargeting. Producer tests reject unsupported
+new implicit configs, identical-byte symlink retargeting, repository escapes and non-regular files.
+Producer tests reject unsupported
 pipelines and inputs. A real Storybook build and the shipped CLI bundle must also be checked together;
 source-only tests do not establish protocol compatibility.
 

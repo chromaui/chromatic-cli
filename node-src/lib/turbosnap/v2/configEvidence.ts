@@ -6,7 +6,9 @@ import { z } from 'zod';
 import { Stats } from '../../../types';
 import getEnvironment from '../../getEnvironment';
 import { MAIN_CONFIG_PATTERN } from '../../getStorybookMetadata';
+import { FileHash } from './graph';
 import { ManifestInput } from './manifestInput';
+import { isPathWithinRoot } from './repositoryBoundary';
 import { SkipRule } from './skippedFiles';
 
 const relativePath = z
@@ -14,7 +16,10 @@ const relativePath = z
   .min(1)
   .refine(
     (value) =>
-      !path.posix.isAbsolute(value) && !path.win32.isAbsolute(value) && !value.includes('\0')
+      !path.posix.isAbsolute(value) &&
+      !path.win32.parse(value).root &&
+      !value.includes('\\') &&
+      !value.includes('\0')
   );
 const digest = z.string().regex(/^[a-f0-9]{64}$/);
 const evidenceSchema = z.object({
@@ -47,13 +52,14 @@ export type ConfigEvidenceReason =
   | 'invalid-build-dependencies'
   | 'stale-build-dependencies'
   | 'incomplete-build-dependencies'
-  | 'excluded-build-dependency';
+  | 'excluded-build-dependency'
+  | 'outside-repository-build-dependency';
 
 export type ConfigEvidence =
   | { status: 'unavailable'; reason: ConfigEvidenceReason }
   | {
       status: 'verified';
-      buildFiles: string[];
+      buildFileHashes: Record<string, FileHash>;
       environmentHash: string;
       capability: string;
     };
@@ -79,12 +85,23 @@ export async function readConfigEvidence(
   }
   const parsed = evidenceSchema.safeParse(stats.turbosnapConfig);
   if (!parsed.success) return unavailable('invalid-build-dependencies');
-  const evidence = parsed.data;
+  return verifyEvidence(parsed.data, stats, input, skipRule);
+}
+
+async function verifyEvidence(
+  evidence: Evidence,
+  stats: Stats,
+  input: ManifestInput,
+  skipRule: SkipRule
+): Promise<ConfigEvidence> {
   const statsRoot = input.statsRoot ?? input.projectRoot;
   const absolute = (file: string) => path.resolve(statsRoot, file);
   if (!hasValidGraph(evidence, absolute)) return unavailable('invalid-build-dependencies');
 
   try {
+    if (!hasRepositorySources(evidence, input, absolute)) {
+      return unavailable('outside-repository-build-dependency');
+    }
     if (!matchesMetadata(evidence, stats, input, absolute)) {
       return unavailable('stale-build-dependencies');
     }
@@ -94,12 +111,17 @@ export async function readConfigEvidence(
     if ([...buildFiles].some((file) => skipRule(absolute(file)))) {
       return unavailable('excluded-build-dependency');
     }
-    if (!(await matchesSourceBindings(evidence, input, skipRule, absolute))) {
+    const sourceHashes = await readSourceBindings(evidence, input, skipRule, absolute);
+    if (!sourceHashes) {
       return unavailable('stale-build-dependencies');
     }
     return {
       status: 'verified',
-      buildFiles: [...buildFiles].map((file) => absolute(file)),
+      buildFileHashes: Object.fromEntries(
+        [...sourceHashes]
+          .filter(([file]) => buildFiles.has(file))
+          .map(([file, hash]) => [absolute(file), hash])
+      ),
       environmentHash: evidence.environmentHash,
       capability: JSON.stringify([evidence.version, evidence.builder]),
     };
@@ -107,6 +129,20 @@ export async function readConfigEvidence(
     input.log.debug('Unable to verify TurboSnap v2 build dependency evidence', error);
     return unavailable('stale-build-dependencies');
   }
+}
+
+function hasRepositorySources(
+  evidence: Evidence,
+  input: ManifestInput,
+  absolute: AbsolutePathResolver
+): boolean {
+  const realRoot = input.projectFiles.realPath(input.gitRoot);
+  return Object.entries(evidence.files).every(
+    ([file, binding]) =>
+      isPathWithinRoot(input.gitRoot, absolute(file)) &&
+      isPathWithinRoot(input.gitRoot, absolute(binding.realPath)) &&
+      isPathWithinRoot(realRoot, input.projectFiles.realPath(absolute(file)))
+  );
 }
 
 function hasValidGraph(evidence: Evidence, absolute: AbsolutePathResolver): boolean {
@@ -191,13 +227,14 @@ function collectBuildFiles(evidence: Evidence): Set<string> {
   return files;
 }
 
-async function matchesSourceBindings(
+async function readSourceBindings(
   evidence: Evidence,
   input: ManifestInput,
   skipRule: SkipRule,
   absolute: AbsolutePathResolver
-): Promise<boolean> {
+): Promise<Map<string, FileHash> | undefined> {
   const limit = pLimit(getEnvironment().CHROMATIC_HASH_CONCURRENCY);
+  const captureHashes = new Map<string, FileHash>();
   const matches = await Promise.all(
     Object.keys(evidence.files).map((file) =>
       limit(async () => {
@@ -209,14 +246,15 @@ async function matchesSourceBindings(
         )
           return false;
         // Skipped story helpers do not invalidate the evidence when their bytes change.
-        return (
-          Boolean(skipRule(filename)) ||
-          (await input.projectFiles.sha256(filename)) === binding.hash
-        );
+        if (skipRule(filename)) return true;
+        const hashes = await input.projectFiles.sourceHashes(filename, input.gitRoot);
+        if (hashes.sha256 !== binding.hash) return false;
+        captureHashes.set(file, hashes.capture);
+        return true;
       })
     )
   );
-  return matches.every(Boolean);
+  return matches.every(Boolean) ? captureHashes : undefined;
 }
 
 function unavailable(reason: ConfigEvidenceReason): ConfigEvidence {

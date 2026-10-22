@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import path from 'path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { Stats } from '../../../types';
 import {
@@ -74,6 +74,20 @@ function evidence(
 }
 
 describe('verified TurboSnap 2 config coverage', () => {
+  it('uses verified capture hashes without reopening metadata-only build inputs', async () => {
+    const context = fixture();
+    const dependency = `${projectRoot}/build/transform.ts`;
+    const hashAll = vi.spyOn(context.input.projectFiles, 'hashAll');
+    const manifest = await buildManifest(
+      { ...context.stats, turbosnapConfig: evidence(context, context.stats, [dependency]) },
+      context.input
+    );
+
+    expect(manifest.configAnalysis.mode).toBe('dependencies');
+    expect(manifest.configAnalysis.buildFiles).toContain('./build/transform.ts');
+    expect(hashAll.mock.calls.flatMap(([files]) => files)).not.toContain(dependency);
+  });
+
   it('scopes a config-directory helper to its stories after a fresh supported build', async () => {
     const context = fixture();
     const { input, disk, stats } = context;
@@ -232,6 +246,23 @@ describe('verified TurboSnap 2 config coverage', () => {
       './.storybook/main.ts',
     ]);
     expect([...after.outOfGraphFiles.externals.keys()]).toEqual(['./.storybook/data.json']);
+  });
+
+  it('preserves legacy coverage when metadata names a source outside the repository', async () => {
+    const context = fixture();
+    const metadata = evidence(context, context.stats, ['/outside/input.json']);
+    const legacy = await buildManifest(context.stats, context.input);
+    const after = await buildManifest(
+      { ...context.stats, turbosnapConfig: metadata },
+      context.input
+    );
+
+    expect(after.configAnalysis.mode).toBe('directory');
+    expect(after.configAnalysis.reason).toBe('outside-repository-build-dependency');
+    expect(after.storybookHash).toBe(legacy.storybookHash);
+    expect(after.storybookConfigHashes).toEqual(legacy.storybookConfigHashes);
+    expect(after.storyFileHashes).toEqual(legacy.storyFileHashes);
+    expect(after.outOfGraphFiles.storybookConfigFiles.has('./.storybook/data.json')).toBe(true);
   });
 
   const invalidations: Record<

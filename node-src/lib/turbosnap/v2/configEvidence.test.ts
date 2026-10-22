@@ -1,11 +1,11 @@
 import { createHash } from 'crypto';
 import { readFileSync, rmSync, symlinkSync } from 'fs';
 import path from 'path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { Stats } from '../../../types';
 import TestLogger from '../../testLogger';
-import { repository, write } from './__fixtures__/temporaryDisk';
+import { repository, temporaryDirectory, write } from './__fixtures__/temporaryDisk';
 import { readConfigEvidence } from './configEvidence';
 import { ManifestInput } from './manifestInput';
 import { realProjectFiles } from './projectFiles';
@@ -53,7 +53,8 @@ function fixture() {
       },
     ],
   };
-  const relative = (file: string) => `./${path.relative(projectRoot, file)}`;
+  const relative = (file: string) =>
+    `./${path.relative(projectRoot, file).split(path.sep).join('/')}`;
 
   function record() {
     const configFiles = projectFiles.listTree(input.configDir).map((file) => relative(file));
@@ -97,10 +98,9 @@ describe('readConfigEvidence filesystem bindings', () => {
 
     expect(result.status).toBe('verified');
     if (result.status !== 'verified') throw new Error('Expected verified build evidence');
-    expect(result.buildFiles).toEqual([
-      path.resolve(input.projectRoot, main),
-      path.resolve(input.projectRoot, buildControl),
-    ]);
+    expect(Object.keys(result.buildFileHashes).sort()).toEqual(
+      [path.resolve(input.projectRoot, main), path.resolve(input.projectRoot, buildControl)].sort()
+    );
   });
 
   it.each([helper, buildControl])('rejects evidence after editing %s on disk', async (file) => {
@@ -249,5 +249,98 @@ describe('readConfigEvidence graph identities', () => {
     expect(
       await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
     ).toEqual({ status: 'unavailable', reason: 'stale-build-dependencies' });
+  });
+});
+
+describe('readConfigEvidence repository boundary', () => {
+  it.each(['rooted', 'unreferenced', 'untraced'])(
+    'rejects an outside source binding when it is %s before hashing any metadata source',
+    async (mode) => {
+      const { input, stats, record } = fixture();
+      const metadata = record();
+      const outside = write(
+        temporaryDirectory(),
+        'outside.txt',
+        'test fixture outside the repository'
+      );
+      const file = path.relative(input.projectRoot, outside).split(path.sep).join('/');
+      metadata.files[file] = {
+        hash: sha256('test fixture outside the repository'),
+        realPath: file,
+        dependencies: [],
+      };
+      if (mode === 'rooted') metadata.roots.push(file);
+      const hash = vi.spyOn(input.projectFiles, 'sourceHashes');
+
+      expect(
+        await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, (name) =>
+          mode === 'untraced' && name === outside ? 'untraced' : undefined
+        )
+      ).toEqual({ status: 'unavailable', reason: 'outside-repository-build-dependency' });
+      expect(hash).not.toHaveBeenCalled();
+    }
+  );
+
+  it('rejects a symlink escape even when metadata supplies the correct target and digest', async () => {
+    const { input, stats, record } = fixture();
+    const target = write(temporaryDirectory(), 'outside.json', '{"label":"Button"}');
+    const link = path.resolve(input.projectRoot, helper);
+    rmSync(link);
+    symlinkSync(target, link);
+    const metadata = record();
+    const hash = vi.spyOn(input.projectFiles, 'sourceHashes');
+
+    expect(
+      await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
+    ).toEqual({ status: 'unavailable', reason: 'outside-repository-build-dependency' });
+    expect(hash).not.toHaveBeenCalled();
+  });
+
+  it('rejects an actual symlink escape even when the declared real path stays inside', async () => {
+    const { input, stats, record } = fixture();
+    const metadata = record();
+    const link = path.resolve(input.projectRoot, helper);
+    rmSync(link);
+    symlinkSync(write(temporaryDirectory(), 'outside.json', '{"label":"Button"}'), link);
+    const hash = vi.spyOn(input.projectFiles, 'sourceHashes');
+
+    expect(
+      await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
+    ).toEqual({ status: 'unavailable', reason: 'outside-repository-build-dependency' });
+    expect(hash).not.toHaveBeenCalled();
+  });
+
+  it('allows shared build sources above the project but still inside the repository', async () => {
+    const { input, stats, record } = fixture();
+    const metadata = record();
+    const shared = write(input.gitRoot, 'shared/control.json', '{}');
+    const file = path.relative(input.projectRoot, shared).split(path.sep).join('/');
+    metadata.files[file] = { hash: sha256('{}'), realPath: file, dependencies: [] };
+    metadata.roots.push(file);
+
+    const result = await readConfigEvidence(
+      { ...stats, turbosnapConfig: metadata },
+      input,
+      () => undefined
+    );
+    expect(result.status).toBe('verified');
+    if (result.status !== 'verified') throw new Error('Expected verified build evidence');
+    expect(Object.keys(result.buildFileHashes)).toContain(shared);
+  });
+
+  it.each([
+    'C:relative.json',
+    String.raw`C:\outside.json`,
+    String.raw`\\server\share\input.json`,
+    String.raw`..\outside.json`,
+  ])('rejects a non-portable metadata path %s before any hashing', async (file) => {
+    const { input, stats, record } = fixture();
+    const metadata = record();
+    metadata.files[file] = { hash: sha256('x'), realPath: file, dependencies: [] };
+    const hash = vi.spyOn(input.projectFiles, 'sourceHashes');
+    expect(
+      await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
+    ).toEqual({ status: 'unavailable', reason: 'invalid-build-dependencies' });
+    expect(hash).not.toHaveBeenCalled();
   });
 });
