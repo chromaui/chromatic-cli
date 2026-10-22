@@ -50,17 +50,10 @@ describe('buildSkipRule', () => {
 
   it('skips the gitignored files build tools generate under node_modules, since they are not installed packages', async () => {
     const federationEntry = `${projectRoot}/node_modules/.federation/entry.3f2a1b.js`;
-    const builderEntry = `${projectRoot}/node_modules/.cache/storybook-rsbuild-builder/storybook-stories.js`;
 
-    const result = await skipped(
-      [federationEntry, builderEntry, installed],
-      context({ isIgnored: () => true })
-    );
+    const result = await skipped([federationEntry, installed], context({ isIgnored: () => true }));
 
-    expect(result).toEqual([
-      [federationEntry, 'gitignored'],
-      [builderEntry, 'gitignored'],
-    ]);
+    expect(result).toEqual([[federationEntry, 'gitignored']]);
   });
 
   it('skips a gitignored file in the Storybook config directory like any other project file', async () => {

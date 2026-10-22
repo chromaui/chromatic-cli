@@ -107,7 +107,7 @@ export async function buildSkipRule(context: SkipContext): Promise<SkipRule> {
  * Two exceptions. An installed package under `node_modules` keeps a real change visible: it is in
  * nearly every `.gitignore`, yet a dependency upgrade is a real change. The exemption covers only
  * installed packages, not the directories build tools generate under `node_modules` (such as
- * `.cache` or `.federation`; see {@link isInstalledPackagePath}): their output can change on every
+ * `.federation`; see {@link isInstalledPackagePath}): their output can change on every
  * build, and v1 never sees it either. The Storybook config directory gets no exemption: a
  * gitignored file there is generated like any other, and hashing it over-captures just the same;
  * the main config is the one file hashed regardless, by the config sweep; see

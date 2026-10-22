@@ -117,8 +117,6 @@ export function isNodeModulesPath(filePath: string): boolean {
 // leave a directory out: hashing generated output only costs recaptures, while skipping a package
 // misses visual changes.
 const GENERATED_NODE_MODULES_DIRECTORIES = new Set([
-  // Build caches, including the Storybook builder entries story detection recognizes.
-  '.cache',
   // Module federation's generated entries, renamed by content hash on every build.
   '.federation',
 ]);
@@ -136,7 +134,7 @@ function isGeneratedNodeModulesPath(filePath: string): boolean {
 /**
  * Whether a path lies inside an installed package: it passes through a `node_modules` directory,
  * and no `node_modules` segment along it leads into a directory build tools generate there (such as
- * `.cache` or `.federation`). Package stores like pnpm's `.pnpm` count as installed packages.
+ * `.federation`). Package stores like pnpm's `.pnpm` count as installed packages.
  *
  * @param filePath The path to test, raw or canonical.
  *

@@ -474,25 +474,6 @@ describe('readStatsGraph global composition roots', () => {
     expect([...graph.globalRoots]).toEqual([canonical]);
   });
 
-  it('still recognizes a cached builder entry as a root when the skip rule skips it', async () => {
-    const configEntry = './node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js';
-    const { input } = createFixture({ fileHashes: { [annotation]: 'EP' } });
-
-    const graph = await readStatsGraph(
-      {
-        modules: [
-          { id: 1, name: configEntry, reasons: [] },
-          { id: 2, name: annotation, reasons: [{ moduleName: configEntry }] },
-        ],
-      },
-      input,
-      (absolutePath) => (absolutePath.includes('/.cache/') ? 'gitignored' : undefined)
-    );
-
-    expect([...graph.globalRoots]).toEqual([configEntry]);
-    expect([...graph.skippedFiles]).toEqual([[configEntry, 'gitignored']]);
-  });
-
   it('finds the same root when stats paths are anchored outside the project root', async () => {
     // In this monorepo fixture, relative stats paths start at `/repo` while the Storybook project is
     // under `/repo/packages/ui`. The root must therefore be stored with a `../../` prefix.

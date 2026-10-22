@@ -485,8 +485,7 @@ describe('buildManifest out-of-graph inputs', () => {
 });
 
 describe('buildManifest of files build tools generate under node_modules', () => {
-  // An rsbuild-style project: the builder writes its stories and config entries under
-  // `node_modules/.cache`, and module federation writes a content-hashed entry under
+  // An rsbuild-style project: module federation writes a content-hashed entry under
   // `node_modules/.federation` that no story reaches. Git ignores all of `node_modules`.
   const storiesEntry = './node_modules/.cache/storybook-rsbuild-builder/storybook-stories.js';
   const configEntry = './node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js';
@@ -551,19 +550,5 @@ describe('buildManifest of files build tools generate under node_modules', () =>
     expect(after.storybookConfigHashes.get('storybookGlobals')).not.toBe(
       before.storybookConfigHashes.get('storybookGlobals')
     );
-  });
-
-  it('still finds the stories through the skipped builder entries under node_modules/.cache', async () => {
-    const manifest = await buildManifest(makeStats(firstEntry), fixture().input);
-
-    expect([...manifest.storyFileHashes.keys()]).toEqual(['./src/Button.stories.tsx']);
-    expect(manifest.skippedFiles.get(storiesEntry)).toBe('gitignored');
-    expect(manifest.skippedFiles.get(configEntry)).toBe('gitignored');
-    expect(manifest.attribution.previewSubtree.has('./.storybook/preview.ts')).toBe(true);
-    expect(
-      manifest.attribution.storybookGlobals.has(
-        './node_modules/.pnpm/react-dom@19.0.0/node_modules/react-dom/index.js'
-      )
-    ).toBe(true);
   });
 });
