@@ -13,6 +13,7 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup
       - name: Push to action-next
+        id: publish
         run: yarn run release-next
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -40,8 +41,19 @@ jobs:
           yarn install
         env:
           YARN_ENABLE_IMMUTABLE_INSTALLS: false
+      # `uses:` doesn't accept expressions, so check out this run's pinned tag and run it locally.
+      # GitHub documents this checkout-then-`uses: ./path` pattern for actions in private repos.
+      # action-next is public, so the default token is enough:
+      # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#example-using-an-action-inside-a-different-private-repository-than-the-workflow
+      - name: Check out the published action
+        uses: actions/checkout@v7
+        with:
+          repository: chromaui/action-next
+          ref: ${{ steps.publish.outputs.tag }}
+          path: action-next
+          persist-credentials: false
       - name: Run build against action-next
-        uses: chromaui/action-next@latest
+        uses: ./action-next
         with:
           workingDir: ${{ runner.temp }}/smoke-tests
           buildScriptName: build-storybook

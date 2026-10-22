@@ -90,7 +90,8 @@ const publishAction = async ({ major, version, repo }) => {
     console.info('✅ Done');
   }
 
-  return cleanup();
+  await cleanup();
+  return dryRun ? undefined : `v${version}`;
 };
 
 export async function main(context) {
@@ -107,14 +108,11 @@ export async function main(context) {
 
   switch (context) {
     case 'canary':
-      await publishAction({ major, version, repo: 'chromaui/action-canary' });
-      break;
+      return publishAction({ major, version, repo: 'chromaui/action-canary' });
     case 'next':
-      await publishAction({ major, version, repo: 'chromaui/action-next' });
-      break;
+      return publishAction({ major, version, repo: 'chromaui/action-next' });
     case 'latest':
-      await publishAction({ major, version, repo: 'chromaui/action' });
-      break;
+      return publishAction({ major, version, repo: 'chromaui/action' });
     default:
       console.error(`❗️ Unknown context: ${context}`);
   }
