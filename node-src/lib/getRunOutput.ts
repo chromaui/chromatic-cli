@@ -2,6 +2,8 @@ import { Context } from '../types';
 
 // Keep this in sync with the configured outputs in action.yml
 export interface Output {
+  usageStatus: Context['build']['usageStatus'];
+  optimization: Context['build']['optimization'];
   code: number;
   url: string;
   buildUrl: string;
@@ -31,12 +33,19 @@ type RunBuild = NonNullable<Context['rebuildForBuild']>;
  * @returns The details returned by the Node API and set as GitHub Action outputs.
  */
 export default function getRunOutput(
-  ctx: Partial<Pick<Context, 'exitCode' | 'build' | 'rebuildForBuild' | 'storybookUrl'>>
+  ctx: Partial<
+    Pick<Context, 'exitCode' | 'build' | 'rebuildForBuild' | 'storybookUrl' | 'announcedBuild'>
+  >
 ): Partial<Output> {
   const fromBuild = <K extends keyof RunBuild>(key: K) =>
     ctx.build?.[key] ?? ctx.rebuildForBuild?.[key];
 
   return {
+    usageStatus:
+      ctx.build?.usageStatus === undefined
+        ? ctx.announcedBuild?.usageStatus
+        : ctx.build.usageStatus,
+    optimization: ctx.build?.optimization,
     code: ctx.exitCode,
     url: fromBuild('webUrl'),
     buildUrl: fromBuild('webUrl'),

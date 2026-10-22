@@ -130,6 +130,10 @@ inputs:
     required: false
 
 outputs:
+  usageStatus:
+    description: 'Account usage and billing-period warnings as JSON; null if unauthorized, undefined if unsupported'
+  optimization:
+    description: 'TurboSnap status and recommendations as JSON; null if unavailable, undefined if unsupported'
   code:
     description: 'The exit code for the current run of the Chromatic CLI'
   url:

@@ -66,7 +66,15 @@ import skipNoProjectToken from './ui/messages/warnings/skipNoProjectToken';
 // Make keys of `T` outside of `R` optional.
 type AtLeast<T, R extends keyof T> = Partial<T> & Pick<T, R>;
 
-export type { Configuration, Context, Flags, Options, TaskName } from './types';
+export type {
+  BuildOptimization,
+  Configuration,
+  Context,
+  Flags,
+  Options,
+  TaskName,
+  UsageStatus,
+} from './types';
 
 export type InitialContext = Omit<
   AtLeast<
@@ -329,10 +337,15 @@ async function runBuild(ctx: Context) {
       await renderGitInfo(ctx);
       await renderStorybookInfo(ctx);
       await renderInitialize(ctx);
+      // Initialization advice must be visible before the next expensive task.
+      ctx.log.flush();
+      if (ctx.options.interactive) ctx.log.queue();
       await renderBuild(ctx);
       await renderPrepare(ctx);
       await renderUpload(ctx);
       await renderVerify(ctx);
+      ctx.log.flush();
+      if (ctx.options.interactive) ctx.log.queue();
       await renderSnapshot(ctx);
       await new Listr(getTasks(ctx), options).run(ctx);
       ctx.log.debug('Tasks completed');

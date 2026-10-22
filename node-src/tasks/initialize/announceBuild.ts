@@ -2,6 +2,8 @@ import { emailHash } from '@cli/emailHash';
 import * as Sentry from '@sentry/node';
 
 import { relativeTo } from '../../lib/getStorybookProjectRoot';
+import { runUsageQuery } from '../../lib/runUsageQuery';
+import { logUsageStatus, usageStatusSelection } from '../../lib/usageStatus';
 import {
   AnnouncedBuild,
   Deps,
@@ -24,7 +26,7 @@ export interface AnnounceBuildInput {
   projectMetadata: ProjectMetadata;
 }
 
-const AnnounceBuildMutation = `
+const AnnounceBuildMutation = (includeUsage: boolean) => `
   mutation AnnounceBuildMutation($input: AnnounceBuildInput!) {
     announceBuild(input: $input) {
       id
@@ -34,6 +36,7 @@ const AnnounceBuildMutation = `
       status
       autoAcceptChanges
       reportToken
+      ${includeUsage ? usageStatusSelection : ''}
       features {
         uiTests
         uiReview
@@ -103,11 +106,24 @@ export const announceBuild = async (
   input: AnnounceBuildInput
 ): Promise<AnnouncedBuild> => {
   const gqlInput = parseAnnounceBuildMutationInput(deps, input);
-  const { announceBuild: announcedBuild } = await deps.client.runQuery<AnnounceBuildMutationResult>(
+  const { announceBuild: announcedBuild } = await runUsageQuery<AnnounceBuildMutationResult>(
+    deps.client,
     AnnounceBuildMutation,
     { input: gqlInput },
     { retries: 3 }
   );
+
+  logUsageStatus(deps.log, announcedBuild.usageStatus);
+  if (
+    !input.turboSnap &&
+    ['UNUSED', 'APPLIED'].includes(announcedBuild.app.turboSnapAvailability) &&
+    (announcedBuild.features?.uiTests || announcedBuild.features?.uiReview) &&
+    !announcedBuild.features.isReactNativeApp
+  ) {
+    deps.log.warn(
+      'TurboSnap is available but is not enabled for this run. Review the --only-changed configuration before starting further builds: https://www.chromatic.com/docs/turbosnap/'
+    );
+  }
 
   Sentry.setTag('app_id', announcedBuild.app.id);
   Sentry.setContext('build', { id: announcedBuild.id });

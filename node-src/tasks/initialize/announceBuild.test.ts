@@ -1,6 +1,7 @@
 import TestLogger from '@cli/testLogger';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { usageStatus } from '../../lib/usageStatus.fake';
 import { Deps } from '../../types';
 import { announceBuild, AnnounceBuildInput } from './announceBuild';
 
@@ -129,5 +130,42 @@ describe('announceBuild', () => {
       { retries: 3 }
     );
     expect(result).toEqual(build);
+  });
+  it.each(['UNUSED', 'APPLIED'])(
+    'warns before later build tasks when TurboSnap is eligible (%s) but disabled for this run',
+    async (turboSnapAvailability) => {
+      const build = {
+        id: 'usage-build',
+        app: { id: 'app', turboSnapAvailability },
+        features: { uiTests: true },
+        usageStatus,
+      };
+      client.runQuery.mockResolvedValue({ announceBuild: build });
+      const result = await announceBuild(deps, input);
+      expect(result.usageStatus).toEqual(usageStatus);
+      expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('70%'));
+      expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('--only-changed'));
+    }
+  );
+
+  it('does not suggest enabling TurboSnap when it is unavailable or already enabled', async () => {
+    client.runQuery.mockResolvedValue({
+      announceBuild: {
+        id: 'build',
+        app: { id: 'app', turboSnapAvailability: 'UNAVAILABLE' },
+        features: { uiTests: true },
+      },
+    });
+    await announceBuild(deps, input);
+    expect(log.warn).not.toHaveBeenCalled();
+    client.runQuery.mockResolvedValue({
+      announceBuild: {
+        id: 'build',
+        app: { id: 'app', turboSnapAvailability: 'APPLIED' },
+        features: { uiTests: true },
+      },
+    });
+    await announceBuild(deps, { ...input, turboSnap: {} });
+    expect(log.warn).not.toHaveBeenCalled();
   });
 });

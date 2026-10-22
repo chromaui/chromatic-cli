@@ -8,11 +8,15 @@ const RETRYABLE_ERROR_CODE = 'RETRYABLE_ERROR_CODE';
 export interface GraphQLError {
   message: string;
   locations?: { line: number; column: number }[];
+  path?: (string | number)[];
   extensions: {
     code: string;
     exception?: { stacktrace?: string[] };
   };
 }
+
+const errorLocation = (error: GraphQLError) =>
+  `${error.path?.join('.') || ''} ${error.locations?.map((l) => `${l.line}:${l.column}`).join(', ') || ''}`;
 
 /**
  * Interact with a GraphQL server using fetch and retries.
@@ -63,9 +67,7 @@ export default class GraphQLClient {
           if (err.extensions && err.extensions.code === RETRYABLE_ERROR_CODE) throw err;
 
           err.name = err.name || 'GraphQLError';
-          err.at = `${err.path.join('.')} ${err.locations
-            .map((l) => `${l.line}:${l.column}`)
-            .join(', ')}`;
+          err.at = errorLocation(err);
         }
         return bail(errors.length === 1 ? errors[0] : errors);
       },

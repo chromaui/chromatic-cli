@@ -1,4 +1,11 @@
+import { runUsageQuery } from '../../lib/runUsageQuery';
 import { exitCodes, TaskFailure } from '../../lib/setExitCode';
+import {
+  logOptimization,
+  logUsageStatus,
+  optimizationSelection,
+  usageStatusSelection,
+} from '../../lib/usageStatus';
 import { delay } from '../../lib/utilities';
 import { Context, Deps } from '../../types';
 import brokenStorybook from '../../ui/messages/errors/brokenStorybook';
@@ -38,7 +45,7 @@ interface StartedBuildQueryResult {
 }
 
 // these fields must be part of authorizedBuildFieldsViaAppCode in the public api
-const VerifyBuildQuery = `
+const VerifyBuildQuery = (includeUsage: boolean) => `
   query VerifyBuildQuery($number: Int!) {
     app {
       build(number: $number) {
@@ -69,6 +76,7 @@ const VerifyBuildQuery = `
         autoAcceptChanges
         turboSnapEnabled
         wasLimited
+        ${includeUsage ? usageStatusSelection + optimizationSelection : ''}
         app {
           manageUrl
           setupUrl
@@ -185,7 +193,7 @@ export const verifyBuild = async (
 
     const {
       app: { build: startedBuild },
-    } = await client.runQuery<VerifyBuildQueryResult>(VerifyBuildQuery, variables, options);
+    } = await runUsageQuery<VerifyBuildQueryResult>(client, VerifyBuildQuery, variables, options);
     build = { ...announcedBuild, ...build, ...startedBuild };
   };
 
@@ -199,6 +207,9 @@ export const verifyBuild = async (
       )
     ),
   ]);
+
+  logUsageStatus(log, build.usageStatus, announcedBuild.usageStatus);
+  logOptimization(log, build.optimization);
 
   const isPublishOnly = !build.features?.uiReview && !build.features?.uiTests;
 

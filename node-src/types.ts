@@ -301,7 +301,39 @@ export interface RuntimeMetadata {
   packageManagerVersion?: string;
 }
 
+/** Account-wide billing information calculated by Chromatic. Null values are unknown, never zero. */
+export interface UsageStatus {
+  dataStatus: 'AVAILABLE' | 'UNAVAILABLE';
+  recordedAt: string;
+  periodStart: string | null;
+  periodEnd: string | null;
+  billableSnapshots: number | null;
+  includedSnapshots: number | null;
+  remainingSnapshots: number | null;
+  usagePercentage: number | null;
+  elapsedPercentage: number | null;
+  daysRemaining: number | null;
+  threshold: number | null;
+  isOverageAllowed: boolean;
+  projectedSnapshots: number | null;
+  warnings: {
+    code: string;
+    severity: 'INFO' | 'WARNING' | 'CRITICAL';
+    message: string;
+    action: string;
+  }[];
+  links: { billing: string | null; documentation: string };
+}
+
+export interface BuildOptimization {
+  turboSnapStatus: 'UNAVAILABLE' | 'NOT_ENABLED' | 'APPLIED' | 'BAILED' | 'UNKNOWN';
+  reason: string | null;
+  recommendation: string;
+  documentationUrl: string;
+}
+
 export interface AnnouncedBuild {
+  usageStatus?: UsageStatus | null;
   id: string;
   number: number;
   browsers: string[];
@@ -432,6 +464,8 @@ export interface Context {
   storybookUrl?: string;
   announcedBuild: AnnouncedBuild;
   build: {
+    usageStatus?: UsageStatus | null;
+    optimization?: BuildOptimization | null;
     id: string;
     number: number;
     status: string;

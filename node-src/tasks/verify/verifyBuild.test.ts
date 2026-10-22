@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { exitCodes } from '../../lib/setExitCode';
 import TestLogger from '../../lib/testLogger';
+import { optimization, usageStatus } from '../../lib/usageStatus.fake';
 import { verifyBuild } from './verifyBuild';
 
 const environment = {
@@ -276,5 +277,29 @@ describe('verifyBuild', () => {
 
       View the published archives at https://61b0a4b8ebf0e344c2aa231c-wdooytetbw.dev-chromatic.com/"
     `);
+  });
+  it('refreshes advice for exitOnceUploaded without setting a warning exit code', async () => {
+    const client = { runQuery: vi.fn() };
+    const build = {
+      number: 1,
+      status: 'IN_PROGRESS',
+      features: { uiTests: true, uiReview: false },
+      app: {},
+      startedAt: Date.now(),
+      usageStatus,
+      optimization,
+    };
+    client.runQuery.mockResolvedValue({ app: { build } });
+    const result = await verifyBuild(buildDeps(client), {
+      ...defaultInput,
+      options: { exitOnceUploaded: true },
+      matchesBranch: () => true,
+    });
+    expect(result.skipSnapshots).toBe(true);
+    expect(result.limitExitCode).toBeUndefined();
+    expect(result.build.usageStatus).toEqual(usageStatus);
+    expect(result.build.optimization).toEqual(optimization);
+    expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('70%'));
+    expect(log.warn).toHaveBeenCalledWith(expect.stringContaining(optimization.recommendation));
   });
 });

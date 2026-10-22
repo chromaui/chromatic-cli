@@ -209,7 +209,9 @@ async function run() {
       },
     });
 
-    for (const [key, value] of Object.entries(output)) setOutput(key, String(value));
+    for (const [key, value] of Object.entries(output)) {
+      setOutput(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
+    }
 
     if (output.code !== 0) {
       setFailed('non-zero exit code');

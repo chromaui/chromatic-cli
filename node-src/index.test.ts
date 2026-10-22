@@ -18,12 +18,14 @@ import parseArguments from './lib/parseArguments';
 import TestLogger from './lib/testLogger';
 import { patchModulePath } from './lib/testUtilities';
 import { uploadFiles } from './lib/uploadFiles';
+import { usageStatus } from './lib/usageStatus.fake';
 import { writeChromaticDiagnostics } from './lib/writeChromaticDiagnostics';
-import { Context } from './types';
+import { Context, UsageStatus } from './types';
 
 let announcedBuild;
 let publishedBuild;
 let mockBuildFeatures;
+let mockUsageStatus: UsageStatus | undefined;
 
 vi.useFakeTimers();
 
@@ -34,6 +36,7 @@ afterEach(() => {
 });
 
 beforeEach(() => {
+  mockUsageStatus = undefined;
   mockBuildFeatures = {
     features: { uiTests: true, uiReview: true },
     wasLimited: false,
@@ -107,6 +110,7 @@ vi.mock('node-fetch', () => ({
               id: 'build-id',
               number: 1,
               status: 'ANNOUNCED',
+              usageStatus: mockUsageStatus,
               app: {
                 turboSnapAvailability: 'APPLIED',
               },
@@ -571,6 +575,27 @@ it('returns 0 with exit-zero-on-changes', async () => {
 it('returns 0 with exit-once-uploaded', async () => {
   const ctx = getContext(['--project-token=asdf1234', '--exit-once-uploaded']);
   await runAll(ctx);
+  expect(ctx.exitCode).toBe(0);
+});
+
+it('flushes early usage advice before building Storybook, including exit-once-uploaded runs', async () => {
+  mockUsageStatus = usageStatus;
+  const ctx = getContext(['--project-token=asdf1234', '--exit-once-uploaded']);
+  const buildStarted = vi.fn();
+  ctx.extraOptions = {
+    experimental_onTaskStart: (current) => {
+      if (current.task === 'build') {
+        buildStarted();
+        expect(ctx.testLogger.warn).toHaveBeenCalledWith(expect.stringContaining('70%'));
+        expect(ctx.testLogger.flush).toHaveBeenCalled();
+        expect(ctx.testLogger.flush.mock.invocationCallOrder[0]).toBeGreaterThan(
+          ctx.testLogger.warn.mock.invocationCallOrder[0]
+        );
+      }
+    },
+  };
+  await runAll(ctx);
+  expect(buildStarted).toHaveBeenCalledOnce();
   expect(ctx.exitCode).toBe(0);
 });
 

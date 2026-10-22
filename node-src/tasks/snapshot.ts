@@ -7,7 +7,14 @@ import waitForBuildToComplete, {
 } from '@cli/waitForBuildToComplete';
 import * as Sentry from '@sentry/node';
 
+import { runUsageQuery } from '../lib/runUsageQuery';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
+import {
+  logOptimization,
+  logUsageStatus,
+  optimizationSelection,
+  usageStatusSelection,
+} from '../lib/usageStatus';
 import { delay, throttle } from '../lib/utilities';
 import { Context, Deps, TaskResult } from '../types';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
@@ -18,7 +25,7 @@ import { pending } from '../ui/tasks/snapshot';
 
 // `pendingCount`, `acceptedCount` and `deniedCount` are counted by test status, so IGNORED tests are
 // excluded by construction. `changeCount` is counted by test result and includes ignored tests.
-const SnapshotBuildQuery = `
+const SnapshotBuildQuery = (includeUsage: boolean) => `
   query SnapshotBuildQuery($number: Int!) {
     app {
       build(number: $number) {
@@ -34,6 +41,7 @@ const SnapshotBuildQuery = `
         acceptedCount: testCount(statuses: [ACCEPTED])
         deniedCount: testCount(statuses: [DENIED])
         completedAt
+        ${includeUsage ? usageStatusSelection + optimizationSelection : ''}
       }
     }
   }
@@ -54,6 +62,8 @@ interface BuildQueryResult {
       acceptedCount: number;
       deniedCount: number;
       completedAt?: number;
+      usageStatus?: Context['build']['usageStatus'];
+      optimization?: Context['build']['optimization'];
     };
   };
 }
@@ -142,7 +152,7 @@ export async function snapshotProject(
   const getCompletedBuild = async (): Promise<Context['build']> => {
     const queryOptions = { headers: { Authorization: `Bearer ${reportToken}` } };
     const data = await client.runQuery<BuildQueryResult>(
-      SnapshotBuildQuery,
+      SnapshotBuildQuery(false),
       { number },
       queryOptions
     );
@@ -162,7 +172,21 @@ export async function snapshotProject(
     await waitForBuildToCompleteAndHandleErrors(deps, build.id, uiStateUpdater, reportToken);
   }
 
-  const completedBuild = await getCompletedBuild();
+  let completedBuild = await getCompletedBuild();
+  // Shared-account usage can be expensive to calculate. Refresh it once after completion,
+  // rather than on each fallback status poll, and skip it on servers without these fields.
+  if (input.build.usageStatus !== undefined || input.build.optimization !== undefined) {
+    const data = await runUsageQuery<BuildQueryResult>(
+      client,
+      SnapshotBuildQuery,
+      { number },
+      { headers: { Authorization: `Bearer ${reportToken}` } }
+    );
+    completedBuild = { ...completedBuild, ...data.app.build };
+  }
+
+  logUsageStatus(log, completedBuild.usageStatus, input.build.usageStatus);
+  logOptimization(log, completedBuild.optimization, input.build.optimization);
 
   switch (completedBuild.status) {
     case 'PASSED':

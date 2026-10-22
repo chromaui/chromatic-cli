@@ -10,6 +10,7 @@ import * as Sentry from '@sentry/node';
 import { describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
+import { usageStatus } from '../lib/usageStatus.fake';
 import {
   applySnapshotOutput,
   extractSnapshotInput,
@@ -116,6 +117,24 @@ describe('snapshotProject', () => {
       );
     }
     expect(ctx.build).toMatchObject({ ignoredCount: 3, pendingCount: 2, features });
+  });
+
+  it('refreshes usage once after status polling without turning a passing build into a failure', async () => {
+    const build = { app: {}, number: 1, features: {}, usageStatus };
+    const ctx = { ...createBaseTestContext(), build } as any;
+    const completedUsage = { ...usageStatus, usagePercentage: 95, threshold: 90 };
+    ctx.client.runQuery.mockResolvedValueOnce({ app: { build: { status: 'IN_PROGRESS' } } });
+    ctx.client.runQuery.mockResolvedValue({
+      app: { build: { status: 'PASSED', completedAt: 1, usageStatus: completedUsage } },
+    });
+    await runSnapshot(ctx);
+    expect(ctx.exitCode).toBe(0);
+    expect(ctx.build.usageStatus).toEqual(completedUsage);
+    expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('95%'));
+    expect(ctx.client.runQuery).toHaveBeenCalledTimes(3);
+    expect(ctx.client.runQuery.mock.calls[0][0]).not.toContain('usageStatus');
+    expect(ctx.client.runQuery.mock.calls[1][0]).not.toContain('usageStatus');
+    expect(ctx.client.runQuery.mock.calls[2][0]).toContain('usageStatus');
   });
 
   it('sets exitCode to 1 when build has changes', async () => {

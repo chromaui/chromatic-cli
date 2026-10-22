@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import getRunOutput from './getRunOutput';
+import { usageStatus } from './usageStatus.fake';
 
 const counts = {
   webUrl: 'https://www.chromatic.com/build?appId=abc&number=42',
@@ -52,5 +53,14 @@ describe('getRunOutput', () => {
     expect(output.code).toBe(254);
     expect(output.pendingCount).toBeUndefined();
     expect(output.ignoredCount).toBeUndefined();
+  });
+  it('preserves a fresh permission denial instead of falling back to earlier usage', () => {
+    const ctx = { build: { ...counts, usageStatus: null }, announcedBuild: { usageStatus } } as any;
+    expect(getRunOutput(ctx).usageStatus).toBeNull();
+  });
+
+  it('returns early usage when the build has not reached verification', () => {
+    const ctx = { announcedBuild: { usageStatus } } as any;
+    expect(getRunOutput(ctx).usageStatus).toEqual(usageStatus);
   });
 });
