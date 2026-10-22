@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from 'vitest';
 
 import { Module } from '../../../types';
@@ -6,6 +7,7 @@ import {
   canonicalImporters,
   foldStatsId,
   gitRootGlobMatcher,
+  isInstalledPackagePath,
   isNodeModulesPath,
   isSyntheticFile,
   moduleFileNames,
@@ -477,6 +479,60 @@ describe('isNodeModulesPath', () => {
     ['an empty path', ''],
   ])('is false for %s', (_description, filePath) => {
     expect(isNodeModulesPath(filePath)).toBe(false);
+  });
+});
+
+describe('isInstalledPackagePath', () => {
+  it.each([
+    ['a hoisted package', './node_modules/react/index.js'],
+    ['an absolute package path', '/repo/node_modules/react/index.js'],
+    [
+      'a package in the pnpm virtual store',
+      './node_modules/.pnpm/react@19.0.0/node_modules/react/index.js',
+    ],
+    [
+      'a package in the Bun isolated store',
+      './node_modules/.bun/react@19.0.0/node_modules/react/index.js',
+    ],
+    [
+      'a package in the Deno store',
+      './node_modules/.deno/react@19.0.0/node_modules/react/index.js',
+    ],
+    ['a nested workspace package', './packages/ui/node_modules/lodash/lodash.js'],
+    ['a package nested in another', './node_modules/a/node_modules/b/index.js'],
+    [
+      'a package whose own directory is named .federation',
+      './node_modules/react/.federation/index.js',
+    ],
+    ['a package whose name only starts with .federation', './node_modules/.federation-x/index.js'],
+    ['a package path with Windows separators', String.raw`C:\repo\node_modules\react\index.js`],
+    ['a Vite pre-bundled copy of a package', '/repo/node_modules/.vite/deps/react.js'],
+    [
+      'a Storybook builder cache entry',
+      './node_modules/.cache/storybook-rsbuild-builder/storybook-stories.js',
+    ],
+  ])('is true for %s', (_description, filePath) => {
+    expect(isInstalledPackagePath(filePath)).toBe(true);
+  });
+
+  it.each([
+    ['a module federation entry', './node_modules/.federation/entry.3f2a1b.js'],
+    [
+      'a federation entry in a nested workspace package',
+      './packages/ui/node_modules/.federation/entry.3f2a1b.js',
+    ],
+    [
+      'a federation entry inside a pnpm store package',
+      './node_modules/.pnpm/a@1.0.0/node_modules/.federation/entry.js',
+    ],
+    [
+      'a federation entry with Windows separators',
+      String.raw`C:\repo\node_modules\.federation\entry.js`,
+    ],
+    ['a project source file', './src/Button.tsx'],
+    ['a project directory named .federation', './src/.federation/x.js'],
+  ])('is false for %s', (_description, filePath) => {
+    expect(isInstalledPackagePath(filePath)).toBe(false);
   });
 });
 

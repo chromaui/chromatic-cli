@@ -1,6 +1,6 @@
 import { AbsolutePath } from '../../../types';
 import { ManifestInput } from './manifestInput';
-import { gitRootGlobMatcher, isNodeModulesPath } from './paths';
+import { gitRootGlobMatcher, isInstalledPackagePath } from './paths';
 
 /**
  * The part of {@link ManifestInput} the skip rule reads: where the repository is, what the user
@@ -104,8 +104,11 @@ export async function buildSkipRule(context: SkipContext): Promise<SkipRule> {
  * that works is a glob on the sibling's tracked source: any change there recaptures Storybook-wide,
  * which detects changes to the built `dist` too.
  *
- * Two exceptions. `node_modules` keeps a real change visible: it is in nearly every `.gitignore`,
- * yet a dependency upgrade is a real change. The Storybook config directory gets no exemption: a
+ * Two exceptions. An installed package under `node_modules` keeps a real change visible: it is in
+ * nearly every `.gitignore`, yet a dependency upgrade is a real change. The exemption covers only
+ * installed packages, not the directories build tools generate under `node_modules` (such as
+ * `.federation`; see {@link isInstalledPackagePath}): their output can change on every
+ * build, and v1 never sees it either. The Storybook config directory gets no exemption: a
  * gitignored file there is generated like any other, and hashing it over-captures just the same;
  * the main config is the one file hashed regardless, by the config sweep; see
  * `hashOutOfGraphFiles`.
@@ -123,5 +126,5 @@ async function ignoredFileCheck(
   const { projectFiles } = context;
   const ignored = await projectFiles.ignoredPaths();
 
-  return (realPath) => !isNodeModulesPath(realPath) && ignored.has(realPath);
+  return (realPath) => !isInstalledPackagePath(realPath) && ignored.has(realPath);
 }
