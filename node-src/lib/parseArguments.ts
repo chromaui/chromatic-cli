@@ -37,6 +37,7 @@ export default function parseArguments(argv: string[]) {
       --exit-zero-on-changes [branch]           If all tests render successfully but visual changes are found, exit with code 0 rather than the usual exit code 1. Only for [branch], if specified. Globs are supported via picomatch.
       --externals <filepath>                    Disable TurboSnap when any of these files have changed since the baseline build. Globs are supported via picomatch. This flag can be specified multiple times. Requires --only-changed.
       --ignore-last-build-on-branch <branch>    Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased). Globs are supported via picomatch.
+      --ignore-merged-pr-builds [branch]        Do not consider builds on the head branches of merged pull requests as baseline candidates. Only for [branch], if specified. Globs are supported via picomatch. Note: with squash or rebase merges this means squash/rebase merges are not detected and you may lose baselines, unless you use --auto-accept-changes on the target branch.
       --only-changed [branch]                   Enables TurboSnap: Only run stories affected by files changed since the baseline build. Only for [branch], if specified. Globs are supported via picomatch. For all other snapshots, TurboSnap will copy the baselines from the previous commit.
       --only-story-files <filepath>             Only run a single story or a subset of stories by their filename(s). Specify the full path to the story file relative to the root of your Storybook project. Globs are supported via picomatch. This flag can be specified multiple times.
       --only-story-names <storypath>            Only run a single story or a subset of stories. Story paths typically look like "Path/To/Story". Globs are supported via picomatch. This flag can be specified multiple times.
@@ -97,6 +98,7 @@ export default function parseArguments(argv: string[]) {
         exitZeroOnChanges: { type: 'string' },
         externals: { type: 'string', isMultiple: true },
         ignoreLastBuildOnBranch: { type: 'string' },
+        ignoreMergedPrBuilds: { type: 'string' },
         onlyChanged: { type: 'string' },
         onlyStoryFiles: { type: 'string', isMultiple: true },
         onlyStoryNames: { type: 'string', isMultiple: true },

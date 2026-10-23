@@ -57,6 +57,7 @@ describe('getOptions', () => {
       zip: undefined,
 
       ignoreLastBuildOnBranch: undefined,
+      ignoreMergedPrBuilds: undefined,
       preserveMissingSpecs: undefined,
 
       buildScriptName: 'build-storybook',
@@ -122,6 +123,15 @@ describe('getOptions', () => {
       debug: true,
       interactive: false,
       storybookLogFile: false,
+    });
+  });
+
+  it('accepts a branch glob or a bare flag for --ignore-merged-pr-builds', async () => {
+    expect(getOptions(getContext(['--ignore-merged-pr-builds', 'main']))).toMatchObject({
+      ignoreMergedPrBuilds: 'main',
+    });
+    expect(getOptions(getContext(['--ignore-merged-pr-builds']))).toMatchObject({
+      ignoreMergedPrBuilds: true,
     });
   });
 
