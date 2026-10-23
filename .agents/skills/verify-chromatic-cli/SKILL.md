@@ -1,6 +1,6 @@
 ---
 name: verify-chromatic-cli
-description: Drive the locally built Chromatic CLI (`chromatic` / `dist/bin.cjs` in chromaui/chromatic-cli) the way a user does from a terminal and capture proof — stdout, stderr, exit codes, written files, TTY output. Use when you need to show that a change to bin-src/ or node-src/ works in the real CLI, not just in vitest: the main publish command and its option/config preflight, `--only-changed` TurboSnap builds, `trace`, `turbosnap-manifest`, and `trim-stats-file`.
+description: Drive the locally built Chromatic CLI (`chromatic` / `dist/bin.cjs` in chromaui/chromatic-cli) the way a user does from a terminal and capture proof — stdout, stderr, exit codes, written files, TTY output. Use whenever a change touches bin-src/ or node-src/, before calling it done, opening or updating a PR, or reviewing one; for comparing main against a branch; for testing in scratch projects with other builders or package managers; and for trying a published canary. Covers the main publish command and its option/config preflight, `--only-changed` TurboSnap builds, `trace`, `turbosnap-manifest`, and `trim-stats-file`.
 ---
 
 # Verify the Chromatic CLI
@@ -74,6 +74,17 @@ $S tty <label> [--cwd DIR] [--timeout SECS] -- <chromatic args...>
 
 The per-feature recipes are in [`features/`](features/README.md). Read its README first.
 
+## Compare, reproduce elsewhere, try a canary
+
+Most verification is "the branch behaves differently from main, in a project like the user's". The helper covers that too, so don't hand-roll copies of `dist/` or ad-hoc run scripts:
+
+- **Main vs branch.** `MAIN_CLI=$($S build-ref main origin/main | tail -1)` builds `origin/main` in a detached worktree under `$WORK` that shares `node_modules`. Drive both with the same arguments: `$S run <label>-main --cli "$MAIN_CLI" -- …` and `$S run <label>-branch -- …`, then diff the outputs with `jq` (drop `generatedAt` from manifests). Any ref works, such as a PR head you fetched. Don't copy a `dist/` out of the repo: the bundle resolves externals such as `semver` from the `node_modules` beside it and fails with `Cannot find module`.
+- **A scratch project.** When the bug needs a builder, package manager, or layout the repo's Storybook doesn't have (webpack, rsbuild, Vite, pnpm, a monorepo), create the project under `$WORK/<name>`, `git init` it and commit, pin versions, build its Storybook there (pipe stdin: `: | npx storybook build --webpack-stats-json`), then drive with `--cwd "$WORK/<name>"`. Edit only committed files and `git checkout -- <file>` after each edit, because hashes come from files on disk. Pin TypeScript and peer packages explicitly: npm, pnpm, and Yarn resolve peers differently.
+- **A published canary or release.** `PUB_CLI=$($S install-published canary <version> | tail -1)` installs `chromatic@<version>` under `$WORK`, waiting for a fresh canary to reach npm (about a minute after its release job passes). Drive it with `--cli "$PUB_CLI"`.
+- `$S cleanup` removes all of these.
+
+Driving through `$S run` or `$S tty` matters: they give the CLI a pipe or TTY on stdin. Run by hand with stdin at `/dev/null`, the CLI and `yarn build-storybook` crash with `process.stdin.unref is not a function`.
+
 ## Evidence
 
 - Location: `$EVIDENCE` = `${VERIFY_ROOT:-${TMPDIR:-/tmp}/verify-chromatic-cli}/$RUN_ID/evidence/`. Cleanup never deletes it.
@@ -84,7 +95,7 @@ The per-feature recipes are in [`features/`](features/README.md). Read its READM
   - Verify side effects alongside visible output. `trim-stats-file` writes a file. A publish creates a build on Chromatic. Diagnostics contain the resolved options.
   - `--dry-run` is not offline. It still authenticates and, per `node-src/tasks/initialize/announceBuild.ts`, still announces a build to the backend. It skips only upload, verify and snapshot ("Skipped due to --dry-run"). Never use it as a "safe, local" mode.
   - Mocks are allowed only at an existing production boundary. The only one is `CHROMATIC_INDEX_URL`, which selects the backend. Point it at staging (`https://index.staging-chromatic.com`) or dev, never at a hand-rolled fake that you then call proof of a publish.
-- Diagnostics files are not safe to share after a real run until the CAP-5317 fix ships. Without it they contain the raw project token at `.analytics.client.client.env.CHROMATIC_PROJECT_TOKEN`, the session JWT at `.analytics.client.headers.Authorization`, and any `-t <token>` in `.options.originalArgv`. See `publish-build` and the `diag-files` journey. Always pass real tokens via `CHROMATIC_PROJECT_TOKEN`, never `-t`. The helper writes a `-t` value to `command.txt` as `REDACTED`. `$S cleanup` deletes `.analytics` and redacts `-t` values in `.options.originalArgv` in every JSON file in `$EVIDENCE`, so run it before sharing evidence.
+- CLI 18.13.1 and later keep the project token and session JWT out of diagnostics and log files (CAP-5317). Older releases, which `install-published` can install, put the raw token at `.analytics.client.client.env.CHROMATIC_PROJECT_TOKEN`, the session JWT at `.analytics.client.headers.Authorization`, and any `-t <token>` in `.options.originalArgv`. See `publish-build` and the `diag-files` journey. Always pass real tokens via `CHROMATIC_PROJECT_TOKEN`, never `-t`. The helper writes a `-t` value to `command.txt` as `REDACTED`. `$S cleanup` deletes `.analytics` and redacts `-t` values in `.options.originalArgv` in every JSON file in `$EVIDENCE`, so run it before sharing evidence.
 
 ## Cleanup
 
@@ -107,8 +118,10 @@ A real publish (`publish-build`) leaves a build on the Chromatic project. Cleanu
 | `$S fixture` | (Re)create the disposable project at `$FIXTURE`; prints its path |
 | `$S checkout` | Add a throwaway worktree of `HEAD` at `$CHECKOUT` on branch `vcc-$RUN_ID`; prints its path |
 | `$S checkout-storybook` | Build `$CHECKOUT`'s Storybook into `$CHECKOUT_SB_DIR` |
-| `$S run <label> [--cwd D] -- args` | Non-TTY drive with captured stdout/stderr/exit |
-| `$S tty <label> [--cwd D] [--timeout N] -- args` | TTY drive on its own tmux server; captured pane + exit |
-| `$S cleanup` | Stop owned tmux servers, remove the checkout and `$WORK`, scrub and keep `$EVIDENCE` |
+| `$S build-ref <name> <ref>` | Build the CLI at a git ref in a worktree under `$WORK`; prints its `bin.cjs` |
+| `$S install-published <name> <version>` | Install a published release or canary under `$WORK`; prints its `bin.cjs` |
+| `$S run <label> [--cwd D] [--cli B] -- args` | Non-TTY drive with captured stdout/stderr/exit; `--cli` picks another bundle |
+| `$S tty <label> [--cwd D] [--cli B] [--timeout N] -- args` | TTY drive on its own tmux server; captured pane + exit |
+| `$S cleanup` | Stop owned tmux servers, remove the checkout, ref builds, and `$WORK`, scrub and keep `$EVIDENCE` |
 
 Keep the feature map honest as the CLI changes. See `/maintain-verification-skill`.

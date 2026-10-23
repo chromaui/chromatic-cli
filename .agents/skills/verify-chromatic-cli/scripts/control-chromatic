@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # control-chromatic — drive the locally built Chromatic CLI (dist/bin.cjs) and capture proof.
-# Usage: control-chromatic <setup|rebuild|env|doctor|fixture|checkout|checkout-storybook|run|tty|cleanup> [...]
+# Usage: control-chromatic <setup|rebuild|env|doctor|fixture|checkout|checkout-storybook|build-ref|install-published|run|tty|cleanup> [...]
 # Every run is scoped by RUN_ID (default: "default"); state lives in $VERIFY_ROOT/$RUN_ID.
 set -euo pipefail
 
@@ -150,6 +150,44 @@ cmd_checkout() {
   echo "$CHECKOUT"
 }
 
+# build-ref <name> <git-ref>: build the CLI at another ref (usually origin/main) in a detached worktree at
+# $WORK/cli-<name>, sharing the repo's node_modules, so a change can be compared against it. Prints the
+# bundle path to pass as `run --cli`. Running a dist/ copied out of the repo fails with "Cannot find
+# module 'semver'", because the bundle resolves its externals from node_modules next to it.
+cmd_build_ref() {
+  local name="${1:-}" ref="${2:-}"
+  [[ -n "$name" && -n "$ref" ]] || die "usage: build-ref <name> <git-ref>"
+  require_safe_name name "$name"
+  local dir="$WORK/cli-$name"
+  [[ -e "$dir" ]] && die "$dir already exists; run cleanup first"
+  mkdir -p "$WORK"
+  git -C "$REPO" worktree add -q --detach "$dir" "$ref"
+  ln -s "$REPO/node_modules" "$dir/node_modules"
+  echo "==> yarn build ($ref in $dir)"
+  (cd "$dir" && yarn build > "$WORK/build-$name.log" 2>&1) \
+    || { tail -30 "$WORK/build-$name.log"; die "build of $ref failed (log: $WORK/build-$name.log)"; }
+  echo "$dir/dist/bin.cjs"
+}
+
+# install-published <name> <version>: install a published chromatic (a release or a PR canary such as
+# 18.13.4--canary.1568.<run>.0) into $WORK/npm-<name>. Prints the bundle path to pass as `run --cli`.
+# A canary shows up on npm about a minute after the release job passes; this retries until then.
+cmd_install_published() {
+  local name="${1:-}" version="${2:-}" attempt
+  [[ -n "$name" && -n "$version" ]] || die "usage: install-published <name> <version>"
+  require_safe_name name "$name"
+  local dir="$WORK/npm-$name"
+  for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    npm view "chromatic@$version" version > /dev/null 2>&1 && break
+    (( attempt < 12 )) || die "chromatic@$version is not on npm"
+    sleep 10
+  done
+  mkdir -p "$dir"
+  (cd "$dir" && npm init -y > /dev/null && npm install --no-audit --no-fund "chromatic@$version" > "$WORK/install-$name.log" 2>&1) \
+    || { tail -20 "$WORK/install-$name.log"; die "npm install chromatic@$version failed"; }
+  echo "$dir/node_modules/chromatic/dist/bin.cjs"
+}
+
 cmd_checkout_storybook() {
   [[ -d "$CHECKOUT" ]] || die "no checkout at $CHECKOUT; run: control-chromatic checkout"
   build_storybook "$CHECKOUT" "$CHECKOUT_SB_DIR"
@@ -180,10 +218,11 @@ cmd_run() {
   local label="${1:-}"; shift || true
   [[ -n "$label" ]] || die "run needs a label"
   require_safe_name label "$label"
-  local cwd="$REPO"
+  local cwd="$REPO" CLI="$CLI"   # local CLI: --cli swaps the bundle for this drive only
   while [[ $# -gt 0 && "$1" != "--" ]]; do
     case "$1" in
       --cwd) cwd="$2"; shift 2 ;;
+      --cli) CLI="$2"; shift 2 ;;
       *) die "unknown run option $1" ;;
     esac
   done
@@ -214,10 +253,11 @@ cmd_tty() {
   local label="${1:-}"; shift || true
   [[ -n "$label" ]] || die "tty needs a label"
   require_safe_name label "$label"
-  local cwd="$REPO" timeout=120
+  local cwd="$REPO" timeout=120 CLI="$CLI"
   while [[ $# -gt 0 && "$1" != "--" ]]; do
     case "$1" in
       --cwd) cwd="$2"; shift 2 ;;
+      --cli) CLI="$2"; shift 2 ;;
       --timeout) timeout="$2"; shift 2 ;;
       *) die "unknown tty option $1" ;;
     esac
@@ -246,9 +286,9 @@ cmd_tty() {
   grep -v '^$' "$out/pane.txt" | head -40
 }
 
-# Until CAP-5317 ships, diagnostics hold the raw project token and session JWT under
-# .analytics and any -t value in .options.originalArgv, so scrub both before evidence
-# outlives the run.
+# CLIs before 18.13.1 (CAP-5317) put the raw project token and session JWT under .analytics
+# and any -t value in .options.originalArgv. install-published can run those, so scrub both
+# before evidence outlives the run.
 SCRUB_JQ='
   def token_flag: . == "-t" or . == "--project-token";
   del(.analytics)
@@ -277,6 +317,12 @@ cmd_cleanup() {
     rm -f "$CHECKOUT/node_modules"
     git -C "$REPO" worktree remove --force "$CHECKOUT" || true
   fi
+  local wt
+  for wt in "$WORK"/cli-*; do
+    [[ -d "$wt" ]] || continue
+    rm -f "$wt/node_modules"
+    git -C "$REPO" worktree remove --force "$wt" || true
+  done
   rm -rf "$WORK"
   git -C "$REPO" worktree prune
   if git -C "$REPO" show-ref --verify --quiet "refs/heads/$CHECKOUT_BRANCH"; then
@@ -297,6 +343,8 @@ case "$sub" in
   fixture) cmd_fixture ;;
   checkout) cmd_checkout ;;
   checkout-storybook) cmd_checkout_storybook ;;
+  build-ref) cmd_build_ref "$@" ;;
+  install-published) cmd_install_published "$@" ;;
   run) cmd_run "$@" ;;
   tty) cmd_tty "$@" ;;
   cleanup) cmd_cleanup ;;
