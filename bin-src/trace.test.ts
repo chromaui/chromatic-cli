@@ -1,4 +1,5 @@
-import { execSync } from 'child_process';
+import { execFileSync, execSync } from 'child_process';
+import path from 'path';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -18,6 +19,20 @@ describe('Test trace script from package.json', () => {
 
     // Verify that the output does not contain the expanded output
     expect(output).not.toContain(rootDirectoryNote);
+  });
+  it('traces absolute changed file paths the same as repository-relative ones', () => {
+    // Pass arguments without a shell, so a checkout path with spaces stays one argument
+    const output = execFileSync('yarn', [
+      'chromatic',
+      'trace',
+      path.join(process.cwd(), 'node-src/ui/messages/errors/invalidReportPath.ts'),
+      '-s',
+      'bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json',
+    ])
+      .toString()
+      .trim();
+
+    expect(output).toContain('Traced 1 changed file to 1 affected story file');
   });
   it('outputs directory info when -m expanded is passed', () => {
     const scriptName =
