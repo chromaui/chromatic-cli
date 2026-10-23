@@ -108,11 +108,9 @@ export async function main(argv: string[]) {
     },
   } as any;
   const stats = await readStatsFile(flags.statsFile);
-  // Changed files are matched against paths relative to the repository root, so absolute paths
-  // must be made relative first or they silently match nothing.
-  const changedFiles = input.map((f) =>
-    path.isAbsolute(f) ? posix(path.relative(gitRoot, f)) : f.replace(/^\.\//, '')
-  );
+  // Changed files are matched against POSIX paths relative to the repository root, so normalize
+  // each one (absolute, `./`-prefixed or plain) to that form or it silently matches nothing.
+  const changedFiles = input.map((f) => posix(path.relative(gitRoot, path.resolve(gitRoot, f))));
 
   const packageManifestFile = changedFiles.find((item) => isPackageManifestFile(item));
   if (packageManifestFile) {
