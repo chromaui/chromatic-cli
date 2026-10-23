@@ -1,5 +1,5 @@
 import { execFileSync } from 'child_process';
-import { mkdirSync, symlinkSync } from 'fs';
+import { mkdirSync, rmSync, symlinkSync } from 'fs';
 import path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -27,6 +27,8 @@ describe('realProjectFiles untrackedPaths', () => {
    */
   function ignoringRepository(): string {
     const root = repository();
+    // Tracked, so the repository has an index entry, as any real checkout does.
+    track(root, '.gitignore');
     write(root, '.gitignore', 'generated/\n*.log\n');
     process.chdir(root);
     return root;
@@ -115,5 +117,13 @@ describe('realProjectFiles untrackedPaths', () => {
     const schema = write(root, 'generated/schema.ts');
 
     await expect(untrackedAmong([schema])).rejects.toThrow(/Git repository/);
+  });
+
+  it('rejects when the index is missing, rather than reporting the whole repository as untracked', async () => {
+    const root = ignoringRepository();
+    const button = track(root, 'src/Button.tsx');
+    rmSync(path.join(root, '.git/index'));
+
+    await expect(untrackedAmong([button])).rejects.toThrow(/no tracked files/);
   });
 });

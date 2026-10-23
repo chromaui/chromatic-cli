@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
 import {
@@ -341,6 +341,13 @@ describe('getChangedFilesWithStatus', () => {
 });
 
 describe('getUntrackedPaths', () => {
+  // The index has at least one entry, so the untracked listing is trusted.
+  beforeEach(() => {
+    execGitCommandEntries.mockImplementationOnce(async function* () {
+      yield 'src/Button.tsx';
+    });
+  });
+
   it('answers by absolute path, covering everything under a wholly untracked directory', async () => {
     // first call from getRepositoryRoot()
     execGitCommand.mockResolvedValueOnce('/root');

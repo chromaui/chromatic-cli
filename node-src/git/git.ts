@@ -596,6 +596,22 @@ export interface UntrackedPaths {
  */
 export async function getUntrackedPaths(deps: GitDeps): Promise<UntrackedPaths> {
   const repositoryRoot = await getRepositoryRoot(deps);
+
+  // `--others` means "not in the index", so with no index (a Docker build that copied `.git`
+  // without it, say) git lists the whole repository as untracked and still exits 0. Skipping every
+  // file would hide every change, so treat that like a git error. One tracked path proves the index
+  // is there: the loop stops at the first, which kills git before it lists the rest.
+  let hasTrackedFile = false;
+  for await (const _ of trackedFiles(deps, repositoryRoot)) {
+    hasTrackedFile = true;
+    break;
+  }
+  if (!hasTrackedFile) {
+    throw new Error(
+      'git lists no tracked files, so it cannot tell which files are untracked; is the git index missing?'
+    );
+  }
+
   // `--full-name` with the `:/` pathspec lists the whole repository, not just the directory the CLI
   // runs in. Only stdout is parsed, so a stderr warning can't masquerade as a path. The listing is
   // unbounded, so it stays out of the debug log.
