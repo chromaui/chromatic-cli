@@ -192,6 +192,21 @@ function filterBundleFilesByBrowser(files: FileDesc[], browsers: string[] = []):
   });
 }
 
+/**
+ * Pair each upload target returned by the server with the local file it was requested for.
+ *
+ * @param targets The upload targets returned by the server.
+ * @param files The files whose paths were sent to the server.
+ *
+ * @returns Each target merged with its matching file.
+ */
+function withLocalFiles(targets: TargetInfo[], files: FileDesc[]): (FileDesc & TargetInfo)[] {
+  const filesByTargetPath = new Map(files.map((file) => [file.targetPath, file]));
+  return targets.map(
+    (target) => ({ ...filesByTargetPath.get(target.filePath), ...target }) as FileDesc & TargetInfo
+  );
+}
+
 export interface UploadBuildResult {
   sentinelUrls: string[];
   uploadedBytes: number;
@@ -346,13 +361,7 @@ export async function uploadBuild(
     }
 
     sentinelUrls.push(...(uploadBuild.info?.sentinelUrls || []));
-    const filesByTargetPath = new Map(batch.map((f) => [f.targetPath, f]));
-    targets.push(
-      ...(uploadBuild.info?.targets.map((target) => {
-        const file = filesByTargetPath.get(target.filePath);
-        return { ...file, ...target } as FileDesc & TargetInfo;
-      }) || [])
-    );
+    targets.push(...withLocalFiles(uploadBuild.info?.targets || [], batch));
 
     // Use the last received zipTarget, as it will have the largest allowed size.
     // If all files in the batch are copied rather than uploaded, we won't receive a zipTarget.
@@ -452,12 +461,7 @@ export async function uploadMetadata(ctx: Context, files: FileDesc[]) {
   );
 
   if (uploadMetadata.info) {
-    const filesByTargetPath = new Map(files.map((f) => [f.targetPath, f]));
-    const targets = uploadMetadata.info.targets.map((target) => {
-      const file = filesByTargetPath.get(target.filePath);
-      return { ...file, ...target } as FileDesc & TargetInfo;
-    });
-    await uploadFiles(ctx, targets);
+    await uploadFiles(ctx, withLocalFiles(uploadMetadata.info.targets, files));
   }
 
   if (uploadMetadata.userErrors.length > 0) {
