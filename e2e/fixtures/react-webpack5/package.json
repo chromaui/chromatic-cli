@@ -11,7 +11,7 @@
   "devDependencies": {
     "@storybook/addon-webpack5-compiler-swc": "4.0.3",
     "@storybook/react-webpack5": "10.6.1",
-    "storybook": "10.6.1",
+    "storybook": "10.6.3",
     "typescript": "5.9.3"
   }
 }
