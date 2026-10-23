@@ -9,3 +9,4 @@ updates:
       - "skip-release"
     exclude-paths:
       - "node-src/__mocks__/**"
+      - "e2e/fixtures/**"

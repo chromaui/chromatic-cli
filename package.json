@@ -1,6 +1,6 @@
 {
   "name": "chromatic",
-  "version": "18.13.2",
+  "version": "18.13.3",
   "description": "Automate visual testing across browsers. Gather UI feedback. Versioned documentation.",
   "keywords": [
     "storybook-addon",
@@ -90,6 +90,7 @@
     "typescript:check": "tsc --project ./tsconfig.json --noEmit",
     "prepare": "yarn run build",
     "dev": "tsdown --watch",
+    "fixture": "node e2e/prepare.mjs",
     "clean:sourcemaps": "rm -f dist/*.map && rm -f action/*.map"
   },
   "resolutions": {

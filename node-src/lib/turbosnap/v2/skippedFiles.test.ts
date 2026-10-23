@@ -36,10 +36,24 @@ describe('buildSkipRule', () => {
     expect(result).toEqual([[generated, 'gitignored']]);
   });
 
-  it('never skips a node_modules file, however git sees it', async () => {
-    const result = await skipped([installed, source], context({ isIgnored: () => true }));
+  it('never skips an installed package file, however git sees it', async () => {
+    const pnpmInstalled = `${projectRoot}/node_modules/.pnpm/react@19.0.0/node_modules/react/index.js`;
+    const nestedInstalled = '/repo/packages/ui/node_modules/lodash/lodash.js';
+
+    const result = await skipped(
+      [installed, pnpmInstalled, nestedInstalled, source],
+      context({ isIgnored: () => true })
+    );
 
     expect(result).toEqual([[source, 'gitignored']]);
+  });
+
+  it('skips the gitignored files build tools generate under node_modules, since they are not installed packages', async () => {
+    const federationEntry = `${projectRoot}/node_modules/.federation/entry.3f2a1b.js`;
+
+    const result = await skipped([federationEntry, installed], context({ isIgnored: () => true }));
+
+    expect(result).toEqual([[federationEntry, 'gitignored']]);
   });
 
   it('skips a gitignored file in the Storybook config directory like any other project file', async () => {

@@ -1,3 +1,26 @@
+# v18.13.3 (Thu Oct 22 2026)
+
+### Release Notes
+
+#### Lower default TurboSnap lockfile parse concurrency to 1 ([#1564](https://github.com/chromaui/chromatic-cli/pull/1564))
+
+TurboSnap now parses one lockfile at a time by default (previously 200), which greatly reduces peak memory in repositories with many package manifests. Wall time is unchanged, since parsing is synchronous. Set `CHROMATIC_TURBOSNAP_PACKAGE_CONCURRENCY` to override the default.
+
+---
+
+#### 🐛 Bug Fix
+
+- Lower default TurboSnap lockfile parse concurrency to 1 [#1564](https://github.com/chromaui/chromatic-cli/pull/1564) ([@codykaup](https://github.com/codykaup))
+- [TurboSnap v2] Skip generated directories under `node_modules` [#1557](https://github.com/chromaui/chromatic-cli/pull/1557) ([@codykaup](https://github.com/codykaup))
+- Replace raceFulfilled with Promise.any and fix findChangedPackageFiles short-circuit [#1556](https://github.com/chromaui/chromatic-cli/pull/1556) ([@codykaup](https://github.com/codykaup))
+- Show upload task as skipped when TurboSnap bypasses the build [#1559](https://github.com/chromaui/chromatic-cli/pull/1559) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.13.2 (Wed Oct 21 2026)
 
 #### 🐛 Bug Fix
