@@ -87,6 +87,29 @@ describe('snapshotProject', () => {
     expect(ctx.exitCode).toBe(0);
   });
 
+  it('suggests --exit-once-uploaded for CI builds but not for local builds', async () => {
+    const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
+    const passed = { app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } } };
+    const infoSpy = vi.spyOn(log, 'info');
+
+    const ciContext = { ...createBaseTestContext(), build, uploadedBytes: 100 } as any;
+    ciContext.client.runQuery.mockReturnValueOnce(passed);
+    await runSnapshot(ciContext);
+    expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining('--exit-once-uploaded'));
+
+    infoSpy.mockClear();
+    const localContext = {
+      ...createBaseTestContext(),
+      build,
+      uploadedBytes: 100,
+      options: { isLocalBuild: true },
+    } as any;
+    localContext.client.runQuery.mockReturnValueOnce(passed);
+    await runSnapshot(localContext);
+    expect(infoSpy).not.toHaveBeenCalledWith(expect.stringContaining('Speed up'));
+    infoSpy.mockRestore();
+  });
+
   it('queries the counts and keeps the verify-time features on the completed build', async () => {
     const features = { uiTests: true, uiReview: false, accessibilityTests: { enabled: true } };
     const build = { app: {}, number: 1, features, reportToken: 'report-token' };
