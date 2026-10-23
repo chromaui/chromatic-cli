@@ -11,8 +11,20 @@ import { temporaryDirectory, write } from '../node-src/lib/turbosnap/v2/__fixtur
 import { serializeManifest } from '../node-src/lib/turbosnap/v2/manifest';
 import { main } from './turbosnapManifest';
 
-vi.mock('fs', { spy: true });
-vi.mock('fs/promises', { spy: true });
+// Spying on the entire fs module also wraps native stream prototypes used by stats parsing.
+vi.mock('fs', async (importOriginal) => {
+  const filesystem = await importOriginal<typeof import('fs')>();
+  return {
+    ...filesystem,
+    createReadStream: vi.fn(filesystem.createReadStream),
+    open: vi.fn(filesystem.open),
+    readFileSync: vi.fn(filesystem.readFileSync),
+  };
+});
+vi.mock('fs/promises', async (importOriginal) => {
+  const filesystem = await importOriginal<typeof import('fs/promises')>();
+  return { ...filesystem, open: vi.fn(filesystem.open) };
+});
 vi.mock('../node-src/git/git', () => ({
   getRepositoryRoot: vi.fn(),
   getIgnoredPaths: vi.fn(async () => new Set<string>()),
