@@ -103,6 +103,11 @@ describe('snapshotProject', () => {
       expect(log.info).toHaveBeenCalledWith(expect.stringContaining('--exit-once-uploaded'));
     });
 
+    it('suggests the exitOnceUploaded workflow input in the GitHub Action', async () => {
+      await runLinkedBuild({ inAction: true });
+      expect(log.info).toHaveBeenCalledWith(expect.stringContaining('exitOnceUploaded: true'));
+    });
+
     it('is not shown for local builds', async () => {
       await runLinkedBuild({ isLocalBuild: true });
       expect(log.info).not.toHaveBeenCalledWith(
