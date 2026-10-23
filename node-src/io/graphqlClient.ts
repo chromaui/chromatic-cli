@@ -60,19 +60,33 @@ export default class GraphQLClient {
   ): Promise<T> {
     return retry(
       async (bail) => {
-        const { data, errors } = await this.client
-          .fetch(
-            endpoint,
-            {
-              body: JSON.stringify({ query, variables }),
-              headers: { ...this.headers, ...headers },
-              method: 'post',
-            },
-            { retries, noLogErrorBody: true }
-          )
-          .then((result) => result.json() as any)
-          .catch((error) => this.readValidationError(error))
-          .catch(bail);
+        let response;
+        try {
+          response = await this.client
+            .fetch(
+              endpoint,
+              {
+                body: JSON.stringify({ query, variables }),
+                headers: { ...this.headers, ...headers },
+                method: 'post',
+              },
+              {
+                retries,
+                noLogErrorBody: true,
+                shouldRetry: (error) =>
+                  error.response.status !== 400 ||
+                  this.readValidationError(error).then(
+                    () => false,
+                    () => true
+                  ),
+              }
+            )
+            .then((result) => result.json() as any)
+            .catch((error) => this.readValidationError(error));
+        } catch (error) {
+          return bail(error);
+        }
+        const { data, errors } = response;
 
         if (!errors) return data;
         if (!Array.isArray(errors)) return bail(errors);
@@ -94,7 +108,7 @@ export default class GraphQLClient {
 
   private async readValidationError(error: unknown) {
     if (!(error instanceof HTTPClientError)) throw error;
-    const body = await error.response.text().catch(() => {
+    const body = await error.readBody().catch(() => {
       throw error;
     });
     this.client.log.debug(error.message);

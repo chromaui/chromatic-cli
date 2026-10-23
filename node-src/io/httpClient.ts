@@ -12,6 +12,7 @@ import getProxyAgent from './getProxyAgent';
  */
 export class HTTPClientError extends Error {
   response: Response;
+  private body?: Promise<string>;
 
   constructor(fetchResponse: Response, message?: string, ...parameters: any[]) {
     super(...parameters);
@@ -26,6 +27,11 @@ export class HTTPClientError extends Error {
       message ||
       `HTTPClient failed to fetch ${fetchResponse.url}, got ${fetchResponse.status}/${fetchResponse.statusText}`;
   }
+
+  readBody() {
+    this.body ??= this.response.text();
+    return this.body;
+  }
 }
 
 export interface HTTPClientOptions {
@@ -37,6 +43,7 @@ export interface HTTPClientFetchOptions {
   noLogErrorBody?: boolean;
   proxy?: HttpsProxyAgentOptions<any>;
   retries?: number;
+  shouldRetry?: (error: HTTPClientError) => boolean | Promise<boolean>;
 }
 
 /**
@@ -89,16 +96,20 @@ export default class HTTPClient {
     };
 
     return retry(
-      async () => {
+      async (bail) => {
         const headers = { ...this.headers, ...options.headers };
         const result = await fetch(url, { ...options, agent, headers });
         if (!result.ok) {
           const error = new HTTPClientError(result);
-          // You can only call text() or json() once, so if we are going to handle it outside of here..
           if (!options_.noLogErrorBody) {
-            const body = await result.text();
+            const body = await error.readBody();
             this.log.debug(error.message);
             this.log.debug(body);
+          }
+          if (options_.shouldRetry && !(await options_.shouldRetry(error))) {
+            bail(error);
+            // bail rejects the caller; throwing here would schedule another attempt.
+            return result;
           }
           throw error;
         }
