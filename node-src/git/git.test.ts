@@ -11,6 +11,7 @@ import * as execGit from './execGit';
 import {
   checkoutFile,
   commitExists,
+  commitsExist,
   findFilesFromRepositoryRoot,
   getBranch,
   getChangedFiles,
@@ -243,6 +244,36 @@ describe('commitExists', () => {
       new Error(`fatal: Not a valid object name 1234567890^{commit}`)
     );
     expect(await commitExists(ctx, '1234567890')).toEqual(false);
+  });
+});
+
+describe('commitsExist', () => {
+  it('does not run git when given no commits', async () => {
+    expect(await commitsExist(ctx, [])).toEqual(new Set());
+    expect(execGitCommand).not.toHaveBeenCalled();
+  });
+
+  it('matches results to inputs by line position', async () => {
+    const full = 'a'.repeat(40);
+    execGitCommand.mockResolvedValue(
+      [
+        'bbb^{commit} missing',
+        `${full} commit 284`,
+        'ccc^{commit} ambiguous',
+        `${'d'.repeat(40)} commit 190`,
+      ].join('\n')
+    );
+    // The short `aaa` is printed back as its full SHA, so text matching would miss it.
+    expect(await commitsExist(ctx, ['bbb', 'aaa', 'ccc', 'ddd'])).toEqual(new Set(['aaa', 'ddd']));
+    expect(execGitCommand).toHaveBeenCalledWith(ctx, 'git cat-file --batch-check', {
+      input: 'bbb^{commit}\naaa^{commit}\nccc^{commit}\nddd^{commit}',
+      all: false,
+    });
+  });
+
+  it('treats every commit as missing when git fails', async () => {
+    execGitCommand.mockRejectedValue(new Error('fatal: not a git repository'));
+    expect(await commitsExist(ctx, ['aaa'])).toEqual(new Set());
   });
 });
 
