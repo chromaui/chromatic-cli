@@ -201,7 +201,8 @@ function filterBundleFilesByBrowser(files: FileDesc[], browsers: string[] = []):
  * @returns Each target merged with its matching file.
  */
 function withLocalFiles(targets: TargetInfo[], files: FileDesc[]): (FileDesc & TargetInfo)[] {
-  const filesByTargetPath = new Map(files.map((file) => [file.targetPath, file]));
+  // Metadata files can share a target path; reverse so the first file wins, as `find` did.
+  const filesByTargetPath = new Map(files.toReversed().map((file) => [file.targetPath, file]));
   return targets.map(
     (target) => ({ ...filesByTargetPath.get(target.filePath), ...target }) as FileDesc & TargetInfo
   );
