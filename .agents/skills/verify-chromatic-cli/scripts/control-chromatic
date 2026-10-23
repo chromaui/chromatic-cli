@@ -168,8 +168,12 @@ cmd_e2e_fixture() {
 cmd_commit() {
   local dir="${1:-}" msg="${2:-}"
   [[ -d "$dir" && -n "$msg" ]] || die "usage: commit <dir> <message>"
-  [[ "$dir" == "$WORK"/* ]] || die "commit only works on scratch repos under $WORK"
-  git -C "$dir" add -A
+  # Compare canonical paths of the repo root, so `..` or a symlink can't reach the developer's repo.
+  local root work
+  root="$(git -C "$dir" rev-parse --show-toplevel 2> /dev/null)" || die "$dir is not in a git repo"
+  root="$(realpath "$root")" work="$(realpath "$WORK")"
+  [[ "$root" == "$work"/* ]] || die "commit only works on scratch repos under $WORK (repo root: $root)"
+  git -C "$root" add -A
   git -C "$dir" -c user.name=verify -c user.email=verify@example.invalid -c commit.gpgsign=false \
     -c core.hooksPath=/dev/null commit -q -m "$msg"
   git -C "$dir" log --oneline -1

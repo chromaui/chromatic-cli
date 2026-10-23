@@ -41,8 +41,8 @@ Preconditions:
 
 ## Gotchas
 
-- `diag-files` guards CAP-5317, fixed in 18.13.1. Older CLIs keep `-t <token>` verbatim in `.options.originalArgv`. If the journey fails, report it as a regression. Do not drop the assertion or switch the journey to `CHROMATIC_PROJECT_TOKEN` to make it pass. Users attach this file to CI artifacts and support requests, and `--upload-metadata` uploads it to the published Storybook.
-- An explicit `--config-file` always wins, even when it does not exist (since 18.13.1; older CLIs fell back to `chromatic.config.json`). If `cfg-missing` proceeds to `Authenticating`, that is a regression.
+- `diag-files` guards CAP-5317, fixed in 18.13.1. Older CLIs keep `-t <token>` verbatim in `.options.originalArgv`, which is expected when driving one with `--cli`. If it fails on 18.13.1 or later, report it as a regression. Do not drop the assertion or switch the journey to `CHROMATIC_PROJECT_TOKEN` to make it pass. Users attach this file to CI artifacts and support requests, and `--upload-metadata` uploads it to the published Storybook.
+- An explicit `--config-file` always wins, even when it does not exist (since 18.13.1; older CLIs fell back to `chromatic.config.json`). If `cfg-missing` proceeds to `Authenticating` on 18.13.1 or later, that is a regression.
 - `pre-no-package` relies on no `package.json` existing in any parent of `$WORK/empty`. Keep `VERIFY_ROOT` outside any JS project. Exit `253` is a hard-coded exit with no diagnostics file and no `exitCodeKey`.
 - `--dry-run` does not make a run offline. With a token it goes straight to `Authenticating with Chromatic`. See `publish-build`.
 - Any journey that gets past preflight hits the backend. Its exit code then depends on the network and on the backend's answer to the token, not on the preflight behavior under test. With the fake tokens used here, a reachable backend gives `202` (`GRAPHQL_ERROR`), and an unreachable one gives a fetch error.
