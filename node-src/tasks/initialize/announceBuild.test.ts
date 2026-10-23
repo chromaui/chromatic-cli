@@ -17,6 +17,7 @@ describe('announceBuild', () => {
     log,
     client: client as unknown as Deps['client'],
     options: {} as Deps['options'],
+    env: {} as Deps['env'],
     pkg: { version: '1.0.0' } as Deps['pkg'],
   };
   const input: AnnounceBuildInput = {
@@ -132,7 +133,7 @@ describe('announceBuild', () => {
     expect(result).toEqual(build);
   });
   it.each(['UNUSED', 'APPLIED'])(
-    'warns before later build tasks when TurboSnap is eligible (%s) but disabled for this run',
+    'keeps optimization unconfirmed when TurboSnap is eligible (%s) and onlyChanged is unset',
     async (turboSnapAvailability) => {
       const build = {
         id: 'usage-build',
@@ -144,9 +145,73 @@ describe('announceBuild', () => {
       const result = await announceBuild(deps, input);
       expect(result.usageStatus).toEqual(usageStatus);
       expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('70%'));
-      expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('--only-changed'));
+      expect(log.warn).not.toHaveBeenCalledWith(expect.stringMatching(/^TurboSnap/));
+      expect(log.info).toHaveBeenCalledWith(
+        expect.stringContaining('Hash-based TurboSnap may apply automatically')
+      );
     }
   );
+
+  it.each([
+    { options: { onlyChanged: false }, env: {} },
+    { options: {}, env: { CHROMATIC_TURBOSNAP_DISABLE_HASHES: true } },
+  ])('warns when both TurboSnap paths are disabled (%j)', async ({ options, env }) => {
+    client.runQuery.mockResolvedValue({
+      announceBuild: {
+        id: 'build',
+        app: { id: 'app', turboSnapAvailability: 'APPLIED' },
+        features: { uiTests: true },
+      },
+    });
+
+    await announceBuild(
+      { ...deps, options: { ...deps.options, ...options }, env: { ...deps.env, ...env } },
+      input
+    );
+
+    expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('is disabled for this run'));
+    expect(log.info).not.toHaveBeenCalled();
+  });
+
+  it('does not report TurboSnap disabled when v1 is enabled and hashes are disabled', async () => {
+    client.runQuery.mockResolvedValue({
+      announceBuild: {
+        id: 'build',
+        app: { id: 'app', turboSnapAvailability: 'APPLIED' },
+        features: { uiTests: true },
+      },
+    });
+
+    await announceBuild(
+      {
+        ...deps,
+        options: { ...deps.options, onlyChanged: true },
+        env: { ...deps.env, CHROMATIC_TURBOSNAP_DISABLE_HASHES: true },
+      },
+      { ...input, turboSnap: {} }
+    );
+
+    expect(log.warn).not.toHaveBeenCalled();
+    expect(log.info).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { uiTests: false, uiReview: false },
+    { uiTests: true, isReactNativeApp: true },
+  ])('does not suggest TurboSnap for unsupported project features (%j)', async (features) => {
+    client.runQuery.mockResolvedValue({
+      announceBuild: {
+        id: 'build',
+        app: { id: 'app', turboSnapAvailability: 'APPLIED' },
+        features,
+      },
+    });
+
+    await announceBuild(deps, input);
+
+    expect(log.warn).not.toHaveBeenCalled();
+    expect(log.info).not.toHaveBeenCalled();
+  });
 
   it('does not suggest enabling TurboSnap when it is unavailable or already enabled', async () => {
     client.runQuery.mockResolvedValue({
@@ -158,6 +223,7 @@ describe('announceBuild', () => {
     });
     await announceBuild(deps, input);
     expect(log.warn).not.toHaveBeenCalled();
+    expect(log.info).not.toHaveBeenCalled();
     client.runQuery.mockResolvedValue({
       announceBuild: {
         id: 'build',
@@ -167,5 +233,6 @@ describe('announceBuild', () => {
     });
     await announceBuild(deps, { ...input, turboSnap: {} });
     expect(log.warn).not.toHaveBeenCalled();
+    expect(log.info).not.toHaveBeenCalled();
   });
 });

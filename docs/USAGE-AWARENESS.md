@@ -4,7 +4,7 @@ The CLI requests account usage when announcing a build, before building or uploa
 
 When the server returns a usage warning, the CLI prints the percentage of the included snapshot allowance consumed, billing-period end, days remaining, the warning code and recommended action, and whether further usage can incur overages. The server decides which threshold and consumption-pace warnings apply. Warnings alone do not change the build's exit code or pause the build. Existing quota and payment failures retain their exit codes.
 
-The CLI also explains when TurboSnap is available but disabled, or when the server reports that it could not apply TurboSnap. Review the recommended configuration changes before starting further builds. Preserve test coverage: do not exclude dependencies or stories simply to reduce usage.
+The CLI also explains when TurboSnap is available but explicitly disabled, or when the server reports that it could not apply TurboSnap. Without `--only-changed`, automatic hash-based TurboSnap may still apply; initialization reports that optimization is unconfirmed until build preparation determines the result. Review the recommended configuration changes before starting further builds. Preserve test coverage: do not exclude dependencies or stories simply to reduce usage.
 
 ## Structured results
 

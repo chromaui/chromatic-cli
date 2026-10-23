@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/node';
 
 import { relativeTo } from '../../lib/getStorybookProjectRoot';
 import { runUsageQuery } from '../../lib/runUsageQuery';
+import { isHashCollectionDisabled } from '../../lib/turbosnap/isHashCollectionDisabled';
 import { logUsageStatus, usageStatusSelection } from '../../lib/usageStatus';
 import {
   AnnouncedBuild,
@@ -14,7 +15,7 @@ import {
   TurboSnap,
 } from '../../types';
 
-export type AnnounceBuildDeps = Pick<Deps, 'log' | 'client' | 'options' | 'pkg'>;
+export type AnnounceBuildDeps = Pick<Deps, 'log' | 'client' | 'options' | 'pkg' | 'env'>;
 
 export interface AnnounceBuildInput {
   git: Git;
@@ -120,9 +121,15 @@ export const announceBuild = async (
     (announcedBuild.features?.uiTests || announcedBuild.features?.uiReview) &&
     !announcedBuild.features.isReactNativeApp
   ) {
-    deps.log.warn(
-      'TurboSnap is available but is not enabled for this run. Review the --only-changed configuration before starting further builds: https://www.chromatic.com/docs/turbosnap/'
-    );
+    if (isHashCollectionDisabled(deps)) {
+      deps.log.warn(
+        'TurboSnap is available but is disabled for this run. Review your onlyChanged setting and CHROMATIC_TURBOSNAP_DISABLE_HASHES before starting further builds: https://www.chromatic.com/docs/turbosnap/'
+      );
+    } else {
+      deps.log.info(
+        "Hash-based TurboSnap may apply automatically, but optimization is not confirmed yet. Check this build's optimization status before starting further builds: https://www.chromatic.com/docs/turbosnap/"
+      );
+    }
   }
 
   Sentry.setTag('app_id', announcedBuild.app.id);
