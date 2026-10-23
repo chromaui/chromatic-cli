@@ -346,9 +346,10 @@ export async function uploadBuild(
     }
 
     sentinelUrls.push(...(uploadBuild.info?.sentinelUrls || []));
+    const filesByTargetPath = new Map(batch.map((f) => [f.targetPath, f]));
     targets.push(
       ...(uploadBuild.info?.targets.map((target) => {
-        const file = batch.find((f) => f.targetPath === target.filePath);
+        const file = filesByTargetPath.get(target.filePath);
         return { ...file, ...target } as FileDesc & TargetInfo;
       }) || [])
     );
@@ -451,8 +452,9 @@ export async function uploadMetadata(ctx: Context, files: FileDesc[]) {
   );
 
   if (uploadMetadata.info) {
+    const filesByTargetPath = new Map(files.map((f) => [f.targetPath, f]));
     const targets = uploadMetadata.info.targets.map((target) => {
-      const file = files.find((f) => f.targetPath === target.filePath);
+      const file = filesByTargetPath.get(target.filePath);
       return { ...file, ...target } as FileDesc & TargetInfo;
     });
     await uploadFiles(ctx, targets);
