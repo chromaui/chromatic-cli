@@ -138,17 +138,19 @@ EOF
 }
 
 # e2e-fixture <name> [copy]: prepare e2e/fixtures/<name> with `yarn fixture` (own git repo, frozen install) at
-# $WORK/e2e-<name>[-<copy>], on branch vcc-$RUN_ID-<name>[-<copy>]-<short sha>. A copy name allows several
-# independent copies of one fixture in a run (parallel publishes, or a fresh one-commit copy for TurboSnap). The fixture's commit is on `main`, and every copy of
-# every fixture publishing to one project would share that branch: the CLI adds the last build on the branch as a
-# parent even when its commit is from another copy's history, and TurboSnap then fails with "missing git history".
+# $WORK/e2e-<name>[.<copy>], on branch vcc-$RUN_ID-<name>[.<copy>]-<short sha>. A copy name allows several
+# independent copies of one fixture in a run (parallel publishes, or a fresh one-commit copy for TurboSnap).
+# Names can't contain '.', so a copy can't collide with another fixture (monorepo-yarn.classic is not
+# monorepo-yarn-classic). The fixture's commit is on `main`, and every copy of every fixture publishing to
+# one project would share that branch: the CLI adds the last build on the branch as a parent even when its
+# commit is from another copy's history, and TurboSnap then fails with "missing git history".
 # The copy's own commit SHA (it has a fresh timestamp) keeps the name unique across sessions with the same RUN_ID.
 cmd_e2e_fixture() {
   local name="${1:-}" copy="${2:-}"
   [[ -n "$name" ]] || die "usage: e2e-fixture <name> [copy] (name is one of: $(ls "$REPO/e2e/fixtures" | tr '\n' ' '))"
   require_safe_name name "$name"
   local id="$name"
-  if [[ -n "$copy" ]]; then require_safe_name copy "$copy"; id="$name-$copy"; fi
+  if [[ -n "$copy" ]]; then require_safe_name copy "$copy"; id="$name.$copy"; fi
   [[ -d "$REPO/e2e/fixtures/$name" ]] || die "no fixture e2e/fixtures/$name (have: $(ls "$REPO/e2e/fixtures" | tr '\n' ' '))"
   local dir="$WORK/e2e-$id"
   [[ -e "$dir" ]] && die "$dir already exists; reuse it, pass another copy name, or run cleanup first"
