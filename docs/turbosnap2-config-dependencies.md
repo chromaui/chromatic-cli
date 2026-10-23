@@ -58,9 +58,12 @@ build timestamps or generation durations is outside the selective-output contrac
 
 Core finalization runs after preview building and other output effects. The CLI verifies the
 inventory and bytes before accepting the evidence. Prebuilt output is supported without installed
-builder packages. Metadata cannot choose a filesystem root: sources are confined to the independently
-discovered Git root, and output to the independently configured build directory. Both lexical paths
-and actual symlink targets must remain inside their boundary. Strict inventory enumeration rejects
+builder packages. For optional output-evidence verification, metadata cannot choose a filesystem root:
+sources are confined to the independently discovered Git root, and output to the independently
+configured build directory. That output root must be an existing directory; a regular file or a
+symlink to a file is rejected before reading its contents. Explicitly selected directories outside
+the Git root remain supported. Both lexical paths and actual symlink targets must remain inside
+their boundary. Strict inventory enumeration rejects
 unreadable entries, cycles, and non-regular files. Binding reads use validated regular-file descriptors
 and no-follow flags where supported. These checks protect against untrusted metadata on a stable
 filesystem; they are not an atomic sandbox against concurrent replacement of ancestor directories.

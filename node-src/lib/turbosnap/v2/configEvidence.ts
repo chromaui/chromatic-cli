@@ -88,6 +88,9 @@ async function verifyEvidence(
   input: OutputInput
 ): Promise<ConfigEvidence> {
   const outputDirectory = input.outputDir;
+  if (!input.projectFiles.isDirectory(outputDirectory)) {
+    return unavailable('invalid-output-evidence');
+  }
   const absolute = (file: string) =>
     resolveWithinRoot(input.statsRoot ?? input.projectRoot, file, input.gitRoot);
   const outputPath = (file: string) => resolveWithinRoot(outputDirectory, file, outputDirectory);
