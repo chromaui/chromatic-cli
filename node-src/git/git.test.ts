@@ -271,9 +271,12 @@ describe('commitsExist', () => {
     });
   });
 
-  it('treats every commit as missing when git fails', async () => {
-    execGitCommand.mockRejectedValue(new Error('fatal: not a git repository'));
-    expect(await commitsExist(ctx, ['aaa'])).toEqual(new Set());
+  it('checks commits one at a time when the batch call fails', async () => {
+    execGitCommand.mockImplementation(async (_, command) => {
+      if (command === 'git cat-file -e "aaa^{commit}"') return '';
+      throw new Error('Command timed out');
+    });
+    expect(await commitsExist(ctx, ['aaa', 'bbb'])).toEqual(new Set(['aaa']));
   });
 });
 

@@ -256,7 +256,13 @@ export async function commitsExist(deps: GitDeps, commits: string[]): Promise<Se
       all: false,
     });
   } catch {
-    return new Set();
+    // The single call can fail where individual checks would not, e.g. by hitting the git timeout
+    // while a partial clone tries to lazily fetch several missing commits. Check one at a time.
+    const existing = new Set<string>();
+    for (const commit of commits) {
+      if (await commitExists(deps, commit)) existing.add(commit);
+    }
+    return existing;
   }
 
   // Git prints one line per input line, in order. Match by position, since an existing commit is
