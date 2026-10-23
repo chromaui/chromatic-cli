@@ -1,111 +1,126 @@
-# TurboSnap 2 configuration dependencies
+# TurboSnap 2 configuration coverage
 
-TurboSnap 2 can treat a file under the Storybook config directory as a story dependency when the
-builder proves it is not also a build input. TurboSnap 1 is unchanged. Existing `untraced` values,
-traversal boundaries, the main-config exception, and `externals` precedence remain in force.
+TurboSnap 2 can waive a `.storybook` directory bailout when uploaded-output evidence proves it is
+safe to skip unaffected stories. The release scope covers `@storybook/react-vite`,
+`@storybook/react-webpack5`, `@storybook/nextjs-vite`, and `@storybook/nextjs`. TurboSnap 1 is unchanged.
 
-## Supported coverage
+The CLI retains its existing source hashes, config-directory sweep, `untraced` boundaries,
+gitignore handling, main-config exception, and `externals` precedence. Output evidence is a separate
+optional comparison. It cannot independently request more captures than the existing hashes would.
 
-The Storybook Vite producer supplies `turbosnapConfig` alongside the existing preview stats. Its
-first complete profile is a declarative `@storybook/html-vite` configuration using Vite 7.3.6 with esbuild 0.28.1 and Rollup 4.53.2, the known
-built-in presets/plugins, and JavaScript, TypeScript or JSON preview inputs. Custom addons, presets,
-Vite configs, styles, queried modules such as workers, opaque runtime inputs, HTML sidecars and
-static/public assets are unsupported
-by this initial proof. Unsupported inputs produce incomplete evidence and retain directory coverage.
-Other frameworks and builders need their own producer validation before selective coverage applies.
+## How selection works
 
-| File role | Coverage with verified evidence |
+The CLI identifies config files reached only through stories, excluding entry files, preview/global
+dependencies, configured static files, and explicit externals. It supplies a `stableConfigHash`
+that omits those candidates, alongside the original full config hash.
+
+For each current/ancestor pair, the backend applies these rules:
+
+1. If the original global hashes match, use the original source-story comparison. Output-only
+   changes do not force captures, preserving explicit exclusions.
+2. If only the config-directory hash differs, both builds must have compatible, complete evidence.
+   Their `stableConfigHash` and `globalOutputHash` must match. Otherwise retain the full bailout.
+3. Under that waiver, a story can inherit only if both its source hash and final output hash match.
+   A hidden compiler read that changes another story's output therefore prevents skipping it.
+
+The same comparison applies to the upload's ancestor union and each test's most recent ancestor.
+The backend's `turboSnapConfigCoverage` account flag defaults to off. It controls these waivers
+independently of the existing TurboSnap 2 flag; evidence is stored while the new flag is off.
+An older server that rejects the optional `configCoverage` input receives a retry with only the
+original fields. Other errors are not downgraded.
+
+| Change | Coverage |
 | --- | --- |
-| Reached only by stories | Dependent stories |
-| Preview/global dependency or build input, including dual-use helpers | All stories |
-| Main, preview, preview HTML, unknown or unattributed config file | Existing global coverage |
+| Story-scoped config helper; shared output unchanged | Stories whose source or output changed |
+| Preview/global output change during a config-directory waiver | Existing full capture |
+| Main, preview, unknown or unattributed config file | Existing global coverage |
 | Explicit external or configured static asset | Existing global coverage |
-| Explicit `untraced` exclusion | Existing exclusion behavior |
+| Excluded-only edit | Existing exclusion behavior |
 | Missing, stale, malformed or incomplete evidence | Existing directory sweep |
 
-Manager-only and unused files remain conservative. Absence from preview stats does not establish
-that a file is unused. A root Vite transform, compiler sidecar, plugin or preset can read a helper
-without introducing a runtime import edge.
+Manager-only and unused files remain conservative. A runtime import graph does not prove the
+absence of build-time reads. The producer fingerprints the final output rather than claiming to
+observe every filesystem read made by a framework, compiler, loader, or plugin. Shared CSS and
+unclassified assets are global; changing them may retain a full capture.
 
 ## Evidence contract
 
-Version 1 identifies the builder and Vite versions, project/config roots, complete config-directory
-inventory, absent implicit control files, and build roots with dependency edges. Each source record
-binds its bytes with SHA256 and records its resolved filesystem identity. The record also binds the
-exact preview module list and the resolved environment/define values. It contains no raw environment
-values. The producer rejects pipelines it cannot account for, including unsupported dynamic reads.
+The Storybook producer adds `turbosnapOutput` to `preview-stats.json`, without changing its existing
+module graph. Version 1 binds the exact module list, project/config roots, config inventory and
+source SHA256 digests, and the final uploaded file inventory and raw SHA256 digests. It also supplies
+canonical global and per-story output digests. Only known generated output references may be
+canonicalized; arbitrary user strings must retain their bytes. Unknown or ambiguous output shapes
+produce incomplete evidence. The producer may normalize `generatedAt` in the exact core-generated
+`project.json` and the generation duration in core's diagnostic `components.html`. The latter uses
+the generator's canonical rendering with `durationMs: 0`, preserving the remaining payload. Both
+exceptions require the complete raw file to match the bytes produced by core. Rendering diagnostic
+build timestamps or generation durations is outside the selective-output contract.
 
-The CLI validates package versions, roots, graph references, inventory, absence assertions, source
-bytes and symlink identities before using the evidence. Resolved compiler package manifests and discovered lockfiles also
-contribute to global coverage. Custom compiler binaries are unsupported; same-version patched
-compiler packages remain outside the initial supported contract. Build inputs are hashed as literal paths;
-bundler query and loader normalization must not change their filenames. Missing or unreadable proof
-falls back to the original directory sweep. Any excluded build dependency also forces that fallback,
-so the opaque environment digest cannot bypass an explicit exclusion. Excluded story helpers retain
-their existing behavior.
+Core finalization runs after preview building and other output effects. The CLI verifies the
+inventory and bytes before accepting the evidence. Prebuilt output is supported without installed
+builder packages. Metadata cannot choose a filesystem root: sources are confined to the independently
+discovered Git root, and output to the independently configured build directory. Both lexical paths
+and actual symlink targets must remain inside their boundary. Strict inventory enumeration rejects
+unreadable entries, cycles, and non-regular files. Binding reads use validated regular-file descriptors
+and no-follow flags where supported. These checks protect against untrusted metadata on a stable
+filesystem; they are not an atomic sandbox against concurrent replacement of ancestor directories.
 
-Source bindings are constrained to the independently discovered Git repository root before any
-binding contents are read, including unreferenced and excluded records. Both the declared paths and
-resolved symlink targets must stay inside that root. The file reader repeats this check, uses
-no-follow open flags where supported and verifies the opened regular file before streaming its bytes.
-Binding and capture hashes use the same descriptor; capture hashing never reopens a metadata path.
-These checks constrain untrusted metadata on a stable filesystem. They are not an atomic sandbox
-against a local process concurrently replacing ancestor directories.
-Shared sources above the project directory are supported when they remain inside the repository.
-Sources or linked packages outside the repository retain directory coverage with reason
-`outside-repository-build-dependency`; metadata cannot authorize access to another filesystem root.
-
-Validation fingerprints never enter capture hashes. The selected build inputs use the normal capture
-hashes under `buildConfiguration`, together with the producer capability and resolved environment
-hash. `configDependencyVersion` versions this coverage contract. Entering or leaving verified mode
-changes the global hash once, preventing reuse across incompatible coverage rules.
+The exact stats file and `.chromatic/` internal metadata are excluded from the output inventory.
+A file added, removed, or changed after finalization invalidates the evidence. The builder identity
+and protocol version are included in the global comparison. The optional coverage record also enters
+`storybookHash` identity so storage deduplication cannot discard different evidence for the same
+source hashes. Source comparison still controls whether output evidence is consulted.
 
 ## Inspecting a build
 
-Run `chromatic turbosnap-manifest` after a fresh Storybook build with stats. `configAnalysis` includes:
+Run `chromatic turbosnap-manifest` after `storybook build --stats-json`. For custom paths, pass
+`--stats-file <file>` and `--storybook-build-dir <directory>` separately; the output boundary is not
+inferred from metadata or from an arbitrarily located stats file.
 
-- `mode`: `dependencies` for verified coverage, otherwise `directory`.
-- `reason`: the verification result or conservative fallback reason.
+`configAnalysis` reports:
+
+- `mode`: `output` when verified evidence is available, otherwise `directory`.
+- `reason`: the verification result or fallback reason.
 - `entryFiles`: main, preview and preview HTML files at the config-directory root.
-- `globalFiles`: config helpers reached by preview, build inputs, static directories or externals.
-- `storyScopedCandidates`: config files reached only through stories in the runtime graph.
+- `globalFiles`: config helpers reached by preview/globals, static directories or externals.
+- `storyScopedCandidates`: config helpers reached only through stories.
 - `unattributedFiles`: config files whose role is not established.
-- `buildFiles`: verified build inputs, including files outside the config directory.
 
-The first four file categories partition the original hashed config sweep; they exclude skipped
-files. In `dependencies` mode the candidates are removed from `storybookConfigFiles`. In `directory`
-mode they remain globally hashed. `buildFiles` is a separate list and may overlap the categories.
-Consult `skippedFiles` for exclusions. A candidate in directory mode is diagnostic, not a promise
-of selective capture. For an incomplete producer record, inspect `turbosnapConfig.reason` in the
-preview stats for the specific unsupported input.
+The file categories partition the full config sweep and exclude skipped files. Candidates remain
+in `storybookConfigFiles` in both modes. A separate `configCoverage` record proposes the conditional
+waiver; `mode: "output"` is not itself proof that a particular ancestor permits selective capture.
+Inspect `turbosnapOutput.reason` in the stats for producer-specific fallback details.
 
 ## Migrating existing untraced settings
 
-An upgrade never removes or changes a customer's explicit exclusions, including `.storybook/**`.
-Keep fixtures and helpers in the config directory; relocating them is not the migration path.
+An upgrade preserves explicit exclusions, including `.storybook/**`. Fixtures and helpers may stay
+in that directory.
 
-1. Check that the project's builder produces complete evidence. A broad config exclusion can make
-   the current manifest report `excluded-build-dependency` because it also matches main config.
-2. On a trial branch, remove only exclusions added to avoid directory-wide recaptures. Retain
-   intentional unrelated exclusions. Build Storybook again and inspect the manifest.
-3. Require `mode: "dependencies"` before expecting fewer captures. Unsupported projects still get
-   directory-wide coverage after removing exclusions.
-4. Run a forced-full visual build to establish coverage, then test a story-local edit and a global
-   edit. The local edit should select its dependents; the global edit should select all stories.
+1. Upgrade Storybook and the CLI to versions with output evidence, and confirm the backend supports
+   the optional coverage input and has enabled `turboSnapConfigCoverage` for the trial account.
+   Check for `mode: "output"` on a fresh build.
+2. On a trial branch, remove only exclusions added to avoid config-directory recaptures. Retain
+   unrelated intentional exclusions.
+3. Run a forced-full visual build after removing the workaround. Establish an ancestor with the new
+   evidence before measuring savings.
+4. Change a story-local helper and check that its dependents are selected. Change preview/global
+   configuration and check that all stories are selected. Unsupported output retains full coverage.
+
+If an excluded edit coincides with an ordinary config-helper edit, output differences may prevent
+the waiver and retain the old full capture. This loses an optimization but does not expand capture
+beyond the original decision.
 
 ## Validation and release gates
 
-Consumer tests cover story-local and dual-use files, global inputs, exclusions, custom config roots,
-contract transitions and byte-identical fallback. Real-filesystem tests cover source deletion,
-new implicit configs, identical-byte symlink retargeting, repository escapes and non-regular files.
-Producer tests reject unsupported
-pipelines and inputs. A real Storybook build and the shipped CLI bundle must also be checked together;
-source-only tests do not establish protocol compatibility.
+Unit tests cover source-hash preservation, hidden output effects, malformed/stale evidence,
+exclusions, filesystem escapes and legacy-server fallback. Acceptance requires actual Storybook
+builds for all four frameworks with JSX, CSS/static assets and normal framework plugins. Test local
+helpers, global edits, hidden compiler reads, late output mutations, preview imports of stories,
+additions/removals/renames, custom config directories and monorepos.
 
-Before broad rollout or adding a supported framework/builder, compare selected stories against
-forced-full visual runs. Include fixtures, mocks, decorators, main imports, presets, compiler/style
-configs, static assets, additions/removals/renames, custom config directories, monorepos and symlinks.
-Every changed visual result must be selected. Start with shadow decisions and a canary with periodic
-forced-full comparisons and a kill switch. Track fallback reasons, selected/full counts and broad
-exclusions separately for builds and projects. These production rollout controls and visual oracle
-runs are release requirements; this local implementation does not provision them.
+Before production rollout, compare selected stories with forced-full visual results. Every changed
+visual must be selected. Start with shadow decisions, a canary, periodic forced-full comparisons and
+a kill switch. Disabling `turboSnapConfigCoverage` restores the existing source comparison for
+subsequent decisions; it does not cancel a bypass already decided for an in-flight build. Track
+fallback reasons, selected/full counts and broad exclusions per build and project. Local build/CLI
+tests do not establish a hosted visual oracle or provision shadow comparisons or rollout monitoring.

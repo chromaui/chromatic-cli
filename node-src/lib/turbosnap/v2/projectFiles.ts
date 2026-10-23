@@ -51,7 +51,7 @@ export interface ProjectFiles {
     absolutePaths: AbsolutePath[],
     concurrency?: number
   ): Promise<Record<AbsolutePath, FileHash>>;
-  /** Reads binding and capture hashes from one regular file confined to the caller's repository. */
+  /** Reads binding and capture hashes from one regular file confined to the caller's independently configured root. */
   sourceHashes(absolutePath: AbsolutePath, repositoryRoot: AbsolutePath): Promise<SourceHashes>;
   /**
    * Follows symlinks, names files by the link path, terminates on a cycle, empty when absent. A path
@@ -59,6 +59,8 @@ export interface ProjectFiles {
    * a reason other than absence, matching `isFile` and `isDirectory`.
    */
   listTree(absolutePath: AbsolutePath): AbsolutePath[];
+  /** Strict inventory within an independent root; rejects escapes, cycles and unreadable entries. */
+  listBoundFiles(directory: AbsolutePath, root: AbsolutePath): AbsolutePath[];
   /**
    * Every path in the git index under the repository root, absolute, streamed as git lists it so a
    * monorepo's index never has to be held whole. Includes paths whose file is gone from disk and
@@ -111,6 +113,7 @@ export function realProjectFiles(deps: GitDeps): ProjectFiles {
       return hashRepositorySource(absolutePath, repositoryRoot, await xxhash);
     },
     listTree: (absolutePath: AbsolutePath) => listTree(log, absolutePath),
+    listBoundFiles,
     trackedFiles: (gitRoot: AbsolutePath) => trackedFiles(deps, gitRoot),
     writeFile: (absolutePath: AbsolutePath, contents: string) => {
       mkdirSync(path.dirname(absolutePath), { recursive: true });
@@ -123,10 +126,10 @@ export function realProjectFiles(deps: GitDeps): ProjectFiles {
 
 /**
  * Metadata is not authority to read another part of the filesystem. Check both the supplied path
- * and its resolved target against a root obtained from git before opening any file contents.
+ * and its resolved target against an independent repository or upload root before opening any file contents.
  *
  * @param absolutePath The proposed source file.
- * @param repositoryRoot The independently discovered repository root.
+ * @param repositoryRoot The independently discovered repository or upload root.
  * @param xxhash The normal capture hash implementation.
  *
  * @returns Binding and capture digests of the same bytes.
@@ -392,4 +395,25 @@ function listFilesRecursively(
   } finally {
     ancestorDirectories.delete(realDirectory);
   }
+}
+
+function listBoundFiles(directory: AbsolutePath, root: AbsolutePath): AbsolutePath[] {
+  const realRoot = realpathSync(root);
+  const ancestors = new Set<string>();
+  function walk(file: string): string[] {
+    if (!isPathWithinRoot(root, file)) throw new Error('Inventory path is outside its root');
+    const realFile = realpathSync(file);
+    if (!isPathWithinRoot(realRoot, realFile))
+      throw new Error('Inventory target is outside its root');
+    const stat = statSync(file);
+    if (stat.isFile()) return [file];
+    if (!stat.isDirectory() || ancestors.has(realFile)) throw new Error('Invalid inventory entry');
+    ancestors.add(realFile);
+    try {
+      return readdirSync(file).flatMap((entry) => walk(path.join(file, entry)));
+    } finally {
+      ancestors.delete(realFile);
+    }
+  }
+  return walk(directory);
 }

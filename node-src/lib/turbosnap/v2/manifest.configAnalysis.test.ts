@@ -67,8 +67,7 @@ describe('TurboSnap 2 configuration analysis', () => {
 
     expect(after.configAnalysis).toEqual({
       mode: 'directory',
-      reason: 'build-dependencies-unavailable',
-      buildFiles: [],
+      reason: 'output-evidence-unavailable',
       entryFiles: [
         './.storybook/main.ts',
         './.storybook/preview-body.html',
@@ -136,8 +135,7 @@ describe('TurboSnap 2 configuration analysis', () => {
     expect(after.storybookHash).toBe(before.storybookHash);
     expect(after.configAnalysis).toEqual({
       mode: 'directory',
-      reason: 'build-dependencies-unavailable',
-      buildFiles: [],
+      reason: 'output-evidence-unavailable',
       entryFiles: ['./.storybook/main.ts'],
       storyScopedCandidates: [],
       globalFiles: [],

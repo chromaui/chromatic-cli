@@ -12,32 +12,24 @@ import { realProjectFiles } from './projectFiles';
 
 const main = './.storybook/main.ts';
 const helper = './.storybook/data.json';
-const buildControl = './build/control.ts';
 const sha256 = (content: string | Buffer) => createHash('sha256').update(content).digest('hex');
 
 function fixture() {
   const gitRoot = repository();
   const projectRoot = path.join(gitRoot, 'packages/ui');
-  write(projectRoot, main, 'export default { framework: "@storybook/html-vite" };');
+  const outputDirectory = path.join(projectRoot, 'storybook-static');
+  write(projectRoot, main, 'export default { framework: "@storybook/react-vite" };');
   write(projectRoot, helper, '{"label":"Button"}');
-  write(projectRoot, buildControl, 'export const theme = "light";');
-  write(
-    projectRoot,
-    'node_modules/@storybook/builder-vite/package.json',
-    JSON.stringify({ name: '@storybook/builder-vite', version: '10.4.0' })
-  );
-  write(
-    projectRoot,
-    'node_modules/vite/package.json',
-    JSON.stringify({ name: 'vite', version: '7.3.1' })
-  );
-
+  write(outputDirectory, 'iframe.html', '<script src="./preview.js"></script>');
+  write(outputDirectory, 'preview.js', 'console.log("preview")');
+  write(outputDirectory, 'preview-stats.json', '{}');
   const log = new TestLogger();
   const projectFiles = realProjectFiles({ log });
   const input: ManifestInput = {
     log,
     projectRoot,
     gitRoot,
+    outputDir: outputDirectory,
     configDir: path.join(projectRoot, '.storybook'),
     staticDirs: [],
     externals: [],
@@ -45,302 +37,239 @@ function fixture() {
     projectFiles,
   };
   const stats: Stats = {
-    modules: [
-      {
-        id: 1,
-        name: helper,
-        reasons: [{ moduleName: './src/Button.stories.ts' }],
-      },
-    ],
+    modules: [{ id: 1, name: helper, reasons: [{ moduleName: './src/Button.stories.tsx' }] }],
   };
   const relative = (file: string) =>
     `./${path.relative(projectRoot, file).split(path.sep).join('/')}`;
-
   function record() {
-    const configFiles = projectFiles.listTree(input.configDir).map((file) => relative(file));
-    const absentFiles: string[] = [];
-    const files: Record<string, { hash: string; realPath: string; dependencies: string[] }> = {};
-    for (const file of [...configFiles, buildControl]) {
-      const absolute = path.resolve(projectRoot, file);
-      files[file] = {
-        hash: sha256(readFileSync(absolute)),
-        realPath: relative(projectFiles.realPath(absolute)),
-        dependencies: file === main ? [buildControl] : [],
-      };
-    }
     return {
       version: 1,
       status: 'complete',
-      reason: 'supported-profile',
-      builder: { name: '@storybook/builder-vite', version: '10.4.0', viteVersion: '7.3.1' },
+      reason: 'final-output',
+      builder: { name: '@storybook/builder-vite', version: '11.0.0' },
       projectRoot: './',
       configDir: './.storybook',
       modulesHash: sha256(JSON.stringify(stats.modules)),
-      environmentHash: sha256('production'),
-      configFiles,
-      absentFiles,
-      roots: [main],
-      files,
+      configFiles: Object.fromEntries(
+        projectFiles.listTree(input.configDir).map((file) => [
+          relative(file),
+          {
+            hash: sha256(readFileSync(file)),
+            realPath: relative(projectFiles.realPath(file)),
+          },
+        ])
+      ),
+      outputFiles: Object.fromEntries(
+        ['iframe.html', 'preview.js'].map((file) => [
+          file,
+          sha256(readFileSync(path.join(outputDirectory, file))),
+        ])
+      ),
+      globalOutputHash: sha256('global'),
+      storyOutputHashes: { './src/Button.stories.tsx': sha256('button') },
     };
   }
-
-  return { input, stats, record };
+  return { input, stats, record, outputDirectory };
 }
 
-describe('readConfigEvidence filesystem bindings', () => {
-  it('verifies real source bytes and an out-of-directory build dependency', async () => {
-    const { input, stats, record } = fixture();
-    const result = await readConfigEvidence(
-      { ...stats, turbosnapConfig: record() },
-      input,
-      () => undefined
-    );
-
-    expect(result.status).toBe('verified');
-    if (result.status !== 'verified') throw new Error('Expected verified build evidence');
-    expect(Object.keys(result.buildFileHashes).sort()).toEqual(
-      [path.resolve(input.projectRoot, main), path.resolve(input.projectRoot, buildControl)].sort()
-    );
+it('verifies a prebuilt output without requiring installed framework packages', async () => {
+  const { input, stats, record } = fixture();
+  const evidence = record();
+  expect(await readConfigEvidence({ ...stats, turbosnapOutput: evidence }, input)).toEqual({
+    status: 'verified',
+    globalOutputHash: sha256(
+      JSON.stringify([
+        evidence.version,
+        evidence.builder.name,
+        evidence.builder.version,
+        evidence.globalOutputHash,
+      ])
+    ),
+    storyOutputHashes: evidence.storyOutputHashes,
   });
+});
 
-  it.each([helper, buildControl])('rejects evidence after editing %s on disk', async (file) => {
+it('requires an independent output root', async () => {
+  const { input, stats, record } = fixture();
+  input.outputDir = undefined;
+  expect(await readConfigEvidence({ ...stats, turbosnapOutput: record() }, input)).toEqual({
+    status: 'unavailable',
+    reason: 'output-evidence-unavailable',
+  });
+});
+
+it.each([main, helper, './storybook-static/preview.js', './storybook-static/iframe.html'])(
+  'rejects stale source or uploaded bytes: %s',
+  async (file) => {
     const { input, stats, record } = fixture();
-    const metadata = record();
+    const evidence = record();
     write(input.projectRoot, file, 'changed after the build');
+    expect(await readConfigEvidence({ ...stats, turbosnapOutput: evidence }, input)).toEqual({
+      status: 'unavailable',
+      reason: 'stale-output-evidence',
+    });
+  }
+);
 
-    expect(
-      await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
-    ).toEqual({ status: 'unavailable', reason: 'stale-build-dependencies' });
-  });
-
-  it('rejects a deleted build dependency outside the config inventory', async () => {
+it.each(['.storybook/new.ts', 'storybook-static/new.css'])(
+  'rejects a new file omitted from the recorded inventory: %s',
+  async (file) => {
     const { input, stats, record } = fixture();
-    const metadata = record();
-    rmSync(path.resolve(input.projectRoot, buildControl));
+    const evidence = record();
+    write(input.projectRoot, file, 'new output or config');
+    await expect(
+      readConfigEvidence({ ...stats, turbosnapOutput: evidence }, input)
+    ).resolves.toMatchObject({ status: 'unavailable' });
+  }
+);
 
-    expect(
-      await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
-    ).toEqual({ status: 'unavailable', reason: 'stale-build-dependencies' });
-  });
-
-  it('rejects a symlink retarget even when its bytes and config inventory are unchanged', async () => {
+it.each(['.storybook/data.json', 'storybook-static/preview.js'])(
+  'rejects a deleted binding: %s',
+  async (file) => {
     const { input, stats, record } = fixture();
-    const firstTarget = write(input.projectRoot, 'assets/first.json', '{"label":"Button"}');
-    const secondTarget = write(input.projectRoot, 'assets/second.json', '{"label":"Button"}');
-    const link = path.resolve(input.projectRoot, helper);
-    rmSync(link);
-    symlinkSync(firstTarget, link);
-    const metadata = record();
-    const before = await readConfigEvidence(
-      { ...stats, turbosnapConfig: metadata },
-      input,
-      () => undefined
-    );
-    expect(before.status).toBe('verified');
+    const evidence = record();
+    rmSync(path.join(input.projectRoot, file));
+    await expect(
+      readConfigEvidence({ ...stats, turbosnapOutput: evidence }, input)
+    ).resolves.toMatchObject({ status: 'unavailable' });
+  }
+);
 
-    rmSync(link);
-    symlinkSync(secondTarget, link);
-    expect(sha256(readFileSync(link))).toBe(metadata.files[helper].hash);
-    expect(
-      await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
-    ).toEqual({ status: 'unavailable', reason: 'stale-build-dependencies' });
-  });
-
-  it('rejects an implicit config created outside the config directory after the build', async () => {
-    const { input, stats, record } = fixture();
-    const metadata = { ...record(), absentFiles: ['./vite.config.ts'] };
-    const before = await readConfigEvidence(
-      { ...stats, turbosnapConfig: metadata },
-      input,
-      () => undefined
-    );
-    expect(before.status).toBe('verified');
-
-    write(input.projectRoot, 'vite.config.ts', 'export default {};');
-    expect(
-      await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
-    ).toEqual({ status: 'unavailable', reason: 'stale-build-dependencies' });
-  });
-
-  it('rejects a removed config directory', async () => {
-    const { input, stats, record } = fixture();
-    const metadata = record();
-    rmSync(input.configDir, { recursive: true });
-
-    expect(
-      await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
-    ).toEqual({ status: 'unavailable', reason: 'stale-build-dependencies' });
-  });
+it('rejects a source symlink retarget even if its bytes match', async () => {
+  const { input, stats, record } = fixture();
+  const first = write(input.projectRoot, 'assets/one.json', '{}');
+  const second = write(input.projectRoot, 'assets/two.json', '{}');
+  const link = path.resolve(input.projectRoot, helper);
+  rmSync(link);
+  symlinkSync(first, link);
+  const evidence = record();
+  await expect(
+    readConfigEvidence({ ...stats, turbosnapOutput: evidence }, input)
+  ).resolves.toMatchObject({ status: 'verified' });
+  rmSync(link);
+  symlinkSync(second, link);
+  await expect(
+    readConfigEvidence({ ...stats, turbosnapOutput: evidence }, input)
+  ).resolves.toMatchObject({ status: 'unavailable' });
 });
 
-describe('readConfigEvidence graph identities', () => {
-  it('rejects two metadata keys that resolve to the same source file', async () => {
-    const { input, stats, record } = fixture();
-    const metadata = record();
-    metadata.files['./build/../build/control.ts'] = metadata.files[buildControl];
-
-    expect(
-      await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
-    ).toEqual({ status: 'unavailable', reason: 'invalid-build-dependencies' });
-  });
-
-  it('rejects a config inventory containing aliases of the same file', async () => {
-    const { input, stats, record } = fixture();
-    const metadata = record();
-    metadata.configFiles.push('./.storybook/../.storybook/data.json');
-
-    expect(
-      await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
-    ).toEqual({ status: 'unavailable', reason: 'invalid-build-dependencies' });
-  });
-
-  it.each(['configDir', 'configFiles', 'roots'])(
-    'rejects complete evidence without %s metadata',
-    async (field) => {
-      const { input, stats, record } = fixture();
-      const metadata = Object.fromEntries(
-        Object.entries(record()).filter(([key]) => key !== field)
-      );
-
-      expect(
-        await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
-      ).toEqual({ status: 'unavailable', reason: 'invalid-build-dependencies' });
-    }
-  );
-
-  it('rejects complete evidence with no build roots', async () => {
-    const { input, stats, record } = fixture();
-    const metadata = { ...record(), roots: [] };
-
-    expect(
-      await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
-    ).toEqual({ status: 'unavailable', reason: 'invalid-build-dependencies' });
-  });
-
-  it('rejects an inventory entry whose source binding is missing', async () => {
-    const { input, stats, record } = fixture();
-    const metadata = record();
-    metadata.files = Object.fromEntries(
-      Object.entries(metadata.files).filter(([file]) => file !== helper)
-    );
-
-    expect(
-      await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
-    ).toEqual({ status: 'unavailable', reason: 'invalid-build-dependencies' });
-  });
-
-  it.each(['constructor', 'toString'])(
-    'rejects a dependency on an inherited property named %s',
-    async (dependency) => {
-      const { input, stats, record } = fixture();
-      const metadata = record();
-      metadata.files[main].dependencies.push(dependency);
-
-      expect(
-        await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
-      ).toEqual({ status: 'unavailable', reason: 'invalid-build-dependencies' });
-    }
-  );
-
-  it('rejects roots that omit the main config and its build dependency closure', async () => {
-    const { input, stats, record } = fixture();
-    const metadata = { ...record(), roots: [helper] };
-
-    expect(
-      await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
-    ).toEqual({ status: 'unavailable', reason: 'stale-build-dependencies' });
-  });
+it('excludes only the selected stats file and internal Chromatic metadata', async () => {
+  const { input, stats, record, outputDirectory } = fixture();
+  const evidence = record();
+  write(outputDirectory, '.chromatic/turbosnap-manifest.json', '{}');
+  write(outputDirectory, 'preview-stats.json', 'updated stats');
+  await expect(
+    readConfigEvidence({ ...stats, turbosnapOutput: evidence }, input)
+  ).resolves.toMatchObject({ status: 'verified' });
+  write(outputDirectory, 'another-stats.json', '{}');
+  await expect(
+    readConfigEvidence({ ...stats, turbosnapOutput: evidence }, input)
+  ).resolves.toMatchObject({ status: 'unavailable' });
 });
 
-describe('readConfigEvidence repository boundary', () => {
-  it.each(['rooted', 'unreferenced', 'untraced'])(
-    'rejects an outside source binding when it is %s before hashing any metadata source',
-    async (mode) => {
-      const { input, stats, record } = fixture();
-      const metadata = record();
-      const outside = write(
-        temporaryDirectory(),
-        'outside.txt',
-        'test fixture outside the repository'
-      );
-      const file = path.relative(input.projectRoot, outside).split(path.sep).join('/');
-      metadata.files[file] = {
-        hash: sha256('test fixture outside the repository'),
-        realPath: file,
-        dependencies: [],
-      };
-      if (mode === 'rooted') metadata.roots.push(file);
+it('supports independently configured output outside the repository', async () => {
+  const { input, stats, record } = fixture();
+  const evidence = record();
+  input.outputDir = temporaryDirectory();
+  write(input.outputDir, 'iframe.html', '<script src="./preview.js"></script>');
+  write(input.outputDir, 'preview.js', 'console.log("preview")');
+  await expect(
+    readConfigEvidence({ ...stats, turbosnapOutput: evidence }, input)
+  ).resolves.toMatchObject({ status: 'verified' });
+});
+
+describe('untrusted evidence boundaries', () => {
+  it.each(['source', 'output'])(
+    'rejects a %s traversal before hashing any metadata file',
+    async (kind) => {
+      const { input, stats, record, outputDirectory } = fixture();
+      const evidence = record();
+      const outside = write(temporaryDirectory(), 'outside.txt', 'outside fixture');
+      const file = path
+        .relative(kind === 'source' ? input.projectRoot : outputDirectory, outside)
+        .split(path.sep)
+        .join('/');
+      if (kind === 'source')
+        evidence.configFiles[file] = { hash: sha256('outside fixture'), realPath: file };
+      else evidence.outputFiles[file] = sha256('outside fixture');
       const hash = vi.spyOn(input.projectFiles, 'sourceHashes');
-
-      expect(
-        await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, (name) =>
-          mode === 'untraced' && name === outside ? 'untraced' : undefined
-        )
-      ).toEqual({ status: 'unavailable', reason: 'outside-repository-build-dependency' });
+      expect(await readConfigEvidence({ ...stats, turbosnapOutput: evidence }, input)).toEqual({
+        status: 'unavailable',
+        reason: 'outside-root-output-evidence',
+      });
       expect(hash).not.toHaveBeenCalled();
     }
   );
 
-  it('rejects a symlink escape even when metadata supplies the correct target and digest', async () => {
-    const { input, stats, record } = fixture();
-    const target = write(temporaryDirectory(), 'outside.json', '{"label":"Button"}');
-    const link = path.resolve(input.projectRoot, helper);
-    rmSync(link);
-    symlinkSync(target, link);
-    const metadata = record();
-    const hash = vi.spyOn(input.projectFiles, 'sourceHashes');
-
-    expect(
-      await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
-    ).toEqual({ status: 'unavailable', reason: 'outside-repository-build-dependency' });
-    expect(hash).not.toHaveBeenCalled();
-  });
-
-  it('rejects an actual symlink escape even when the declared real path stays inside', async () => {
-    const { input, stats, record } = fixture();
-    const metadata = record();
-    const link = path.resolve(input.projectRoot, helper);
-    rmSync(link);
-    symlinkSync(write(temporaryDirectory(), 'outside.json', '{"label":"Button"}'), link);
-    const hash = vi.spyOn(input.projectFiles, 'sourceHashes');
-
-    expect(
-      await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
-    ).toEqual({ status: 'unavailable', reason: 'outside-repository-build-dependency' });
-    expect(hash).not.toHaveBeenCalled();
-  });
-
-  it('allows shared build sources above the project but still inside the repository', async () => {
-    const { input, stats, record } = fixture();
-    const metadata = record();
-    const shared = write(input.gitRoot, 'shared/control.json', '{}');
-    const file = path.relative(input.projectRoot, shared).split(path.sep).join('/');
-    metadata.files[file] = { hash: sha256('{}'), realPath: file, dependencies: [] };
-    metadata.roots.push(file);
-
-    const result = await readConfigEvidence(
-      { ...stats, turbosnapConfig: metadata },
-      input,
-      () => undefined
-    );
-    expect(result.status).toBe('verified');
-    if (result.status !== 'verified') throw new Error('Expected verified build evidence');
-    expect(Object.keys(result.buildFileHashes)).toContain(shared);
-  });
+  it.each(['source', 'output'])(
+    'rejects a %s symlink escape even when the declared digest matches',
+    async (kind) => {
+      const { input, stats, record, outputDirectory } = fixture();
+      const evidence = record();
+      const file =
+        kind === 'source'
+          ? path.resolve(input.projectRoot, helper)
+          : path.join(outputDirectory, 'preview.js');
+      const outside = write(temporaryDirectory(), 'outside.txt', readFileSync(file, 'utf8'));
+      rmSync(file);
+      symlinkSync(outside, file);
+      const hash = vi.spyOn(input.projectFiles, 'sourceHashes');
+      expect(await readConfigEvidence({ ...stats, turbosnapOutput: evidence }, input)).toEqual({
+        status: 'unavailable',
+        reason: 'outside-root-output-evidence',
+      });
+      expect(hash).not.toHaveBeenCalled();
+    }
+  );
 
   it.each([
-    'C:relative.json',
-    String.raw`C:\outside.json`,
-    String.raw`\\server\share\input.json`,
-    String.raw`..\outside.json`,
-  ])('rejects a non-portable metadata path %s before any hashing', async (file) => {
+    'C:relative.js',
+    String.raw`C:\outside.js`,
+    String.raw`\\server\share\input.js`,
+    String.raw`..\outside.js`,
+    '/outside.js',
+  ])('rejects a non-portable output path %s', async (file) => {
     const { input, stats, record } = fixture();
-    const metadata = record();
-    metadata.files[file] = { hash: sha256('x'), realPath: file, dependencies: [] };
+    const evidence = record();
+    evidence.outputFiles[file] = sha256('x');
     const hash = vi.spyOn(input.projectFiles, 'sourceHashes');
-    expect(
-      await readConfigEvidence({ ...stats, turbosnapConfig: metadata }, input, () => undefined)
-    ).toEqual({ status: 'unavailable', reason: 'invalid-build-dependencies' });
+    expect(await readConfigEvidence({ ...stats, turbosnapOutput: evidence }, input)).toEqual({
+      status: 'unavailable',
+      reason: 'invalid-output-evidence',
+    });
+    expect(hash).not.toHaveBeenCalled();
+  });
+
+  it.each(['source', 'output', 'story'])(
+    'rejects duplicate normalized %s identities',
+    async (kind) => {
+      const { input, stats, record } = fixture();
+      const evidence = record();
+      if (kind === 'source')
+        evidence.configFiles['./.storybook/../.storybook/main.ts'] = evidence.configFiles[main];
+      else if (kind === 'output')
+        evidence.outputFiles['./preview.js'] = evidence.outputFiles['preview.js'];
+      else
+        Object.assign(evidence.storyOutputHashes, {
+          './src/../src/Button.stories.tsx': sha256('button'),
+        });
+      expect(await readConfigEvidence({ ...stats, turbosnapOutput: evidence }, input)).toEqual({
+        status: 'unavailable',
+        reason: 'invalid-output-evidence',
+      });
+    }
+  );
+
+  it('rejects an output symlink directory missing from the declared inventory without hashing it', async () => {
+    const { input, stats, record, outputDirectory } = fixture();
+    const evidence = record();
+    const outside = temporaryDirectory();
+    write(outside, 'secret.txt', 'fixture');
+    symlinkSync(outside, path.join(outputDirectory, 'linked'));
+    const hash = vi.spyOn(input.projectFiles, 'sourceHashes');
+    await expect(
+      readConfigEvidence({ ...stats, turbosnapOutput: evidence }, input)
+    ).resolves.toMatchObject({ status: 'unavailable' });
     expect(hash).not.toHaveBeenCalled();
   });
 });

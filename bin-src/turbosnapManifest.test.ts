@@ -60,6 +60,8 @@ describe('turbosnap-manifest', () => {
         log: testLogger,
         projectRoot: '/repo',
         gitRoot: '/repo',
+        outputDir: '/repo/storybook-static',
+        statsPath: '/repo/storybook-static/preview-stats.json',
         untraced: [],
         configDir: '/repo/.storybook',
         staticDirs: [],
@@ -162,6 +164,8 @@ describe('turbosnap-manifest', () => {
       expect.anything(),
       expect.objectContaining({
         gitRoot: '/repo',
+        outputDir: '/repo/packages/ui/storybook-static',
+        statsPath: '/repo/packages/ui/storybook-static/preview-stats.json',
         untraced: ['packages/ui/src/generated/**', '**/*.css'],
       })
     );
@@ -194,4 +198,15 @@ describe('turbosnap-manifest', () => {
     expect(process.exit).toHaveBeenCalledWith(1);
     expect(process.stdout.write).not.toHaveBeenCalled();
   });
+});
+
+it('resolves an output boundary independently from a custom stats location', async () => {
+  await main(['--stats-file', 'metadata/preview-stats.json', '--storybook-build-dir', 'build']);
+  expect(buildManifest).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({
+      statsPath: '/repo/metadata/preview-stats.json',
+      outputDir: '/repo/build',
+    })
+  );
 });

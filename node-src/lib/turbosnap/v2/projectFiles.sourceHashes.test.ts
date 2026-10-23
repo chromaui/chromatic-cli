@@ -169,3 +169,41 @@ describe('realProjectFiles sourceHashes repository boundary', () => {
     }
   );
 });
+
+describe('strict bounded inventories', () => {
+  it('accepts internal file aliases without losing their upload names', () => {
+    const root = temporaryDirectory();
+    const source = write(root, 'assets/source.css', 'body {}');
+    const link = path.join(root, 'theme.css');
+    symlinkSync(source, link);
+    expect(realProjectFiles({ log }).listBoundFiles(root, root).sort()).toEqual(
+      [source, link].sort()
+    );
+  });
+
+  it('rejects a directory cycle instead of silently omitting part of the inventory', () => {
+    const root = temporaryDirectory();
+    write(root, 'assets/source.css', 'body {}');
+    symlinkSync(root, path.join(root, 'assets', 'cycle'));
+    expect(() => realProjectFiles({ log }).listBoundFiles(root, root)).toThrow(
+      'Invalid inventory entry'
+    );
+  });
+
+  it('rejects directory enumeration outside the independent root', () => {
+    const root = temporaryDirectory();
+    const outside = temporaryDirectory();
+    write(outside, 'other.css', 'body {}');
+    expect(() => realProjectFiles({ log }).listBoundFiles(outside, root)).toThrow(
+      'outside its root'
+    );
+  });
+
+  it.skipIf(process.platform === 'win32')('rejects a FIFO rather than omitting it', () => {
+    const root = temporaryDirectory();
+    execFileSync('mkfifo', [path.join(root, 'output.pipe')]);
+    expect(() => realProjectFiles({ log }).listBoundFiles(root, root)).toThrow(
+      'Invalid inventory entry'
+    );
+  });
+});

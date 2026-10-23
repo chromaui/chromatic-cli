@@ -12,9 +12,8 @@ import { FileAttribution } from './storybookFiles';
  * to a build transform whose dependencies the preview graph does not record.
  */
 export interface ConfigAnalysis {
-  mode: 'directory' | 'dependencies';
-  reason: ConfigEvidenceReason | 'verified-build-dependencies';
-  buildFiles: FilePath[];
+  mode: 'directory' | 'output';
+  reason: ConfigEvidenceReason | 'verified-output-evidence';
   entryFiles: FilePath[];
   storyScopedCandidates: FilePath[];
   globalFiles: FilePath[];
@@ -28,20 +27,17 @@ export interface ConfigAnalysis {
  * @param configDirectory The canonical, project-relative config directory.
  * @param outOfGraphFiles The hashed config, static and external files, after existing skip rules.
  * @param attribution The preview graph's reachability categories.
- * @param buildFiles Verified build-time dependencies, when available.
  *
  * @returns Sorted, portable evidence for diagnostics and migration planning.
  */
 export function analyzeConfig(
   configDirectory: FilePath,
   outOfGraphFiles: OutOfGraphFiles,
-  attribution: FileAttribution,
-  buildFiles: ReadonlySet<FilePath> = new Set()
+  attribution: FileAttribution
 ): ConfigAnalysis {
   const analysis: ConfigAnalysis = {
     mode: 'directory',
-    reason: 'build-dependencies-unavailable',
-    buildFiles: [...buildFiles].sort((a, b) => a.localeCompare(b)),
+    reason: 'output-evidence-unavailable',
     entryFiles: [],
     storyScopedCandidates: [],
     globalFiles: [],
@@ -58,7 +54,6 @@ export function analyzeConfig(
       [
         attribution.previewSubtree,
         attribution.storybookGlobals,
-        buildFiles,
         outOfGraphFiles.staticFiles,
         outOfGraphFiles.externals,
       ].some((files) => files.has(file))

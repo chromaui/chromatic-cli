@@ -104,6 +104,7 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
       );
     },
     listTree,
+    listBoundFiles: listTree,
     trackedFiles: async function* () {
       yield* disk.trackedFiles ?? [];
     },

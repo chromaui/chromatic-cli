@@ -21,6 +21,10 @@ export interface ManifestInput {
    * is where a builder usually names them from.
    */
   statsRoot?: AbsolutePath;
+  /** Independently configured upload directory; metadata cannot supply this boundary. */
+  outputDir?: AbsolutePath;
+  /** The stats file itself is not part of the output inventory. */
+  statsPath?: AbsolutePath;
   /**
    * The `--untraced` globs, relative to `gitRoot`, naming files that wall off tracing: neither their
    * own changes nor those of files reached only through them recapture stories. Empty when unset.

@@ -7,6 +7,7 @@ const RETRYABLE_ERROR_CODE = 'RETRYABLE_ERROR_CODE';
 
 export interface GraphQLError {
   message: string;
+  path?: (string | number)[];
   locations?: { line: number; column: number }[];
   extensions: {
     code: string;
@@ -22,7 +23,11 @@ export default class GraphQLClient {
   headers: Record<string, string>;
   client: HTTPClient;
 
-  constructor(ctx: InitialContext, endpoint: string, httpClientOptions: HTTPClientOptions) {
+  constructor(
+    ctx: Pick<InitialContext, 'env' | 'log'>,
+    endpoint: string,
+    httpClientOptions: HTTPClientOptions
+  ) {
     if (!endpoint) throw new Error('Option `endpoint` required.');
     this.endpoint = endpoint;
     this.client = new HTTPClient(ctx, httpClientOptions);
@@ -63,13 +68,15 @@ export default class GraphQLClient {
           if (err.extensions && err.extensions.code === RETRYABLE_ERROR_CODE) throw err;
 
           err.name = err.name || 'GraphQLError';
-          err.at = `${err.path.join('.')} ${err.locations
-            .map((l) => `${l.line}:${l.column}`)
-            .join(', ')}`;
+          err.at = formatErrorLocation(err);
         }
         return bail(errors.length === 1 ? errors[0] : errors);
       },
       { retries }
     );
   }
+}
+
+function formatErrorLocation(error: GraphQLError): string {
+  return `${error.path?.join('.') ?? ''} ${(error.locations ?? []).map((location) => `${location.line}:${location.column}`).join(', ')}`;
 }
