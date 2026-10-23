@@ -28,7 +28,7 @@ Preconditions:
 - **Default path.** Run from the run's work dir, whose `storybook-static/` is `$SB_DIR`. Run `$S run trim-default-path --cwd "$WORK" -- trim-stats-file`. Exit code `0`. stdout is `Wrote ./storybook-static/preview-stats.trimmed.json`.
 - **Missing input.** Run `$S run trim-missing -- trim-stats-file "$WORK/nope.json"`. Exit code `1`. stdout is empty, and stderr contains `ENOENT: no such file or directory, open '<path>/nope.json'`. No `Wrote` line appears, and no `nope.trimmed.json` exists.
 - **Help.** Run `$S run trim-help -- trim-stats-file --help`. Exit code `0`. stdout contains the usage text `$ chromatic trim-stats-file [<stats file>]`, and no file is written.
-- **Webpack filters.** Only webpack stats have `(webpack)…` and `node_modules/` top-level modules to drop. Prepare `react-webpack5` and build its Storybook as in `trace-wp` (see `trace`). Run `$S run trim-wp --cwd "$F" -- trim-stats-file`. Exit code `0`. stdout is `Wrote ./storybook-static/preview-stats.trimmed.json`. `jq '[.modules[].name|select(startswith("(webpack)") or contains("node_modules/"))]|length'` is greater than `0` on `preview-stats.json` and `0` on `preview-stats.trimmed.json`.
+- **Webpack filters.** Only webpack stats have `(webpack)…` and `node_modules/` top-level modules to drop. Reuse the `react-webpack5` copy and Storybook from `trace-wp` (`F=$WORK/e2e-react-webpack5`), or prepare and build one as described there (see `trace`). Run `$S run trim-wp --cwd "$F" -- trim-stats-file`. Exit code `0`. stdout is `Wrote ./storybook-static/preview-stats.trimmed.json`. `jq '[.modules[].name|select(startswith("(webpack)") or contains("node_modules/"))]|length'` is greater than `0` on `preview-stats.json` and `0` on `preview-stats.trimmed.json`.
 
 ## Gotchas
 

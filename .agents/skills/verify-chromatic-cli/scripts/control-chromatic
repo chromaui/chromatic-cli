@@ -137,22 +137,25 @@ EOF
   echo "$FIXTURE"
 }
 
-# e2e-fixture <name>: prepare e2e/fixtures/<name> with `yarn fixture` (own git repo, frozen install) at
-# $WORK/e2e-<name>, on branch vcc-$RUN_ID-<name>-<short sha>. The fixture's commit is on `main`, and every copy of
+# e2e-fixture <name> [copy]: prepare e2e/fixtures/<name> with `yarn fixture` (own git repo, frozen install) at
+# $WORK/e2e-<name>[-<copy>], on branch vcc-$RUN_ID-<name>[-<copy>]-<short sha>. A copy name allows several
+# independent copies of one fixture in a run (parallel publishes, or a fresh one-commit copy for TurboSnap). The fixture's commit is on `main`, and every copy of
 # every fixture publishing to one project would share that branch: the CLI adds the last build on the branch as a
 # parent even when its commit is from another copy's history, and TurboSnap then fails with "missing git history".
 # The copy's own commit SHA (it has a fresh timestamp) keeps the name unique across sessions with the same RUN_ID.
 cmd_e2e_fixture() {
-  local name="${1:-}"
-  [[ -n "$name" ]] || die "usage: e2e-fixture <name> (one of: $(ls "$REPO/e2e/fixtures" | tr '\n' ' '))"
+  local name="${1:-}" copy="${2:-}"
+  [[ -n "$name" ]] || die "usage: e2e-fixture <name> [copy] (name is one of: $(ls "$REPO/e2e/fixtures" | tr '\n' ' '))"
   require_safe_name name "$name"
+  local id="$name"
+  if [[ -n "$copy" ]]; then require_safe_name copy "$copy"; id="$name-$copy"; fi
   [[ -d "$REPO/e2e/fixtures/$name" ]] || die "no fixture e2e/fixtures/$name (have: $(ls "$REPO/e2e/fixtures" | tr '\n' ' '))"
-  local dir="$WORK/e2e-$name"
-  [[ -e "$dir" ]] && die "$dir already exists; run cleanup first"
+  local dir="$WORK/e2e-$id"
+  [[ -e "$dir" ]] && die "$dir already exists; reuse it, pass another copy name, or run cleanup first"
   mkdir -p "$WORK"
-  (cd "$REPO" && yarn fixture "$name" "$dir" > "$WORK/e2e-$name.log" 2>&1) \
-    || { tail -30 "$WORK/e2e-$name.log"; die "yarn fixture $name failed (log: $WORK/e2e-$name.log)"; }
-  local branch="vcc-$RUN_ID-$name-$(git -C "$dir" rev-parse --short HEAD)"
+  (cd "$REPO" && yarn fixture "$name" "$dir" > "$WORK/e2e-$id.log" 2>&1) \
+    || { tail -30 "$WORK/e2e-$id.log"; die "yarn fixture $name failed (log: $WORK/e2e-$id.log)"; }
+  local branch="vcc-$RUN_ID-$id-$(git -C "$dir" rev-parse --short HEAD)"
   git -C "$dir" checkout -q -b "$branch"
   echo "==> $dir is on branch $branch"
   echo "$dir"
@@ -195,8 +198,9 @@ cmd_build_ref() {
   require_safe_name name "$name"
   local dir="$WORK/cli-$name"
   [[ -e "$dir" ]] && die "$dir already exists; run cleanup first"
+  git -C "$REPO" rev-parse --verify --quiet "$ref^{commit}" > /dev/null || die "unknown git ref $ref"
   git -C "$REPO" diff --quiet "$ref" -- package.json yarn.lock \
-    || echo "control-chromatic: WARNING: package.json or yarn.lock differ between $ref and this checkout; $ref will be built and run with this checkout's node_modules, so dependency-related differences won't show. Compare against a published canary (install-published) instead." >&2
+    || echo "control-chromatic: WARNING: package.json or yarn.lock differ between $ref and this checkout; $ref will be built and run with this checkout's node_modules, so dependency-related differences won't show. Compare against a published release or canary (install-published) instead." >&2
   mkdir -p "$WORK"
   git -C "$REPO" worktree add -q --detach "$dir" "$ref"
   ln -s "$REPO/node_modules" "$dir/node_modules"
