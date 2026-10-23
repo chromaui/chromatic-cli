@@ -91,7 +91,7 @@ describe('isPackageManifestFile', () => {
 });
 
 describe('isPackageLockFile', () => {
-  it.each(['yarn.lock', 'pnpm-lock.yaml', 'package-lock.json'])(
+  it.each(['yarn.lock', 'pnpm-lock.yaml', 'package-lock.json', 'bun.lock'])(
     'returns true for %s at the root or in a directory',
     (lockfile) => {
       expect(isPackageLockFile(lockfile)).toBe(true);
