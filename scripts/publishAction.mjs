@@ -10,6 +10,53 @@ const copy = (globs, ...args) => {
   return cpy(globs, ...args);
 };
 
+const PUSH_ATTEMPTS = 5;
+
+// A push loses the race with a concurrent push in one of two ways. Usually the server sees main has
+// moved and rejects ours as non-fast-forward (`[rejected]`). If both pushes arrive at almost the
+// same moment, ours passes that check but fails to lock main (`[remote rejected] ... cannot lock
+// ref`). Every other server-side rejection is a real failure and must not be retried.
+const lostPushRace = (stderr = '') =>
+  stderr.includes('[rejected]') || /\[remote rejected].*\(cannot lock ref/.test(stderr);
+
+// Retries a push that lost a race with another run's push. `prepareRetry` runs before each retry.
+const pushRetryingLostRace = async (label, push, prepareRetry = async () => {}) => {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await push();
+    } catch (error) {
+      if (attempt >= PUSH_ATTEMPTS || !lostPushRace(error.stderr)) throw error;
+      console.info(
+        `⚠️ Push of ${label} was rejected (attempt ${attempt}/${PUSH_ATTEMPTS}). Retrying.`
+      );
+      await prepareRetry();
+    }
+  }
+};
+
+// Canary releases from different PRs run concurrently, so another run can push to main between our
+// clone and our push. When that happens, recommit our exact tree on top of the new main and retry.
+// A rebase would be wrong here: it can splice the other run's non-conflicting hunks into our
+// bundled files, so the pinned tag would no longer point at what this run built.
+const pushToMain = ($$, version) =>
+  pushRetryingLostRace(
+    'main',
+    () => $$`git push origin HEAD:main`,
+    async () => {
+      await $$`git fetch origin main`;
+      await $$`git reset --soft FETCH_HEAD`;
+      await $$`git commit --allow-empty -m v${version}`;
+    }
+  );
+
+// Other runs force-push the same floating tags (`v<major>`, `latest`), so this push can lose the ref
+// lock too. Force-pushing again needs no preparation, because each push reads the current tag values.
+const pushTags = ($$, version, major) =>
+  pushRetryingLostRace(
+    'tags',
+    () => $$`git push --force origin refs/tags/v${version} refs/tags/v${major} refs/tags/latest`
+  );
+
 const publishAction = async ({ major, version, repo }) => {
   const dryRun = process.argv.includes('--dry-run');
 
@@ -61,15 +108,17 @@ const publishAction = async ({ major, version, repo }) => {
   if (dryRun) {
     console.info('✅ Skipping git push due to --dry-run');
   } else {
+    // Tag only after main is pushed, because a retried push recommits HEAD.
+    await pushToMain($$, version);
     await $$`git tag -a v${version} -m ${`v${version} without automatic upgrades (pinned)`}`;
     await $$`git tag -f -a v${major} -m ${`v${version} with automatic upgrades to v${major}.x.x`}`;
     await $$`git tag -f -a latest -m ${`v${version} with automatic upgrades to all versions`}`;
-    await $$`git push origin HEAD:main`;
-    await $$`git push --tags --force`;
+    await pushTags($$, version, major);
     console.info('✅ Done');
   }
 
-  return cleanup();
+  await cleanup();
+  return dryRun ? undefined : `v${version}`;
 };
 
 export async function main(context) {
@@ -86,14 +135,11 @@ export async function main(context) {
 
   switch (context) {
     case 'canary':
-      await publishAction({ major, version, repo: 'chromaui/action-canary' });
-      break;
+      return publishAction({ major, version, repo: 'chromaui/action-canary' });
     case 'next':
-      await publishAction({ major, version, repo: 'chromaui/action-next' });
-      break;
+      return publishAction({ major, version, repo: 'chromaui/action-next' });
     case 'latest':
-      await publishAction({ major, version, repo: 'chromaui/action' });
-      break;
+      return publishAction({ major, version, repo: 'chromaui/action' });
     default:
       console.error(`❗️ Unknown context: ${context}`);
   }
