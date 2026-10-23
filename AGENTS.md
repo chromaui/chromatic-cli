@@ -43,3 +43,7 @@ If you are unsure whether something is identifying, leave it out. If a ticket ti
    - `skip-release`: docs, tests, CI, tooling, and agent files (`.agents/`, `AGENTS.md`). Also use it for package changes with no significant user benefit or too small to justify a release on their own; they ship with the next release.
 
 When the user names labels, use theirs. Never add `DO NOT MERGE` unless asked; `check-labels` fails while it is set.
+
+## Verify changes in the real CLI
+
+Unit tests don't show that the CLI behaves correctly for users. Before you call a change to `bin-src/` or `node-src/` done, open or update a PR, or approve one, load the `verify-chromatic-cli` skill (`.agents/skills/verify-chromatic-cli/`) and drive the built CLI through its `control-chromatic` helper. That covers comparing `main` against your branch (`build-ref`), reproducing a bug in a scratch project with another builder or package manager (`--cwd`), and trying a published canary (`install-published`). If the helper can't do what the change needs, extend it in the same PR instead of working around it. When you can't verify something, say what and why in the PR.
