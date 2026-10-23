@@ -12,6 +12,13 @@ const copy = (globs, ...args) => {
 
 const PUSH_ATTEMPTS = 5;
 
+// A push loses the race with a concurrent push in one of two ways. Usually the server sees main has
+// moved and rejects ours as non-fast-forward (`[rejected]`). If both pushes arrive at almost the
+// same moment, ours passes that check but fails to lock main (`[remote rejected] ... cannot lock
+// ref`). Every other server-side rejection is a real failure and must not be retried.
+const lostPushRace = (stderr = '') =>
+  stderr.includes('[rejected]') || /\[remote rejected].*\(cannot lock ref/.test(stderr);
+
 // Canary releases from different PRs run concurrently, so another run can push to main between our
 // clone and our push. When that happens, recommit our exact tree on top of the new main and retry.
 // A rebase would be wrong here: it can splice the other run's non-conflicting hunks into our
@@ -21,7 +28,7 @@ const pushToMain = async ($$, version) => {
     try {
       return await $$`git push origin HEAD:main`;
     } catch (error) {
-      if (attempt >= PUSH_ATTEMPTS || !error.stderr?.includes('[rejected]')) throw error;
+      if (attempt >= PUSH_ATTEMPTS || !lostPushRace(error.stderr)) throw error;
       console.info(`⚠️ Push to main was rejected (attempt ${attempt}/${PUSH_ATTEMPTS}). Retrying.`);
       await $$`git fetch origin main`;
       await $$`git reset --soft FETCH_HEAD`;
