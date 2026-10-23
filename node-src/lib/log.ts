@@ -40,15 +40,16 @@ const logVerbose = (type: string, args: any[]) => {
   return args.map((argument) => (isPrintable(argument) ? String(argument) : stringify(argument)));
 };
 
-// Generate a timestamp like "14:30:00.123" in local time
-const getTimeString = () =>
-  new Date().toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    fractionalSecondDigits: 3,
-    hour12: false,
-  });
+// Generate a timestamp like "14:30:00.123" in local time.
+// Reuse one formatter, since toLocaleTimeString builds a new one on every call.
+const timeFormat = new Intl.DateTimeFormat('en-US', {
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  fractionalSecondDigits: 3,
+  hour12: false,
+});
+const getTimeString = () => timeFormat.format(new Date());
 
 const createPrefixer =
   (color = false, prefix?: string) =>
