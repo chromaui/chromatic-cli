@@ -138,9 +138,10 @@ EOF
 }
 
 # e2e-fixture <name>: prepare e2e/fixtures/<name> with `yarn fixture` (own git repo, frozen install) at
-# $WORK/e2e-<name>, on branch vcc-$RUN_ID-<name>. The fixture's commit is on `main`, and every copy of every
-# fixture publishing to one project would share that branch: the CLI adds the last `main` build as a parent
-# even when its commit is from another copy's history, and TurboSnap then fails with "missing git history".
+# $WORK/e2e-<name>, on branch vcc-$RUN_ID-<name>-<short sha>. The fixture's commit is on `main`, and every copy of
+# every fixture publishing to one project would share that branch: the CLI adds the last build on the branch as a
+# parent even when its commit is from another copy's history, and TurboSnap then fails with "missing git history".
+# The copy's own commit SHA (it has a fresh timestamp) keeps the name unique across sessions with the same RUN_ID.
 cmd_e2e_fixture() {
   local name="${1:-}"
   [[ -n "$name" ]] || die "usage: e2e-fixture <name> (one of: $(ls "$REPO/e2e/fixtures" | tr '\n' ' '))"
@@ -151,7 +152,9 @@ cmd_e2e_fixture() {
   mkdir -p "$WORK"
   (cd "$REPO" && yarn fixture "$name" "$dir" > "$WORK/e2e-$name.log" 2>&1) \
     || { tail -30 "$WORK/e2e-$name.log"; die "yarn fixture $name failed (log: $WORK/e2e-$name.log)"; }
-  git -C "$dir" checkout -q -b "vcc-$RUN_ID-$name"
+  local branch="vcc-$RUN_ID-$name-$(git -C "$dir" rev-parse --short HEAD)"
+  git -C "$dir" checkout -q -b "$branch"
+  echo "==> $dir is on branch $branch"
   echo "$dir"
 }
 
@@ -184,12 +187,16 @@ cmd_checkout() {
 # $WORK/cli-<name>, sharing the repo's node_modules, so a change can be compared against it. Prints the
 # bundle path to pass as `run --cli`. Running a dist/ copied out of the repo fails with "Cannot find
 # module 'semver'", because the bundle resolves its externals from node_modules next to it.
+# Sharing node_modules means <ref> is built and run against this checkout's dependencies, so when the
+# manifests differ the comparison is not a true picture of <ref>; it warns on stderr in that case.
 cmd_build_ref() {
   local name="${1:-}" ref="${2:-}"
   [[ -n "$name" && -n "$ref" ]] || die "usage: build-ref <name> <git-ref>"
   require_safe_name name "$name"
   local dir="$WORK/cli-$name"
   [[ -e "$dir" ]] && die "$dir already exists; run cleanup first"
+  git -C "$REPO" diff --quiet "$ref" -- package.json yarn.lock \
+    || echo "control-chromatic: WARNING: package.json or yarn.lock differ between $ref and this checkout; $ref will be built and run with this checkout's node_modules, so dependency-related differences won't show. Compare against a published canary (install-published) instead." >&2
   mkdir -p "$WORK"
   git -C "$REPO" worktree add -q --detach "$dir" "$ref"
   ln -s "$REPO/node_modules" "$dir/node_modules"
@@ -203,13 +210,16 @@ cmd_build_ref() {
 # 18.13.4--canary.1568.<run>.0) into $WORK/npm-<name>. Prints the bundle path to pass as `run --cli`.
 # A canary shows up on npm about a minute after the release job passes; this retries until then.
 cmd_install_published() {
-  local name="${1:-}" version="${2:-}" attempt
+  local name="${1:-}" version="${2:-}" attempt err
   [[ -n "$name" && -n "$version" ]] || die "usage: install-published <name> <version>"
   require_safe_name name "$name"
   local dir="$WORK/npm-$name"
+  [[ -e "$dir" ]] && die "$dir already exists; run cleanup first"
+  # Only a 404 means "not published yet"; any other failure (network, auth) is reported at once.
   for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
-    npm view "chromatic@$version" version > /dev/null 2>&1 && break
-    (( attempt < 12 )) || die "chromatic@$version is not on npm"
+    err="$(npm view "chromatic@$version" version 2>&1 > /dev/null)" && break
+    grep -q 'code E404' <<< "$err" || die "npm view chromatic@$version failed: $(grep -m3 'npm error' <<< "$err")"
+    (( attempt < 12 )) || die "chromatic@$version is not on npm after 2 minutes"
     sleep 10
   done
   mkdir -p "$dir"
@@ -237,13 +247,19 @@ redacted_args() {
   done
 }
 
+# run and tty cd into --cwd before starting node, so a relative --cli is resolved against the caller's cwd first.
+cli_path() {
+  [[ -f "$1" ]] || die "--cli $1 is not a file"
+  realpath "$1"
+}
+
 # record_command <out dir> <cwd> <mode suffix> <cli args...>
 record_command() {
   local out="$1" cwd="$2" mode="$3"; shift 3
   printf 'cwd: %s\ncommand%s: node %s%s\n' "$cwd" "$mode" "$CLI" "$(redacted_args "$@")" > "$out/command.txt"
 }
 
-# run <label> [--cwd DIR] -- <cli args...>
+# run <label> [--cwd DIR] [--cli BUNDLE] -- <cli args...>
 cmd_run() {
   local label="${1:-}"; shift || true
   [[ -n "$label" ]] || die "run needs a label"
@@ -252,7 +268,7 @@ cmd_run() {
   while [[ $# -gt 0 && "$1" != "--" ]]; do
     case "$1" in
       --cwd) cwd="$2"; shift 2 ;;
-      --cli) CLI="$2"; shift 2 ;;
+      --cli) CLI="$(cli_path "$2")"; shift 2 ;;
       *) die "unknown run option $1" ;;
     esac
   done
@@ -278,7 +294,7 @@ kill_tmux() {
   return 0
 }
 
-# tty <label> [--cwd DIR] [--timeout SECS] -- <cli args...>
+# tty <label> [--cwd DIR] [--cli BUNDLE] [--timeout SECS] -- <cli args...>
 cmd_tty() {
   local label="${1:-}"; shift || true
   [[ -n "$label" ]] || die "tty needs a label"
@@ -287,7 +303,7 @@ cmd_tty() {
   while [[ $# -gt 0 && "$1" != "--" ]]; do
     case "$1" in
       --cwd) cwd="$2"; shift 2 ;;
-      --cli) CLI="$2"; shift 2 ;;
+      --cli) CLI="$(cli_path "$2")"; shift 2 ;;
       --timeout) timeout="$2"; shift 2 ;;
       *) die "unknown tty option $1" ;;
     esac
