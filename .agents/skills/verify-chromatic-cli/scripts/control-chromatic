@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # control-chromatic — drive the locally built Chromatic CLI (dist/bin.cjs) and capture proof.
-# Usage: control-chromatic <setup|rebuild|env|doctor|fixture|checkout|checkout-storybook|build-ref|install-published|run|tty|cleanup> [...]
+# Usage: control-chromatic <setup|rebuild|env|doctor|fixture|e2e-fixture|commit|checkout|checkout-storybook|build-ref|install-published|run|tty|cleanup> [...]
 # Every run is scoped by RUN_ID (default: "default"); state lives in $VERIFY_ROOT/$RUN_ID.
 set -euo pipefail
 
@@ -135,6 +135,36 @@ EOF
   git -C "$FIXTURE" -c user.email=verify@example.invalid -c user.name=verify add -A
   git -C "$FIXTURE" -c user.email=verify@example.invalid -c user.name=verify commit -q -m "fixture"
   echo "$FIXTURE"
+}
+
+# e2e-fixture <name>: prepare e2e/fixtures/<name> with `yarn fixture` (own git repo, frozen install) at
+# $WORK/e2e-<name>, on branch vcc-$RUN_ID-<name>. The fixture's commit is on `main`, and every copy of every
+# fixture publishing to one project would share that branch: the CLI adds the last `main` build as a parent
+# even when its commit is from another copy's history, and TurboSnap then fails with "missing git history".
+cmd_e2e_fixture() {
+  local name="${1:-}"
+  [[ -n "$name" ]] || die "usage: e2e-fixture <name> (one of: $(ls "$REPO/e2e/fixtures" | tr '\n' ' '))"
+  require_safe_name name "$name"
+  [[ -d "$REPO/e2e/fixtures/$name" ]] || die "no fixture e2e/fixtures/$name (have: $(ls "$REPO/e2e/fixtures" | tr '\n' ' '))"
+  local dir="$WORK/e2e-$name"
+  [[ -e "$dir" ]] && die "$dir already exists; run cleanup first"
+  mkdir -p "$WORK"
+  (cd "$REPO" && yarn fixture "$name" "$dir" > "$WORK/e2e-$name.log" 2>&1) \
+    || { tail -30 "$WORK/e2e-$name.log"; die "yarn fixture $name failed (log: $WORK/e2e-$name.log)"; }
+  git -C "$dir" checkout -q -b "vcc-$RUN_ID-$name"
+  echo "$dir"
+}
+
+# commit <dir> <message>: commit every change in a scratch repo (a prepared fixture or $CHECKOUT) without
+# the user's signing config or hooks.
+cmd_commit() {
+  local dir="${1:-}" msg="${2:-}"
+  [[ -d "$dir" && -n "$msg" ]] || die "usage: commit <dir> <message>"
+  [[ "$dir" == "$WORK"/* ]] || die "commit only works on scratch repos under $WORK"
+  git -C "$dir" add -A
+  git -C "$dir" -c user.name=verify -c user.email=verify@example.invalid -c commit.gpgsign=false \
+    -c core.hooksPath=/dev/null commit -q -m "$msg"
+  git -C "$dir" log --oneline -1
 }
 
 # A git worktree of HEAD on a throwaway local branch, so journeys that need commits
@@ -341,6 +371,8 @@ case "$sub" in
   env) cmd_env ;;
   doctor) cmd_doctor ;;
   fixture) cmd_fixture ;;
+  e2e-fixture) cmd_e2e_fixture "$@" ;;
+  commit) cmd_commit "$@" ;;
   checkout) cmd_checkout ;;
   checkout-storybook) cmd_checkout_storybook ;;
   build-ref) cmd_build_ref "$@" ;;

@@ -1,6 +1,6 @@
 ---
 name: verify-chromatic-cli
-description: Drive the locally built Chromatic CLI (`chromatic` / `dist/bin.cjs` in chromaui/chromatic-cli) the way a user does from a terminal and capture proof — stdout, stderr, exit codes, written files, TTY output. Use whenever a change touches bin-src/ or node-src/, before calling it done, opening or updating a PR, or reviewing one; for comparing main against a branch; for testing in scratch projects with other builders or package managers; and for trying a published canary. Covers the main publish command and its option/config preflight, `--only-changed` TurboSnap builds, `trace`, `turbosnap-manifest`, and `trim-stats-file`.
+description: Drive the locally built Chromatic CLI (`chromatic` / `dist/bin.cjs` in chromaui/chromatic-cli) the way a user does from a terminal and capture proof — stdout, stderr, exit codes, written files, TTY output. Use whenever a change touches bin-src/ or node-src/, before calling it done, opening or updating a PR, or reviewing one; for comparing main against a branch; for testing in the e2e fixture projects (Vite, webpack, rsbuild; npm, Yarn 1, Yarn 4 and pnpm monorepos); and for trying a published canary. Covers the main publish command and its option/config preflight, `--only-changed` TurboSnap builds, `trace`, `turbosnap-manifest`, and `trim-stats-file`.
 ---
 
 # Verify the Chromatic CLI
@@ -66,11 +66,11 @@ $S tty <label> [--cwd DIR] [--timeout SECS] -- <chromatic args...>
 #   writes command.txt, pane.txt (full scrollback), exit_code; kills its own session when done
 ```
 
-- `--cwd` defaults to the repo root. Use the repo root for `trace` and `turbosnap-manifest`: they hash and resolve files relative to cwd.
+- `--cwd` defaults to the repo root. Use the repo root (or a fixture's root) for `trace` and `turbosnap-manifest`. `trace` matches changed files relative to the git root, and `turbosnap-manifest` resolves `-s` against its project root (`-b`, else cwd).
 - Run the main command in a fixture project so `chromatic.log`, `chromatic-diagnostics.json` and `chromatic.config.json` never land in the checkout. Create one with `$S fixture`, which makes a disposable `package.json` plus a git repo with one commit at `$FIXTURE`.
 - Arguments after `--` are passed to `node dist/bin.cjs` literally. Env vars like `CHROMATIC_INDEX_URL`, `CHROMATIC_PROJECT_TOKEN` and `LOG_LEVEL` pass through from your shell, for `tty` too.
-- Journeys that need new commits (TurboSnap) run in a throwaway checkout. `$S checkout` adds a git worktree of `HEAD` at `$CHECKOUT` on a local branch `vcc-$RUN_ID`, sharing the repo's `node_modules`. `$S checkout-storybook` builds its Storybook into `$CHECKOUT_SB_DIR`. Drive it with `--cwd "$CHECKOUT"`. Never commit on the developer's branch.
-- Assert on stable handles: the exact message strings in `node-src/ui/messages/**`, exit codes from `node-src/lib/setExitCode.ts` (0 OK, 1 changes, 254 INVALID_OPTIONS, 253 no package.json, 255 UNKNOWN_ERROR, 201 FETCH_ERROR, …), file paths, and JSON keys read with `jq`. Do not assert on timestamps or log prefixes.
+- Journeys that need new commits (TurboSnap) run in an e2e fixture (`$S e2e-fixture`, below), never on the developer's branch. When the change is to the repo's own Storybook, use a throwaway checkout instead: `$S checkout` adds a git worktree of `HEAD` at `$CHECKOUT` on a local branch `vcc-$RUN_ID`, sharing the repo's `node_modules`. `$S checkout-storybook` builds its Storybook into `$CHECKOUT_SB_DIR`. Drive it with `--cwd "$CHECKOUT"`. Never commit on the developer's branch.
+- Assert on stable handles: the exact message strings in `node-src/ui/messages/**`, exit codes from `node-src/lib/setExitCode.ts` (0 OK, 1 changes, 254 INVALID_OPTIONS, 255 UNKNOWN_ERROR, 201 FETCH_ERROR, …; 253 for no `package.json` is a hard-coded exit in `node-src/index.ts` with no `exitCodeKey`), file paths, and JSON keys read with `jq`. Do not assert on timestamps or log prefixes.
 
 The per-feature recipes are in [`features/`](features/README.md). Read its README first.
 
@@ -79,7 +79,8 @@ The per-feature recipes are in [`features/`](features/README.md). Read its READM
 Most verification is "the branch behaves differently from main, in a project like the user's". The helper covers that too, so don't hand-roll copies of `dist/` or ad-hoc run scripts:
 
 - **Main vs branch.** `MAIN_CLI=$($S build-ref main origin/main | tail -1)` builds `origin/main` in a detached worktree under `$WORK` that shares `node_modules`. Drive both with the same arguments: `$S run <label>-main --cli "$MAIN_CLI" -- …` and `$S run <label>-branch -- …`, then diff the outputs with `jq` (drop `generatedAt` from manifests). Any ref works, such as a PR head you fetched. Don't copy a `dist/` out of the repo: the bundle resolves externals such as `semver` from the `node_modules` beside it and fails with `Cannot find module`.
-- **A scratch project.** When the bug needs a builder, package manager, or layout the repo's Storybook doesn't have (webpack, rsbuild, Vite, pnpm, a monorepo), create the project under `$WORK/<name>`, `git init` it and commit, pin versions, build its Storybook there (pipe stdin: `: | npx storybook build --webpack-stats-json`), then drive with `--cwd "$WORK/<name>"`. Edit only committed files and `git checkout -- <file>` after each edit, because hashes come from files on disk. Pin TypeScript and peer packages explicitly: npm, pnpm, and Yarn resolve peers differently.
+- **An e2e fixture project.** `e2e/fixtures/` has bare Storybook projects: `react-vite`, `react-webpack5` and `react-rsbuild` (npm, Storybook at the root), and `monorepo-npm`, `monorepo-yarn-classic`, `monorepo-yarn` and `monorepo-pnpm` (Storybook in `packages/ui`, which imports `@myorg/shared`; nothing imports `@myorg/backend`). See `e2e/README.md`. `F=$($S e2e-fixture <name> | tail -1)` runs `yarn fixture` into `$WORK/e2e-<name>` (its own git repo with one commit, frozen install), then switches it to a branch `vcc-$RUN_ID-<name>`. That branch matters: every prepared copy starts on `main`, and copies publishing to one project on the same branch use each other's builds as baselines, so TurboSnap fails with `missing git history`. Commit edits with `$S commit "$F" "<message>"`. Drive the main command with `--cwd "$F"` (or `"$F/packages/ui"`) and `--build-script-name build-storybook`: the fixture scripts leave out the stats flag, so this exercises the CLI adding it. For a prebuilt Storybook or the offline subcommands, build it yourself with `(cd "$F" && : | npx storybook build --stats-json)`. Installs need the npm registry, and `monorepo-pnpm` fetches pnpm with `npx`.
+- **Some other project.** When no fixture has the layout you need, prepare the closest fixture and change the copy. Commit before driving, because TurboSnap and the manifest hash files on disk. Don't add scenario-specific files to `e2e/fixtures/` itself.
 - **A published canary or release.** `PUB_CLI=$($S install-published canary <version> | tail -1)` installs `chromatic@<version>` under `$WORK`, waiting for a fresh canary to reach npm (about a minute after its release job passes). Drive it with `--cli "$PUB_CLI"`.
 - `$S cleanup` removes all of these.
 
@@ -116,6 +117,8 @@ A real publish (`publish-build`) leaves a build on the Chromatic project. Cleanu
 | `eval "$($S env)"` | Export `REPO WORK EVIDENCE SB_DIR SB_STATS FIXTURE CLI CHECKOUT CHECKOUT_SB_DIR` for `RUN_ID` |
 | `$S doctor` | Read-only health check; exit 1 on any FAIL |
 | `$S fixture` | (Re)create the disposable project at `$FIXTURE`; prints its path |
+| `$S e2e-fixture <name>` | Prepare `e2e/fixtures/<name>` at `$WORK/e2e-<name>` on branch `vcc-$RUN_ID-<name>`; prints its path |
+| `$S commit <dir> <message>` | Commit every change in a scratch repo under `$WORK`, without signing or hooks |
 | `$S checkout` | Add a throwaway worktree of `HEAD` at `$CHECKOUT` on branch `vcc-$RUN_ID`; prints its path |
 | `$S checkout-storybook` | Build `$CHECKOUT`'s Storybook into `$CHECKOUT_SB_DIR` |
 | `$S build-ref <name> <ref>` | Build the CLI at a git ref in a worktree under `$WORK`; prints its `bin.cjs` |

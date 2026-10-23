@@ -8,6 +8,7 @@
 - `tsm-externals` records hashes for repo files that match an `--externals` glob.
 - `tsm-static` records hashes for files under `--static-dir` directories.
 - `tsm-missing-stats` fails with a clear message and exit `1` when the stats file is missing.
+- `tsm-mono` builds a manifest for a monorepo package with `-b`, including externals outside it.
 
 ## How to get to it (user POV)
 
@@ -25,11 +26,13 @@ Preconditions:
 - **No disk writes.** Before and after the run, `ls "$SB_DIR"` and `git -C "$REPO" status --short` are identical.
 - **Externals.** Run `$S run tsm-externals -- turbosnap-manifest -s "$SB_STATS" --externals 'node-src/lib/log.ts'`. Exit code `0`. `jq -c '.externals' "$EVIDENCE/tsm-externals/stdout.txt"` is `{"./node-src/lib/log.ts":"<16-hex hash>"}`.
 - **Static dir.** Run `$S run tsm-static -- turbosnap-manifest -s "$SB_STATS" --static-dir static`. Exit code `0`. `jq -c '.staticFiles|keys' "$EVIDENCE/tsm-static/stdout.txt"` includes `./static/css/global.css`.
-- **Missing stats.** Run `$S run tsm-missing-stats -- turbosnap-manifest -s "$WORK/nope.json"`. Exit code `1`. stdout or stderr starts with `No stats file at <path>/nope.json`, followed by the usage text.
+- **Missing stats.** Run `$S run tsm-missing-stats -- turbosnap-manifest -s "$WORK/nope.json"`. Exit code `1`. stdout is empty, and stderr starts with `No stats file at <path>/nope.json`, followed by the usage text.
+- **Monorepo project root.** Prepare `monorepo-pnpm` and build its Storybook as in `trace-mono` (see `trace`). Run `$S run tsm-mono --cwd "$F" -- turbosnap-manifest -b packages/ui -s storybook-static/preview-stats.json --externals 'packages/backend/**'`. Exit code `0`. `-s` is resolved against `packages/ui`. `jq -c '.storyFiles|keys'` is `["./src/Badge.stories.tsx","./src/Button.stories.tsx"]`, and `jq -c '.externals|keys'` is `["../backend/package.json","../backend/src/index.ts"]`: keys are relative to the project root, with `../` for files outside it.
 - **Proof.** The `$EVIDENCE/tsm-*` dirs hold the JSON on stdout. Keep the `jq` outputs above with them: `jq -c 'keys' … > "$EVIDENCE/tsm-default/keys.txt"`.
 
 ## Gotchas
 
+- `-s` resolves against the project root (`-b`, else cwd), but `trace -s` resolves against cwd. Running from a monorepo root without `-b` fails with exit `1`. In `monorepo-pnpm` the error is `Error: Could not resolve a Storybook version from <root>/.storybook: …`.
 - The manifest is large. `$S run` prints only the first 40 lines, so always inspect `stdout.txt` with `jq`.
 - `--externals 'static/*.css'` matches nothing here because the CSS lives in `static/css/`. An empty `{}` usually means a glob that is too narrow, not a bug.
 - `-u/--untraced` with a story-local glob did not change `storyFiles` or `skippedFiles` counts in this repo. Do not cite that as proof of untraced behavior without a case that changes the output.
