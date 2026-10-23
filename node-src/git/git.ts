@@ -237,6 +237,42 @@ export async function commitExists(deps: GitDeps, commit: string) {
 }
 
 /**
+ * Check which of several commits exist in the repository, using a single
+ * `git cat-file --batch-check` call rather than one process per commit.
+ *
+ * @param deps Function dependencies.
+ * @param commits The commits to check.
+ *
+ * @returns The subset of `commits` that exist, as given (not expanded to full SHAs).
+ */
+export async function commitsExist(deps: GitDeps, commits: string[]): Promise<Set<string>> {
+  if (commits.length === 0) return new Set();
+
+  let result: string;
+  try {
+    // Only read stdout so stray stderr output cannot shift the line positions.
+    result = await execGitCommand(deps, 'git cat-file --batch-check', {
+      input: commits.map((commit) => `${commit}^{commit}`).join('\n'),
+      all: false,
+    });
+  } catch {
+    // The single call can fail where individual checks would not, e.g. by hitting the git timeout
+    // while a partial clone tries to lazily fetch several missing commits. Check one at a time.
+    const existing = new Set<string>();
+    for (const commit of commits) {
+      if (await commitExists(deps, commit)) existing.add(commit);
+    }
+    return existing;
+  }
+
+  // Git prints one line per input line, in order. Match by position, since an existing commit is
+  // printed as its full SHA (`<sha> commit <size>`) which may differ from a short input SHA.
+  // Anything else, such as `<input> missing` or `<input> ambiguous`, means it doesn't exist.
+  const lines = result.split(newline);
+  return new Set(commits.filter((_, index) => lines[index]?.split(' ')[1] === 'commit'));
+}
+
+/**
  * Get the changed files of a single commit or between two.
  *
  * @param deps Function dependencies.

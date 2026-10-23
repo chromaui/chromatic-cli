@@ -3,7 +3,7 @@ import gql from 'fake-tag';
 import { localBuildsSpecifier } from '../lib/localBuildsSpecifier';
 import { Deps, Git, VisitedCommit } from '../types';
 import { execGitCommand, GitDeps } from './execGit';
-import { commitExists, getVisitedCommitDetails } from './git';
+import { commitExists, commitsExist, getVisitedCommitDetails } from './git';
 
 export const FETCH_N_INITIAL_BUILD_COMMITS = 20;
 
@@ -305,13 +305,16 @@ export async function getParentCommits(
 
   // Track which visited commits the platform index identified as PR merge points.
   const mergePointCommits = new Set<string>();
+  const existingHeadBuildCommits = await commitsExist(deps, [
+    ...new Set(mergedPullRequests.flatMap((pr) => pr.lastHeadBuild?.commit ?? [])),
+  ]);
   for (const pullRequest of mergedPullRequests) {
     // Add the most recent build on a (merged) branch as an ancestor if we visit a commit
     // during our ancestor selection that was the merge commit for that PR.
     // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
     const lastHeadBuildCommit = pullRequest.lastHeadBuild?.commit;
     if (lastHeadBuildCommit) {
-      if (await commitExists(deps, lastHeadBuildCommit)) {
+      if (existingHeadBuildCommits.has(lastHeadBuildCommit)) {
         log.debug(`Adding merged PR build commit ${lastHeadBuildCommit} to commits with builds`);
         commitsWithBuilds.push(lastHeadBuildCommit);
       } else {
