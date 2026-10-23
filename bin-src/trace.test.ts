@@ -19,6 +19,13 @@ describe('Test trace script from package.json', () => {
     // Verify that the output does not contain the expanded output
     expect(output).not.toContain(rootDirectoryNote);
   });
+  it('traces absolute changed file paths the same as repository-relative ones', () => {
+    const scriptName = `chromatic trace ${process.cwd()}/node-src/ui/messages/errors/invalidReportPath.ts -s bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json`;
+
+    const output = execSync(`yarn ${scriptName}`).toString().trim();
+
+    expect(output).toContain('Traced 1 changed file to 1 affected story file');
+  });
   it('outputs directory info when -m expanded is passed', () => {
     const scriptName =
       "chromatic trace ./node-src/ui/messages/errors/invalidReportPath.ts -s bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json -m 'expanded'";
