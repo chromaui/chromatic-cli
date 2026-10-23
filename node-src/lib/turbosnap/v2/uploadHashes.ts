@@ -1,4 +1,5 @@
 import GraphQLClient from '../../../io/graphqlClient';
+import { ConfigCoverage } from './configCoverage';
 import { TurboSnapManifest } from './manifest';
 
 const BuildUploadHashesMutation = `
@@ -40,6 +41,7 @@ interface BuildUploadHashesInput {
   storybookHash: string;
   storybookConfigHashes: Record<string, string>;
   storyFileHashes: Record<string, string>;
+  configCoverage?: ConfigCoverage;
 }
 
 /**
@@ -81,13 +83,39 @@ export async function uploadHashes(
     storybookHash: manifest.storybookHash,
     storybookConfigHashes: Object.fromEntries(manifest.storybookConfigHashes),
     storyFileHashes: Object.fromEntries(manifest.storyFileHashes),
+    ...(manifest.configCoverage && { configCoverage: manifest.configCoverage }),
   };
 
-  const { buildUploadHashes } = await graphqlClient.runQuery<BuildUploadHashesResult>(
-    BuildUploadHashesMutation,
-    { input },
-    { retries: 3 }
-  );
+  const send = async (uploadInput: BuildUploadHashesInput) => {
+    const { buildUploadHashes } = await graphqlClient.runQuery<BuildUploadHashesResult>(
+      BuildUploadHashesMutation,
+      { input: uploadInput },
+      { retries: 3 }
+    );
+    return buildUploadHashes;
+  };
+  try {
+    return await send(input);
+  } catch (error) {
+    if (!input.configCoverage || !isUnsupportedCoverage(error)) throw error;
+    const { configCoverage: _coverage, ...legacyInput } = input;
+    return send(legacyInput);
+  }
+}
 
-  return buildUploadHashes;
+function isUnsupportedCoverage(error: unknown): boolean {
+  const errors: unknown[] = Array.isArray(error) ? error : [error];
+  return (
+    errors.length > 0 &&
+    errors.every(
+      (item) =>
+        typeof item === 'object' &&
+        item !== null &&
+        'message' in item &&
+        typeof item.message === 'string' &&
+        /^Variable "\$input" got invalid value [\s\S]*; Field "configCoverage" is not defined by type "BuildUploadHashesInput"\.$/.test(
+          item.message
+        )
+    )
+  );
 }

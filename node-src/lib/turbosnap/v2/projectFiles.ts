@@ -1,4 +1,6 @@
+import { createHash } from 'crypto';
 import {
+  constants,
   existsSync,
   mkdirSync,
   readdirSync,
@@ -8,8 +10,10 @@ import {
   writeFileSync,
 } from 'fs';
 import { Dirent, Stats } from 'fs';
+import { FileHandle, open } from 'fs/promises';
 import { createRequire } from 'module';
 import path from 'path';
+import xxHashWasm, { XXHashAPI } from 'xxhash-wasm';
 
 import { GitDeps } from '../../../git/execGit';
 import {
@@ -21,6 +25,12 @@ import { AbsolutePath } from '../../../types';
 import { getFileHashes } from '../../getFileHashes';
 import { Logger } from '../../log';
 import { FileHash } from './graph';
+import { isPathWithinRoot } from './repositoryBoundary';
+
+interface SourceHashes {
+  sha256: string;
+  capture: FileHash;
+}
 
 /**
  * Every read of the project TurboSnap v2 makes, disk and git index alike, behind one interface, so
@@ -41,12 +51,16 @@ export interface ProjectFiles {
     absolutePaths: AbsolutePath[],
     concurrency?: number
   ): Promise<Record<AbsolutePath, FileHash>>;
+  /** Reads binding and capture hashes from one regular file confined to the caller's independently configured root. */
+  sourceHashes(absolutePath: AbsolutePath, repositoryRoot: AbsolutePath): Promise<SourceHashes>;
   /**
    * Follows symlinks, names files by the link path, terminates on a cycle, empty when absent. A path
    * that names a single file lists that file alone. Throws when the path itself cannot be stat'd for
    * a reason other than absence, matching `isFile` and `isDirectory`.
    */
   listTree(absolutePath: AbsolutePath): AbsolutePath[];
+  /** Strict inventory within an independent root; rejects escapes, cycles and unreadable entries. */
+  listBoundFiles(directory: AbsolutePath, root: AbsolutePath): AbsolutePath[];
   /**
    * Every path in the git index under the repository root, absolute, streamed as git lists it so a
    * monorepo's index never has to be held whole. Includes paths whose file is gone from disk and
@@ -85,6 +99,7 @@ export interface ProjectFiles {
  */
 export function realProjectFiles(deps: GitDeps): ProjectFiles {
   const { log } = deps;
+  let xxhash: ReturnType<typeof xxHashWasm> | undefined;
 
   return {
     isFile: (absolutePath: AbsolutePath) => statFile(log, absolutePath)?.isFile() ?? false,
@@ -93,7 +108,12 @@ export function realProjectFiles(deps: GitDeps): ProjectFiles {
     packageVersion: (fromDirectory: AbsolutePath, packageName: string) =>
       readPackageVersion(log, fromDirectory, packageName),
     hashAll: hashFileContents,
+    sourceHashes: async (absolutePath, repositoryRoot) => {
+      xxhash ??= xxHashWasm();
+      return hashRepositorySource(absolutePath, repositoryRoot, await xxhash);
+    },
     listTree: (absolutePath: AbsolutePath) => listTree(log, absolutePath),
+    listBoundFiles,
     trackedFiles: (gitRoot: AbsolutePath) => trackedFiles(deps, gitRoot),
     writeFile: (absolutePath: AbsolutePath, contents: string) => {
       mkdirSync(path.dirname(absolutePath), { recursive: true });
@@ -102,6 +122,71 @@ export function realProjectFiles(deps: GitDeps): ProjectFiles {
     realPath,
     ignoredPaths: () => getIgnoredPaths(deps),
   };
+}
+
+/**
+ * Metadata is not authority to read another part of the filesystem. Check both the supplied path
+ * and its resolved target against an independent repository or upload root before opening any file contents.
+ *
+ * @param absolutePath The proposed source file.
+ * @param repositoryRoot The independently discovered repository or upload root.
+ * @param xxhash The normal capture hash implementation.
+ *
+ * @returns Binding and capture digests of the same bytes.
+ */
+async function hashRepositorySource(
+  absolutePath: AbsolutePath,
+  repositoryRoot: AbsolutePath,
+  xxhash: XXHashAPI
+): Promise<SourceHashes> {
+  if (!isPathWithinRoot(repositoryRoot, absolutePath)) {
+    throw new Error('Build dependency is outside the repository');
+  }
+  const realRoot = realpathSync(repositoryRoot);
+  const realFile = realpathSync(absolutePath);
+  if (!isPathWithinRoot(realRoot, realFile)) {
+    throw new Error('Build dependency resolves outside the repository');
+  }
+  const file = await open(
+    realFile,
+    constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK
+  );
+  try {
+    const opened = await file.stat();
+    const current = statSync(realFile);
+    if (
+      !opened.isFile() ||
+      realpathSync(absolutePath) !== realFile ||
+      realpathSync(repositoryRoot) !== realRoot ||
+      opened.dev !== current.dev ||
+      opened.ino !== current.ino
+    ) {
+      throw new Error('Build dependency is not the validated regular file');
+    }
+    return await hashOpenFile(file, xxhash);
+  } finally {
+    await file.close();
+  }
+}
+
+function hashOpenFile(file: FileHandle, xxhash: XXHashAPI): Promise<SourceHashes> {
+  return new Promise((resolve, reject) => {
+    const hash = createHash('sha256');
+    const capture = xxhash.create64();
+    file
+      .createReadStream({ autoClose: false })
+      .on('data', (chunk: Buffer) => {
+        hash.update(chunk);
+        capture.update(chunk);
+      })
+      .on('error', reject)
+      .on('end', () =>
+        resolve({
+          sha256: hash.digest('hex'),
+          capture: capture.digest().toString(16).padStart(16, '0'),
+        })
+      );
+  });
 }
 
 /**
@@ -310,4 +395,25 @@ function listFilesRecursively(
   } finally {
     ancestorDirectories.delete(realDirectory);
   }
+}
+
+function listBoundFiles(directory: AbsolutePath, root: AbsolutePath): AbsolutePath[] {
+  const realRoot = realpathSync(root);
+  const ancestors = new Set<string>();
+  function walk(file: string): string[] {
+    if (!isPathWithinRoot(root, file)) throw new Error('Inventory path is outside its root');
+    const realFile = realpathSync(file);
+    if (!isPathWithinRoot(realRoot, realFile))
+      throw new Error('Inventory target is outside its root');
+    const stat = statSync(file);
+    if (stat.isFile()) return [file];
+    if (!stat.isDirectory() || ancestors.has(realFile)) throw new Error('Invalid inventory entry');
+    ancestors.add(realFile);
+    try {
+      return readdirSync(file).flatMap((entry) => walk(path.join(file, entry)));
+    } finally {
+      ancestors.delete(realFile);
+    }
+  }
+  return walk(directory);
 }

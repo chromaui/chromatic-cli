@@ -4,7 +4,12 @@
 
 ## Sub-features
 
-- `tsm-default` prints a manifest with the top-level keys `attribution`, `externals`, `files`, `skippedFiles`, `staticFiles`, `storyFiles`, `storybookConfigFiles`, `storybookConfigHashes` and `storybookHash`.
+- `tsm-default` prints a manifest with the top-level keys `attribution`, `configAnalysis`, `externals`, `files`, `skippedFiles`, `staticFiles`, `storyFiles`, `storybookConfigFiles`, `storybookConfigHashes` and `storybookHash`, plus optional `configCoverage` when output evidence is verified.
+- `tsm-config-analysis` reports config roles, output-evidence availability and the reason for fallback.
+- `tsm-config-selective` supplies a conditional ancestor comparison while retaining legacy source hashes.
+- `tsm-config-fallback` retains the legacy sweep when producer metadata is unavailable, incomplete or stale.
+- `tsm-config-boundary` rejects source/output bindings outside their independent roots and retains legacy coverage.
+- `tsm-config-untraced` preserves explicit config exclusions.
 - `tsm-externals` records hashes for repo files that match an `--externals` glob.
 - `tsm-static` records hashes for files under `--static-dir` directories.
 - `tsm-missing-stats` fails with a clear message and exit `1` when the stats file is missing.
@@ -21,7 +26,13 @@ Preconditions:
 - `$S doctor` exits 0, and `$SB_STATS` exists for this `RUN_ID`.
 - Drive from the repo root. Globs are relative to the repo root.
 
-- **Default manifest.** Run `$S run tsm-default -- turbosnap-manifest -s "$SB_STATS"`. Exit code `0`. Then run `jq -c 'keys' "$EVIDENCE/tsm-default/stdout.txt"`, which prints the nine keys listed above. `jq '.storyFiles|length'` is greater than `0`. Every `.storyFiles` value is a 16-hex-char hash.
+- **Default manifest.** Run `$S run tsm-default -- turbosnap-manifest -s "$SB_STATS"`. Exit code `0`. Then run `jq -c 'keys' "$EVIDENCE/tsm-default/stdout.txt"`, which includes the ten required keys above and may also include `configCoverage`. `jq '.storyFiles|length'` is greater than `0`. Every `.storyFiles` value is a 16-hex-char hash.
+- **Config analysis.** Run `$S run tsm-config-analysis -- turbosnap-manifest -s "$SB_STATS" --storybook-build-dir "$SB_DIR"`. `configAnalysis` contains a mode/reason and sorted `entryFiles`, `globalFiles`, `storyScopedCandidates`, and `unattributedFiles`. These partition the full config sweep in both modes.
+- **Conditional config coverage.** Use actual disposable React-Vite, React-Webpack5, Nextjs-Vite and Nextjs-Webpack Storybooks with two independent stories, CSS/static assets and a `.storybook/fixture.json` imported by one story. Build fresh stats and run the shipped CLI before/after changing that helper. Mode is `output`, reason `verified-output-evidence`, and `configCoverage` exists. The original config hash and dependent story hash change; the unrelated source-story hash, `stableConfigHash`, global output hash, and unrelated output-story hash remain equal. Candidates remain in the full `storybookConfigFiles`. A backend ancestor comparison is necessary to verify the actual capture decision.
+- **Hidden effects.** Make a compiler/plugin read the helper and change another story's generated output. That story's output hash must change or evidence must fall back. A preview/global output change must change global output coverage or fall back.
+- **Stale evidence.** Edit the helper or emitted output without rebuilding. The manifest uses `directory` mode, lacks `configCoverage`, and retains legacy hashes. Also test missing/added output files and incomplete metadata.
+- **Explicit exclusions.** With fresh stats, run with `-u '.storybook/**'`. Existing exclusions remain visible in `skippedFiles`, and main remains in the sweep. Compare source-story and global source hashes against the same stats with producer metadata omitted; they must be identical. After an excluded-only edit/rebuild they remain equal even if output evidence changes.
+- **Filesystem boundaries.** Add a binding for a harmless file outside the Git root, then an output binding outside the independent build root. Both must fall back without reading the external contents for optional evidence verification. Repeat with escaping output symlinks for a whole-command no-read check; the existing source sweep still follows source symlinks. Use `--stats-file` and `--storybook-build-dir` independently for custom paths. An explicitly selected directory outside Git remains supported. Selecting a harmless external regular file or a symlink to it as the build directory must yield `invalid-output-evidence`, without reading that file or adding `configCoverage`.
 - **No disk writes.** Before and after the run, `ls "$SB_DIR"` and `git -C "$REPO" status --short` are identical.
 - **Externals.** Run `$S run tsm-externals -- turbosnap-manifest -s "$SB_STATS" --externals 'node-src/lib/log.ts'`. Exit code `0`. `jq -c '.externals' "$EVIDENCE/tsm-externals/stdout.txt"` is `{"./node-src/lib/log.ts":"<16-hex hash>"}`.
 - **Static dir.** Run `$S run tsm-static -- turbosnap-manifest -s "$SB_STATS" --static-dir static`. Exit code `0`. `jq -c '.staticFiles|keys' "$EVIDENCE/tsm-static/stdout.txt"` includes `./static/css/global.css`.

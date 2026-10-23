@@ -13,6 +13,8 @@ export interface InMemoryDisk {
   directories?: Record<AbsolutePath, string[]>;
   /** Content hash per absolute file path. A file with no entry here hashes as `x`. */
   fileHashes?: Record<AbsolutePath, FileHash>;
+  /** Builder binding digests; separate from the hashes used to select captures. */
+  sha256Hashes?: Record<AbsolutePath, string>;
   /** Installed version per package name, whatever directory it is resolved from. */
   packageVersions?: Record<string, string>;
   /**
@@ -79,6 +81,11 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
   }
 
   return {
+    sourceHashes: async (absolutePath) => {
+      const hash = disk.sha256Hashes?.[absolutePath];
+      if (typeof hash !== 'string') throw new Error(`Could not read ${absolutePath}`);
+      return { sha256: hash, capture: disk.fileHashes?.[absolutePath] ?? 'x' };
+    },
     isFile,
     isDirectory,
     packageVersion: (fromDirectory: AbsolutePath, packageName: string) =>
@@ -97,6 +104,7 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
       );
     },
     listTree,
+    listBoundFiles: listTree,
     trackedFiles: async function* () {
       yield* disk.trackedFiles ?? [];
     },

@@ -182,6 +182,8 @@ describe('traceChangedFiles', () => {
       buildId: 'head-build',
       stats,
       manifestPath: '/repo/packages/ui/storybook-static/.chromatic/turbosnap-manifest.json',
+      outputDir: ctx.sourceDir,
+      statsPath: ctx.fileInfo.statsPath,
       projectRoot: ctx.storybook.projectRoot,
       gitRoot: '/repo',
       untraced: ['**/*.md'],

@@ -107,6 +107,8 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
         buildId: ctx.announcedBuild.id,
         stats,
         manifestPath: getManifestPath(ctx.sourceDir),
+        outputDir: ctx.sourceDir,
+        statsPath: ctx.fileInfo?.statsPath,
         projectRoot: ctx.storybook.projectRoot,
         gitRoot: ctx.git.rootPath,
         untraced: ctx.options.untraced ?? [],

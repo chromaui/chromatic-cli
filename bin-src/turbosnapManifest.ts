@@ -43,6 +43,7 @@ export async function main(argv: string[]) {
     Options
       --stats-file, -s <filepath>           Path to preview-stats.json, relative to the Storybook project root. (default: 'storybook-static/preview-stats.json')
       --storybook-base-dir, -b <dirname>    Relative path from repository root to Storybook project root. Alternatively, set STORYBOOK_BASE_DIR. Use when your Storybook is located in a subdirectory of your repository. (default: the current directory)
+      --storybook-build-dir <dirname>      Build output directory, relative to the Storybook project root. (default: 'storybook-static')
       --config-dir, -c <dirname>            Storybook config directory, relative to the Storybook project root. (default: '.storybook')
       --static-dir <dirnames>               Comma-separated static directories, relative to the Storybook project root. (default: none)
       --externals <glob>                    Glob of files that disable TurboSnap when changed, relative to the repository root. Can be specified multiple times. (default: none)
@@ -64,6 +65,7 @@ export async function main(argv: string[]) {
           // means the current directory, which is resolved in the handler.
           ...(STORYBOOK_BASE_DIR && { default: STORYBOOK_BASE_DIR }),
         },
+        storybookBuildDir: { type: 'string', default: 'storybook-static' },
         configDir: {
           type: 'string',
           alias: 'c',
@@ -110,6 +112,8 @@ export async function main(argv: string[]) {
       log,
       projectRoot,
       gitRoot,
+      outputDir: path.resolve(projectRoot, cli.flags.storybookBuildDir),
+      statsPath,
       untraced: cli.flags.untraced ?? [],
       configDir: path.resolve(projectRoot, cli.flags.configDir),
       staticDirs: (cli.flags.staticDir?.split(',') ?? []).map((directory) =>
