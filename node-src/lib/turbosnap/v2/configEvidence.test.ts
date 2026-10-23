@@ -180,7 +180,7 @@ it('supports independently configured output outside the repository', async () =
 
 describe('untrusted evidence boundaries', () => {
   it.each(['source', 'output'])(
-    'rejects a %s traversal before hashing any metadata file',
+    'rejects a %s traversal before inspecting any metadata file',
     async (kind) => {
       const { input, stats, record, outputDirectory } = fixture();
       const evidence = record();
@@ -193,11 +193,15 @@ describe('untrusted evidence boundaries', () => {
         evidence.configFiles[file] = { hash: sha256('outside fixture'), realPath: file };
       else evidence.outputFiles[file] = sha256('outside fixture');
       const hash = vi.spyOn(input.projectFiles, 'sourceHashes');
+      const realPath = vi.spyOn(input.projectFiles, 'realPath');
+      const inventory = vi.spyOn(input.projectFiles, 'listBoundFiles');
       expect(await readConfigEvidence({ ...stats, turbosnapOutput: evidence }, input)).toEqual({
         status: 'unavailable',
         reason: 'outside-root-output-evidence',
       });
       expect(hash).not.toHaveBeenCalled();
+      expect(realPath).not.toHaveBeenCalled();
+      expect(inventory).not.toHaveBeenCalled();
     }
   );
 

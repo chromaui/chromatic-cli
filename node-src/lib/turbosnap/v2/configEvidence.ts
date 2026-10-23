@@ -74,6 +74,7 @@ export async function readConfigEvidence(
   try {
     return await verifyEvidence(parsed.data, stats, { ...input, outputDir: input.outputDir });
   } catch (error) {
+    if (error instanceof OutsideEvidenceRoot) return unavailable('outside-root-output-evidence');
     input.log.debug('Unable to verify TurboSnap v2 output evidence', error);
     return unavailable('stale-output-evidence');
   }
@@ -87,8 +88,9 @@ async function verifyEvidence(
   input: OutputInput
 ): Promise<ConfigEvidence> {
   const outputDirectory = input.outputDir;
-  const absolute = (file: string) => path.resolve(input.statsRoot ?? input.projectRoot, file);
-  const outputPath = (file: string) => path.resolve(outputDirectory, file);
+  const absolute = (file: string) =>
+    resolveWithinRoot(input.statsRoot ?? input.projectRoot, file, input.gitRoot);
+  const outputPath = (file: string) => resolveWithinRoot(outputDirectory, file, outputDirectory);
   if (
     !uniquePaths(Object.keys(evidence.configFiles), absolute) ||
     !uniquePaths(Object.keys(evidence.outputFiles), outputPath) ||
@@ -245,4 +247,12 @@ function matchesInventory(actual: string[], declared: string[]): boolean {
 
 function unavailable(reason: ConfigEvidenceReason): ConfigEvidence {
   return { status: 'unavailable', reason };
+}
+
+class OutsideEvidenceRoot extends Error {}
+
+function resolveWithinRoot(base: string, file: string, root: string): string {
+  const resolved = path.resolve(base, file);
+  if (!isPathWithinRoot(root, resolved)) throw new OutsideEvidenceRoot();
+  return resolved;
 }
