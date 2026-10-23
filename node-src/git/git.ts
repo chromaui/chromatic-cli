@@ -593,6 +593,8 @@ export interface UntrackedPaths {
  * @param deps Function dependencies.
  *
  * @returns The listing, queried by absolute path.
+ *
+ * @throws {Error} When git lists no tracked files, as when the index is missing.
  */
 export async function getUntrackedPaths(deps: GitDeps): Promise<UntrackedPaths> {
   const repositoryRoot = await getRepositoryRoot(deps);
