@@ -110,7 +110,7 @@ export function collectStorybookFiles(
   // shared accumulator is safe because every preview feeds the same hash, so there is no cross-preview
   // leak to keep apart.
   const storybookConfigHashes = new Map<StorybookFileKey, FileHash>();
-  // A skipped preview still roots the subtree: a gitignored preview keeps its edges, so the tracked
+  // A skipped preview still roots the subtree: an untracked preview keeps its edges, so the tracked
   // files it imports roll up here rather than falling through to globals. The roll-up leaves the
   // skipped file itself out (see `rollUpFileHashes`), and like the globals entry it is omitted when
   // nothing hashed is left, as when the preview is untraced and so has no edges to follow.

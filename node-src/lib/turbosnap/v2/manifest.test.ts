@@ -52,7 +52,8 @@ describe('serializeManifest', () => {
         '/repo/packages/ui/public': ['bundle.css'],
       },
       fileHashes: { [story]: 'S', [generated]: 'G' },
-      isIgnored: (candidate) => candidate.includes('generated') || candidate.endsWith('bundle.css'),
+      isUntracked: (candidate) =>
+        candidate.includes('generated') || candidate.endsWith('bundle.css'),
     });
     const stats: Stats = {
       modules: [
@@ -66,8 +67,8 @@ describe('serializeManifest', () => {
     );
 
     expect(Object.entries(serialized.skippedFiles)).toEqual([
-      ['./public/bundle.css', 'gitignored'],
-      ['./src/generated/schema.ts', 'gitignored'],
+      ['./public/bundle.css', 'untracked'],
+      ['./src/generated/schema.ts', 'untracked'],
     ]);
     expect(serialized.staticFiles).toEqual({});
   });
@@ -78,14 +79,14 @@ describe('serializeManifest', () => {
         '/repo/packages/ui/.storybook': ['main.ts', 'static'],
         '/repo/packages/ui/.storybook/static': ['bundle.css'],
       },
-      isIgnored: (candidate) => candidate.endsWith('bundle.css'),
+      isUntracked: (candidate) => candidate.endsWith('bundle.css'),
     });
 
     const serialized = serializeManifest(await buildManifest({ modules: [] }, input));
 
     expect(Object.keys(serialized.storybookConfigFiles)).toEqual(['./.storybook/main.ts']);
     expect(serialized.staticFiles).toEqual({});
-    expect(serialized.skippedFiles).toEqual({ './.storybook/static/bundle.css': 'gitignored' });
+    expect(serialized.skippedFiles).toEqual({ './.storybook/static/bundle.css': 'untracked' });
   });
 
   it('keeps a file git ignores in the graph, marked skipped, so the edges through it survive', async () => {
@@ -94,7 +95,7 @@ describe('serializeManifest', () => {
     const button = '/repo/packages/ui/src/Button.tsx';
     const { input } = createFixture({
       fileHashes: { [story]: 'S', [barrel]: 'G', [button]: 'B' },
-      isIgnored: (candidate) => candidate === barrel,
+      isUntracked: (candidate) => candidate === barrel,
     });
     const stats: Stats = {
       modules: [
