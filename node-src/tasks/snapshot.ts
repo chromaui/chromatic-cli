@@ -105,8 +105,9 @@ export async function snapshotProject(
   let build = input.build;
   const { app, number, tests, testCount, actualTestCount, reportToken } = build;
 
-  if (app.repository && uploadedBytes && !options.junitReport) {
-    log.info(speedUpCI(app.repository.provider));
+  // Local builds (e.g. from the Visual Tests addon) need to wait for results, so don't suggest skipping that.
+  if (app.repository && uploadedBytes && !options.junitReport && !options.isLocalBuild) {
+    log.info(speedUpCI(app.repository.provider, options.inAction));
   }
 
   const testLabels =
