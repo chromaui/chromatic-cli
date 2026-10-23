@@ -61,6 +61,16 @@ const runSnapshot = async (ctx: any) => {
   return { result, report };
 };
 
+// Run a passing build whose project is linked to a repository, so the speed-up-CI tip is eligible.
+const runLinkedBuild = (options = {}) => {
+  const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
+  const ctx = { ...createBaseTestContext(), build, uploadedBytes: 100, options } as any;
+  ctx.client.runQuery.mockReturnValueOnce({
+    app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } },
+  });
+  return runSnapshot(ctx);
+};
+
 describe('snapshotProject', () => {
   it('waits for the build to complete and sets it on context', async () => {
     const build = {
@@ -87,27 +97,18 @@ describe('snapshotProject', () => {
     expect(ctx.exitCode).toBe(0);
   });
 
-  it('suggests --exit-once-uploaded for CI builds but not for local builds', async () => {
-    const build = { app: { repository: { provider: 'github' } }, number: 1, features: {} };
-    const passed = { app: { build: { changeCount: 0, status: 'PASSED', completedAt: 1 } } };
-    const infoSpy = vi.spyOn(log, 'info');
+  describe('speed-up-CI tip', () => {
+    it('suggests --exit-once-uploaded for CI builds', async () => {
+      await runLinkedBuild();
+      expect(log.info).toHaveBeenCalledWith(expect.stringContaining('--exit-once-uploaded'));
+    });
 
-    const ciContext = { ...createBaseTestContext(), build, uploadedBytes: 100 } as any;
-    ciContext.client.runQuery.mockReturnValueOnce(passed);
-    await runSnapshot(ciContext);
-    expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining('--exit-once-uploaded'));
-
-    infoSpy.mockClear();
-    const localContext = {
-      ...createBaseTestContext(),
-      build,
-      uploadedBytes: 100,
-      options: { isLocalBuild: true },
-    } as any;
-    localContext.client.runQuery.mockReturnValueOnce(passed);
-    await runSnapshot(localContext);
-    expect(infoSpy).not.toHaveBeenCalledWith(expect.stringContaining('Speed up'));
-    infoSpy.mockRestore();
+    it('is not shown for local builds', async () => {
+      await runLinkedBuild({ isLocalBuild: true });
+      expect(log.info).not.toHaveBeenCalledWith(
+        expect.stringContaining('Speed up Continuous Integration')
+      );
+    });
   });
 
   it('queries the counts and keeps the verify-time features on the completed build', async () => {
