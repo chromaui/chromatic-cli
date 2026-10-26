@@ -29,3 +29,17 @@ Instead:
 - **Rewrite rather than quote** error messages and logs: keep the part that comes from this CLI, and replace anything that comes from the customer's project with a placeholder.
 
 If you are unsure whether something is identifying, leave it out. If a ticket title itself names a customer, write a neutral title of your own.
+
+## Label every pull request
+
+`check-labels` fails a PR unless it has exactly one label from each pair below, and `auto` reads them to set the version bump and decide whether to publish. Add both when you open the PR (`gh pr create --label <bump> --label <release>`) without asking, and fix them with `gh pr edit` if later commits change the answer. Say which labels you chose and why in your reply.
+
+1. **Version bump, one of `major`, `minor`, `patch`.** Judge it by what users of the published `chromatic` package see.
+   - `major`: a breaking change, such as a removed or renamed flag or config option, a changed exit code, changed output that users parse, or a dropped Node version.
+   - `minor`: a new flag, option, subcommand, or feature.
+   - `patch`: everything else, including bug fixes, performance work, refactors, and changes to docs, tests, CI, and agent files.
+2. **Release, one of `release`, `skip-release`.**
+   - `release`: a change users of the published package would notice, in `bin-src/`, `node-src/`, `action-src/`, or `action.yml`.
+   - `skip-release`: docs, tests, CI, tooling, and agent files (`.agents/`, `AGENTS.md`). Also use it for package changes with no significant user benefit or too small to justify a release on their own; they ship with the next release.
+
+When the user names labels, use theirs. Never add `DO NOT MERGE` unless asked; `check-labels` fails while it is set.
