@@ -1,6 +1,6 @@
 import { execFileSync, execSync } from 'child_process';
 import path from 'path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   baseDirectoryNote,
@@ -8,6 +8,11 @@ import {
   storybookDirectoryNote,
   traceSuggestions,
 } from '../node-src/ui/messages/info/tracedAffectedFiles';
+import { main } from './trace';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('Test trace script from package.json', () => {
   it('returns the default output successfully', () => {
@@ -33,6 +38,19 @@ describe('Test trace script from package.json', () => {
       .trim();
 
     expect(output).toContain('Traced 1 changed file to 1 affected story file');
+  });
+  it('traces absolute changed file paths when main is called in-process', async () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+
+    await main([
+      path.join(process.cwd(), 'node-src/ui/messages/errors/invalidReportPath.ts'),
+      '-s',
+      'bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json',
+    ]);
+
+    expect(info.mock.calls.flat().join('\n')).toContain(
+      'Traced 1 changed file to 1 affected story file'
+    );
   });
   it('outputs directory info when -m expanded is passed', () => {
     const scriptName =
