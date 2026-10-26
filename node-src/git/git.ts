@@ -237,6 +237,22 @@ export async function commitExists(deps: GitDeps, commit: string) {
 }
 
 /**
+ * Check commits one at a time with {@link commitExists}.
+ *
+ * @param deps Function dependencies.
+ * @param commits The commits to check.
+ *
+ * @returns The subset of `commits` that exist.
+ */
+async function checkEachCommit(deps: GitDeps, commits: string[]) {
+  const existing = new Set<string>();
+  for (const commit of commits) {
+    if (await commitExists(deps, commit)) existing.add(commit);
+  }
+  return existing;
+}
+
+/**
  * Check which of several commits exist in the repository, using a single
  * `git cat-file --batch-check` call rather than one process per commit.
  *
@@ -255,20 +271,24 @@ export async function commitsExist(deps: GitDeps, commits: string[]): Promise<Se
       input: commits.map((commit) => `${commit}^{commit}`).join('\n'),
       all: false,
     });
-  } catch {
+  } catch (error) {
     // The single call can fail where individual checks would not, e.g. by hitting the git timeout
-    // while a partial clone tries to lazily fetch several missing commits. Check one at a time.
-    const existing = new Set<string>();
-    for (const commit of commits) {
-      if (await commitExists(deps, commit)) existing.add(commit);
-    }
-    return existing;
+    // while a partial clone tries to lazily fetch several missing commits.
+    deps.log.debug(`git cat-file --batch-check failed, checking one at a time: ${error}`);
+    return checkEachCommit(deps, commits);
   }
 
   // Git prints one line per input line, in order. Match by position, since an existing commit is
   // printed as its full SHA (`<sha> commit <size>`) which may differ from a short input SHA.
   // Anything else, such as `<input> missing` or `<input> ambiguous`, means it doesn't exist.
   const lines = result.split(newline);
+  if (lines.length !== commits.length) {
+    // Positions would no longer line up with the input, so don't trust any of them.
+    deps.log.debug(
+      `git cat-file --batch-check returned ${lines.length} lines for ${commits.length} commits, checking one at a time`
+    );
+    return checkEachCommit(deps, commits);
+  }
   return new Set(commits.filter((_, index) => lines[index]?.split(' ')[1] === 'commit'));
 }
 

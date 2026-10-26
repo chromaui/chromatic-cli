@@ -271,6 +271,16 @@ describe('commitsExist', () => {
     });
   });
 
+  it('checks commits one at a time when the line count does not match the input', async () => {
+    execGitCommand.mockImplementation(async (_, command) => {
+      if (command === 'git cat-file --batch-check') return `${'a'.repeat(40)} commit 284`;
+      if (command === 'git cat-file -e "bbb^{commit}"') return '';
+      throw new Error('fatal: Not a valid object name');
+    });
+    // By position, the single line would wrongly mark `aaa` as existing.
+    expect(await commitsExist(ctx, ['aaa', 'bbb'])).toEqual(new Set(['bbb']));
+  });
+
   it('checks commits one at a time when the batch call fails', async () => {
     execGitCommand.mockImplementation(async (_, command) => {
       if (command === 'git cat-file -e "aaa^{commit}"') return '';
