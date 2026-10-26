@@ -237,6 +237,62 @@ export async function commitExists(deps: GitDeps, commit: string) {
 }
 
 /**
+ * Check commits one at a time with {@link commitExists}.
+ *
+ * @param deps Function dependencies.
+ * @param commits The commits to check.
+ *
+ * @returns The subset of `commits` that exist.
+ */
+async function checkEachCommit(deps: GitDeps, commits: string[]) {
+  const existing = new Set<string>();
+  for (const commit of commits) {
+    if (await commitExists(deps, commit)) existing.add(commit);
+  }
+  return existing;
+}
+
+/**
+ * Check which of several commits exist in the repository, using a single
+ * `git cat-file --batch-check` call rather than one process per commit.
+ *
+ * @param deps Function dependencies.
+ * @param commits The commits to check.
+ *
+ * @returns The subset of `commits` that exist, as given (not expanded to full SHAs).
+ */
+export async function commitsExist(deps: GitDeps, commits: string[]): Promise<Set<string>> {
+  if (commits.length === 0) return new Set();
+
+  let result: string;
+  try {
+    // Only read stdout so stray stderr output cannot shift the line positions.
+    result = await execGitCommand(deps, 'git cat-file --batch-check', {
+      input: commits.map((commit) => `${commit}^{commit}`).join('\n'),
+      all: false,
+    });
+  } catch (error) {
+    // The single call can fail where individual checks would not, e.g. by hitting the git timeout
+    // while a partial clone tries to lazily fetch several missing commits.
+    deps.log.debug(`git cat-file --batch-check failed, checking one at a time: ${error}`);
+    return checkEachCommit(deps, commits);
+  }
+
+  // Git prints one line per input line, in order. Match by position, since an existing commit is
+  // printed as its full SHA (`<sha> commit <size>`) which may differ from a short input SHA.
+  // Anything else, such as `<input> missing` or `<input> ambiguous`, means it doesn't exist.
+  const lines = result.split(newline);
+  if (lines.length !== commits.length) {
+    // Positions would no longer line up with the input, so don't trust any of them.
+    deps.log.debug(
+      `git cat-file --batch-check returned ${lines.length} lines for ${commits.length} commits, checking one at a time`
+    );
+    return checkEachCommit(deps, commits);
+  }
+  return new Set(commits.filter((_, index) => lines[index]?.split(' ')[1] === 'commit'));
+}
+
+/**
  * Get the changed files of a single commit or between two.
  *
  * @param deps Function dependencies.
@@ -572,41 +628,60 @@ export async function getRepositoryRoot(deps: GitDeps) {
 }
 
 /**
- * The paths git ignores, answered by absolute path; see {@link getIgnoredPaths}. The match is exact,
- * as git names paths, so a caller resolves symlinks before asking.
+ * The paths git does not track, answered by absolute path; see {@link getUntrackedPaths}. The match
+ * is exact, as git names paths, so a caller resolves symlinks before asking.
  */
-export interface IgnoredPaths {
+export interface UntrackedPaths {
   has(absolutePath: string): boolean;
 }
 
 /**
- * Lists what git ignores: every untracked path in the repository that `.gitignore` or another exclude
- * source matches. A tracked file is never ignored, whatever the patterns say, and nor is any path
- * outside the repository.
+ * Lists what git does not track: every path in the repository's working tree that is not in the
+ * index, whether or not `.gitignore` or another exclude source matches it. A tracked file is never
+ * untracked, even with uncommitted edits, and nor is any path outside the repository or inside a
+ * submodule, whose files the superproject never lists.
  *
- * The listing is bounded by the repository's tracked shape rather than by what the ignored
- * directories hold: a directory with nothing but ignored content comes back as one entry, so
+ * The listing is bounded by the repository's tracked shape rather than by what the untracked
+ * directories hold: a directory with nothing tracked beneath it comes back as one entry, so
  * `node_modules` is one line, not a hundred thousand. That is what makes one listing cheaper than
- * one `git check-ignore` call, which also refuses any path that passes through a symlink.
+ * one git call per path.
  *
  * @param deps Function dependencies.
  *
  * @returns The listing, queried by absolute path.
+ *
+ * @throws {Error} When git lists no tracked files, as when the index is missing.
  */
-export async function getIgnoredPaths(deps: GitDeps): Promise<IgnoredPaths> {
+export async function getUntrackedPaths(deps: GitDeps): Promise<UntrackedPaths> {
   const repositoryRoot = await getRepositoryRoot(deps);
+
+  // `--others` means "not in the index", so with no index (a Docker build that copied `.git`
+  // without it, say) git lists the whole repository as untracked and still exits 0. Skipping every
+  // file would hide every change, so treat that like a git error. One tracked path proves the index
+  // is there: the loop stops at the first, which kills git before it lists the rest.
+  let hasTrackedFile = false;
+  for await (const _ of trackedFiles(deps, repositoryRoot)) {
+    hasTrackedFile = true;
+    break;
+  }
+  if (!hasTrackedFile) {
+    throw new Error(
+      'git lists no tracked files, so it cannot tell which files are untracked; is the git index missing?'
+    );
+  }
+
   // `--full-name` with the `:/` pathspec lists the whole repository, not just the directory the CLI
   // runs in. Only stdout is parsed, so a stderr warning can't masquerade as a path. The listing is
   // unbounded, so it stays out of the debug log.
   const output = await execGitCommand(
     deps,
-    'git ls-files --others --ignored --exclude-standard --directory -z --full-name -- :/',
+    'git ls-files --others --directory -z --full-name -- :/',
     { all: false, logResult: false }
   );
 
-  // A wholly ignored directory keeps its trailing slash, which `path.join` preserves as the native
+  // A wholly untracked directory keeps its trailing slash, which `path.join` preserves as the native
   // separator, so an entry ending in a separator covers everything beneath it.
-  const ignored = new Set(
+  const untracked = new Set(
     output
       .split(NULL_BYTE)
       .filter(Boolean)
@@ -615,14 +690,14 @@ export async function getIgnoredPaths(deps: GitDeps): Promise<IgnoredPaths> {
 
   return {
     has: (absolutePath) => {
-      if (ignored.has(absolutePath)) {
+      if (untracked.has(absolutePath)) {
         return true;
       }
 
       // Only a directory inside the repository can be in the listing, so the walk up stops there.
       let directory = path.dirname(absolutePath);
       while (directory.startsWith(repositoryRoot + path.sep)) {
-        if (ignored.has(directory + path.sep)) {
+        if (untracked.has(directory + path.sep)) {
           return true;
         }
         directory = path.dirname(directory);

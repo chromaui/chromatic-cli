@@ -26,10 +26,12 @@ export interface UploadOutput {
 }
 
 const buildFileList = (ctx: Context, withHashes: boolean): FileDesc[] => {
+  const lengthsByPath = new Map(
+    ctx.fileInfo?.lengths.map(({ knownAs, contentLength }) => [knownAs, contentLength])
+  );
   const files = ctx.fileInfo?.paths.map<FileDesc>((filePath) => ({
     ...(withHashes && ctx.fileInfo?.hashes && { contentHash: ctx.fileInfo.hashes[filePath] }),
-    contentLength:
-      ctx.fileInfo?.lengths.find(({ knownAs }) => knownAs === filePath)?.contentLength ?? -1,
+    contentLength: lengthsByPath.get(filePath) ?? -1,
     localPath: path.join(ctx.sourceDir, filePath),
     targetPath: filePath,
   }));

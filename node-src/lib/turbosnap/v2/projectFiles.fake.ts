@@ -32,8 +32,8 @@ export interface InMemoryDisk {
   trackedFiles?: AbsolutePath[];
   /** Contents written by `writeFile`, keyed by absolute path, so a suite can read them back. */
   writtenFiles?: Record<AbsolutePath, string>;
-  /** Whether git ignores a path. Nothing is ignored unless a suite says so. */
-  isIgnored?: (absolutePath: AbsolutePath) => boolean;
+  /** Whether git does not track a path. Everything is tracked unless a suite says so. */
+  isUntracked?: (absolutePath: AbsolutePath) => boolean;
 }
 
 /**
@@ -106,8 +106,8 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
     },
     // Symlinks are not modelled, so every path is already the real one.
     realPath: (absolutePath: AbsolutePath) => absolutePath,
-    ignoredPaths: async () => ({
-      has: (absolutePath: AbsolutePath) => disk.isIgnored?.(absolutePath) ?? false,
+    untrackedPaths: async () => ({
+      has: (absolutePath: AbsolutePath) => disk.isUntracked?.(absolutePath) ?? false,
     }),
   };
 }

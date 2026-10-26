@@ -27,13 +27,13 @@ async function skipped(absolutePaths: string[], skipContext: SkipContext) {
 }
 
 describe('buildSkipRule', () => {
-  it('skips the files git ignores, recording why', async () => {
+  it('skips the files git does not track, recording why', async () => {
     const result = await skipped(
       [generated, source],
-      context({ isIgnored: (candidate) => candidate === generated })
+      context({ isUntracked: (candidate) => candidate === generated })
     );
 
-    expect(result).toEqual([[generated, 'gitignored']]);
+    expect(result).toEqual([[generated, 'untracked']]);
   });
 
   it('never skips an installed package file, however git sees it', async () => {
@@ -42,37 +42,40 @@ describe('buildSkipRule', () => {
 
     const result = await skipped(
       [installed, pnpmInstalled, nestedInstalled, source],
-      context({ isIgnored: () => true })
+      context({ isUntracked: () => true })
     );
 
-    expect(result).toEqual([[source, 'gitignored']]);
+    expect(result).toEqual([[source, 'untracked']]);
   });
 
-  it('skips the gitignored files build tools generate under node_modules, since they are not installed packages', async () => {
+  it('skips the untracked files build tools generate under node_modules, since they are not installed packages', async () => {
     const federationEntry = `${projectRoot}/node_modules/.federation/entry.3f2a1b.js`;
 
-    const result = await skipped([federationEntry, installed], context({ isIgnored: () => true }));
-
-    expect(result).toEqual([[federationEntry, 'gitignored']]);
-  });
-
-  it('skips a gitignored file in the Storybook config directory like any other project file', async () => {
     const result = await skipped(
-      [preview, source],
-      context({ isIgnored: (candidate) => candidate === preview })
+      [federationEntry, installed],
+      context({ isUntracked: () => true })
     );
 
-    expect(result).toEqual([[preview, 'gitignored']]);
+    expect(result).toEqual([[federationEntry, 'untracked']]);
   });
 
-  it("skips a sibling package's gitignored file, since the rule is git's view of the whole repository", async () => {
+  it('skips an untracked file in the Storybook config directory like any other project file', async () => {
+    const result = await skipped(
+      [preview, source],
+      context({ isUntracked: (candidate) => candidate === preview })
+    );
+
+    expect(result).toEqual([[preview, 'untracked']]);
+  });
+
+  it("skips a sibling package's untracked file, since the rule is git's view of the whole repository", async () => {
     const built = '/repo/packages/icons/dist/index.js';
 
-    const result = await skipped([built, generated], context({ isIgnored: () => true }));
+    const result = await skipped([built, generated], context({ isUntracked: () => true }));
 
     expect(result).toEqual([
-      [built, 'gitignored'],
-      [generated, 'gitignored'],
+      [built, 'untracked'],
+      [generated, 'untracked'],
     ]);
   });
 
@@ -80,20 +83,20 @@ describe('buildSkipRule', () => {
     const real = '/repo/packages/theme/src/generated.ts';
     const linked = '/repo/packages/ui/node_modules/theme/src/generated.ts';
     const projectFiles = {
-      ...inMemoryProjectFiles({ isIgnored: (candidate) => candidate === real }),
+      ...inMemoryProjectFiles({ isUntracked: (candidate) => candidate === real }),
       realPath: (absolutePath: string) => absolutePath.replace(linked, real),
     };
 
     const result = await skipped([linked, installed], { ...context({}), projectFiles });
 
-    expect(result).toEqual([[linked, 'gitignored']]);
+    expect(result).toEqual([[linked, 'untracked']]);
   });
 
   it('judges every rule by where a file really lives, since a bundler may name a file through a symlink', async () => {
     const linkedRoot = '/repo/apps/web';
     const projectFiles = {
       ...inMemoryProjectFiles({
-        isIgnored: (candidate) => candidate === generated,
+        isUntracked: (candidate) => candidate === generated,
       }),
       realPath: (absolutePath: string) => absolutePath.replace(linkedRoot, projectRoot),
     };
@@ -104,7 +107,7 @@ describe('buildSkipRule', () => {
       projectFiles,
     });
 
-    expect(result).toEqual([[linkedGenerated, 'gitignored']]);
+    expect(result).toEqual([[linkedGenerated, 'untracked']]);
   });
 
   it('asks git by real path and answers by the path it was given', async () => {
@@ -112,7 +115,7 @@ describe('buildSkipRule', () => {
     const projectFiles = {
       ...inMemoryProjectFiles({}),
       realPath: (absolutePath: string) => absolutePath.replace('/repo/apps/web', projectRoot),
-      ignoredPaths: async () => ({
+      untrackedPaths: async () => ({
         has: (absolutePath: string) => {
           asked.push(absolutePath);
           return true;
@@ -124,14 +127,14 @@ describe('buildSkipRule', () => {
     const result = await skipped([linked], { ...context({}), projectFiles });
 
     expect(asked).toEqual([generated]);
-    expect(result).toEqual([[linked, 'gitignored']]);
+    expect(result).toEqual([[linked, 'untracked']]);
   });
 
   it('asks git once, however many files are judged', async () => {
     let listings = 0;
     const projectFiles = {
       ...inMemoryProjectFiles({}),
-      ignoredPaths: async () => {
+      untrackedPaths: async () => {
         listings += 1;
         return { has: () => false };
       },
@@ -176,10 +179,10 @@ describe('buildSkipRule', () => {
     expect(result).toEqual([[decorator, 'untraced']]);
   });
 
-  it("records a file both untraced and ignored as untraced, since that is the user's own say", async () => {
+  it("records a file both untraced and untracked as untraced, since that is the user's own say", async () => {
     const result = await skipped(
       [generated],
-      context({ isIgnored: (absolutePath) => absolutePath === generated }, [
+      context({ isUntracked: (absolutePath) => absolutePath === generated }, [
         'packages/ui/src/generated/**',
       ])
     );
