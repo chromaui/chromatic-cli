@@ -237,6 +237,26 @@ export async function commitExists(deps: GitDeps, commit: string) {
 }
 
 /**
+ * Check if a file exists at the given reference.
+ *
+ * @param deps Function dependencies.
+ * @param reference The reference (usually a commit) to look in.
+ * @param fileName The repository-relative path of the file.
+ *
+ * @returns True if the file exists at the reference.
+ */
+export async function fileExistsAtReference(deps: GitDeps, reference: string, fileName: string) {
+  return limitConcurrency(async () => {
+    try {
+      await execGitCommand(deps, `git cat-file -e "${reference}:${fileName}"`);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
  * Check commits one at a time with {@link commitExists}.
  *
  * @param deps Function dependencies.

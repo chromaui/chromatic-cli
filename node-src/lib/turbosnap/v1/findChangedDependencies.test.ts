@@ -477,6 +477,7 @@ const reactBump = {
 const packageKey = ({ name, version }: { name: string; version: string }) => `${name}@${version}`;
 
 describe('findChangedDependencies with stats', () => {
+  const fileExistsAtReference = vi.mocked(git.fileExistsAtReference);
   const parsePnpmProject = vi.mocked(snykParser.parsePnpmProject);
 
   // `declares` lists the packages a workspace's manifest declares, by default all of `head`.
@@ -543,6 +544,7 @@ describe('findChangedDependencies with stats', () => {
   afterEach(() => {
     readFileSync.mockReset();
     readFileSync.mockReturnValue('');
+    fileExistsAtReference.mockReset();
     parsePnpmProject.mockReset();
   });
 
@@ -830,5 +832,43 @@ describe('findChangedDependencies with stats', () => {
         stats(...uiModules, './../../node_modules/storybook/dist/index.js')
       )
     ).resolves.toEqual(['storybook']);
+  });
+
+  it('reports everything a workspace added since the baseline installs', async () => {
+    mockWorkspace({
+      'packages/ui': {
+        name: '@myorg/ui',
+        head: ['react@19.0.1', '@myorg/extra@0.0.1'],
+        base: ['react@19.0.1'],
+      },
+      'packages/extra': { name: '@myorg/extra', head: ['is-odd@3.0.1'] },
+      // The Storybook doesn't load this one, so the `react` the Storybook declares is dropped.
+      'packages/unused': { name: '@myorg/unused', head: ['react@19.0.1', 'moment@2.31.0'] },
+    });
+    checkoutFile.mockImplementation(async (_, __, file) => {
+      if (file === 'packages/extra/package.json' || file === 'packages/unused/package.json') {
+        throw new Error('missing');
+      }
+    });
+    fileExistsAtReference.mockResolvedValue(false);
+
+    const changes = await findChangedDependencies(
+      getStatsContext(),
+      stats(...uiModules, './../extra/src/index.ts')
+    );
+    expect(changes.toSorted()).toEqual(['@myorg/extra', '@myorg/unused', 'is-odd', 'moment']);
+  });
+
+  it('throws when a manifest that exists at the baseline cannot be checked out', async () => {
+    mockWorkspace({ 'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] } });
+    const error = new Error('checkout failed');
+    checkoutFile.mockImplementation(async (_, __, file) => {
+      if (file === 'packages/ui/package.json') throw error;
+    });
+    fileExistsAtReference.mockResolvedValue(true);
+
+    await expect(findChangedDependencies(getStatsContext(), stats(...uiModules))).rejects.toBe(
+      error
+    );
   });
 });
