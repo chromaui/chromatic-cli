@@ -1,11 +1,26 @@
 name: Release
 
 on:
-  # PRs have their own canary releases which always run but don't publish the GitHub Action.
+  # PRs have their own canary releases which don't publish the GitHub Action. They only run when
+  # the PR changes the published package or its build, or the release process itself, so the
+  # release can be debugged on a PR. `release` is not a required check, so not running is safe.
   # Types are configured so this also runs when labels are added or removed.
-  # To allow debugging the release process, this does not have a paths filter.
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
+    paths:
+      - action-src/**
+      - bin-src/**
+      - node-src/**
+      - action.yml
+      - isChromatic.*
+      - package.json
+      - storybook-addon.*
+      - tsdown.config.ts
+      - yarn.lock
+      - .github/actions/setup/**
+      - .github/workflows/release.yml
+      - scripts/publishAction.mjs
+      - scripts/release.mjs
 
   # Pushes to main trigger a release and publish the GitHub Action. To allow the occasional update
   # to markdown and config files, only changes to actual source code trigger a release.
