@@ -236,6 +236,15 @@ export async function commitExists(deps: GitDeps, commit: string) {
   }
 }
 
+// One fetch at a time. Baseline recovery runs inside a Promise.all over the baseline builds
+// (see gitInfo.ts), so several orphaned commits can be fetched at once — and concurrent
+// `git fetch` calls in one repository contend for the same locks, most visibly
+// `.git/shallow.lock` when a shallow clone adds `--depth=1`. A loser fails with
+// "Unable to create '.../shallow.lock': File exists", which this function would report as an
+// unrecoverable baseline rather than a retryable clash. These fetches are rare and small, so
+// serialising costs little against losing a baseline to a race.
+const limitFetches = pLimit(1);
+
 /**
  * Fetch a single commit from the `origin` remote by hash.
  *
@@ -263,15 +272,17 @@ export async function fetchCommit(deps: GitDeps, commit: string) {
     return false;
   }
 
-  try {
-    const cloneDepth = await getCloneDepth(deps).catch(() => 'full');
-    const depth = cloneDepth === 'shallow' ? ' --depth=1' : '';
-    await execGitCommand(deps, `git fetch --no-tags${depth} origin "${commit}"`);
-    return true;
-  } catch (error) {
-    deps.log.debug(`Failed to fetch commit ${commit} from origin: ${error.message}`);
-    return false;
-  }
+  return limitFetches(async () => {
+    try {
+      const cloneDepth = await getCloneDepth(deps).catch(() => 'full');
+      const depth = cloneDepth === 'shallow' ? ' --depth=1' : '';
+      await execGitCommand(deps, `git fetch --no-tags${depth} origin "${commit}"`);
+      return true;
+    } catch (error) {
+      deps.log.debug(`Failed to fetch commit ${commit} from origin: ${error.message}`);
+      return false;
+    }
+  });
 }
 
 /**

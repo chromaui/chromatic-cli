@@ -273,6 +273,28 @@ describe('fetchCommit', () => {
     expect(await fetchCommit(ctx, '"; rm -rf / #')).toEqual(false);
     expect(execGitCommand).not.toHaveBeenCalled();
   });
+
+  it('runs one fetch at a time, so concurrent recoveries cannot clash over git locks', async () => {
+    execGitCommandOneLine.mockResolvedValue('true');
+    let inFlight = 0;
+    let maxInFlight = 0;
+    execGitCommand.mockImplementation(async () => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      inFlight -= 1;
+      return '';
+    });
+
+    const commits = [commit, commit.replace(/.$/, 'b'), commit.replace(/.$/, 'c')];
+    expect(await Promise.all(commits.map((sha) => fetchCommit(ctx, sha)))).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect(execGitCommand).toHaveBeenCalledTimes(3);
+    expect(maxInFlight).toEqual(1);
+  });
 });
 
 describe('commitsExist', () => {
