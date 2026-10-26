@@ -1,4 +1,5 @@
 import { AbsolutePath, Stats } from '../../../types';
+import { isNodeModulesPath, moduleFileNames } from '../statsPaths';
 import {
   collectTransitiveDependencies,
   FileHash,
@@ -11,9 +12,7 @@ import {
   canonicalFileNames,
   canonicalImporters,
   foldStatsId,
-  isNodeModulesPath,
   isSyntheticFile,
-  moduleFileNames,
   normalizeStatsPath,
   resolveStatsPath,
   StatsRoots,
