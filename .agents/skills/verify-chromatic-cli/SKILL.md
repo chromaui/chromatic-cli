@@ -1,6 +1,6 @@
 ---
 name: verify-chromatic-cli
-description: Drive the locally built Chromatic CLI (`chromatic` / `dist/bin.cjs` in chromaui/chromatic-cli) the way a user does from a terminal and capture proof — stdout, stderr, exit codes, written files, TTY output. Use whenever a change touches bin-src/ or node-src/, before calling it done, opening or updating a PR, or reviewing one; for comparing main against a branch; for testing in the e2e fixture projects (Vite, webpack, rsbuild; npm, Yarn 1, Yarn 4 and pnpm monorepos); and for trying a published canary. Covers the main publish command and its option/config preflight, `--only-changed` TurboSnap builds, `trace`, `turbosnap-manifest`, and `trim-stats-file`.
+description: Drive the locally built Chromatic CLI (`chromatic` / `dist/bin.cjs` in chromaui/chromatic-cli) the way a user does from a terminal and capture proof — stdout, stderr, exit codes, written files, TTY output. Use whenever a change to bin-src/ or node-src/ affects behavior or output, before calling it done or opening or updating a PR, and when reviewing one whose evidence doesn't cover the change; for comparing main against a branch; for testing in the e2e fixture projects (Vite, webpack, rsbuild; npm, Yarn 1, Yarn 4 and pnpm monorepos); and for trying a published canary. Covers the main publish command and its option/config preflight, `--only-changed` TurboSnap builds, `trace`, `turbosnap-manifest`, and `trim-stats-file`.
 ---
 
 # Verify the Chromatic CLI
