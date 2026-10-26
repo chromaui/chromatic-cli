@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
 import {
@@ -19,13 +19,13 @@ import {
   getCloneFilter,
   getCommit,
   getCommittedFileCount,
-  getIgnoredPaths,
   getNumberOfCommitters,
   getRepositoryCreationDate,
   getShallowBoundaryCommits,
   getSlug,
   getStorybookCreationDate,
   getUncommittedHash,
+  getUntrackedPaths,
   getUserEmail,
   getVersion,
   getVisitedCommitDetails,
@@ -340,39 +340,46 @@ describe('getChangedFilesWithStatus', () => {
   });
 });
 
-describe('getIgnoredPaths', () => {
-  it('answers by absolute path, covering everything under a wholly ignored directory', async () => {
+describe('getUntrackedPaths', () => {
+  // The index has at least one entry, so the untracked listing is trusted.
+  beforeEach(() => {
+    execGitCommandEntries.mockImplementationOnce(async function* () {
+      yield 'src/Button.tsx';
+    });
+  });
+
+  it('answers by absolute path, covering everything under a wholly untracked directory', async () => {
     // first call from getRepositoryRoot()
     execGitCommand.mockResolvedValueOnce('/root');
     execGitCommand.mockResolvedValueOnce(
       ['generated/', 'debug.log', 'node_modules/'].join(NULL_BYTE) + NULL_BYTE
     );
 
-    const ignored = await getIgnoredPaths(ctx);
+    const untracked = await getUntrackedPaths(ctx);
 
     expect(execGitCommand).toHaveBeenNthCalledWith(
       2,
       ctx,
-      'git ls-files --others --ignored --exclude-standard --directory -z --full-name -- :/',
+      'git ls-files --others --directory -z --full-name -- :/',
       { all: false, logResult: false }
     );
-    expect(ignored.has('/root/generated/schema.ts')).toBe(true);
-    expect(ignored.has('/root/generated/deep/schema.ts')).toBe(true);
-    expect(ignored.has('/root/debug.log')).toBe(true);
-    expect(ignored.has('/root/node_modules/react/index.js')).toBe(true);
+    expect(untracked.has('/root/generated/schema.ts')).toBe(true);
+    expect(untracked.has('/root/generated/deep/schema.ts')).toBe(true);
+    expect(untracked.has('/root/debug.log')).toBe(true);
+    expect(untracked.has('/root/node_modules/react/index.js')).toBe(true);
 
-    expect(ignored.has('/root/src/Button.tsx')).toBe(false);
-    expect(ignored.has('/root/generated-docs/index.md')).toBe(false);
-    expect(ignored.has('/elsewhere/generated/schema.ts')).toBe(false);
+    expect(untracked.has('/root/src/Button.tsx')).toBe(false);
+    expect(untracked.has('/root/generated-docs/index.md')).toBe(false);
+    expect(untracked.has('/elsewhere/generated/schema.ts')).toBe(false);
   });
 
-  it('ignores nothing when git lists nothing', async () => {
+  it('reports nothing when git lists nothing', async () => {
     execGitCommand.mockResolvedValueOnce('/root');
     execGitCommand.mockResolvedValueOnce('');
 
-    const ignored = await getIgnoredPaths(ctx);
+    const untracked = await getUntrackedPaths(ctx);
 
-    expect(ignored.has('/root/src/Button.tsx')).toBe(false);
+    expect(untracked.has('/root/src/Button.tsx')).toBe(false);
   });
 });
 

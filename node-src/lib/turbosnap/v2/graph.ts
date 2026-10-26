@@ -7,7 +7,7 @@ export type FileHash = string;
  *
  * A skipped file contributes nothing to any roll-up, not even its path: a generated file is often
  * renamed every build, so its path alone would move the roll-up each time. It stays in the graph so a
- * skipped story file is still a story file and, for a gitignored file, so the edges through it
+ * skipped story file is still a story file and, for an untracked file, so the edges through it
  * survive, which is how a tracked file imported through a generated barrel still rolls up into the
  * story. An untraced file keeps no edges; see `SkipReason`.
  */

@@ -596,7 +596,7 @@ describe('readStatsGraph skipped files', () => {
     const { input } = createFixture({ fileHashes: { [story]: 'S', [generated]: 'G' } });
 
     const graph = await readStatsGraph(stats, input, (candidate) =>
-      candidate === generated ? 'gitignored' : undefined
+      candidate === generated ? 'untracked' : undefined
     );
 
     expect(graph.hashes.get('./src/generated/schema.ts')).toBe(SKIPPED_HASH);
@@ -604,7 +604,7 @@ describe('readStatsGraph skipped files', () => {
     expect([...(graph.files.get('./src/Button.stories.tsx')?.dependencies ?? [])]).toEqual([
       './src/generated/schema.ts',
     ]);
-    expect([...graph.skippedFiles]).toEqual([['./src/generated/schema.ts', 'gitignored']]);
+    expect([...graph.skippedFiles]).toEqual([['./src/generated/schema.ts', 'untracked']]);
   });
 
   it('severs the edges of an untraced file and reports what they led to, since v1 stops its trace there', async () => {
@@ -635,7 +635,7 @@ describe('readStatsGraph skipped files', () => {
     });
 
     const graph = await readStatsGraph(throughBarrel(button), input, (candidate) =>
-      candidate === generated ? 'gitignored' : undefined
+      candidate === generated ? 'untracked' : undefined
     );
 
     expect([...(graph.files.get('./src/generated/schema.ts')?.dependencies ?? [])]).toEqual([
