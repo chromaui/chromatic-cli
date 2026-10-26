@@ -5,7 +5,12 @@ import pLimit from 'p-limit';
 import path from 'path';
 import semver from 'semver';
 
-import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../../../git/git';
+import {
+  checkoutFile,
+  fileExistsAtReference,
+  findFilesFromRepositoryRoot,
+  getRepositoryRoot,
+} from '../../../git/git';
 import { Context, Stats } from '../../../types';
 import { matchesFile, SUPPORTED_LOCK_FILES } from '../../utilities';
 import { getStatsProjectRoot } from '../statsPaths';
@@ -282,7 +287,9 @@ async function keepChangesInScope(
 
 /**
  * Finds the dependencies of a manifest/lockfile pair that changed since a baseline. A change means
- * either the version number is different or the dependency was added or removed.
+ * either the version number is different or the dependency was added or removed. A manifest added
+ * since the baseline makes everything it installs, and the workspace itself, a change; the tracer
+ * then decides which stories that reaches.
  *
  * @param ctx The context set when executing the CLI.
  * @param options The pair and the baseline to compare it with.
@@ -291,8 +298,8 @@ async function keepChangesInScope(
  * @param options.lockfilePath The repository-relative path of its lockfile.
  * @param options.headDependencies The pair's dependency graph at HEAD.
  *
- * @returns The names of the changed dependencies. Throws when the baseline manifest or lockfile
- * can't be checked out, which makes the caller bail.
+ * @returns The names of the changed dependencies. Throws when the baseline lockfile, or a manifest
+ * that exists at the baseline, can't be checked out, which makes the caller bail.
  */
 async function getBaselineChanges(
   ctx: Context,
@@ -307,10 +314,17 @@ async function getBaselineChanges(
   // the manifest keeps its position relative to the lockfile.
   const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
   try {
-    await Promise.all([
+    const [manifestCheckout, lockfileCheckout] = await Promise.allSettled([
       checkoutFile(ctx, reference, manifestPath, tmpdir),
       checkoutFile(ctx, reference, lockfilePath, tmpdir),
     ]);
+    if (lockfileCheckout.status === 'rejected') throw lockfileCheckout.reason;
+    if (manifestCheckout.status === 'rejected') {
+      if (await fileExistsAtReference(ctx, reference, manifestPath)) throw manifestCheckout.reason;
+
+      ctx.log.debug({ reference, manifestPath }, 'Manifest was added since the baseline');
+      return new Set(headDependencies.getPkgs().map(({ name }) => name));
+    }
 
     const baselineDependencies = await getDependencies(ctx, {
       rootPath: tmpdir,
