@@ -72,7 +72,7 @@ One row per user-facing flow. [`.agents/skills/verify-chromatic-cli`](.agents/sk
 | E2E build | `--playwright`, `--cypress`, or `--vitest` on the main command | build runs the test framework's `build-archive-storybook` over its test archives instead of the user's Storybook. | Same as a Storybook build. | `node-src/lib/e2e.ts`, `node-src/tasks/build/` |
 | React Native build | Main command for a project the index marks `isReactNativeApp` | build runs the Android or iOS app build and generates a story manifest. prepare validates the artifact. | Same as a Storybook build. | `node-src/lib/react-native/`, `node-src/tasks/build/buildReactNative.ts` |
 | Share a Storybook | `share()` in `chromatic/node` (used by the Visual Tests addon) | Reserve a share (`UploadShareMutation`) → build → upload to the share bucket → `ConfirmShare`. No Chromatic build or tests. | A temporary share URL. | `node-src/share.ts`, `node-src/lib/share/`, `node-src/tasks/uploadShare.ts` |
-| Utility subcommands | `chromatic trace`, `turbosnap-manifest`, `trim-stats-file`, `generate-manifest`, `react-native-build`, `init` | `bin-src/register.js` routes `argv[2]` to `bin-src/<command>.ts`. These run offline and do not talk to Chromatic. `init` edits `package.json` and installs packages. | Printed output or written files. | `bin-src/`, reusing `node-src/lib/*` |
+| Utility subcommands | `chromatic trace`, `turbosnap-manifest`, `trim-stats-file`, `generate-manifest`, `react-native-build`, `init` | `bin-src/register.js` routes `argv[2]` to `bin-src/<command>.ts`. These do not call Chromatic services. `init` edits `package.json` and installs packages from the registry. | Printed output or written files. | `bin-src/`, reusing `node-src/lib/*` |
 
 ## Cross-repo contracts
 
