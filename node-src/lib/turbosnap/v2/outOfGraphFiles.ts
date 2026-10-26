@@ -136,8 +136,8 @@ export async function hashOutOfGraphFiles(
 /**
  * The rule as the config sweep applies it: the main config is hashed whatever the rule says. It is
  * the file that makes the directory a config directory, so the config section always has it, and an
- * `--untraced` glob or `.gitignore` rule wide enough to catch it is more likely an accident than a
- * request. The case is logged so we can see whether anyone hits it.
+ * `--untraced` glob wide enough to catch it, or a main config not yet added to git, is more likely an
+ * accident than a request. The case is logged so we can see whether anyone hits it.
  *
  * @param skipRule The rule for every other file; see {@link buildSkipRule}.
  * @param input Where the config directory is, and where to log.

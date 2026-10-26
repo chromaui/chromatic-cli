@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
 import {
@@ -11,6 +11,7 @@ import * as execGit from './execGit';
 import {
   checkoutFile,
   commitExists,
+  commitsExist,
   findFilesFromRepositoryRoot,
   getBranch,
   getChangedFiles,
@@ -19,13 +20,13 @@ import {
   getCloneFilter,
   getCommit,
   getCommittedFileCount,
-  getIgnoredPaths,
   getNumberOfCommitters,
   getRepositoryCreationDate,
   getShallowBoundaryCommits,
   getSlug,
   getStorybookCreationDate,
   getUncommittedHash,
+  getUntrackedPaths,
   getUserEmail,
   getVersion,
   getVisitedCommitDetails,
@@ -246,6 +247,49 @@ describe('commitExists', () => {
   });
 });
 
+describe('commitsExist', () => {
+  it('does not run git when given no commits', async () => {
+    expect(await commitsExist(ctx, [])).toEqual(new Set());
+    expect(execGitCommand).not.toHaveBeenCalled();
+  });
+
+  it('matches results to inputs by line position', async () => {
+    const full = 'a'.repeat(40);
+    execGitCommand.mockResolvedValue(
+      [
+        'bbb^{commit} missing',
+        `${full} commit 284`,
+        'ccc^{commit} ambiguous',
+        `${'d'.repeat(40)} commit 190`,
+      ].join('\n')
+    );
+    // The short `aaa` is printed back as its full SHA, so text matching would miss it.
+    expect(await commitsExist(ctx, ['bbb', 'aaa', 'ccc', 'ddd'])).toEqual(new Set(['aaa', 'ddd']));
+    expect(execGitCommand).toHaveBeenCalledWith(ctx, 'git cat-file --batch-check', {
+      input: 'bbb^{commit}\naaa^{commit}\nccc^{commit}\nddd^{commit}',
+      all: false,
+    });
+  });
+
+  it('checks commits one at a time when the line count does not match the input', async () => {
+    execGitCommand.mockImplementation(async (_, command) => {
+      if (command === 'git cat-file --batch-check') return `${'a'.repeat(40)} commit 284`;
+      if (command === 'git cat-file -e "bbb^{commit}"') return '';
+      throw new Error('fatal: Not a valid object name');
+    });
+    // By position, the single line would wrongly mark `aaa` as existing.
+    expect(await commitsExist(ctx, ['aaa', 'bbb'])).toEqual(new Set(['bbb']));
+  });
+
+  it('checks commits one at a time when the batch call fails', async () => {
+    execGitCommand.mockImplementation(async (_, command) => {
+      if (command === 'git cat-file -e "aaa^{commit}"') return '';
+      throw new Error('Command timed out');
+    });
+    expect(await commitsExist(ctx, ['aaa', 'bbb'])).toEqual(new Set(['aaa']));
+  });
+});
+
 describe('getChangedFiles', () => {
   it('returns the parsed list of changed files on success', async () => {
     execGitCommand.mockResolvedValue('a.ts\nb.ts\n');
@@ -340,39 +384,46 @@ describe('getChangedFilesWithStatus', () => {
   });
 });
 
-describe('getIgnoredPaths', () => {
-  it('answers by absolute path, covering everything under a wholly ignored directory', async () => {
+describe('getUntrackedPaths', () => {
+  // The index has at least one entry, so the untracked listing is trusted.
+  beforeEach(() => {
+    execGitCommandEntries.mockImplementationOnce(async function* () {
+      yield 'src/Button.tsx';
+    });
+  });
+
+  it('answers by absolute path, covering everything under a wholly untracked directory', async () => {
     // first call from getRepositoryRoot()
     execGitCommand.mockResolvedValueOnce('/root');
     execGitCommand.mockResolvedValueOnce(
       ['generated/', 'debug.log', 'node_modules/'].join(NULL_BYTE) + NULL_BYTE
     );
 
-    const ignored = await getIgnoredPaths(ctx);
+    const untracked = await getUntrackedPaths(ctx);
 
     expect(execGitCommand).toHaveBeenNthCalledWith(
       2,
       ctx,
-      'git ls-files --others --ignored --exclude-standard --directory -z --full-name -- :/',
+      'git ls-files --others --directory -z --full-name -- :/',
       { all: false, logResult: false }
     );
-    expect(ignored.has('/root/generated/schema.ts')).toBe(true);
-    expect(ignored.has('/root/generated/deep/schema.ts')).toBe(true);
-    expect(ignored.has('/root/debug.log')).toBe(true);
-    expect(ignored.has('/root/node_modules/react/index.js')).toBe(true);
+    expect(untracked.has('/root/generated/schema.ts')).toBe(true);
+    expect(untracked.has('/root/generated/deep/schema.ts')).toBe(true);
+    expect(untracked.has('/root/debug.log')).toBe(true);
+    expect(untracked.has('/root/node_modules/react/index.js')).toBe(true);
 
-    expect(ignored.has('/root/src/Button.tsx')).toBe(false);
-    expect(ignored.has('/root/generated-docs/index.md')).toBe(false);
-    expect(ignored.has('/elsewhere/generated/schema.ts')).toBe(false);
+    expect(untracked.has('/root/src/Button.tsx')).toBe(false);
+    expect(untracked.has('/root/generated-docs/index.md')).toBe(false);
+    expect(untracked.has('/elsewhere/generated/schema.ts')).toBe(false);
   });
 
-  it('ignores nothing when git lists nothing', async () => {
+  it('reports nothing when git lists nothing', async () => {
     execGitCommand.mockResolvedValueOnce('/root');
     execGitCommand.mockResolvedValueOnce('');
 
-    const ignored = await getIgnoredPaths(ctx);
+    const untracked = await getUntrackedPaths(ctx);
 
-    expect(ignored.has('/root/src/Button.tsx')).toBe(false);
+    expect(untracked.has('/root/src/Button.tsx')).toBe(false);
   });
 });
 

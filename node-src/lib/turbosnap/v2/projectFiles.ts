@@ -13,9 +13,9 @@ import path from 'path';
 
 import { GitDeps } from '../../../git/execGit';
 import {
-  getIgnoredPaths,
-  IgnoredPaths,
+  getUntrackedPaths,
   trackedFiles as trackedRelativePaths,
+  UntrackedPaths,
 } from '../../../git/git';
 import { AbsolutePath } from '../../../types';
 import { getFileHashes } from '../../getFileHashes';
@@ -61,14 +61,14 @@ export interface ProjectFiles {
    */
   realPath(absolutePath: AbsolutePath): AbsolutePath;
   /**
-   * What git ignores: untracked files that `.gitignore` or another exclude source matches. A tracked
-   * file is never ignored, whatever the patterns say, and nor is a path outside the repository.
-   * Paths are matched exactly as git names them, so a path reached through a symlink is answered as
-   * not ignored; resolve it with `realPath` first. Rejects when git cannot answer: a guess of
-   * "nothing is ignored" would hash every generated file as a real change, which is the over-capture
-   * the skip rule exists to prevent.
+   * What git does not track: files outside the index, whether or not `.gitignore` or another exclude
+   * source matches them. A tracked file is never untracked, even with uncommitted edits, and nor is
+   * a path outside the repository. Paths are matched exactly as git names them, so a path reached
+   * through a symlink is answered as tracked; resolve it with `realPath` first. Rejects when git
+   * cannot answer: a guess of "everything is tracked" would hash every generated file as a real
+   * change, which is the over-capture the skip rule exists to prevent.
    */
-  ignoredPaths(): Promise<IgnoredPaths>;
+  untrackedPaths(): Promise<UntrackedPaths>;
 }
 
 /**
@@ -100,7 +100,7 @@ export function realProjectFiles(deps: GitDeps): ProjectFiles {
       writeFileSync(absolutePath, contents);
     },
     realPath,
-    ignoredPaths: () => getIgnoredPaths(deps),
+    untrackedPaths: () => getUntrackedPaths(deps),
   };
 }
 

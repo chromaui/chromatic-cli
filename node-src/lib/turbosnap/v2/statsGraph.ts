@@ -144,7 +144,7 @@ export async function readStatsGraph(
  * trace at an untraced importer, which is what the documented recipes rely on, untracing a barrel to
  * untrace what it re-exports and untracing a global decorator to untrace the utilities it imports.
  * The node itself stays, so an untraced story file is still a story file and an importer's edge to
- * it is still recorded. A gitignored file keeps its edges; see {@link SkipReason}.
+ * it is still recorded. An untracked file keeps its edges; see {@link SkipReason}.
  *
  * @param files The graph, mutated in place.
  * @param skippedFiles The skipped files with their reasons, keyed by canonical path.
