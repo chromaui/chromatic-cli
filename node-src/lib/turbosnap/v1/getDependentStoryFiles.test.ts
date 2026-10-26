@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Context, Module } from '../../../types';
 import TestLogger from '../../testLogger';
-import { getDependentStoryFiles, normalizePath } from './getDependentStoryFiles';
+import { getDependentStoryFiles } from './getDependentStoryFiles';
+import { normalizePath } from './statsPaths';
 
 const CSF_GLOB = String.raw`./src sync ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$`;
 const statsPath = 'preview-stats.json';
