@@ -3,6 +3,8 @@ import {
   copyFileSync as unMockedCopyFileSync,
   mkdtempSync as unMockedMkdtempSync,
   readFileSync as unMockedReadFileSync,
+  realpathSync,
+  rmSync,
   statSync as unMockedStatSync,
 } from 'fs';
 import { getPnpmLockfileParser, parsePnpmWorkspaceProject } from 'snyk-nodejs-lockfile-parser';
@@ -13,6 +15,7 @@ import { Context } from '../../..';
 import * as git from '../../../git/git';
 import getEnvironment from '../../getEnvironment';
 import TestLogger from '../../testLogger';
+import { BaselineCheckoutFailedError, LockFileParseFailedError } from './errors';
 import { findChangedDependencies } from './findChangedDependencies';
 
 vi.mock('snyk-nodejs-lockfile-parser');
@@ -412,5 +415,262 @@ describe('findChangedDependencies', () => {
     // HEAD and baseline for both the root and the nested package.
     expect(importers.toSorted()).toEqual(['.', '.', 'packages/ui', 'packages/ui']);
     expect(inspect).not.toHaveBeenCalled();
+  });
+});
+
+describe('findChangedDependencies with an added workspace', () => {
+  const manifestPath = 'packages/new-workspace/package.json';
+  const lockfilePath = 'pnpm-lock.yaml';
+  const workspaceName = 'new-workspace';
+  const getChangedFilesWithStatus = vi.mocked(git.getChangedFilesWithStatus);
+  const realpath = vi.mocked(realpathSync);
+  let context: Context;
+  let checkoutError: BaselineCheckoutFailedError;
+  let rootGraph: snykGraph.DepGraph;
+  let workspaceGraph: snykGraph.DepGraph;
+  let depGraph: typeof snykGraph;
+
+  // Use the real graph comparison so the safety checks see actual added, removed and
+  // upgraded dependencies, rather than a predetermined list from a comparator mock.
+  function graph(name: string, dependencies: [string, string][] = []) {
+    const builder = new depGraph.DepGraphBuilder({ name: 'pnpm' }, { name, version: '1.0.0' });
+    for (const [dependency, version] of dependencies) {
+      builder.addPkgNode({ name: dependency, version }, dependency);
+      builder.connectDep(builder.rootNodeId, dependency);
+    }
+    return builder.build();
+  }
+
+  function mockGraphs(...graphs: snykGraph.DepGraph[]) {
+    pnpmWorkspaceProject.mockReset();
+    for (const dependencyGraph of graphs) {
+      pnpmWorkspaceProject.mockResolvedValueOnce(dependencyGraph);
+    }
+  }
+
+  beforeEach(async () => {
+    depGraph = await vi.importActual<typeof snykGraph>('@snyk/dep-graph');
+    createChangedPackagesGraph.mockImplementation(depGraph.createChangedPackagesGraph);
+    rootGraph = graph('root', [['existing-dependency', '1.0.0']]);
+    const builder = new depGraph.DepGraphBuilder(
+      { name: 'pnpm' },
+      { name: workspaceName, version: '1.0.0' }
+    );
+    builder.addPkgNode({ name: 'direct-dependency', version: '1.0.0' }, 'direct');
+    builder.addPkgNode({ name: 'transitive-dependency', version: '1.0.0' }, 'transitive');
+    builder.connectDep(builder.rootNodeId, 'direct');
+    builder.connectDep('direct', 'transitive');
+    workspaceGraph = builder.build();
+    mockGraphs(rootGraph, rootGraph, workspaceGraph);
+
+    findFilesFromRepositoryRoot.mockImplementation(async (_, __, ...patterns) => {
+      if (patterns[0] === 'package.json') return ['package.json'];
+      if (patterns[0] === '**/package.json') return [manifestPath];
+      return patterns.includes(lockfilePath) ? [lockfilePath] : [];
+    });
+    const parser = await vi.importActual<typeof import('snyk-nodejs-lockfile-parser')>(
+      'snyk-nodejs-lockfile-parser'
+    );
+    pnpmLockfileParser.mockReturnValue(
+      parser.getPnpmLockfileParser(`
+lockfileVersion: '9.0'
+importers:
+  .: {}
+  packages/new-workspace: {}
+`)
+    );
+    readFileSync.mockReturnValue(JSON.stringify({ name: workspaceName }));
+    realpath.mockImplementation(String);
+    getChangedFilesWithStatus.mockResolvedValue([{ path: manifestPath, status: 'added' }]);
+    checkoutError = new BaselineCheckoutFailedError(`A:${manifestPath}`);
+    checkoutFile.mockImplementation(async (_, reference, file) => {
+      if (reference === 'A' && file === manifestPath) throw checkoutError;
+    });
+    context = getContext({
+      git: {
+        packageMetadataChanges: [{ commit: 'A', changedFiles: [lockfilePath, manifestPath] }],
+      },
+    });
+    // Keep parser mock responses deterministic across manifests and baselines.
+    context.env.CHROMATIC_TURBOSNAP_MANIFEST_CONCURRENCY = 1;
+    context.env.CHROMATIC_TURBOSNAP_PACKAGE_CONCURRENCY = 1;
+  });
+
+  afterEach(() => {
+    getChangedFilesWithStatus.mockReset();
+    realpath.mockReset();
+    readFileSync.mockReturnValue('');
+  });
+
+  it('includes the new workspace and its direct and transitive dependencies', async () => {
+    await expect(findChangedDependencies(context)).resolves.toEqual(
+      expect.arrayContaining([workspaceName, 'direct-dependency', 'transitive-dependency'])
+    );
+    expect(getChangedFilesWithStatus).toHaveBeenCalledWith(context, 'A', 'HEAD');
+    expect(rmSync).toHaveBeenCalledWith(tmpdir, { recursive: true, force: true });
+  });
+
+  it('does not mark unchanged dependencies of an existing workspace as changed', async () => {
+    const changes = await findChangedDependencies(context);
+    expect(changes).not.toContain('existing-dependency');
+    expect(changes).not.toContain('root');
+    expect(new Set(changes).size).toBe(changes.length);
+  });
+
+  it('allows an existing workspace to start depending on the new workspace', async () => {
+    const headRoot = graph('root', [
+      ['existing-dependency', '1.0.0'],
+      [workspaceName, '1.0.0'],
+    ]);
+    mockGraphs(headRoot, rootGraph, workspaceGraph);
+
+    const changes = await findChangedDependencies(context);
+    expect(changes).toContain(workspaceName);
+    expect(changes).toContain('transitive-dependency');
+    expect(changes.filter((name) => name === workspaceName)).toHaveLength(1);
+  });
+
+  it.each([
+    ['upgraded', [['existing-dependency', '2.0.0']]],
+    ['removed', []],
+    [
+      'added',
+      [
+        ['existing-dependency', '1.0.0'],
+        ['another-dependency', '1.0.0'],
+      ],
+    ],
+  ] satisfies [string, [string, string][]][])(
+    'preserves the fallback when an existing workspace dependency is %s',
+    async (_, dependencies) => {
+      mockGraphs(graph('root', dependencies), rootGraph, workspaceGraph);
+      await expect(findChangedDependencies(context)).rejects.toBe(checkoutError);
+    }
+  );
+
+  it.each(['dependency', 'root'])(
+    'preserves the fallback for a baseline %s name collision',
+    async (collision) => {
+      const baseline =
+        collision === 'root' ? graph(workspaceName) : graph('root', [[workspaceName, '0.9.0']]);
+      mockGraphs(graph('root', [[workspaceName, '1.0.0']]), baseline, workspaceGraph);
+      await expect(findChangedDependencies(context)).rejects.toBe(checkoutError);
+    }
+  );
+
+  it('preserves the fallback when a baseline graph lacks root metadata', async () => {
+    const incompleteGraph = new Proxy(rootGraph, {
+      get(target, property, receiver) {
+        return property === 'rootPkg' ? undefined : Reflect.get(target, property, receiver);
+      },
+    });
+    mockGraphs(rootGraph, incompleteGraph, workspaceGraph);
+    await expect(findChangedDependencies(context)).rejects.toBe(checkoutError);
+  });
+
+  it('checks dependency changes against every baseline', async () => {
+    context.git.packageMetadataChanges = [
+      { commit: 'A', changedFiles: [lockfilePath, manifestPath] },
+      { commit: 'B', changedFiles: [lockfilePath] },
+    ];
+    mockGraphs(
+      rootGraph,
+      rootGraph,
+      graph('root', [['existing-dependency', '0.9.0']]),
+      workspaceGraph,
+      workspaceGraph
+    );
+    await expect(findChangedDependencies(context)).rejects.toBe(checkoutError);
+    expect(checkoutFile).toHaveBeenCalledWith(context, 'B', manifestPath, tmpdir);
+  });
+
+  it('combines an addition at one baseline with an unchanged workspace at another', async () => {
+    context.git.packageMetadataChanges = [
+      { commit: 'A', changedFiles: [lockfilePath, manifestPath] },
+      { commit: 'B', changedFiles: [lockfilePath] },
+    ];
+    mockGraphs(rootGraph, rootGraph, rootGraph, workspaceGraph, workspaceGraph);
+    await expect(findChangedDependencies(context)).resolves.toEqual(
+      expect.arrayContaining([workspaceName, 'direct-dependency', 'transitive-dependency'])
+    );
+  });
+
+  describe('manifest qualification and error handling', () => {
+    it.each(['modified', 'deleted', 'renamed'] as const)(
+      'preserves the fallback when the missing manifest is %s, not added',
+      async (status) => {
+        getChangedFilesWithStatus.mockResolvedValue([{ path: manifestPath, status }]);
+        await expect(findChangedDependencies(context)).rejects.toBe(checkoutError);
+      }
+    );
+
+    it('does not qualify an addition of a different manifest', async () => {
+      getChangedFilesWithStatus.mockResolvedValue([
+        { path: 'other/package.json', status: 'added' },
+      ]);
+      await expect(findChangedDependencies(context)).rejects.toBe(checkoutError);
+    });
+
+    it('requires the checkout error to identify the exact baseline manifest', async () => {
+      checkoutError = new BaselineCheckoutFailedError(`B:${manifestPath}`);
+      await expect(findChangedDependencies(context)).rejects.toBe(checkoutError);
+      expect(getChangedFilesWithStatus).not.toHaveBeenCalled();
+    });
+
+    it('does not swallow unrelated checkout errors', async () => {
+      const error = new Error('Unable to read repository');
+      checkoutFile.mockRejectedValue(error);
+      await expect(findChangedDependencies(context)).rejects.toBe(error);
+      expect(getChangedFilesWithStatus).not.toHaveBeenCalled();
+    });
+
+    it('preserves the fallback if the baseline lockfile is unavailable', async () => {
+      const error = new BaselineCheckoutFailedError(`A:${lockfilePath}`);
+      checkoutFile.mockImplementation(async (_, __, file) => {
+        if (file === lockfilePath) throw error;
+      });
+      await expect(findChangedDependencies(context)).rejects.toBe(error);
+      expect(getChangedFilesWithStatus).not.toHaveBeenCalled();
+      expect(checkoutFile).not.toHaveBeenCalledWith(context, 'A', manifestPath, tmpdir);
+    });
+
+    it('propagates baseline dependency parsing failures', async () => {
+      pnpmWorkspaceProject.mockReset();
+      pnpmWorkspaceProject
+        .mockResolvedValueOnce(rootGraph)
+        .mockRejectedValueOnce(new Error('Invalid lockfile'));
+      await expect(findChangedDependencies(context)).rejects.toBeInstanceOf(
+        LockFileParseFailedError
+      );
+    });
+
+    it.each([{}, { name: 123 }, null])(
+      'preserves the fallback for an invalid workspace name: %j',
+      async (manifest) => {
+        readFileSync.mockReturnValue(JSON.stringify(manifest));
+        await expect(findChangedDependencies(context)).rejects.toBe(checkoutError);
+      }
+    );
+
+    it('does not swallow malformed manifest JSON', async () => {
+      readFileSync.mockReturnValue('{');
+      await expect(findChangedDependencies(context)).rejects.toBeInstanceOf(SyntaxError);
+    });
+
+    it.each(['/outside/package.json', '/root-sibling/package.json'])(
+      'rejects an added manifest whose symlink resolves outside the repository: %s',
+      async (target) => {
+        realpath.mockImplementation((file) => (String(file) === '/root' ? '/root' : target));
+        await expect(findChangedDependencies(context)).rejects.toBe(checkoutError);
+        expect(readFileSync).not.toHaveBeenCalledWith(target, 'utf8');
+      }
+    );
+
+    it('allows an added manifest whose symlink resolves inside the repository', async () => {
+      const target = '/root/manifests/new-workspace.json';
+      realpath.mockImplementation((file) => (String(file) === '/root' ? '/root' : target));
+      await expect(findChangedDependencies(context)).resolves.toContain(workspaceName);
+      expect(readFileSync).toHaveBeenCalledWith(target, 'utf8');
+    });
   });
 });
