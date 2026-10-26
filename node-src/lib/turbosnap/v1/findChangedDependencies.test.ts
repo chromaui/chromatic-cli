@@ -596,6 +596,14 @@ importers:
   });
 
   describe('manifest qualification and error handling', () => {
+    it('preserves the fallback when a manifest is reported as both added and renamed', async () => {
+      getChangedFilesWithStatus.mockResolvedValue([
+        { path: manifestPath, status: 'added' },
+        { path: manifestPath, fromPath: 'packages/old-workspace/package.json', status: 'renamed' },
+      ]);
+      await expect(findChangedDependencies(context)).rejects.toBe(checkoutError);
+    });
+
     it.each(['modified', 'deleted', 'renamed'] as const)(
       'preserves the fallback when the missing manifest is %s, not added',
       async (status) => {

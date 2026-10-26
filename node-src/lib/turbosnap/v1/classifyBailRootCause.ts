@@ -28,7 +28,7 @@ export async function classifyTagsFromError(
 /**
  * Refined root-cause kinds for a BaselineCheckoutFailedError.
  *
- * These exist for Sentry ONLY and are not sent to the backend.
+ * Used for diagnostics and manifest qualification; not sent to the backend.
  */
 export type BaselineCheckoutFailureKind =
   | 'baselineManifestMoved'
@@ -91,7 +91,7 @@ async function classifyBaselineCheckoutFailureTags(
  *
  * @returns The matching manifest failure kind.
  */
-function classifyManifestChange(
+export function classifyManifestChange(
   changes: ChangedFileWithStatus[],
   fileName: string
 ): BaselineCheckoutFailureKind {

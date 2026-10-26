@@ -11,6 +11,7 @@ import {
 } from '../../../git/git';
 import { Context } from '../../../types';
 import { matchesFile, SUPPORTED_LOCK_FILES } from '../../utilities';
+import { classifyManifestChange } from './classifyBailRootCause';
 import { compareBaseline } from './compareBaseline';
 import { BaselineCheckoutFailedError } from './errors';
 import { getDependencies } from './getDependencies';
@@ -252,7 +253,7 @@ async function getAddedWorkspace(
   }
   // Use the whole-tree diff so a rename is not mistaken for an addition.
   const changes = await getChangedFilesWithStatus(ctx, reference, 'HEAD');
-  if (!changes.some((change) => change.status === 'added' && change.path === manifestPath)) {
+  if (classifyManifestChange(changes, manifestPath) !== 'baselineManifestAdded') {
     throw error;
   }
   const manifest = readAddedManifest(rootPath, manifestPath, error);
