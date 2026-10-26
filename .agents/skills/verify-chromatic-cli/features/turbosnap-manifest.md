@@ -36,4 +36,5 @@ Preconditions:
 - The manifest is large. `$S run` prints only the first 40 lines, so always inspect `stdout.txt` with `jq`.
 - `--externals 'static/*.css'` matches nothing here because the CSS lives in `static/css/`. An empty `{}` usually means a glob that is too narrow, not a bug.
 - `-u/--untraced` with a story-local glob did not change `storyFiles` or `skippedFiles` counts in this repo. Do not cite that as proof of untraced behavior without a case that changes the output.
+- Files git doesn't track are skipped, not hashed (CAP-5348), whether or not `.gitignore` matches them. A new, uncommitted file a story imports appears in `.skippedFiles` as `"untracked"` and in `.files` with `"hash":"<skipped>"`, so editing it never changes the manifest. Commit it (or, in the repo, use an existing tracked file) before proving a hash change. A tracked file with uncommitted edits is still hashed.
 - Hashes come from files on disk, not the stats. To prove a hash changes, edit only a file with no uncommitted changes (`git -C "$REPO" status --short -- <file>` prints nothing), so restoring it with `git -C "$REPO" checkout -- <file>` afterward discards only your edit.
