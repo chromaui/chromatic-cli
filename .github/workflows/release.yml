@@ -15,8 +15,11 @@ on:
       - isChromatic.*
       - package.json
       - storybook-addon.*
+      - tsconfig.json
       - tsdown.config.ts
       - yarn.lock
+      - .tool-versions
+      - .yarnrc.yml
       - .github/actions/setup/**
       - .github/workflows/release.yml
       - scripts/publishAction.mjs
