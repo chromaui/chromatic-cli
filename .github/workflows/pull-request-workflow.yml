@@ -26,8 +26,16 @@ jobs:
       - id: diff
         name: Check for changes that need tests
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
+          # Codecov only passes codecov/patch for an empty upload on a commit that belongs to a PR,
+          # and merge group commits don't, so the merge queue always runs the full suite.
+          if [ "$GITHUB_EVENT_NAME" = "merge_group" ]; then
+            echo "Merge queue; running the full suite."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           # Files that cannot affect the build, the tests, or the published package. Any other
           # change, including to workflows or config, runs the full suite.
           skippable='\.md$|^docs/|^\.obvious/|^\.agents/|^LICENSE$'
