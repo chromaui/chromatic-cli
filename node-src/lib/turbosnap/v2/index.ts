@@ -2,22 +2,32 @@ import * as Sentry from '@sentry/node';
 
 import GraphQLClient from '../../../io/graphqlClient';
 import type { AbsolutePath, Stats } from '../../../types';
-import type { Logger } from '../../log';
+import missingStorybookConfig from '../../../ui/messages/warnings/missingStorybookConfig';
 import { TraceChangedFilesResult } from '../types';
 import { buildManifest, TurboSnapManifest, writeManifest } from './manifest';
-import { ProjectFiles } from './projectFiles';
+import { ManifestInput } from './manifestInput';
+import { MissingStorybookConfigError } from './outOfGraphFiles';
 import { uploadHashes } from './uploadHashes';
 
-interface TraceChangedFilesInput {
-  log: Logger;
+/**
+ * The level a v2 failure is logged at. We do this because we don't need logs showing up if the
+ * user didn't request TurboSnap for the build. Debug logs are fine.
+ */
+export type FailureLogLevel = 'error' | 'debug';
+
+/**
+ * The input to build the manifest (see {@link ManifestInput}), plus what this entry point adds on
+ * top: the stats to build it from, where to write it, how to upload it and how loudly to report a
+ * failure. `gitRoot` is optional here because that is its type on `ctx.git`; {@link traceChangedFiles}
+ * checks it is set, so callers don't have to.
+ */
+interface TraceChangedFilesInput extends Omit<ManifestInput, 'gitRoot'> {
+  failureLogLevel: FailureLogLevel;
   graphqlClient: GraphQLClient;
   buildId: string;
   stats: Stats;
   manifestPath: string;
-  projectRoot: string;
-  configDir: AbsolutePath;
-  staticDirs: AbsolutePath[];
-  projectFiles: ProjectFiles;
+  gitRoot: AbsolutePath | undefined;
 }
 
 /**
@@ -30,16 +40,13 @@ export type TraceChangedFilesV2Result = TraceChangedFilesResult | { status: 'fal
  * Determines which story files are affected by the changed source file hashes, bailing out of
  * TurboSnap when necessary.
  *
- * @param input The input to run TurboSnap 2.0.
+ * @param input The input to run TurboSnap 2.0; see {@link ManifestInput} for the manifest's share.
  * @param input.stats The preview stats file, read by the caller because v1 traces the same one.
  * @param input.manifestPath The path to write the manifest file to.
- * @param input.projectRoot The absolute Storybook project root used to read source files off disk
- * and to anchor manifest keys.
- * @param input.configDir The absolute Storybook config directory, hashed off disk because it is
- * never a bundler input.
- * @param input.staticDirs The absolute static directories, hashed off disk for the same reason.
- * @param input.projectFiles How to read the disk; see {@link ProjectFiles}. Required rather than
- * defaulted, so a caller cannot silently reach the real disk.
+ * @param input.gitRoot The absolute git repository root, as it arrives on `ctx.git`. The gitInfo task
+ * always sets it; its absence is reported as a v2 failure.
+ * @param input.failureLogLevel The level to log a v2 failure at, required rather than defaulted so a
+ * caller cannot pick a level by accident.
  *
  * @returns The TurboSnap result.
  */
@@ -49,16 +56,16 @@ export async function traceChangedFiles(
   let manifest: TurboSnapManifest;
   try {
     manifest = await buildManifest(input.stats, {
-      log: input.log,
-      projectRoot: input.projectRoot,
-      configDir: input.configDir,
-      staticDirs: input.staticDirs,
-      projectFiles: input.projectFiles,
+      ...input,
+      gitRoot: requireGitRoot(input.gitRoot),
     });
   } catch (error) {
-    input.log.error('Failed to build manifest for TurboSnap v2', error);
-    Sentry.captureException(error);
-    return { status: 'fallback' };
+    // A misconfigured project is the user's to fix, not a bug to report.
+    if (error instanceof MissingStorybookConfigError) {
+      input.log[input.failureLogLevel](missingStorybookConfig(error.configDirectory));
+      return { status: 'fallback' };
+    }
+    return failed(input, 'Failed to build manifest for TurboSnap v2', error);
   }
   input.log.debug('Generated manifest for TurboSnap v2');
 
@@ -67,23 +74,53 @@ export async function traceChangedFiles(
   try {
     writeManifest(manifest, input.manifestPath, input.projectFiles);
   } catch (error) {
-    input.log.error('Failed to write manifest for TurboSnap v2', error);
-    Sentry.captureException(error);
-    return { status: 'fallback' };
+    return failed(input, 'Failed to write manifest for TurboSnap v2', error);
   }
   input.log.debug(`Wrote manifest for TurboSnap v2 to ${input.manifestPath}`);
 
   try {
-    // We currently don't care about the output of this function because we'll always fallback to
-    // run TurboSnap v1
-    await uploadHashes(input.graphqlClient, input.buildId, manifest);
+    const response = await uploadHashes(input.graphqlClient, input.buildId, manifest);
+    // The Index refuses in the payload rather than as a GraphQL error, so a refusal resolves instead
+    // of throwing. We ignore the build it returns, but `errors` says whether the upload happened.
+    if (response.errors?.length) {
+      const messages = response.errors.map((error) => error.message ?? 'unknown error').join('; ');
+      throw new Error(`The backend API rejected the hash upload: ${messages}`);
+    }
   } catch (error) {
-    input.log.error('Failed to upload hashes for TurboSnap v2', error);
-    Sentry.captureException(error);
-    return { status: 'fallback' };
+    return failed(input, 'Failed to upload hashes for TurboSnap v2', error);
   }
+
   input.log.debug('Uploaded hashes for TurboSnap v2 to Chromatic');
 
   // Until we want to lean on the v2 output, we always fallback to v1.
+  return { status: 'fallback' };
+}
+
+/**
+ * Narrows the repository root the gitInfo task resolved upstream. It is always set by the time
+ * TurboSnap runs; the `Context` type just cannot say so.
+ *
+ * @param gitRoot The root as it arrives on `ctx.git`.
+ *
+ * @returns The absolute repository root.
+ *
+ * @throws {Error} When the root is missing, which is a bug upstream rather than a user error.
+ */
+function requireGitRoot(gitRoot: AbsolutePath | undefined): AbsolutePath {
+  if (!gitRoot) {
+    throw new Error(
+      'git.rootPath unexpectedly undefined. Should have been set in the gitInfo task upstream.'
+    );
+  }
+  return gitRoot;
+}
+
+function failed(
+  input: Pick<TraceChangedFilesInput, 'log' | 'failureLogLevel'>,
+  message: string,
+  error: unknown
+): TraceChangedFilesV2Result {
+  input.log[input.failureLogLevel](message, error);
+  Sentry.captureException(error);
   return { status: 'fallback' };
 }

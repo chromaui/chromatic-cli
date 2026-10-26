@@ -145,7 +145,11 @@ outputs:
   testCount:
     description: 'The number of tests on the build'
   changeCount:
-    description: 'The number of tests with visual changes, including any inherited changes (e.g. due to TurboSnap)'
+    description: 'The number of tests with visual changes, including any inherited changes (e.g. due to TurboSnap) and ignored tests. Use pendingCount for changes that still need review'
+  pendingCount:
+    description: 'The number of tests with changes that have not been accepted or denied. Does not include ignored tests'
+  ignoredCount:
+    description: 'The number of ignored tests on the build'
   errorCount:
     description: 'The number of tests with error(s), including any inherited errors (e.g. due to TurboSnap)'
   interactionTestFailuresCount:

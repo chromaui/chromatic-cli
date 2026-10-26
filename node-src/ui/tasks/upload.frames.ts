@@ -2,7 +2,16 @@ import { fallbackFailureState } from '../../renderer/engine';
 import { clackProgressBarRenderer } from '../../renderer/engine/clack/progressRenderer';
 import { captureTask } from '../../renderer/storybook/captureTask';
 import { Task } from '../../types';
-import { dryRun, failed, finalizing, invalid, starting, success, uploading } from './upload';
+import {
+  dryRun,
+  failed,
+  finalizing,
+  invalid,
+  starting,
+  success,
+  turboSnapped,
+  uploading,
+} from './upload';
 
 // Node-side scenarios for the upload task. The `?clack` Vite plugin runs this module in Node,
 // renders each export through the real Clack progress-bar renderer (upload wires the progress bar),
@@ -67,10 +76,10 @@ export const SuccessNoFiles = () =>
 // --dry-run self-skips; runTask drives the skipped state through `renderer.succeed`.
 export const DryRun = () => make(dryRun(ctx), pending);
 
-// The backend marked the build fully TurboSnapped (kind:'skip'); the upload frame renders bare (the
-// engine passes no reason). The TurboSnap success messages render as separate Info messages (see
-// `messages/info/buildFullyTurboSnapped.stories.ts`), logged from the task and flushed below.
-export const TurboSkipped = () => make({ status: 'skipped', title: pending.title }, pending);
+// The backend marked the build fully TurboSnapped (kind:'partial'). The TurboSnap success messages
+// render as separate Info messages (see `messages/info/buildFullyTurboSnapped.stories.ts`), logged
+// from the task and flushed below.
+export const TurboSkipped = () => make(turboSnapped(), pending);
 
 // upload's `failure` transition forks on `ctx.isReactNativeApp`, passing an RN-specific or generic
 // title to the engine's fallback failure state (the error body is logged, not shown in the frame).

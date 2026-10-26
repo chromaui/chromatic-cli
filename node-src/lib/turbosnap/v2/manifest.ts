@@ -14,6 +14,7 @@ import { ManifestInput } from './manifestInput';
 import { hashOutOfGraphFiles, OutOfGraphFiles, rollUpOutOfGraphFiles } from './outOfGraphFiles';
 import { normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
+import { buildSkipRule, SkipReason } from './skippedFiles';
 import { readStatsGraph } from './statsGraph';
 import { STORYBOOK_VERSION_KEY, StorybookFileKey } from './storybookFileKeys';
 import { collectStorybookFiles, FileAttribution } from './storybookFiles';
@@ -31,27 +32,33 @@ export interface TurboSnapManifest {
   storybookHash: string;
   /**
    * A rolled-up hash for each Storybook-wide category: the `preview` subtree, the `storybookGlobals`
-   * catch-all, the `storybookConfigFiles` and `staticFiles` out-of-graph sweeps, and the Storybook
-   * version (the plain version string, not a hash of it).
+   * roll-up, the `storybookConfigFiles`, `staticFiles` and `externals` out-of-graph sweeps, and the
+   * Storybook version (the plain version string, not a hash of it).
    */
   storybookConfigHashes: Map<StorybookFileKey, FileHash | StorybookVersion>;
   /** Rolled-up hash per story file, covering only that story's own transitive subtree. */
   storyFileHashes: Map<FilePath, FileHash>;
   /**
    * Which hashing home each real file landed in (story subtree, preview subtree, or the globals
-   * catch-all). A diagnostic record for the S3 manifest; it feeds no hash.
+   * roll-up). A diagnostic record for the S3 manifest; it feeds no hash.
    */
   attribution: FileAttribution;
   /**
    * The per-file detail behind the out-of-graph roll-ups, serialized as the top-level
-   * `storybookConfigFiles` and `staticFiles` maps.
+   * `storybookConfigFiles`, `staticFiles` and `externals` maps.
    */
   outOfGraphFiles: OutOfGraphFiles;
   /**
    * The unpruned graph parsed from `preview-stats.json`, including synthetic transit nodes used by
-   * roll-ups. Synthetic nodes are omitted only when the manifest is serialized.
+   * roll-ups. Synthetic nodes are omitted only when the manifest is serialized; files v2 skipped
+   * stay, hashed as `SKIPPED_HASH`, so the written graph keeps the edges that run through them.
    */
   files: Map<FilePath, TurboSnapFile>;
+  /**
+   * The on-disk files, in the graph or swept, that v2 skipped hashing, each with its reason; see
+   * `buildSkipRule`. A diagnostic record for the S3 manifest; it feeds no hash.
+   */
+  skippedFiles: Map<FilePath, SkipReason>;
 }
 
 /**
@@ -66,9 +73,11 @@ interface ManifestFile {
   storybookConfigHashes: Record<FilePath, FileHash | StorybookVersion>;
   storybookConfigFiles: Record<FilePath, FileHash>;
   staticFiles: Record<FilePath, FileHash>;
+  externals: Record<FilePath, FileHash>;
   storyFiles: Record<FilePath, FileHash>;
   attribution: Record<keyof FileAttribution, FilePath[]>;
   files: Record<FilePath, { hash: FileHash; dependencies: FilePath[] }>;
+  skippedFiles: Record<FilePath, SkipReason>;
 }
 
 /**
@@ -86,44 +95,51 @@ export async function buildManifest(
   stats: Stats,
   input: ManifestInput
 ): Promise<TurboSnapManifest> {
-  const { files, hashes, storyFiles } = await readStatsGraph(stats, input);
+  // Built once, since it asks git once, and shared by the graph and the out-of-graph sweep.
+  const skipRule = await buildSkipRule(input);
+  const {
+    files,
+    hashes,
+    storyFiles,
+    globalRoots,
+    skippedFiles: skippedGraphFiles,
+    untracedSubtrees,
+  } = await readStatsGraph(stats, input, skipRule);
   input.log.debug(`Found ${storyFiles.size} story files from preview-stats.json`);
 
   const { h64ToString } = await xxHashWasm();
   const storyFileHashes = new Map<FilePath, FileHash>();
-  const storyReachable = new Set<FilePath>();
-
   for (const storyFile of storyFiles) {
     const subtree = collectTransitiveDependencies(files, storyFile);
     storyFileHashes.set(storyFile, rollUpFileHashes(hashes, subtree, h64ToString));
-
-    for (const filePath of subtree) {
-      storyReachable.add(filePath);
-    }
   }
 
   const { storybookConfigHashes, attribution } = collectStorybookFiles(
     files,
     hashes,
-    storyReachable,
+    storyFiles,
     normalizeStatsPath(input.configDir, input.projectRoot),
+    globalRoots,
+    untracedSubtrees,
     h64ToString
   );
   input.log.debug(
     `Attributed ${attribution.previewSubtree.size} files to the preview config subtree`
   );
-  input.log.debug(`Found ${attribution.storybookGlobals.size} global files not linked to a story`);
+  input.log.debug(
+    `Found ${attribution.storybookGlobals.size} files in Storybook globals (files that could impact rendering across the entire Storybook)`
+  );
 
   // The preview core runtime may not exist in the module graph, so no file hash can see a Storybook
   // upgrade there. Track the version instead; it is a plain string, not a hash.
-  storybookConfigHashes.set(
-    STORYBOOK_VERSION_KEY,
-    resolveStorybookVersion(input.projectRoot, input.projectFiles)
-  );
+  storybookConfigHashes.set(STORYBOOK_VERSION_KEY, resolveStorybookVersion(input));
 
-  // Storybook's config directory and static assets are never bundler inputs, so nothing above can see
-  // them change. They get their own roll-ups; see rollUpOutOfGraphFiles.
-  const outOfGraphFiles = await hashOutOfGraphFiles(input);
+  // Storybook's config directory, static assets and the user's externals are never bundler inputs, so
+  // nothing above can see them change. They get their own roll-ups; see rollUpOutOfGraphFiles.
+  const { files: outOfGraphFiles, skippedFiles: skippedSweptFiles } = await hashOutOfGraphFiles(
+    input,
+    skipRule
+  );
   for (const [key, hash] of rollUpOutOfGraphFiles(outOfGraphFiles, h64ToString)) {
     storybookConfigHashes.set(key, hash);
   }
@@ -132,6 +148,13 @@ export async function buildManifest(
   );
   input.log.debug(
     `Hashed ${outOfGraphFiles.storybookConfigFiles.size} storybook config files in ${input.configDir}`
+  );
+  input.log.debug(
+    `Hashed ${outOfGraphFiles.externals.size} external files from ${input.externals.length} --externals globs`
+  );
+  const skippedFiles = new Map([...skippedGraphFiles, ...skippedSweptFiles]);
+  input.log.debug(
+    `Skipped hashing ${skippedFiles.size} files; the manifest's skippedFiles lists each with its reason`
   );
 
   // The backend's top-level "did Storybook change at all?" gate: the key and hash of every story
@@ -148,6 +171,7 @@ export async function buildManifest(
     attribution,
     outOfGraphFiles,
     files,
+    skippedFiles,
   };
 }
 
@@ -168,6 +192,7 @@ export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
       Object.fromEntries(manifest.outOfGraphFiles.storybookConfigFiles)
     ),
     staticFiles: sortByKey(Object.fromEntries(manifest.outOfGraphFiles.staticFiles)),
+    externals: sortByKey(Object.fromEntries(manifest.outOfGraphFiles.externals)),
     storyFiles: sortByKey(Object.fromEntries(manifest.storyFileHashes)),
     attribution: sortByKey(
       Object.fromEntries(
@@ -178,19 +203,29 @@ export function serializeManifest(manifest: TurboSnapManifest): ManifestFile {
       )
     ) as ManifestFile['attribution'],
     files: sortByKey(serializeFiles(manifest.files)),
+    skippedFiles: sortByKey(Object.fromEntries(manifest.skippedFiles)),
   };
 }
 
+/**
+ * Serializes the graph without its synthetic nodes: an empty hash means there is no file on disk. A
+ * skipped file keeps its sentinel hash and stays: it is a real file that a story can import tracked
+ * files through, so the written graph keeps that path visible.
+ *
+ * @param files The unpruned graph.
+ *
+ * @returns The graph of real files, each with its hash and the real files it depends on.
+ */
 function serializeFiles(files: Map<FilePath, TurboSnapFile>): ManifestFile['files'] {
+  const isRealFile = (filePath: FilePath) => Boolean(files.get(filePath)?.hash);
+
   const serialized: ManifestFile['files'] = {};
   for (const [filePath, file] of files) {
-    if (file.hash === '') {
-      continue;
-    }
+    if (!isRealFile(filePath)) continue;
     serialized[filePath] = {
       hash: file.hash,
       dependencies: [...file.dependencies]
-        .filter((dependency) => files.get(dependency)?.hash)
+        .filter((dependency) => isRealFile(dependency))
         .sort(comparePaths),
     };
   }

@@ -16,12 +16,24 @@ export interface InMemoryDisk {
   /** Installed version per package name, whatever directory it is resolved from. */
   packageVersions?: Record<string, string>;
   /**
+   * Installed version per package name, per absolute directory it is resolved from, for a suite
+   * whose assertion turns on which directory was asked. A directory with no entry for the package
+   * falls through to `packageVersions`.
+   */
+  packageVersionsByDirectory?: Record<AbsolutePath, Record<string, string>>;
+  /**
    * Whether a path has no file on disk. Everything else is a file, which is what keeps a suite from
-   * having to list every source file its stats fixture names.
+   * having to list every source file its stats fixture names. The one exception is a `package.json`,
+   * which is a file only when its directory lists it: one marks the boundary of a package, so a
+   * suite says where the packages are.
    */
   isAbsent?: (absolutePath: AbsolutePath) => boolean;
+  /** The absolute paths in the git index, whatever repository root is asked. Empty when unset. */
+  trackedFiles?: AbsolutePath[];
   /** Contents written by `writeFile`, keyed by absolute path, so a suite can read them back. */
   writtenFiles?: Record<AbsolutePath, string>;
+  /** Whether git does not track a path. Everything is tracked unless a suite says so. */
+  isUntracked?: (absolutePath: AbsolutePath) => boolean;
 }
 
 /**
@@ -40,18 +52,28 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
     return Boolean(disk.directories?.[absolutePath]);
   }
 
+  // A path is a file for the purposes of listing only when its parent directory names it. The
+  // "everything else is a file" default is for source files the stats fixture names; applying it here
+  // would turn a configured-but-missing static directory into a file.
+  function isListedFile(absolutePath: AbsolutePath): boolean {
+    return Boolean(
+      disk.directories?.[path.dirname(absolutePath)]?.includes(path.basename(absolutePath))
+    );
+  }
+
   function isFile(absolutePath: AbsolutePath): boolean {
+    if (path.basename(absolutePath) === 'package.json') return isListedFile(absolutePath);
     return !isDirectory(absolutePath) && !disk.isAbsent?.(absolutePath);
   }
 
-  function listTree(absoluteDirectory: AbsolutePath): AbsolutePath[] {
-    const entries = disk.directories?.[absoluteDirectory];
+  function listTree(absolutePath: AbsolutePath): AbsolutePath[] {
+    const entries = disk.directories?.[absolutePath];
     if (!entries) {
-      return [];
+      return isListedFile(absolutePath) ? [absolutePath] : [];
     }
 
     return entries.flatMap((name) => {
-      const entryPath = path.join(absoluteDirectory, name);
+      const entryPath = path.join(absolutePath, name);
       return disk.directories?.[entryPath] ? listTree(entryPath) : [entryPath];
     });
   }
@@ -59,7 +81,8 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
   return {
     isFile,
     isDirectory,
-    packageVersion: (_fromDirectory: AbsolutePath, packageName: string) =>
+    packageVersion: (fromDirectory: AbsolutePath, packageName: string) =>
+      disk.packageVersionsByDirectory?.[fromDirectory]?.[packageName] ??
       disk.packageVersions?.[packageName],
     hashAll: async (absolutePaths: AbsolutePath[]) => {
       // The real reader throws for anything it cannot read, so refusing here too keeps the callers'
@@ -74,9 +97,17 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
       );
     },
     listTree,
+    trackedFiles: async function* () {
+      yield* disk.trackedFiles ?? [];
+    },
     writeFile: (absolutePath: AbsolutePath, contents: string) => {
       disk.writtenFiles ??= {};
       disk.writtenFiles[absolutePath] = contents;
     },
+    // Symlinks are not modelled, so every path is already the real one.
+    realPath: (absolutePath: AbsolutePath) => absolutePath,
+    untrackedPaths: async () => ({
+      has: (absolutePath: AbsolutePath) => disk.isUntracked?.(absolutePath) ?? false,
+    }),
   };
 }

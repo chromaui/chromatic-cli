@@ -1,9 +1,13 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from 'vitest';
 
 import { Module } from '../../../types';
 import {
   canonicalFileNames,
   canonicalImporters,
+  foldStatsId,
+  gitRootGlobMatcher,
+  isInstalledPackagePath,
   isNodeModulesPath,
   isSyntheticFile,
   moduleFileNames,
@@ -141,6 +145,11 @@ describe('canonicalFileNames', () => {
       }),
       expected: ['./src/Button.stories.tsx', './src/Button.tsx'],
     },
+    {
+      name: 'a NUL proxy module name, folded onto the real file',
+      module: module({ name: '\0./../../node_modules/react/index.js?commonjs-module' }),
+      expected: ['../../node_modules/react/index.js'],
+    },
   ])('normalizes the file names of $name', ({ module: input, expected }) => {
     expect(canonicalFileNames(input, roots)).toEqual(expected);
   });
@@ -166,12 +175,30 @@ describe('canonicalImporters', () => {
       expected: ['./src/a.ts', '../shared/theme.ts'],
     },
     {
+      name: 'folds a proxy reason moduleName onto the real file',
+      module: module({
+        name: './src/Button.stories.tsx',
+        reasons: [{ moduleName: '\0./src/Foo.vue?vue&type=script&lang.ts' }],
+      }),
+      expected: ['./src/Foo.vue'],
+    },
+    {
       name: 'returns nothing when the module has no reasons',
       module: module({ name: './src/Button.tsx' }),
       expected: [],
     },
   ])('$name', ({ module: input, expected }) => {
     expect(canonicalImporters(input, roots)).toEqual(expected);
+  });
+
+  it('resolves the resource of a loader chain reason from the stats root', () => {
+    const input = module({
+      reasons: [
+        { moduleName: '../../node_modules/css-loader/dist/cjs.js!./packages/ui/src/a.css' },
+      ],
+    });
+
+    expect(canonicalImporters(input, { projectRoot, statsRoot: '/repo' })).toEqual(['./src/a.css']);
   });
 });
 
@@ -180,6 +207,18 @@ describe('normalizeStatsPath', () => {
     const dataUrl = 'data:font/ttf;base64,AAAAAAAAAAAAAAAAAA';
 
     expect(normalizeStatsPath(dataUrl, projectRoot)).toBe(dataUrl);
+  });
+
+  it('keeps a literal ? in a real on-disk filename, since no fold runs here', () => {
+    expect(normalizeStatsPath('/repo/packages/ui/public/what?.svg', projectRoot)).toBe(
+      './public/what?.svg'
+    );
+  });
+
+  it('keys a file with a literal ? apart from the same name without it', () => {
+    expect(normalizeStatsPath('/repo/packages/ui/public/what', projectRoot)).not.toBe(
+      normalizeStatsPath('/repo/packages/ui/public/what?.svg', projectRoot)
+    );
   });
 
   it('keeps a project-relative path as-is, with its ./ prefix', () => {
@@ -239,6 +278,147 @@ describe('normalizeStatsPath', () => {
     expect(normalizeStatsPath('./packages/ui/src/Button.stories.tsx', projectRoot, '/repo')).toBe(
       './src/Button.stories.tsx'
     );
+  });
+});
+
+describe('foldStatsId', () => {
+  it.each([
+    {
+      name: 'a NUL proxy for a relative CommonJS module',
+      id: '\0./../../node_modules/react/index.js?commonjs-module',
+      expected: './../../node_modules/react/index.js',
+    },
+    {
+      name: 'a query-suffixed framework block',
+      id: './src/Foo.vue?vue&type=script&lang.ts',
+      expected: './src/Foo.vue',
+    },
+    {
+      name: 'a query-suffixed html proxy entry',
+      id: './iframe.html?html-proxy&inline-css&index=0.css',
+      expected: './iframe.html',
+    },
+    {
+      name: 'an ordinary path whose segment ends in a mode token',
+      id: './src/tweak panel.tsx?raw',
+      expected: './src/tweak panel.tsx',
+    },
+    {
+      name: 'an ordinary path whose directory ends in lazy',
+      id: './src/Clazy icons.svg?url',
+      expected: './src/Clazy icons.svg',
+    },
+    {
+      name: 'a webpack loader chain',
+      id: '../../node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./src/lib/PathDerived/styles.module.css',
+      expected: './src/lib/PathDerived/styles.module.css',
+    },
+    {
+      name: 'an rsbuild inline match resource chain',
+      id: './src/lib/PathDerived/styles.module.css!=!../../node_modules/@rsbuild/core/compiled/css-loader/index.js??ruleSet[1].rules[3].use[1]!builtin:lightningcss-loader??ruleSet[1].rules[3].use[2]!./src/lib/PathDerived/styles.module.css',
+      expected: './src/lib/PathDerived/styles.module.css',
+    },
+    {
+      name: 'a !!-prefixed loader chain',
+      id: '!!../../node_modules/raw-loader/dist/cjs.js!./src/a.txt',
+      expected: './src/a.txt',
+    },
+    {
+      name: 'a loader chain whose resource carries a query',
+      id: '../../node_modules/some-loader/index.js!./src/icon.svg?raw',
+      expected: './src/icon.svg',
+    },
+    {
+      // The escape NUL is the file's, not a proxy marker: resolveStatsPath strips it later.
+      name: 'a loader chain whose resource is NUL-escaped',
+      id: '../../node_modules/x-loader/index.js!./node_modules/es5-ext/array/\0#/e-index-of.js',
+      expected: './node_modules/es5-ext/array/\0#/e-index-of.js',
+    },
+    {
+      name: 'a loader chain whose resource is a NUL proxy',
+      id: '../../node_modules/x-loader/index.js!\0./src/a.js?commonjs-module',
+      expected: './src/a.js',
+    },
+    {
+      name: 'a loader chain whose resource is an inline data URL',
+      id: '../../node_modules/url-loader/index.js!data:text/css,a?b',
+      expected: 'data:text/css,a?b',
+    },
+  ])('folds $name onto the file it stands for', ({ id, expected }) => {
+    expect(foldStatsId(id)).toBe(expected);
+  });
+
+  it.each([
+    ['a bare NUL module', '\0commonjsHelpers.js'],
+    ['a bare NUL module with a query', '\0vite/preload-helper.js?commonjs-module'],
+    ['an absolute opaque id', '\0/@data-uri/data:text/javascript,export default 1'],
+    ['a virtual module', 'virtual:@storybook/builder-vite/vite-app.js'],
+    ['an inline data URL', 'data:font/ttf;base64,AAAAAAAAAAAAAAAAAA'],
+    ['an inline data URL with a ! in its payload', 'data:text/javascript,alert("a!b?c")'],
+  ])('leaves %s unchanged, since no file stands behind it', (_name, id) => {
+    expect(foldStatsId(id)).toBe(id);
+  });
+
+  it.each([
+    [
+      'an rsbuild context name with a negative lookahead',
+      String.raw`./src sync ^\.\/(?!.*node_modules).*\.stories\.tsx$?query`,
+    ],
+    [
+      'a webpack lazy context name with a query',
+      String.raw`./src lazy ^\.\/.*\.stories\.(?:ts|tsx)$?query`,
+    ],
+    [
+      'an rspack lazy context name with a query',
+      String.raw`./src|lazy|/^\.\/.*$/|include: /(?:\.stories\.tsx)$?query`,
+    ],
+    [
+      'a webpack sync context name with a query',
+      String.raw`./src sync ^\.\/.*\.stories\.(?:ts|tsx)$?query`,
+    ],
+    [
+      'an rspack sync context name with a query',
+      String.raw`./src|sync|/^\.\/.*$/|include: /(?:\.stories\.tsx)$?query`,
+    ],
+    [
+      'a webpack eager context name with a query',
+      String.raw`./icons eager ^\.\/.*\.(?:svg)$?query`,
+    ],
+    ['a webpack weak context name with a query', String.raw`./icons weak ^\.\/.*\.(?:svg)$?query`],
+    [
+      'a webpack async-weak context name with a query',
+      String.raw`./icons async-weak ^\.\/.*\.(?:svg)$?query`,
+    ],
+    [
+      'a webpack lazy-once context name with a query',
+      String.raw`./icons lazy-once nonrecursive ^\.\/.*\.(?:svg)$?query`,
+    ],
+    [
+      'a webpack lazy context whose request ends in a slash',
+      String.raw`./src/lib/ lazy /^\.\/.*$/?query`,
+    ],
+    [
+      'a webpack weak context named after a deep directory',
+      String.raw`./packages/website/containers/ weak ^\.\/.*\.(?:ts|tsx)$?query`,
+    ],
+    [
+      'an rspack eager context name with a query',
+      String.raw`./icons|eager|/^\.\/.*$/|include: /(?:svg)$?query`,
+    ],
+    [
+      'an rspack weak context name with a query',
+      String.raw`./icons|weak|/^\.\/.*$/|include: /(?:svg)$?query`,
+    ],
+    [
+      'an rspack async-weak context name with a query',
+      String.raw`./icons|async-weak|/^\.\/.*$/|include: /(?:svg)$?query`,
+    ],
+    [
+      'an rspack lazy-once context name with a query',
+      String.raw`./icons|lazy-once|/^\.\/.*$/|include: /(?:svg)$?query`,
+    ],
+  ])('keeps the ? of %s', (_name, id) => {
+    expect(foldStatsId(id)).toBe(id);
   });
 });
 
@@ -302,6 +482,60 @@ describe('isNodeModulesPath', () => {
   });
 });
 
+describe('isInstalledPackagePath', () => {
+  it.each([
+    ['a hoisted package', './node_modules/react/index.js'],
+    ['an absolute package path', '/repo/node_modules/react/index.js'],
+    [
+      'a package in the pnpm virtual store',
+      './node_modules/.pnpm/react@19.0.0/node_modules/react/index.js',
+    ],
+    [
+      'a package in the Bun isolated store',
+      './node_modules/.bun/react@19.0.0/node_modules/react/index.js',
+    ],
+    [
+      'a package in the Deno store',
+      './node_modules/.deno/react@19.0.0/node_modules/react/index.js',
+    ],
+    ['a nested workspace package', './packages/ui/node_modules/lodash/lodash.js'],
+    ['a package nested in another', './node_modules/a/node_modules/b/index.js'],
+    [
+      'a package whose own directory is named .federation',
+      './node_modules/react/.federation/index.js',
+    ],
+    ['a package whose name only starts with .federation', './node_modules/.federation-x/index.js'],
+    ['a package path with Windows separators', String.raw`C:\repo\node_modules\react\index.js`],
+    ['a Vite pre-bundled copy of a package', '/repo/node_modules/.vite/deps/react.js'],
+    [
+      'a Storybook builder cache entry',
+      './node_modules/.cache/storybook-rsbuild-builder/storybook-stories.js',
+    ],
+  ])('is true for %s', (_description, filePath) => {
+    expect(isInstalledPackagePath(filePath)).toBe(true);
+  });
+
+  it.each([
+    ['a module federation entry', './node_modules/.federation/entry.3f2a1b.js'],
+    [
+      'a federation entry in a nested workspace package',
+      './packages/ui/node_modules/.federation/entry.3f2a1b.js',
+    ],
+    [
+      'a federation entry inside a pnpm store package',
+      './node_modules/.pnpm/a@1.0.0/node_modules/.federation/entry.js',
+    ],
+    [
+      'a federation entry with Windows separators',
+      String.raw`C:\repo\node_modules\.federation\entry.js`,
+    ],
+    ['a project source file', './src/Button.tsx'],
+    ['a project directory named .federation', './src/.federation/x.js'],
+  ])('is false for %s', (_description, filePath) => {
+    expect(isInstalledPackagePath(filePath)).toBe(false);
+  });
+});
+
 describe('isSyntheticFile', () => {
   it('recognizes an inline data URL by its leading scheme', () => {
     expect(isSyntheticFile('data:font/ttf;base64,AAAAAAAAAAAAAAAAAA')).toBe(true);
@@ -309,5 +543,37 @@ describe('isSyntheticFile', () => {
 
   it('does not mistake a real path containing data: for a synthetic module', () => {
     expect(isSyntheticFile('/repo/packages/data:exports/src/font.ts')).toBe(false);
+  });
+});
+
+describe('isSyntheticFile NUL proxy classification', () => {
+  it.each([
+    ['a bare NUL runtime helper', '\0commonjsHelpers.js'],
+    ['a bare NUL Vite preload helper', '\0vite/preload-helper.js'],
+    ['a bare NUL Vite modulepreload polyfill', '\0vite/modulepreload-polyfill.js'],
+    ['a bare NUL framework helper', '\0plugin-vue:export-helper'],
+    ['a NUL-prefixed opaque rooted id', '\0/@data-uri/data:text/javascript,export default 1'],
+  ])('classifies %s as synthetic', (_name, id) => {
+    expect(isSyntheticFile(id)).toBe(true);
+  });
+
+  it('does not classify a NUL proxy for a relative path as synthetic, since it folds onto a real file', () => {
+    expect(isSyntheticFile('\0./../../node_modules/react/index.js?commonjs-module')).toBe(false);
+  });
+});
+
+describe('gitRootGlobMatcher', () => {
+  it('matches a glob against the posix path relative to the repository root', () => {
+    const isMatch = gitRootGlobMatcher('/repo', ['packages/ui/src/generated/**']);
+
+    expect(isMatch('/repo/packages/ui/src/generated/schema.ts')).toBe(true);
+    expect(isMatch('/repo/packages/ui/src/Button.tsx')).toBe(false);
+  });
+
+  it('ignores an empty glob, which picomatch rejects, so an empty flag or configuration entry names nothing', () => {
+    const isMatch = gitRootGlobMatcher('/repo', ['', '**/*.css']);
+
+    expect(isMatch('/repo/packages/ui/src/theme.css')).toBe(true);
+    expect(isMatch('/repo/packages/ui/src/Button.tsx')).toBe(false);
   });
 });

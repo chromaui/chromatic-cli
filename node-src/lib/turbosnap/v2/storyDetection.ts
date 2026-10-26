@@ -3,6 +3,7 @@ import { FilePath } from './graph';
 import {
   canonicalImporters,
   isNodeModulesPath,
+  LAZY_CONTEXT_MARKER,
   normalizeStatsPath,
   rootFilePath,
   StatsRoots,
@@ -45,7 +46,7 @@ const STORIES_ENTRY_FILES = new Set([
 // Config entry files import the story require-context. They import non-story files too (e.g.
 // `.storybook/preview.ts`), so they only help locate the context — they are not treated as direct
 // story importers.
-const CONFIG_ENTRY_FILES = new Set([
+export const CONFIG_ENTRY_FILES = new Set([
   './storybook-config-entry.js',
   './node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js',
   './node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js',
@@ -54,9 +55,6 @@ const CONFIG_ENTRY_FILES = new Set([
 // Webpack/rspack name a module the bundle does not own `external "<request>"` (e.g. Storybook's
 // preview runtime globals). It has no on-disk file and imports nothing.
 const EXTERNAL_MODULE = /^external "/;
-
-// Webpack spells contexts with ` lazy `; rspack delimits the same marker with pipes.
-const LAZY_CONTEXT_MARKER = / lazy |\|lazy\|/;
 
 /**
  * Detects which modules in the stats are story files.

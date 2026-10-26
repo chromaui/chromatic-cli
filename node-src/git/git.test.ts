@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+/* eslint-disable max-lines */
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
 import {
@@ -10,6 +11,7 @@ import * as execGit from './execGit';
 import {
   checkoutFile,
   commitExists,
+  commitsExist,
   fetchCommit,
   findFilesFromRepositoryRoot,
   getBranch,
@@ -25,24 +27,24 @@ import {
   getSlug,
   getStorybookCreationDate,
   getUncommittedHash,
+  getUntrackedPaths,
   getUserEmail,
   getVersion,
   getVisitedCommitDetails,
   hasPreviousCommit,
   NULL_BYTE,
+  trackedFiles,
 } from './git';
 
 vi.mock('./execGit');
-vi.mock('fs/promises', () => ({ readFile: vi.fn() }));
-vi.mock('tmp-promise', () => ({
-  file: vi.fn().mockResolvedValue({ path: '/tmp/fake-target' }),
-}));
+vi.mock('fs/promises', () => ({ mkdir: vi.fn(), readFile: vi.fn() }));
 
 const execGitCommand = vi.mocked(execGit.execGitCommand);
+const execGitCommandEntries = vi.mocked(execGit.execGitCommandEntries);
 const execGitCommandOneLine = vi.mocked(execGit.execGitCommandOneLine);
 const execGitCommandCountLines = vi.mocked(execGit.execGitCommandCountLines);
 
-const { readFile } = vi.mocked(await import('fs/promises'));
+const { mkdir, readFile } = vi.mocked(await import('fs/promises'));
 
 const ctx = { log: new TestLogger() };
 
@@ -123,6 +125,16 @@ describe('getUncommittedHash', () => {
     execGitCommand.mockResolvedValue('1234567890');
     expect(await getUncommittedHash(ctx)).toEqual('1234567890');
   });
+
+  it('lists untracked files relative to the repository root', async () => {
+    execGitCommand.mockResolvedValue('1234567890');
+    await getUncommittedHash(ctx);
+    expect(execGitCommand).toHaveBeenCalledWith(
+      ctx,
+      'git ls-files --others --exclude-standard --full-name',
+      expect.anything()
+    );
+  });
 });
 
 describe('getSlug', () => {
@@ -135,6 +147,67 @@ describe('getSlug', () => {
 
     execGitCommand.mockResolvedValue('https://gitlab.com/foo/bar.baz.git');
     expect(await getSlug(ctx)).toBe('foo/bar.baz');
+  });
+
+  it('handles Azure DevOps remote urls', async () => {
+    execGitCommand.mockResolvedValue('https://dev.azure.com/org/project/_git/repo');
+    expect(await getSlug(ctx)).toBe('project/repo');
+
+    execGitCommand.mockResolvedValue('https://org@dev.azure.com/org/project/_git/repo');
+    expect(await getSlug(ctx)).toBe('project/repo');
+
+    execGitCommand.mockResolvedValue('git@ssh.dev.azure.com:v3/org/project/repo');
+    expect(await getSlug(ctx)).toBe('project/repo');
+  });
+
+  it('does not alter repo names containing _git', async () => {
+    execGitCommand.mockResolvedValue('https://github.com/owner/my_git_repo.git');
+    expect(await getSlug(ctx)).toBe('owner/my_git_repo');
+  });
+
+  it('does not drop a _git path segment for non-Azure DevOps remotes', async () => {
+    execGitCommand.mockResolvedValue('https://gitlab.com/group/_git/repo.git');
+    expect(await getSlug(ctx)).toBe('_git/repo');
+  });
+
+  it('decodes percent-encoded Azure DevOps project and repo names', async () => {
+    execGitCommand.mockResolvedValue('https://dev.azure.com/org/My%20Project/_git/My%20Repo');
+    expect(await getSlug(ctx)).toBe('my project/my repo');
+
+    execGitCommand.mockResolvedValue('git@ssh.dev.azure.com:v3/org/My%20Project/My%20Repo');
+    expect(await getSlug(ctx)).toBe('my project/my repo');
+
+    execGitCommand.mockResolvedValue('https://org.visualstudio.com/My%20Project/_git/My%20Repo');
+    expect(await getSlug(ctx)).toBe('my project/my repo');
+  });
+
+  it('keeps malformed percent-encoding in Azure DevOps remote urls as-is', async () => {
+    execGitCommand.mockResolvedValue('https://dev.azure.com/org/bad%zz/_git/repo');
+    expect(await getSlug(ctx)).toBe('bad%zz/repo');
+  });
+
+  it('uses the repo name as the project for short-form Azure DevOps remote urls', async () => {
+    execGitCommand.mockResolvedValue('https://dev.azure.com/org/_git/repo');
+    expect(await getSlug(ctx)).toBe('repo/repo');
+
+    execGitCommand.mockResolvedValue('https://org@dev.azure.com/org/_git/repo');
+    expect(await getSlug(ctx)).toBe('repo/repo');
+
+    execGitCommand.mockResolvedValue('https://org.visualstudio.com/_git/repo');
+    expect(await getSlug(ctx)).toBe('repo/repo');
+
+    execGitCommand.mockResolvedValue('https://org.visualstudio.com/DefaultCollection/_git/repo');
+    expect(await getSlug(ctx)).toBe('repo/repo');
+
+    execGitCommand.mockResolvedValue('https://dev.azure.com/org/_git/My%20Repo');
+    expect(await getSlug(ctx)).toBe('my repo/my repo');
+  });
+
+  it('skips the DefaultCollection segment in visualstudio.com remote urls', async () => {
+    execGitCommand.mockResolvedValue(
+      'https://org.visualstudio.com/DefaultCollection/project/_git/repo'
+    );
+    expect(await getSlug(ctx)).toBe('project/repo');
   });
 });
 
@@ -199,6 +272,49 @@ describe('fetchCommit', () => {
   it('does not run git for a value that is not a commit hash', async () => {
     expect(await fetchCommit(ctx, '"; rm -rf / #')).toEqual(false);
     expect(execGitCommand).not.toHaveBeenCalled();
+  });
+});
+
+describe('commitsExist', () => {
+  it('does not run git when given no commits', async () => {
+    expect(await commitsExist(ctx, [])).toEqual(new Set());
+    expect(execGitCommand).not.toHaveBeenCalled();
+  });
+
+  it('matches results to inputs by line position', async () => {
+    const full = 'a'.repeat(40);
+    execGitCommand.mockResolvedValue(
+      [
+        'bbb^{commit} missing',
+        `${full} commit 284`,
+        'ccc^{commit} ambiguous',
+        `${'d'.repeat(40)} commit 190`,
+      ].join('\n')
+    );
+    // The short `aaa` is printed back as its full SHA, so text matching would miss it.
+    expect(await commitsExist(ctx, ['bbb', 'aaa', 'ccc', 'ddd'])).toEqual(new Set(['aaa', 'ddd']));
+    expect(execGitCommand).toHaveBeenCalledWith(ctx, 'git cat-file --batch-check', {
+      input: 'bbb^{commit}\naaa^{commit}\nccc^{commit}\nddd^{commit}',
+      all: false,
+    });
+  });
+
+  it('checks commits one at a time when the line count does not match the input', async () => {
+    execGitCommand.mockImplementation(async (_, command) => {
+      if (command === 'git cat-file --batch-check') return `${'a'.repeat(40)} commit 284`;
+      if (command === 'git cat-file -e "bbb^{commit}"') return '';
+      throw new Error('fatal: Not a valid object name');
+    });
+    // By position, the single line would wrongly mark `aaa` as existing.
+    expect(await commitsExist(ctx, ['aaa', 'bbb'])).toEqual(new Set(['bbb']));
+  });
+
+  it('checks commits one at a time when the batch call fails', async () => {
+    execGitCommand.mockImplementation(async (_, command) => {
+      if (command === 'git cat-file -e "aaa^{commit}"') return '';
+      throw new Error('Command timed out');
+    });
+    expect(await commitsExist(ctx, ['aaa', 'bbb'])).toEqual(new Set(['aaa']));
   });
 });
 
@@ -296,6 +412,64 @@ describe('getChangedFilesWithStatus', () => {
   });
 });
 
+describe('getUntrackedPaths', () => {
+  // The index has at least one entry, so the untracked listing is trusted.
+  beforeEach(() => {
+    execGitCommandEntries.mockImplementationOnce(async function* () {
+      yield 'src/Button.tsx';
+    });
+  });
+
+  it('answers by absolute path, covering everything under a wholly untracked directory', async () => {
+    // first call from getRepositoryRoot()
+    execGitCommand.mockResolvedValueOnce('/root');
+    execGitCommand.mockResolvedValueOnce(
+      ['generated/', 'debug.log', 'node_modules/'].join(NULL_BYTE) + NULL_BYTE
+    );
+
+    const untracked = await getUntrackedPaths(ctx);
+
+    expect(execGitCommand).toHaveBeenNthCalledWith(
+      2,
+      ctx,
+      'git ls-files --others --directory -z --full-name -- :/',
+      { all: false, logResult: false }
+    );
+    expect(untracked.has('/root/generated/schema.ts')).toBe(true);
+    expect(untracked.has('/root/generated/deep/schema.ts')).toBe(true);
+    expect(untracked.has('/root/debug.log')).toBe(true);
+    expect(untracked.has('/root/node_modules/react/index.js')).toBe(true);
+
+    expect(untracked.has('/root/src/Button.tsx')).toBe(false);
+    expect(untracked.has('/root/generated-docs/index.md')).toBe(false);
+    expect(untracked.has('/elsewhere/generated/schema.ts')).toBe(false);
+  });
+
+  it('reports nothing when git lists nothing', async () => {
+    execGitCommand.mockResolvedValueOnce('/root');
+    execGitCommand.mockResolvedValueOnce('');
+
+    const untracked = await getUntrackedPaths(ctx);
+
+    expect(untracked.has('/root/src/Button.tsx')).toBe(false);
+  });
+});
+
+describe('trackedFiles', () => {
+  it('streams the whole index from the repository root', async () => {
+    execGitCommandEntries.mockImplementationOnce(async function* () {
+      yield* ['tailwind.config.js', 'packages/ui/src/Button.tsx'];
+    });
+
+    const results = await Array.fromAsync(trackedFiles(ctx, '/root'));
+
+    expect(execGitCommandEntries).toHaveBeenCalledWith(ctx, 'git ls-files --full-name -z', {
+      cwd: '/root',
+    });
+    expect(results).toEqual(['tailwind.config.js', 'packages/ui/src/Button.tsx']);
+  });
+});
+
 describe('findFilesFromRepositoryRoot', () => {
   it('finds files relative to the repository root', async () => {
     const filesFound = ['package.json', 'another/package/package.json'];
@@ -321,8 +495,71 @@ describe('findFilesFromRepositoryRoot', () => {
 });
 
 describe('checkoutFile', () => {
+  it('shows the file at the reference when it is a regular file', async () => {
+    execGitCommand.mockResolvedValueOnce('100644 blob abc123\tpackage.json');
+    execGitCommand.mockResolvedValueOnce('');
+
+    await checkoutFile(ctx, 'abc123', 'package.json', '/tmp/anywhere');
+
+    expect(execGitCommand).toHaveBeenNthCalledWith(
+      1,
+      ctx,
+      'git ls-tree --full-tree abc123 -- "package.json"'
+    );
+    expect(execGitCommand).toHaveBeenLastCalledWith(
+      ctx,
+      'git show "abc123:package.json" > "/tmp/anywhere/package.json"'
+    );
+  });
+
+  it('keeps the repository-relative path of the file under tmpdir', async () => {
+    execGitCommand.mockResolvedValueOnce('100644 blob abc123\tpackages/ui/package.json');
+    execGitCommand.mockResolvedValueOnce('');
+
+    await checkoutFile(ctx, 'abc123', 'packages/ui/package.json', '/tmp/anywhere');
+
+    expect(mkdir).toHaveBeenCalledWith('/tmp/anywhere/packages/ui', { recursive: true });
+    expect(execGitCommand).toHaveBeenLastCalledWith(
+      ctx,
+      'git show "abc123:packages/ui/package.json" > "/tmp/anywhere/packages/ui/package.json"'
+    );
+  });
+
+  it('follows committed symlinks to the linked file', async () => {
+    execGitCommand.mockResolvedValueOnce('120000 blob abc123\tpackages/app/pnpm-lock.yaml');
+    execGitCommand.mockResolvedValueOnce('../../shared/pnpm-lock.yaml\n');
+    execGitCommand.mockResolvedValueOnce('100644 blob def456\tshared/pnpm-lock.yaml');
+    execGitCommand.mockResolvedValueOnce('');
+
+    await checkoutFile(ctx, 'abc123', 'packages/app/pnpm-lock.yaml', '/tmp/anywhere');
+
+    expect(execGitCommand).toHaveBeenNthCalledWith(
+      2,
+      ctx,
+      'git show "abc123:packages/app/pnpm-lock.yaml"'
+    );
+    // The linked file's contents land at the symlink's own path, which is where callers look.
+    expect(execGitCommand).toHaveBeenLastCalledWith(
+      ctx,
+      'git show "abc123:shared/pnpm-lock.yaml" > "/tmp/anywhere/packages/app/pnpm-lock.yaml"'
+    );
+  });
+
+  it('wraps a symlink cycle in BaselineCheckoutFailedError', async () => {
+    execGitCommand.mockResolvedValueOnce('120000 blob abc123\ta/one');
+    execGitCommand.mockResolvedValueOnce('../b/two\n');
+    execGitCommand.mockResolvedValueOnce('120000 blob def456\tb/two');
+    execGitCommand.mockResolvedValueOnce('../a/one\n');
+
+    await expect(checkoutFile(ctx, 'abc123', 'a/one', '/tmp/anywhere')).rejects.toMatchObject({
+      name: 'BaselineCheckoutFailedError',
+      cause: { message: 'Symbolic link cycle: abc123:a/one' },
+    });
+  });
+
   it('wraps a failing `git show` in BaselineCheckoutFailedError with cause', async () => {
     const cause = new Error('git show failed');
+    execGitCommand.mockResolvedValueOnce('100644 blob abc123\tpackage.json');
     execGitCommand.mockRejectedValueOnce(cause);
 
     let err;
@@ -493,6 +730,23 @@ describe('getVisitedCommitDetails', () => {
 
   it('returns an empty array when git returns no output', async () => {
     execGitCommand.mockResolvedValue('');
+    expect(await getVisitedCommitDetails(ctx, ['abc123'])).toEqual([]);
+  });
+
+  it('passes SHAs via stdin instead of as arguments', async () => {
+    execGitCommand.mockResolvedValue('');
+    const commits = Array.from({ length: 50_000 }, (_, index) =>
+      index.toString(16).padStart(40, '0')
+    );
+    await getVisitedCommitDetails(ctx, commits);
+    const [, command, options] = execGitCommand.mock.calls[0];
+    expect(command).toBe('git log --no-walk=unsorted --stdin --format=%H%x00%P%x00%s%x00');
+    expect(command).not.toContain(commits[0]);
+    expect(options).toEqual({ input: commits.join('\n') });
+  });
+
+  it('returns an empty array instead of throwing when git fails', async () => {
+    execGitCommand.mockRejectedValue(new Error('Command failed with E2BIG'));
     expect(await getVisitedCommitDetails(ctx, ['abc123'])).toEqual([]);
   });
 });

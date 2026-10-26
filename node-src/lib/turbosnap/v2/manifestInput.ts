@@ -14,15 +14,24 @@ export interface ManifestInput {
   log: Logger;
   /** The absolute Storybook project root that canonical manifest keys are relative to. */
   projectRoot: AbsolutePath;
+  /** The absolute git repository root. */
+  gitRoot: AbsolutePath;
   /**
    * The absolute directory relative stats paths are named from. Defaults to the project root, which
    * is where a builder usually names them from.
    */
   statsRoot?: AbsolutePath;
-  /** How to read the disk; required, so no caller can silently get the real one. */
-  projectFiles: ProjectFiles;
+  /**
+   * The `--untraced` globs, relative to `gitRoot`, naming files that wall off tracing: neither their
+   * own changes nor those of files reached only through them recapture stories. Empty when unset.
+   */
+  untraced: string[];
   /** The absolute Storybook config directory, as it arrives on `ctx.storybook`. */
   configDir: AbsolutePath;
-  /** The absolute configured static directories. Empty when unset. */
+  /** The absolute configured static directories, or single static files. Empty when unset. */
   staticDirs: AbsolutePath[];
+  /** The user's `--externals` globs, relative to `gitRoot`. Empty when unset. */
+  externals: string[];
+  /** How to read the disk; required, so no caller can silently get the real one. */
+  projectFiles: ProjectFiles;
 }

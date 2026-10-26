@@ -1,7 +1,15 @@
-import { describe, expect, it } from 'vitest';
+/* eslint-disable max-lines */
+import { describe, expect, it, vi } from 'vitest';
 
-import { hashOutOfGraphFiles, OutOfGraphInput, rollUpOutOfGraphFiles } from './outOfGraphFiles';
+import TestLogger from '../../testLogger';
+import {
+  hashOutOfGraphFiles,
+  MissingStorybookConfigError,
+  OutOfGraphInput,
+  rollUpOutOfGraphFiles,
+} from './outOfGraphFiles';
 import { InMemoryDisk, inMemoryProjectFiles } from './projectFiles.fake';
+import { SkipRule } from './skippedFiles';
 
 const projectRoot = '/repo/packages/ui';
 const h64ToString = (value: string) => `h(${value})`;
@@ -13,16 +21,28 @@ const h64ToString = (value: string) => `h(${value})`;
 // mutates its disk between two sweeps reuses the same input.
 function makeInput(disk: InMemoryDisk, overrides?: Partial<OutOfGraphInput>): OutOfGraphInput {
   return {
+    log: new TestLogger(),
     projectRoot,
+    gitRoot: '/repo',
     configDir: `${projectRoot}/.storybook`,
     staticDirs: [`${projectRoot}/.storybook/static`],
+    externals: [],
     projectFiles: inMemoryProjectFiles(disk),
     ...overrides,
   };
 }
 
+// The skip rule is tested on its own, so the sweep is handed one that skips nothing unless a test
+// says otherwise.
+const skipNothing: SkipRule = () => undefined;
+
+async function sweep(input: OutOfGraphInput) {
+  const { files } = await hashOutOfGraphFiles(input, skipNothing);
+  return files;
+}
+
 async function rollUp(input: OutOfGraphInput) {
-  return rollUpOutOfGraphFiles(await hashOutOfGraphFiles(input), h64ToString);
+  return rollUpOutOfGraphFiles(await sweep(input), h64ToString);
 }
 
 describe('hashOutOfGraphFiles', () => {
@@ -34,7 +54,7 @@ describe('hashOutOfGraphFiles', () => {
       },
     };
 
-    const { storybookConfigFiles } = await hashOutOfGraphFiles(makeInput(disk));
+    const { storybookConfigFiles } = await sweep(makeInput(disk));
 
     expect([...storybookConfigFiles.keys()]).toEqual([
       './.storybook/main.ts',
@@ -48,14 +68,14 @@ describe('hashOutOfGraphFiles', () => {
       directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] },
     };
 
-    const { storybookConfigFiles } = await hashOutOfGraphFiles(makeInput(disk));
+    const { storybookConfigFiles } = await sweep(makeInput(disk));
 
     // The graph-rolled `.storybook/preview.ts` entry covers its *imports*; this covers its bytes,
     // which is what closes the empty-preview.ts case where the builder elides the module entirely.
     expect(storybookConfigFiles.has('./.storybook/preview.ts')).toBe(true);
   });
 
-  it('gives static files their own section, excluding them from the config sweep', async () => {
+  it('gives static files their own section, and keeps them in the config sweep when nested in the config dir', async () => {
     const disk: InMemoryDisk = {
       directories: {
         '/repo/packages/ui/.storybook': ['main.ts', 'static'],
@@ -63,11 +83,62 @@ describe('hashOutOfGraphFiles', () => {
       },
     };
 
-    const { storybookConfigFiles, staticFiles } = await hashOutOfGraphFiles(makeInput(disk));
+    const { storybookConfigFiles, staticFiles } = await sweep(makeInput(disk));
 
-    // Static wins over the config dir, mirroring v1 testing isStaticFile before isStorybookFile.
-    expect([...storybookConfigFiles.keys()]).toEqual(['./.storybook/main.ts']);
+    expect([...storybookConfigFiles.keys()]).toEqual([
+      './.storybook/main.ts',
+      './.storybook/static/mockServiceWorker.js',
+    ]);
     expect([...staticFiles.keys()]).toEqual(['./.storybook/static/mockServiceWorker.js']);
+  });
+
+  it('hashes a static entry that names a single file, which Storybook serves at its basename', async () => {
+    const disk: InMemoryDisk = {
+      directories: {
+        '/repo/packages/ui': ['favicon.ico'],
+        '/repo/packages/ui/.storybook': ['main.ts'],
+      },
+    };
+
+    const { staticFiles } = await sweep(
+      makeInput(disk, { staticDirs: [`${projectRoot}/favicon.ico`] })
+    );
+
+    expect([...staticFiles.keys()]).toEqual(['./favicon.ico']);
+  });
+
+  it('keeps config files in the config section when the config dir itself is a static dir', async () => {
+    const disk: InMemoryDisk = {
+      directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] },
+    };
+
+    const { storybookConfigFiles, staticFiles } = await sweep(
+      makeInput(disk, { staticDirs: [`${projectRoot}/.storybook`] })
+    );
+
+    expect([...storybookConfigFiles.keys()]).toEqual([
+      './.storybook/main.ts',
+      './.storybook/preview.ts',
+    ]);
+    expect([...staticFiles.keys()]).toEqual(['./.storybook/main.ts', './.storybook/preview.ts']);
+  });
+
+  it.each<[string, InMemoryDisk['directories']]>([
+    ['is not on disk', {}],
+    ['has no main config', { '/repo/packages/ui/.storybook': ['preview.ts'] }],
+    [
+      'only has a main config in a nested directory',
+      {
+        '/repo/packages/ui/.storybook': ['nested'],
+        '/repo/packages/ui/.storybook/nested': ['main.ts'],
+      },
+    ],
+  ])('refuses to sweep when the config dir %s', async (_, directories) => {
+    // Storybook requires main.*, so a directory without one is not a config directory. Refusing here
+    // is what guarantees the config section is never empty.
+    await expect(hashOutOfGraphFiles(makeInput({ directories }), skipNothing)).rejects.toThrow(
+      MissingStorybookConfigError
+    );
   });
 
   it('skips documentation files anywhere in the config dir', async () => {
@@ -78,7 +149,7 @@ describe('hashOutOfGraphFiles', () => {
       },
     };
 
-    const { storybookConfigFiles } = await hashOutOfGraphFiles(makeInput(disk));
+    const { storybookConfigFiles } = await sweep(makeInput(disk));
 
     // Docs in the config dir shouldn't affect the built Storybook, so they stay out of the roll-up
     // hash.
@@ -94,7 +165,7 @@ describe('hashOutOfGraphFiles', () => {
       },
     };
 
-    const { staticFiles } = await hashOutOfGraphFiles(makeInput(disk));
+    const { staticFiles } = await sweep(makeInput(disk));
 
     expect([...staticFiles.keys()]).toEqual(['./.storybook/static/terms.md']);
   });
@@ -104,7 +175,7 @@ describe('hashOutOfGraphFiles', () => {
       directories: { '/repo/packages/ui/.storybook': ['main.ts'] },
     };
 
-    const { staticFiles } = await hashOutOfGraphFiles(makeInput(disk, { staticDirs: [] }));
+    const { staticFiles } = await sweep(makeInput(disk, { staticDirs: [] }));
 
     expect(staticFiles.size).toBe(0);
   });
@@ -118,11 +189,144 @@ describe('hashOutOfGraphFiles', () => {
       },
     };
 
-    const { staticFiles } = await hashOutOfGraphFiles(
+    const { staticFiles } = await sweep(
       makeInput(disk, { staticDirs: [`${projectRoot}/public`, `${projectRoot}/assets`] })
     );
 
     expect([...staticFiles.keys()]).toEqual(['./assets/font.woff2', './public/logo.svg']);
+  });
+});
+
+describe('hashOutOfGraphFiles skipped files', () => {
+  it('drops a static file the rule skips and records it', async () => {
+    const disk: InMemoryDisk = {
+      directories: {
+        '/repo/packages/ui/.storybook': ['main.ts'],
+        '/repo/packages/ui/public': ['logo.svg', 'bundle.css'],
+      },
+    };
+
+    const { files, skippedFiles } = await hashOutOfGraphFiles(
+      makeInput(disk, { staticDirs: [`${projectRoot}/public`] }),
+      (candidate) => (candidate.endsWith('bundle.css') ? 'untracked' : undefined)
+    );
+
+    expect([...files.staticFiles.keys()]).toEqual(['./public/logo.svg']);
+    expect([...skippedFiles]).toEqual([['./public/bundle.css', 'untracked']]);
+  });
+
+  it('drops a config file the rule skips from the config section and records it', async () => {
+    const disk: InMemoryDisk = {
+      directories: {
+        '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts', 'decorators'],
+        '/repo/packages/ui/.storybook/decorators': ['withTheme.ts'],
+      },
+    };
+
+    const { files, skippedFiles } = await hashOutOfGraphFiles(makeInput(disk), (candidate) =>
+      candidate.includes('/decorators/') ? 'untraced' : undefined
+    );
+
+    expect([...files.storybookConfigFiles.keys()]).toEqual([
+      './.storybook/main.ts',
+      './.storybook/preview.ts',
+    ]);
+    expect([...skippedFiles]).toEqual([['./.storybook/decorators/withTheme.ts', 'untraced']]);
+  });
+
+  it('drops a skipped file from both sections when a static dir sits inside the config dir', async () => {
+    const disk: InMemoryDisk = {
+      directories: {
+        '/repo/packages/ui/.storybook': ['main.ts', 'static'],
+        '/repo/packages/ui/.storybook/static': ['logo.svg', 'bundle.css'],
+      },
+    };
+
+    const { files, skippedFiles } = await hashOutOfGraphFiles(makeInput(disk), (candidate) =>
+      candidate.endsWith('bundle.css') ? 'untraced' : undefined
+    );
+
+    expect([...files.storybookConfigFiles.keys()]).toEqual([
+      './.storybook/main.ts',
+      './.storybook/static/logo.svg',
+    ]);
+    expect([...files.staticFiles.keys()]).toEqual(['./.storybook/static/logo.svg']);
+    expect([...skippedFiles]).toEqual([['./.storybook/static/bundle.css', 'untraced']]);
+  });
+
+  it('hashes the main config even when the rule skips it, and logs that it did', async () => {
+    const log = new TestLogger();
+    const disk: InMemoryDisk = {
+      directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] },
+    };
+
+    const { files, skippedFiles } = await hashOutOfGraphFiles(
+      makeInput(disk, { log }),
+      () => 'untraced'
+    );
+
+    expect([...files.storybookConfigFiles.keys()]).toEqual(['./.storybook/main.ts']);
+    expect([...skippedFiles]).toEqual([['./.storybook/preview.ts', 'untraced']]);
+    expect(log.debug).toHaveBeenCalledWith(expect.stringContaining('/.storybook/main.ts'));
+  });
+});
+
+describe('hashOutOfGraphFiles externals', () => {
+  // Globs are the user's `--externals`, which v1 matches against git-root-relative changed files, so
+  // the same spelling has to match here against the same universe: the git index.
+  const disk: InMemoryDisk = {
+    directories: { '/repo/packages/ui/.storybook': ['main.ts'] },
+    trackedFiles: [
+      '/repo/tailwind.config.js',
+      '/repo/packages/ui/tailwind.config.js',
+      '/repo/packages/ui/src/styles/main.scss',
+      '/repo/packages/ui/src/Button.tsx',
+    ],
+  };
+
+  it('hashes the tracked files matching a glob, keyed by canonical project-relative path', async () => {
+    const { externals } = await sweep(
+      makeInput(disk, { externals: ['**/*.scss', 'packages/ui/tailwind.config.js'] })
+    );
+
+    expect([...externals.keys()]).toEqual(['./src/styles/main.scss', './tailwind.config.js']);
+  });
+
+  it('matches globs against git-root-relative paths, so a file above the project is reachable', async () => {
+    const { externals } = await sweep(makeInput(disk, { externals: ['tailwind.config.js'] }));
+
+    expect([...externals.keys()]).toEqual(['../../tailwind.config.js']);
+  });
+
+  it('is empty when no externals are configured, without reading the git index', async () => {
+    const projectFiles = inMemoryProjectFiles(disk);
+    const trackedFiles = vi.spyOn(projectFiles, 'trackedFiles');
+
+    const { externals } = await sweep(makeInput(disk, { projectFiles }));
+
+    expect(externals.size).toBe(0);
+    expect(trackedFiles).not.toHaveBeenCalled();
+  });
+
+  it('skips an indexed path with no file on disk, such as a deleted file or a submodule root', async () => {
+    const { externals } = await sweep(
+      makeInput(
+        { ...disk, isAbsent: (candidate) => candidate.endsWith('main.scss') },
+        { externals: ['**/*.scss', 'packages/ui/tailwind.config.js'] }
+      )
+    );
+
+    expect([...externals.keys()]).toEqual(['./tailwind.config.js']);
+  });
+
+  it('hashes an external file the rule skips, since v1 checks externals before it applies --untraced', async () => {
+    const { files, skippedFiles } = await hashOutOfGraphFiles(
+      makeInput(disk, { externals: ['packages/ui/tailwind.config.js'] }),
+      (candidate) => (candidate.endsWith('tailwind.config.js') ? 'untraced' : undefined)
+    );
+
+    expect([...files.externals.keys()]).toEqual(['./tailwind.config.js']);
+    expect(skippedFiles.size).toBe(0);
   });
 });
 
@@ -133,11 +337,72 @@ describe('rollUpOutOfGraphFiles', () => {
         '/repo/packages/ui/.storybook': ['main.ts', 'static'],
         '/repo/packages/ui/.storybook/static': ['logo.svg'],
       },
+      trackedFiles: ['/repo/tailwind.config.js'],
     };
 
-    const rollUps = await rollUp(makeInput(disk));
+    const rollUps = await rollUp(makeInput(disk, { externals: ['tailwind.config.js'] }));
 
-    expect([...rollUps.keys()]).toEqual(['storybookConfigFiles', 'staticFiles']);
+    expect([...rollUps.keys()]).toEqual(['storybookConfigFiles', 'staticFiles', 'externals']);
+  });
+
+  it('contributes no externals entry when the globs match nothing, so a project without externals is unchanged', async () => {
+    const disk: InMemoryDisk = { directories: { '/repo/packages/ui/.storybook': ['main.ts'] } };
+
+    const rollUps = await rollUp(makeInput(disk, { externals: ['tailwind.config.js'] }));
+
+    expect([...rollUps.keys()]).toEqual(['storybookConfigFiles']);
+  });
+
+  it('moves the externals roll-up when an external file content changes, leaving the others alone', async () => {
+    const external = '/repo/tailwind.config.js';
+    const disk: InMemoryDisk = {
+      directories: { '/repo/packages/ui/.storybook': ['main.ts'] },
+      trackedFiles: [external],
+      fileHashes: { [external]: 'T1' },
+    };
+    const input = makeInput(disk, { externals: ['tailwind.config.js'] });
+    const before = await rollUp(input);
+
+    disk.fileHashes = { [external]: 'T2' };
+    const after = await rollUp(input);
+
+    expect(after.get('externals')).not.toBe(before.get('externals'));
+    expect(after.get('storybookConfigFiles')).toBe(before.get('storybookConfigFiles'));
+  });
+
+  it('moves the externals roll-up when an external is renamed without changing its bytes', async () => {
+    const disk: InMemoryDisk = {
+      directories: { '/repo/packages/ui/.storybook': ['main.ts'] },
+      trackedFiles: ['/repo/tailwind.config.js'],
+      fileHashes: { '/repo/tailwind.config.js': 'T' },
+    };
+    const input = makeInput(disk, { externals: ['*.config.js'] });
+    const before = await rollUp(input);
+
+    // Same bytes under a different name is a different file to the tooling that reads it by name, so
+    // path identity is hashed here as it is for the other sections.
+    disk.trackedFiles = ['/repo/postcss.config.js'];
+    disk.fileHashes = { '/repo/postcss.config.js': 'T' };
+    const after = await rollUp(input);
+
+    expect(after.get('externals')).not.toBe(before.get('externals'));
+  });
+
+  it('moves the externals roll-up when another tracked file starts matching, leaving the others alone', async () => {
+    const disk: InMemoryDisk = {
+      directories: { '/repo/packages/ui/.storybook': ['main.ts'] },
+      trackedFiles: ['/repo/tailwind.config.js'],
+      fileHashes: { '/repo/tailwind.config.js': 'T' },
+    };
+    const input = makeInput(disk, { externals: ['*.config.js'] });
+    const before = await rollUp(input);
+
+    disk.trackedFiles = ['/repo/tailwind.config.js', '/repo/postcss.config.js'];
+    disk.fileHashes = { '/repo/tailwind.config.js': 'T', '/repo/postcss.config.js': 'P' };
+    const after = await rollUp(input);
+
+    expect(after.get('externals')).not.toBe(before.get('externals'));
+    expect(after.get('storybookConfigFiles')).toBe(before.get('storybookConfigFiles'));
   });
 
   it('moves the config roll-up when a config file content changes', async () => {
@@ -155,15 +420,15 @@ describe('rollUpOutOfGraphFiles', () => {
   });
 
   it('moves the static roll-up when a static file content changes, leaving the config roll-up alone', async () => {
-    const staticFile = '/repo/packages/ui/.storybook/static/logo.svg';
+    const staticFile = '/repo/packages/ui/public/logo.svg';
     const disk: InMemoryDisk = {
       directories: {
-        '/repo/packages/ui/.storybook': ['main.ts', 'static'],
-        '/repo/packages/ui/.storybook/static': ['logo.svg'],
+        '/repo/packages/ui/.storybook': ['main.ts'],
+        '/repo/packages/ui/public': ['logo.svg'],
       },
       fileHashes: { '/repo/packages/ui/.storybook/main.ts': 'M', [staticFile]: 'A1' },
     };
-    const input = makeInput(disk);
+    const input = makeInput(disk, { staticDirs: [`${projectRoot}/public`] });
     const before = await rollUp(input);
 
     disk.fileHashes = { '/repo/packages/ui/.storybook/main.ts': 'M', [staticFile]: 'A2' };
@@ -219,21 +484,27 @@ describe('rollUpOutOfGraphFiles', () => {
 
   it('moves the config roll-up when a config file is renamed without changing its bytes', async () => {
     const disk: InMemoryDisk = {
-      directories: { '/repo/packages/ui/.storybook': ['preview-head.html'] },
-      fileHashes: { '/repo/packages/ui/.storybook/preview-head.html': 'H' },
+      directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview-head.html'] },
+      fileHashes: {
+        '/repo/packages/ui/.storybook/main.ts': 'M',
+        '/repo/packages/ui/.storybook/preview-head.html': 'H',
+      },
     };
     const input = makeInput(disk);
     const before = await rollUp(input);
 
     // Storybook loads config files by name, so the same bytes under a new name inject elsewhere.
-    disk.directories = { '/repo/packages/ui/.storybook': ['preview-body.html'] };
-    disk.fileHashes = { '/repo/packages/ui/.storybook/preview-body.html': 'H' };
+    disk.directories = { '/repo/packages/ui/.storybook': ['main.ts', 'preview-body.html'] };
+    disk.fileHashes = {
+      '/repo/packages/ui/.storybook/main.ts': 'M',
+      '/repo/packages/ui/.storybook/preview-body.html': 'H',
+    };
     const after = await rollUp(input);
 
     expect(after.get('storybookConfigFiles')).not.toBe(before.get('storybookConfigFiles'));
   });
 
-  it('omits a section that has no files, matching how the globals catch-all behaves', async () => {
+  it('omits a section that has no files, matching how the globals roll-up behaves', async () => {
     const disk: InMemoryDisk = {
       directories: { '/repo/packages/ui/.storybook': ['main.ts'] },
     };

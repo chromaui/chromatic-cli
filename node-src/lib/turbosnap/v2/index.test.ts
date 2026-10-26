@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import GraphQLClient from '../../../io/graphqlClient';
 import { Stats } from '../../../types';
 import TestLogger from '../../testLogger';
-import { traceChangedFiles } from './index';
+import { FailureLogLevel, traceChangedFiles } from './index';
 import { ProjectFiles } from './projectFiles';
 import { InMemoryDisk, inMemoryProjectFiles } from './projectFiles.fake';
 
@@ -43,7 +43,7 @@ function setup() {
   const runQuery = vi.fn().mockResolvedValue({
     buildUploadHashes: { build: { turboSnapStatus: 'APPLIED', turboSnapMechanism: 'HASH_BASED' } },
   });
-  return { disk, projectFiles: inMemoryProjectFiles(disk), runQuery };
+  return { disk, log: new TestLogger(), projectFiles: inMemoryProjectFiles(disk), runQuery };
 }
 
 type Fixture = ReturnType<typeof setup>;
@@ -71,15 +71,31 @@ describe('traceChangedFiles', () => {
       storybookConfigFiles: expect.any(String),
       staticFiles: expect.any(String),
     });
+    // The static dir is nested in the config dir, so its asset is in both detail sections.
     expect(writtenManifest(fixture).storybookConfigFiles).toEqual({
       './.storybook/main.ts': expect.any(String),
       [PREVIEW]: expect.any(String),
+      './.storybook/static/logo.svg': expect.any(String),
     });
     expect(writtenManifest(fixture).staticFiles).toEqual({
       './.storybook/static/logo.svg': expect.any(String),
     });
     expect(writtenManifest(fixture).storyFiles).toEqual({ [STORY]: expect.any(String) });
     expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  it('uploads an externals roll-up and writes its detail when --externals matches tracked files', async () => {
+    const fixture = setup();
+    fixture.disk.trackedFiles = ['/repo/tailwind.config.js', '/repo/packages/ui/src/Button.tsx'];
+
+    await trace(fixture, {}, 'error', { externals: ['tailwind.config.js'] });
+
+    expect(uploaded(fixture).storybookConfigHashes).toEqual(
+      expect.objectContaining({ externals: expect.any(String) })
+    );
+    expect(writtenManifest(fixture).externals).toEqual({
+      '../../tailwind.config.js': expect.any(String),
+    });
   });
 
   it('falls back without uploading when manifest construction fails', async () => {
@@ -99,6 +115,40 @@ describe('traceChangedFiles', () => {
     expect(Sentry.captureException).toHaveBeenCalledWith(error);
     expect(fixture.runQuery).not.toHaveBeenCalled();
   });
+
+  // The gitInfo task always sets the root, so its absence is a bug to report, not a state to handle.
+  it('reports a missing git root as a failure and falls back without uploading', async () => {
+    const fixture = setup();
+
+    await expect(trace(fixture, {}, 'error', { gitRoot: undefined })).resolves.toEqual({
+      status: 'fallback',
+    });
+
+    expect(fixture.log.error).toHaveBeenCalledWith(
+      'Failed to build manifest for TurboSnap v2',
+      expect.objectContaining({ message: expect.stringContaining('git.rootPath') })
+    );
+    expect(Sentry.captureException).toHaveBeenCalledOnce();
+    expect(fixture.runQuery).not.toHaveBeenCalled();
+  });
+
+  it.each<FailureLogLevel>(['error', 'debug'])(
+    'surfaces the install advice at the %s level when Storybook cannot be resolved',
+    async (level) => {
+      const fixture = setup();
+      // A checkout with nothing installed: the version lookup is the first thing to notice.
+      fixture.disk.packageVersions = {};
+
+      await expect(trace(fixture, {}, level)).resolves.toEqual({ status: 'fallback' });
+
+      expect(fixture.log[level]).toHaveBeenCalledWith(
+        'Failed to build manifest for TurboSnap v2',
+        expect.objectContaining({
+          message: expect.stringContaining('must be installed before running Chromatic'),
+        })
+      );
+    }
+  );
 
   it('falls back without uploading when writing the manifest fails', async () => {
     const fixture = setup();
@@ -127,21 +177,107 @@ describe('traceChangedFiles', () => {
     // The manifest is still written before the upload, so the failure remains debuggable.
     expect(writtenManifest(fixture).storyFiles).toEqual({ [STORY]: expect.any(String) });
   });
+
+  it('falls back without logging success when the Index refuses the upload', async () => {
+    const fixture = setup();
+    fixture.runQuery.mockResolvedValue({
+      buildUploadHashes: {
+        errors: [{ message: 'Uploading hashes is only allowed for announced builds.' }],
+      },
+    });
+
+    await expect(trace(fixture)).resolves.toEqual({ status: 'fallback' });
+
+    expect(Sentry.captureException).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('Uploading hashes is only allowed for announced builds.'),
+      })
+    );
+    expect(fixture.log.debug).not.toHaveBeenCalledWith(
+      expect.stringContaining('Uploaded hashes for TurboSnap v2')
+    );
+  });
+
+  it.each<[FailureLogLevel, FailureLogLevel]>([
+    ['error', 'debug'],
+    ['debug', 'error'],
+  ])('logs a refusal at the level the caller gave (%s)', async (level, otherLevel) => {
+    const fixture = setup();
+    fixture.runQuery.mockResolvedValue({
+      buildUploadHashes: { errors: [{ message: 'Uploading hashes is not allowed.' }] },
+    });
+
+    await expect(trace(fixture, {}, level)).resolves.toEqual({ status: 'fallback' });
+
+    expect(fixture.log[level]).toHaveBeenCalledWith(
+      'Failed to upload hashes for TurboSnap v2',
+      expect.objectContaining({
+        message: expect.stringContaining('Uploading hashes is not allowed'),
+      })
+    );
+    expect(fixture.log[otherLevel]).not.toHaveBeenCalledWith(
+      'Failed to upload hashes for TurboSnap v2',
+      expect.anything()
+    );
+  });
+
+  it.each<FailureLogLevel>(['error', 'debug'])(
+    'falls back to v1 and advises --storybook-config-dir when the config dir has no main config (%s)',
+    async (level) => {
+      const fixture = setup();
+      fixture.disk.directories = { [configDirectory]: ['preview.ts'] };
+
+      await expect(trace(fixture, {}, level)).resolves.toEqual({ status: 'fallback' });
+
+      expect(fixture.log[level]).toHaveBeenCalledWith(expect.stringContaining(configDirectory));
+      expect(fixture.log[level]).toHaveBeenCalledWith(
+        expect.stringContaining('--storybook-config-dir')
+      );
+      // A misconfigured project is the user's to fix, not a CLI bug to report.
+      expect(Sentry.captureException).not.toHaveBeenCalled();
+      expect(fixture.runQuery).not.toHaveBeenCalled();
+      expect(writtenManifest(fixture)).toBeUndefined();
+    }
+  );
+
+  it('names the refusal even when the Index sends an error without a message', async () => {
+    const fixture = setup();
+    fixture.runQuery.mockResolvedValue({ buildUploadHashes: { errors: [{}] } });
+
+    await expect(trace(fixture)).resolves.toEqual({ status: 'fallback' });
+
+    expect(fixture.log.error).toHaveBeenCalledWith(
+      'Failed to upload hashes for TurboSnap v2',
+      expect.objectContaining({
+        message: 'The backend API rejected the hash upload: unknown error',
+      })
+    );
+  });
 });
 
 // Runs the entry point against the fixture's disk, with the fake client as its only network. A
 // `patchFiles` override replaces adapter methods for the paths only a failing read or write reaches.
-function trace({ projectFiles, runQuery }: Fixture, patchFiles: Partial<ProjectFiles> = {}) {
+function trace(
+  { log, projectFiles, runQuery }: Fixture,
+  patchFiles: Partial<ProjectFiles> = {},
+  failureLogLevel: FailureLogLevel = 'error',
+  overrides: { gitRoot?: string; externals?: string[] } = {}
+) {
   return traceChangedFiles({
-    log: new TestLogger(),
+    log,
+    failureLogLevel,
     graphqlClient: { runQuery } as unknown as GraphQLClient,
     buildId: 'build-id',
     stats: stats(),
     manifestPath,
     projectRoot,
+    gitRoot: '/repo',
+    untraced: [],
     configDir: configDirectory,
     staticDirs: [`${configDirectory}/static`],
+    externals: [],
     projectFiles: { ...projectFiles, ...patchFiles },
+    ...overrides,
   });
 }
 

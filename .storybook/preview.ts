@@ -26,9 +26,15 @@ const ESC = String.fromCodePoint(27);
 const BEL = String.fromCodePoint(7);
 const OSC8_HYPERLINK = new RegExp(`${ESC}\\]8;;.*?${BEL}(.*?)${ESC}\\]8;;${BEL}`, 'g');
 
+// CLI output is plain text, so anything that looks like markup (e.g. a "<dir>" placeholder) must
+// be escaped before ansi-html turns the SGR codes into real tags.
+function escapeHtml(value) {
+  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+}
+
 function renderCliAnsi(value) {
   const withoutHyperlinks = value.replace(OSC8_HYPERLINK, (_match, text) => text);
-  return ansiHTML(withoutHyperlinks);
+  return ansiHTML(escapeHtml(withoutHyperlinks));
 }
 
 const decorators = [

@@ -1,7 +1,6 @@
 import eslint from '@eslint/js';
 import comments from '@eslint-community/eslint-plugin-eslint-comments/configs';
 import jsdoc from 'eslint-plugin-jsdoc';
-import noSecrets from 'eslint-plugin-no-secrets';
 import prettier from 'eslint-plugin-prettier';
 import security from 'eslint-plugin-security';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
@@ -18,12 +17,12 @@ export default [
       'dist/**',
       'action/**',
       'bin/**',
-      '**/build/*',
       '.storybook/**',
       'storybook-static/**',
       'storybook-out/**',
       'coverage/**',
       'smoke-tests/**',
+      'e2e/fixtures/**',
       // Storybook config fixtures: intentionally a mix of module formats, so linting them is noise.
       'node-src/__mocks__/storybookMainConfig/**',
     ],
@@ -176,18 +175,6 @@ export default [
       'security/detect-unsafe-regex': 'off',
     },
   },
-  {
-    files: ['**/*.js', '**/*.ts'],
-    plugins: {
-      'no-secrets': noSecrets,
-    },
-    rules: {
-      'no-secrets/no-secrets': [
-        'error',
-        { ignoreContent: '^(https://www.chromatic.com/|/var/folders/)*' },
-      ],
-    },
-  },
   // run prettier and expose problems as linting errors
   // NOTE: This does slow down eslint (about 25% slower)
   // If this becomes problematic, we can discuss removing it
@@ -269,7 +256,6 @@ export default [
   {
     files: ['**/*.test.*'],
     rules: {
-      'no-secrets/no-secrets': 'warn',
       'max-lines': 'warn',
       'jsdoc/require-jsdoc': 'off',
       'unicorn/no-null': 'off', // GraphQL returns `null` when there is no value

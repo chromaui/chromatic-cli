@@ -1,19 +1,28 @@
-import { Stats } from '../../../types';
-import { FileHash, FilePath, TurboSnapFile } from './graph';
+import { AbsolutePath, Stats } from '../../../types';
+import {
+  collectTransitiveDependencies,
+  FileHash,
+  FilePath,
+  SKIPPED_HASH,
+  TurboSnapFile,
+} from './graph';
 import { ManifestInput } from './manifestInput';
 import {
   canonicalFileNames,
   canonicalImporters,
+  foldStatsId,
   isNodeModulesPath,
   isSyntheticFile,
   moduleFileNames,
   normalizeStatsPath,
   resolveStatsPath,
+  StatsRoots,
 } from './paths';
 import { ProjectFiles } from './projectFiles';
-import { detectStoryFiles } from './storyDetection';
+import { partitionSkipped, SkipReason, SkipRule } from './skippedFiles';
+import { CONFIG_ENTRY_FILES, detectStoryFiles } from './storyDetection';
 
-/** The part of {@link ManifestInput} reading the stats file needs: the two roots, and the disk. */
+/** The part of {@link ManifestInput} reading the stats file needs: the two roots and the disk. */
 export type StatsContext = Pick<ManifestInput, 'projectRoot' | 'statsRoot' | 'projectFiles'>;
 
 /**
@@ -23,37 +32,79 @@ export type StatsContext = Pick<ManifestInput, 'projectRoot' | 'statsRoot' | 'pr
  *
  * The graph is *unpruned*: synthetic nodes with no file on disk (require-context globs, externals,
  * virtual modules) are still members, because they are members of the subtrees the roll-ups walk.
- * {@link serializeManifest} filters them only when the manifest is written.
+ * {@link serializeManifest} filters them only when the manifest is written. Files v2 skips are
+ * members too, hashed as {@link SKIPPED_HASH}, which is what tells them apart from synthetic nodes.
  */
 export interface StatsGraph {
   /** Every module path, with its content hash and the paths it depends on. */
   files: Map<FilePath, TurboSnapFile>;
-  /** Content hashes keyed by canonical path; a missing entry means there is no file on disk. */
+  /**
+   * An entry for every on-disk file, keyed by canonical path: its content hash, or
+   * {@link SKIPPED_HASH} when v2 skipped the file (see {@link buildSkipRule}). A missing entry
+   * means there is no file on disk.
+   */
   hashes: Map<FilePath, FileHash>;
+  /** The on-disk files v2 skipped hashing, keyed by canonical path, each with its reason. */
+  skippedFiles: Map<FilePath, SkipReason>;
+  /**
+   * The untraced files and every path they imported, directly or through further imports, before
+   * their edges were severed. A file reached only this way is untraced by inheritance: it is in no
+   * story's subtree, and the globals fallback must not adopt it either, or an edit behind the wall
+   * would recapture every story instead of none; see `collectStorybookFiles`.
+   */
+  untracedSubtrees: Set<FilePath>;
   /** The canonical paths the builder's entries identify as story files. */
   storyFiles: Set<FilePath>;
+  /**
+   * Known builder-generated modules that load preview annotations for every story. The paths are
+   * canonical and include only roots present in this graph; see {@link detectGlobalRoots}.
+   */
+  globalRoots: Set<FilePath>;
 }
+
+// Vite uses virtual composition roots instead of `storybook-config-entry.js`. Storybook 8 and 9
+// load annotations from `vite-app.js`; Storybook 10 loads them through `project-annotations.js`.
+// Include both the raw virtual IDs and the resolved IDs that begin with `/virtual:`.
+//
+// Storybook 10.3.0 up to the release that includes storybookjs/storybook#36345 omits
+// `project-annotations.js` and its edges from the stats. There, the globals fallback can still find
+// a disconnected annotation, but not one that a story also imports; the graph contains no evidence
+// that the file is global.
+const VITE_COMPOSITION_ROOTS = new Set([
+  '/virtual:/@storybook/builder-vite/vite-app.js',
+  'virtual:@storybook/builder-vite/vite-app.js',
+  '/virtual:/@storybook/builder-vite/project-annotations.js',
+  'virtual:@storybook/builder-vite/project-annotations.js',
+]);
 
 /**
  * Reads a stats file into the graph the manifest rolls up: what each module is, what it depends on,
  * what it hashes to and which modules are story files.
  *
- * Hashing happens here rather than in the caller because story detection depends on it: telling a
- * story file apart from a require-context glob is asking whether there is a real file on disk, which
- * is what the hashes answer.
+ * Locating files on disk happens here rather than in the caller because story detection depends on
+ * it: telling a story file apart from a require-context glob is asking whether there is a real file
+ * on disk. Hashing follows from the same lookup.
  *
  * @param stats The stats file to parse.
  * @param context The context the stats file was built in, which is needed to resolve module paths to
  * absolute files; see {@link StatsContext}.
+ * @param skipRule Which on-disk files to leave unhashed; see {@link buildSkipRule}.
  *
  * @returns The unpruned graph; see {@link StatsGraph}.
  */
-export async function readStatsGraph(stats: Stats, context: StatsContext): Promise<StatsGraph> {
+export async function readStatsGraph(
+  stats: Stats,
+  context: StatsContext,
+  skipRule: SkipRule
+): Promise<StatsGraph> {
   const { projectRoot, statsRoot = projectRoot, projectFiles } = context;
   const roots = { projectRoot, statsRoot };
-  const hashes = await hashFiles(stats, projectRoot, statsRoot, projectFiles);
+  const onDiskFiles = locateOnDiskFiles(stats, roots, projectFiles);
+  const { hashes, skippedFiles } = await hashOnDiskFiles(onDiskFiles, skipRule, projectFiles);
 
-  const storyFiles = detectStoryFiles({ ...roots, onDiskFiles: hashes }, stats);
+  // Story detection sees every file on disk, skipped or not: a generated story file is still a
+  // story file, so its stories keep a hash that moves with the tracked files they import.
+  const storyFiles = detectStoryFiles({ ...roots, onDiskFiles }, stats);
 
   const files = new Map<FilePath, TurboSnapFile>();
   for (const module of stats.modules) {
@@ -69,11 +120,54 @@ export async function readStatsGraph(stats: Stats, context: StatsContext): Promi
     linkConcatenatedFiles(files, sourceFilePath, concatenated, hashes);
 
     for (const importer of importers) {
+      // Folding can make the importer and the imported the same file (Foo.vue importing its own
+      // script block): a self-edge carries no information and would survive serialization.
+      if (importer === sourceFilePath) continue;
       ensureFile(files, importer, hashes).dependencies.add(sourceFilePath);
     }
   }
 
-  return { files, hashes, storyFiles };
+  const untracedSubtrees = wallOffUntracedFiles(files, skippedFiles);
+
+  return {
+    files,
+    hashes,
+    storyFiles,
+    globalRoots: detectGlobalRoots(files, roots),
+    skippedFiles,
+    untracedSubtrees,
+  };
+}
+
+/**
+ * Severs the dependency edges of every untraced file, making it the wall v1 makes it: v1 stops its
+ * trace at an untraced importer, which is what the documented recipes rely on, untracing a barrel to
+ * untrace what it re-exports and untracing a global decorator to untrace the utilities it imports.
+ * The node itself stays, so an untraced story file is still a story file and an importer's edge to
+ * it is still recorded. An untracked file keeps its edges; see {@link SkipReason}.
+ *
+ * @param files The graph, mutated in place.
+ * @param skippedFiles The skipped files with their reasons, keyed by canonical path.
+ *
+ * @returns The untraced files and everything the severed edges led to; see
+ * {@link StatsGraph.untracedSubtrees}.
+ */
+function wallOffUntracedFiles(
+  files: Map<FilePath, TurboSnapFile>,
+  skippedFiles: Map<FilePath, SkipReason>
+): Set<FilePath> {
+  const untracedFiles = [...skippedFiles]
+    .filter(([, reason]) => reason === 'untraced')
+    .map(([filePath]) => filePath);
+
+  const subtrees = new Set<FilePath>();
+  for (const filePath of untracedFiles) {
+    collectTransitiveDependencies(files, filePath, subtrees);
+  }
+  for (const filePath of untracedFiles) {
+    files.get(filePath)?.dependencies.clear();
+  }
+  return subtrees;
 }
 
 /**
@@ -93,6 +187,33 @@ export function countNodeModulesFiles(stats: Stats): number {
 }
 
 /**
+ * Finds known builder-generated modules that load preview annotations for every story. Walking from
+ * these roots identifies global files by reachability instead of by filename: an annotation can live
+ * anywhere, and an unrelated story dependency can also be named `preview.ts`.
+ *
+ * Only known root names qualify. Other synthetic modules do not necessarily affect every story.
+ *
+ * @param files The unpruned canonical graph. Composition roots are usually synthetic and therefore
+ * absent from the content hashes, but they are retained in this graph.
+ * @param roots The filesystem roots used to resolve builder-specific module names; see
+ * {@link StatsRoots}.
+ *
+ * @returns The canonical paths of the global composition roots present in the graph.
+ */
+function detectGlobalRoots(files: Map<FilePath, TurboSnapFile>, roots: StatsRoots): Set<FilePath> {
+  // The config entry loads the preview annotations on webpack/rspack, so it is a global root here
+  // as well as the locator of the story require-context in story detection. The Vite roots load
+  // preview annotations only, so they stay out of story detection and the two sets are not merged.
+  //
+  // Normalize the known builder-specific names the same way as every other stats path before
+  // comparing them with the graph's canonical keys.
+  const known = [...CONFIG_ENTRY_FILES, ...VITE_COMPOSITION_ROOTS].map((name) =>
+    normalizeStatsPath(name, roots.projectRoot, roots.statsRoot)
+  );
+  return new Set(known.filter((filePath) => files.has(filePath)));
+}
+
+/**
  * Records the internal edges of a concatenated module: webpack/rspack bundle several real files into
  * one module, so the other files become dependencies of the concatenation root. Each of them also gets
  * an entry of its own, so no dependency reference names a file the serialized graph omits.
@@ -100,7 +221,7 @@ export function countNodeModulesFiles(stats: Stats): number {
  * @param files The map of files to their hashes and dependencies, mutated in place.
  * @param rootPath The canonical path of the concatenation root.
  * @param concatenated The canonical paths of the other files bundled into the same module.
- * @param hashes The content hashes keyed by canonical file path.
+ * @param hashes The hash of every on-disk file, keyed by canonical path, or `SKIPPED_HASH` for a file v2 skipped.
  */
 function linkConcatenatedFiles(
   files: Map<FilePath, TurboSnapFile>,
@@ -110,6 +231,9 @@ function linkConcatenatedFiles(
 ) {
   const rootFile = ensureFile(files, rootPath, hashes);
   for (const dependency of concatenated) {
+    // A member may fold onto the root (the root names the block, a member its NUL proxy): skip the
+    // self-edge the same way the importer linking does.
+    if (dependency === rootPath) continue;
     rootFile.dependencies.add(dependency);
     ensureFile(files, dependency, hashes);
   }
@@ -120,7 +244,7 @@ function linkConcatenatedFiles(
  *
  * @param files The map of files to their hashes and dependencies.
  * @param filePath The file to get or create an entry for.
- * @param hashes The content hashes keyed by canonical file path.
+ * @param hashes The hash of every on-disk file, keyed by canonical path, or `SKIPPED_HASH` for a file v2 skipped.
  *
  * @returns The file's graph entry.
  */
@@ -147,56 +271,89 @@ function ensureFile(
  * {@link ProjectFiles.isFile}. Skipping a name with no file loses no evidence, because such a name is
  * never a source file and so can never be edited as one.
  *
- * @param rawPath The module name from the stats file.
+ * @param id The folded stats id; see {@link foldStatsId}.
  * @param statsRoot The directory relative stats paths are named from.
  * @param projectFiles How to read the disk.
  *
  * @returns The absolute path to hash, or undefined if there is no hashable file.
  */
 function hashableAbsolutePath(
-  rawPath: FilePath,
+  id: FilePath,
   statsRoot: string,
   projectFiles: ProjectFiles
 ): string | undefined {
-  if (isSyntheticFile(rawPath)) return undefined;
-  const absolutePath = resolveStatsPath(rawPath, statsRoot);
+  if (isSyntheticFile(id)) return undefined;
+  const absolutePath = resolveStatsPath(id, statsRoot);
   return projectFiles.isFile(absolutePath) ? absolutePath : undefined;
 }
 
-async function hashFiles(
+/**
+ * Finds the file on disk behind every path the stats file names, keyed by canonical path.
+ *
+ * @param stats The stats file to parse.
+ * @param roots The roots to anchor against; see {@link StatsRoots}.
+ * @param projectFiles How to read the disk.
+ *
+ * @returns The absolute on-disk path of each hashable file, keyed by its canonical path.
+ */
+function locateOnDiskFiles(
   stats: Stats,
-  projectRoot: string,
-  statsRoot: string,
+  roots: StatsRoots,
   projectFiles: ProjectFiles
-): Promise<Map<FilePath, FileHash>> {
-  // Collect every referenced module path once, expanding concatenated modules into their real
-  // files and skipping importers with a null moduleName.
-  const rawPaths = new Set<FilePath>();
+): Map<FilePath, AbsolutePath> {
+  // Collect every referenced stats id once, folded onto the file it stands for and expanded into
+  // concatenated real files, skipping importers with a null moduleName. Folding at insertion makes
+  // the dedupe canonical: every spelling of one file stats the disk and keys the node once.
+  const fileIds = new Set<FilePath>();
   for (const module of stats.modules) {
     for (const name of moduleFileNames(module)) {
-      rawPaths.add(name);
+      fileIds.add(foldStatsId(name));
     }
     for (const reason of module.reasons ?? []) {
-      if (reason.moduleName) rawPaths.add(reason.moduleName);
+      if (reason.moduleName) fileIds.add(foldStatsId(reason.moduleName));
     }
   }
 
-  // Map each hashable file's canonical project-relative name to its absolute on-disk path.
-  const normalizedToAbsolute = new Map<FilePath, string>();
-  for (const rawPath of rawPaths) {
-    const absolutePath = hashableAbsolutePath(rawPath, statsRoot, projectFiles);
+  const onDiskFiles = new Map<FilePath, AbsolutePath>();
+  for (const id of fileIds) {
+    const absolutePath = hashableAbsolutePath(id, roots.statsRoot, projectFiles);
     if (absolutePath) {
-      normalizedToAbsolute.set(normalizeStatsPath(rawPath, projectRoot, statsRoot), absolutePath);
+      onDiskFiles.set(normalizeStatsPath(id, roots.projectRoot, roots.statsRoot), absolutePath);
     }
   }
+  return onDiskFiles;
+}
 
-  const fileHashes = await projectFiles.hashAll([...normalizedToAbsolute.values()]);
+/**
+ * Hashes every on-disk file, keyed by canonical path. A file v2 skips gets {@link SKIPPED_HASH} in
+ * place of a content hash, so the one invariant the graph relies on, an entry per on-disk file, is
+ * established where the skip is decided rather than by every caller.
+ *
+ * @param onDiskFiles The absolute path of each on-disk file, keyed by canonical path.
+ * @param skipRule Which files to skip; see {@link buildSkipRule}.
+ * @param projectFiles How to read the disk.
+ *
+ * @returns The hash of every on-disk file, and the skipped files with their reasons, both keyed by
+ * canonical path.
+ */
+async function hashOnDiskFiles(
+  onDiskFiles: Map<FilePath, AbsolutePath>,
+  skipRule: SkipRule,
+  projectFiles: ProjectFiles
+): Promise<{ hashes: Map<FilePath, FileHash>; skippedFiles: Map<FilePath, SkipReason> }> {
+  const { hashable, skipped } = partitionSkipped(onDiskFiles.values(), skipRule);
+  const fileHashes = await projectFiles.hashAll(hashable);
 
   const hashes = new Map<FilePath, FileHash>();
-  for (const [normalizedName, absolutePath] of normalizedToAbsolute) {
-    const hash = fileHashes[absolutePath];
-    if (hash) hashes.set(normalizedName, hash);
+  const skippedFiles = new Map<FilePath, SkipReason>();
+  for (const [filePath, absolutePath] of onDiskFiles) {
+    const reason = skipped.get(absolutePath);
+    if (reason === undefined) {
+      hashes.set(filePath, fileHashes[absolutePath]);
+    } else {
+      hashes.set(filePath, SKIPPED_HASH);
+      skippedFiles.set(filePath, reason);
+    }
   }
-
-  return hashes;
+  return { hashes, skippedFiles };
 }

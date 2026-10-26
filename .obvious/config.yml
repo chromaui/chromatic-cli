@@ -1,0 +1,12 @@
+# Obvious repo policy — chromaui/chromatic-cli
+# Auto-detected from GitHub repo settings on 2026-10-13 via gh api repos/chromaui/chromatic-cli.
+
+defaultBranch: main
+
+merge:
+  # GitHub allows only merge commits for this repo
+  # (allow_merge_commit: true, allow_squash_merge: false, allow_rebase_merge: false).
+  method: merge
+
+# Setup PRs are a human review gate; never self-approve.
+requireHumanMerge: true

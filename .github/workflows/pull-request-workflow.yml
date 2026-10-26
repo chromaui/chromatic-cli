@@ -14,8 +14,39 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Detect code changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: diff
+        name: Check for changes that need tests
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: |
+          # Files that cannot affect the build, the tests, or the published package. Any other
+          # change, including to workflows or config, runs the full suite.
+          skippable='\.md$|^docs/|^\.obvious/|^\.agents/|^LICENSE$'
+
+          # --no-renames lists both paths of a rename, so moving code into docs/ still runs tests.
+          changed="$(git diff --no-renames --name-only "$BASE_SHA" HEAD)"
+          echo "Changed files:"
+          echo "$changed"
+
+          if grep -qvE "$skippable" <<< "$changed"; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Only docs and agent files changed; skipping tests."
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
   package-size:
-    if: github.event_name == 'pull_request'
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/package-size.yml
     permissions:
       contents: read
@@ -26,24 +57,59 @@ jobs:
       UPSTASH_API_KEY: ${{ secrets.UPSTASH_API_KEY }}
 
   lint-and-test:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/lint-and-test.yml
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+  # codecov/patch is a required status that Codecov only posts after an upload. When the tests
+  # are skipped, tell Codecov there is no coverage to report so it passes the status.
+  codecov-skip:
+    needs: changes
+    if: needs.changes.outputs.code == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: codecov/codecov-action@v7
+        with:
+          run_command: empty-upload
+          force: true
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
   chromatic:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/chromatic-prod.yml
-    needs: lint-and-test
     secrets:
       CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-action:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/smoke-test-action.yml
-    needs: lint-and-test
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/smoke-test.yml
-    needs: lint-and-test
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
+  # The single required check for branch protection. Skipped jobs count as passing, so this
+  # passes when tests were skipped for docs-only changes and fails if any job failed. It runs
+  # with always() and fails on cancelled jobs so that a cancelled run reports a failure here
+  # instead of a skipped (and therefore passing) required check.
+  ci-required:
+    if: always()
+    needs: [changes, lint-and-test, codecov-skip, smoke-test-action, smoke-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required jobs
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "One or more required jobs failed or were cancelled."
+          exit 1

@@ -85,8 +85,13 @@ export function isDocumentationFile(filePath: string) {
 export const isPackageManifestFile = (filePath: string) =>
   [/(^|\/)package\.json$/].some((re) => re.test(filePath));
 
+export const PNPM_LOCK_FILE = 'pnpm-lock.yaml';
+export const SUPPORTED_LOCK_FILES = ['yarn.lock', PNPM_LOCK_FILE, 'package-lock.json'];
+
 export const isPackageLockFile = (filePath: string) =>
-  [/(^|\/)package-lock\.json$/, /(^|\/)yarn\.lock$/].some((re) => re.test(filePath));
+  SUPPORTED_LOCK_FILES.some(
+    (lockfile) => filePath === lockfile || filePath.endsWith(`/${lockfile}`)
+  );
 
 export const isPackageMetadataFile = (filePath: string) =>
   isPackageManifestFile(filePath) || isPackageLockFile(filePath);
@@ -99,4 +104,24 @@ export const redact = <T>(value: T, ...fields: string[]): T => {
     object[key] = fields.includes(key) ? undefined : redact(object[key], ...fields);
   }
   return object;
+};
+
+// The credentials given to this run, from flags, options and the environment.
+export const getSecrets = ({ env, flags, options }: Partial<Context>) =>
+  [flags?.projectToken, options?.projectToken, options?.userToken, env?.CHROMATIC_PROJECT_TOKEN]
+    .flat()
+    .filter((secret): secret is string => !!secret);
+
+// Replace every occurrence of the given secrets in any string inside value.
+export const scrubSecrets = <T>(value: T, secrets: string[]): T => {
+  if (typeof value === 'string') {
+    let result: string = value;
+    for (const secret of secrets) result = result.replaceAll(secret, '<redacted>');
+    return result as T;
+  }
+  if (value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map((item) => scrubSecrets(item, secrets)) as T;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [key, scrubSecrets(item, secrets)])
+  ) as T;
 };

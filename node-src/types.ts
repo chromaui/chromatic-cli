@@ -273,7 +273,7 @@ export interface StorybookPaths {
   projectRoot: AbsolutePath;
   /** The absolute directory containing Storybook's configuration. */
   configDir: AbsolutePath;
-  /** The absolute directories Storybook serves as static assets. */
+  /** The absolute directories, or single files, Storybook serves as static assets. */
   staticDirs: AbsolutePath[];
 }
 
@@ -446,8 +446,11 @@ export interface Context {
     testCount: number;
     changeCount: number;
     errorCount: number;
-    accessibilityChangeCount: number;
     interactionTestFailuresCount: number;
+    ignoredCount?: number;
+    pendingCount?: number;
+    acceptedCount?: number;
+    deniedCount?: number;
     inProgressCount?: number;
     autoAcceptChanges: boolean;
     turboSnapEnabled?: boolean;
@@ -470,6 +473,7 @@ export interface Context {
       uiTests: boolean;
       uiReview: boolean;
       isReactNativeApp: boolean;
+      accessibilityTests?: { enabled: boolean };
     };
     tests?: {
       spec: {
@@ -495,6 +499,8 @@ export interface Context {
     componentCount: number;
     testCount: number;
     changeCount: number;
+    pendingCount?: number;
+    ignoredCount?: number;
     errorCount: number;
     actualTestCount: number;
     actualCaptureCount: number;

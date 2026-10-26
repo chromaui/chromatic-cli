@@ -4,6 +4,7 @@ import path from 'path';
 
 import { getRepositoryRoot } from '../node-src/git/git';
 import { createLogger } from '../node-src/lib/log';
+import { posix } from '../node-src/lib/posix';
 import { isPackageManifestFile } from '../node-src/lib/utilities';
 import { readStatsFile } from '../node-src/tasks/readStatsFile';
 import { Context } from '../node-src/types';
@@ -47,7 +48,7 @@ export async function main(argv: string[]) {
       $ chromatic trace [-b|--base-dir] [-c|--config-dir] [-s|--stats-file] [-u|--untraced] [-m|--mode] [<changed files>...]
 
     Options
-      <changed files>...                    List of changed files relative to repository root.
+      <changed files>...                    List of changed files, either relative to repository root or absolute.
       --stats-file, -s <filepath>           Path to preview-stats.json. Alternatively, set WEBPACK_STATS_FILE. (default: 'storybook-static/preview-stats.json')
       --storybook-base-dir, -b <dirname>    Relative path from repository root to Storybook project root. Alternatively, set STORYBOOK_BASE_DIR. Use when your Storybook is located in a subdirectory of your repository.
       --storybook-config-dir, -c <dirname>  Directory where to load Storybook configurations from. Alternatively, set STORYBOOK_CONFIG_DIR. (default: '.storybook')
@@ -107,7 +108,9 @@ export async function main(argv: string[]) {
     },
   } as any;
   const stats = await readStatsFile(flags.statsFile);
-  const changedFiles = input.map((f) => f.replace(/^\.\//, ''));
+  // Changed files are matched against POSIX paths relative to the repository root, so normalize
+  // each one (absolute, `./`-prefixed or plain) to that form or it silently matches nothing.
+  const changedFiles = input.map((f) => posix(path.relative(gitRoot, path.resolve(gitRoot, f))));
 
   const packageManifestFile = changedFiles.find((item) => isPackageManifestFile(item));
   if (packageManifestFile) {

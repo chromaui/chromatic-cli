@@ -1,0 +1,5 @@
+node_modules
+.yarn/*
+storybook-static
+*.log
+chromatic-diagnostics.json

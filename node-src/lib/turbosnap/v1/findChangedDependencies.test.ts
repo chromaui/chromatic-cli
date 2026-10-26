@@ -2,9 +2,10 @@ import snykGraph from '@snyk/dep-graph';
 import {
   copyFileSync as unMockedCopyFileSync,
   mkdtempSync as unMockedMkdtempSync,
+  readFileSync as unMockedReadFileSync,
   statSync as unMockedStatSync,
 } from 'fs';
-import { buildDepTreeFromFiles } from 'snyk-nodejs-lockfile-parser';
+import { getPnpmLockfileParser, parsePnpmWorkspaceProject } from 'snyk-nodejs-lockfile-parser';
 import snyk from 'snyk-nodejs-plugin';
 import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
@@ -32,10 +33,14 @@ copyFileSync.mockReturnValue(undefined);
 const mkdtempSync = unMockedMkdtempSync as Mock;
 mkdtempSync.mockReturnValue(tmpdir);
 
+const readFileSync = unMockedReadFileSync as Mock;
+readFileSync.mockReturnValue('');
+
 const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 const checkoutFile = vi.mocked(git.checkoutFile);
 const findFilesFromRepositoryRoot = vi.mocked(git.findFilesFromRepositoryRoot);
-const buildDepTree = vi.mocked(buildDepTreeFromFiles);
+const pnpmLockfileParser = vi.mocked(getPnpmLockfileParser);
+const pnpmWorkspaceProject = vi.mocked(parsePnpmWorkspaceProject);
 const inspect = vi.mocked(snyk.inspect);
 const createChangedPackagesGraph = vi.mocked(snykGraph.createChangedPackagesGraph);
 
@@ -45,14 +50,14 @@ beforeEach(() => {
   findFilesFromRepositoryRoot.mockImplementation((_, __, file) =>
     Promise.resolve(file.startsWith('**') ? [] : [file])
   );
-  // always checkout files with the result path of "<commit>.<file>"
-  checkoutFile.mockImplementation((_ctx, commit, file) => Promise.resolve(`${commit}.${file}`));
+  checkoutFile.mockResolvedValue();
 });
 afterEach(() => {
   getRepositoryRoot.mockReset();
   checkoutFile.mockReset();
   findFilesFromRepositoryRoot.mockReset();
-  buildDepTree.mockReset();
+  pnpmLockfileParser.mockReset();
+  pnpmWorkspaceProject.mockReset();
   inspect.mockReset();
   createChangedPackagesGraph.mockReset();
 });
@@ -147,7 +152,6 @@ describe('findChangedDependencies', () => {
   });
 
   it('returns nothing when dependency tree is empty', async () => {
-    buildDepTree.mockResolvedValue({ dependencies: {} });
     mockInspect(/* HEAD */ [], /* Baseline A */ []);
     mockChangedPackagesGraph([]);
 
@@ -254,25 +258,11 @@ describe('findChangedDependencies', () => {
       expect.arrayContaining(['react', 'lodash'])
     );
 
-    // Root manifest and lock files are checked
-    expect(inspect).toHaveBeenCalledWith(tmpdir, `${tmpdir}/yarn.lock`, {
-      dev: true,
-      strictOutOfSync: false,
-    });
-    expect(inspect).toHaveBeenCalledWith(tmpdir, `${tmpdir}/A.yarn.lock`, {
-      dev: true,
-      strictOutOfSync: false,
-    });
-
-    // Subpackage manifest and lock files are checked
-    expect(inspect).toHaveBeenCalledWith(tmpdir, `${tmpdir}/yarn.lock`, {
-      dev: true,
-      strictOutOfSync: false,
-    });
-    expect(inspect).toHaveBeenCalledWith(tmpdir, `${tmpdir}/A.yarn.lock`, {
-      dev: true,
-      strictOutOfSync: false,
-    });
+    // HEAD and baseline, for both the root and the subpackage.
+    expect(inspect).toHaveBeenCalledTimes(4);
+    for (const file of ['package.json', 'yarn.lock', 'subdir/package.json', 'subdir/yarn.lock']) {
+      expect(checkoutFile).toHaveBeenCalledWith(expect.anything(), 'A', file, tmpdir);
+    }
   });
 
   it('uses root lockfile when subpackage lockfile is missing', async () => {
@@ -348,17 +338,13 @@ describe('findChangedDependencies', () => {
 
     await expect(findChangedDependencies(context)).resolves.toEqual([]);
 
-    expect(inspect).toHaveBeenCalledWith(
-      `${tmpdir}/A.subdir`,
-      `${tmpdir}/A.subdir/package-lock.json`,
-      {
-        dev: true,
-        strictOutOfSync: false,
-      }
-    );
+    expect(inspect).toHaveBeenCalledWith(tmpdir, `${tmpdir}/package-lock.json`, {
+      dev: true,
+      strictOutOfSync: false,
+    });
   });
 
-  it('handles relative paths correctly when copying files to temp directory', async () => {
+  it('resolves manifest and lockfile paths against the repository root', async () => {
     // Mock the repository root to be different from current working directory
     getRepositoryRoot.mockResolvedValue('/root/subdir');
 
@@ -398,5 +384,33 @@ describe('findChangedDependencies', () => {
       '/root/subdir/package-lock.json',
       `${tmpdir}/package-lock.json`
     );
+  });
+
+  it('resolves pnpm workspace manifests against their own lockfile importer', async () => {
+    findFilesFromRepositoryRoot.mockImplementation((_, __, ...patterns) => {
+      if (patterns[0] === 'package.json') return Promise.resolve(['package.json']);
+      if (patterns[0] === '**/package.json') return Promise.resolve(['packages/ui/package.json']);
+      // Only the root has a lockfile; nested lookups use full paths and find nothing.
+      return Promise.resolve(patterns.includes('pnpm-lock.yaml') ? ['pnpm-lock.yaml'] : []);
+    });
+    pnpmLockfileParser.mockReturnValue({ importers: { '.': {}, 'packages/ui': {} } } as any);
+    const importers: string[] = [];
+    pnpmWorkspaceProject.mockImplementation(async (_manifest, _lockfile, _options, importer) => {
+      importers.push(importer);
+      return { getDepPkgs: () => [] } as any;
+    });
+    mockChangedPackagesGraph(['moment@2.31.0']);
+
+    const context = getContext({
+      git: { packageMetadataChanges: [{ changedFiles: ['pnpm-lock.yaml'], commit: 'A' }] },
+    });
+
+    // The changed dependency comes from the mocked graph comparison; the assertions on the
+    // importer are what exercise the pnpm path.
+    await expect(findChangedDependencies(context)).resolves.toEqual(['moment']);
+
+    // HEAD and baseline for both the root and the nested package.
+    expect(importers.toSorted()).toEqual(['.', '.', 'packages/ui', 'packages/ui']);
+    expect(inspect).not.toHaveBeenCalled();
   });
 });

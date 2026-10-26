@@ -59,8 +59,11 @@ describe('turbosnap-manifest', () => {
       {
         log: testLogger,
         projectRoot: '/repo',
+        gitRoot: '/repo',
+        untraced: [],
         configDir: '/repo/.storybook',
         staticDirs: [],
+        externals: [],
         projectFiles,
       }
     );
@@ -110,6 +113,31 @@ describe('turbosnap-manifest', () => {
     );
   });
 
+  it('passes --externals globs through verbatim, since they are patterns matched against git-root-relative paths rather than paths to resolve', async () => {
+    await main([
+      '-b',
+      'packages/ui',
+      '--externals',
+      'tailwind.config.js',
+      '--externals',
+      '**/*.scss',
+    ]);
+
+    expect(buildManifest).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ externals: ['tailwind.config.js', '**/*.scss'] })
+    );
+  });
+
+  it('keeps a brace glob whole', async () => {
+    await main(['--externals', '*.{css,scss}']);
+
+    expect(buildManifest).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ externals: ['*.{css,scss}'] })
+    );
+  });
+
   it('resolves --config-dir and --stats-file against the project root', async () => {
     await main(['-c', 'config/storybook', '-s', 'dist/stats.json']);
 
@@ -117,6 +145,25 @@ describe('turbosnap-manifest', () => {
     expect(buildManifest).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ configDir: '/repo/config/storybook' })
+    );
+  });
+
+  it('passes each --untraced glob through as given, since they are relative to the repository root', async () => {
+    await main([
+      '-b',
+      'packages/ui',
+      '-u',
+      'packages/ui/src/generated/**',
+      '--untraced',
+      '**/*.css',
+    ]);
+
+    expect(buildManifest).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        gitRoot: '/repo',
+        untraced: ['packages/ui/src/generated/**', '**/*.css'],
+      })
     );
   });
 

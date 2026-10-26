@@ -1,13 +1,21 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
-import { createFixture } from './__fixtures__/manifestFixtures';
+import { createFixture, syntheticAbsent } from './__fixtures__/manifestFixtures';
+import { SKIPPED_HASH } from './graph';
+import { buildManifest, serializeManifest } from './manifest';
+import { SkipRule } from './skippedFiles';
 import { countNodeModulesFiles, readStatsGraph } from './statsGraph';
 
 // These suites are about builder spellings: what webpack, rspack and Vite each call the same file,
 // and what the graph reader makes of it. They assert on the graph, not on a hash — that the right
 // edge exists and the right bytes were hashed. Whether an edge reaches a roll-up is graph.test.ts's
 // job, and end-to-end in manifest.hashing.test.ts.
+
+// The skip rule is tested on its own, so the reader is handed one that skips nothing unless a test
+// says otherwise.
+const skipNothing: SkipRule = () => undefined;
 
 describe('readStatsGraph concatenated modules', () => {
   // Webpack/rspack concatenate the story and its local imports into one module: the module name
@@ -33,7 +41,7 @@ describe('readStatsGraph concatenated modules', () => {
         '/repo/packages/ui/src/Button.tsx': 'B',
       },
     });
-    const graph = await readStatsGraph(concatenatedStory, input);
+    const graph = await readStatsGraph(concatenatedStory, input, skipNothing);
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
   });
@@ -45,7 +53,7 @@ describe('readStatsGraph concatenated modules', () => {
         '/repo/packages/ui/src/Button.tsx': 'B',
       },
     });
-    const graph = await readStatsGraph(concatenatedStory, input);
+    const graph = await readStatsGraph(concatenatedStory, input, skipNothing);
 
     expect([...(graph.files.get('./src/Button.stories.tsx')?.dependencies ?? [])]).toContain(
       './src/Button.tsx'
@@ -84,7 +92,7 @@ describe('readStatsGraph concatenated modules', () => {
       },
     });
 
-    const graph = await readStatsGraph(contextsInModules, input);
+    const graph = await readStatsGraph(contextsInModules, input, skipNothing);
 
     // The record keys by its own name, so it stays a real file rather than becoming a story
     // importer, and the module it imports is not a story file.
@@ -111,7 +119,8 @@ describe('readStatsGraph unhashable paths', () => {
             return input.projectFiles.isFile(absolutePath);
           },
         },
-      }
+      },
+      skipNothing
     );
 
     expect(graph.hashes.size).toBe(0);
@@ -141,7 +150,8 @@ describe('readStatsGraph unhashable paths', () => {
             return input.projectFiles.isFile(absolutePath);
           },
         },
-      }
+      },
+      skipNothing
     );
 
     expect(graph.hashes.get('./node_modules/es5-ext/array/#/e-index-of.js')).toBe('E');
@@ -167,7 +177,8 @@ describe('readStatsGraph unhashable paths', () => {
           { id: 2, name: story, modules: [{ name: directory }], reasons: [] },
         ],
       },
-      input
+      input,
+      skipNothing
     );
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
@@ -183,8 +194,12 @@ describe('readStatsGraph suffix-equivalent story importer identity', () => {
     });
     const { input } = createFixture({ fileHashes: { [story]: 'S' } });
 
-    const plain = await readStatsGraph(stats('./storybook-stories.js'), input);
-    const concatenated = await readStatsGraph(stats('./storybook-stories.js + 1 modules'), input);
+    const plain = await readStatsGraph(stats('./storybook-stories.js'), input, skipNothing);
+    const concatenated = await readStatsGraph(
+      stats('./storybook-stories.js + 1 modules'),
+      input,
+      skipNothing
+    );
 
     expect(concatenated).toEqual(plain);
   });
@@ -224,7 +239,7 @@ describe('readStatsGraph concatenated modules with rspack-style child names', ()
         '/repo/packages/ui/src/Button.tsx': 'B',
       },
     });
-    const graph = await readStatsGraph(rspackConcatenatedStory, input);
+    const graph = await readStatsGraph(rspackConcatenatedStory, input, skipNothing);
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
     expect([...(graph.files.get('./src/Button.stories.tsx')?.dependencies ?? [])]).toContain(
@@ -244,8 +259,8 @@ describe('readStatsGraph concatenated modules with rspack-style child names', ()
     };
     const { input } = createFixture({ fileHashes: { [story]: 'S', [implementation]: 'B' } });
 
-    const full = await readStatsGraph(rspackConcatenatedStory, input);
-    const shimmed = await readStatsGraph(shimmedStats, input);
+    const full = await readStatsGraph(rspackConcatenatedStory, input, skipNothing);
+    const shimmed = await readStatsGraph(shimmedStats, input, skipNothing);
 
     expect(shimmed).toEqual(full);
   });
@@ -270,7 +285,7 @@ describe('readStatsGraph missing names', () => {
       ],
     };
 
-    const graph = await readStatsGraph(stats, input);
+    const graph = await readStatsGraph(stats, input, skipNothing);
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
   });
@@ -296,7 +311,7 @@ describe('readStatsGraph missing names', () => {
       ],
     };
 
-    const graph = await readStatsGraph(stats, input);
+    const graph = await readStatsGraph(stats, input, skipNothing);
 
     expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
     expect([...(graph.files.get('./src/Button.stories.tsx')?.dependencies ?? [])]).toContain(
@@ -323,7 +338,8 @@ describe('readStatsGraph unhashable files', () => {
           { id: 2, name: missing, reasons: [{ moduleName: story }] },
         ],
       },
-      input
+      input,
+      skipNothing
     );
 
     expect(graph.hashes.has('./src/missing.ts')).toBe(false);
@@ -332,26 +348,6 @@ describe('readStatsGraph unhashable files', () => {
 });
 
 describe('readStatsGraph hashing failures', () => {
-  it('treats a file omitted from the hash result as not real', async () => {
-    const story = '/repo/packages/ui/src/Button.stories.tsx';
-    const { input } = createFixture();
-
-    const graph = await readStatsGraph(
-      { modules: [{ id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] }] },
-      {
-        ...input,
-        projectFiles: {
-          ...input.projectFiles,
-          hashAll: async () => ({}),
-        },
-      }
-    );
-
-    expect(graph.hashes.has('./src/Button.stories.tsx')).toBe(false);
-    expect(graph.files.get('./src/Button.stories.tsx')?.hash).toBe('');
-    expect([...graph.storyFiles]).toEqual([]);
-  });
-
   it('fails the read rather than returning a graph missing a file it could not read', async () => {
     // Unreadability is a bug, not an answer: a manifest built without those bytes would silently
     // under-capture, so this propagates to the entry point and bails TurboSnap to v1.
@@ -359,23 +355,85 @@ describe('readStatsGraph hashing failures', () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const unreadable = new Error(`Could not hash ${story}: EACCES: permission denied`);
 
-    let err: Error | undefined;
-    try {
-      await readStatsGraph(
+    await expect(
+      readStatsGraph(
         { modules: [{ id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] }] },
         {
           ...input,
-          projectFiles: {
-            ...input.projectFiles,
-            hashAll: () => Promise.reject(unreadable),
-          },
-        }
-      );
-    } catch (error) {
-      err = error as Error;
-    }
+          projectFiles: { ...input.projectFiles, hashAll: () => Promise.reject(unreadable) },
+        },
+        skipNothing
+      )
+    ).rejects.toThrow(story);
+  });
+});
 
-    expect(err?.message).toContain(story);
+describe('readStatsGraph loader chain ids', () => {
+  // Reduced from real Storybook builds of a story importing a CSS module. The story is imported
+  // straight from the stories entry rather than through a lazy context, since the context is not
+  // what is under test. The css-loader runtime names the loader chain as its importer; folded, that
+  // reason is the CSS module, so the runtime joins the story's subtree.
+  const story = '/repo/packages/ui/src/lib/PathDerived/PathDerived.stories.tsx';
+  const css = '/repo/packages/ui/src/lib/PathDerived/styles.module.css';
+  const cssKey = './src/lib/PathDerived/styles.module.css';
+
+  const webpackChain =
+    '../../node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./src/lib/PathDerived/styles.module.css';
+  const webpackRuntimeKey = '../../node_modules/css-loader/dist/runtime/api.js';
+  // rsbuild emits no module record under the chain name; the chain only appears as a reason.
+  const rsbuildChain =
+    './src/lib/PathDerived/styles.module.css!=!../../node_modules/@rsbuild/core/compiled/css-loader/index.js??ruleSet[1].rules[3].use[1]!builtin:lightningcss-loader??ruleSet[1].rules[3].use[2]!./src/lib/PathDerived/styles.module.css';
+  const rsbuildRuntimeKey = '../../node_modules/@rsbuild/core/compiled/css-loader/api.js';
+
+  it.each([
+    {
+      name: 'a webpack loader chain reason',
+      runtimeKey: webpackRuntimeKey,
+      runtime: '/repo/node_modules/css-loader/dist/runtime/api.js',
+      modules: [
+        { id: 2, name: cssKey, nameForCondition: css, reasons: [{ moduleName: story }] },
+        { id: 3, name: webpackChain, nameForCondition: css, reasons: [{ moduleName: cssKey }] },
+        {
+          id: 4,
+          name: webpackRuntimeKey,
+          nameForCondition: '/repo/node_modules/css-loader/dist/runtime/api.js',
+          // The second reason is the runtime's own "cjs self exports reference".
+          reasons: [{ moduleName: webpackChain }, { moduleName: webpackRuntimeKey }],
+        },
+      ],
+    },
+    {
+      name: 'an rsbuild inline match resource reason',
+      runtimeKey: rsbuildRuntimeKey,
+      runtime: '/repo/node_modules/@rsbuild/core/compiled/css-loader/api.js',
+      modules: [
+        { id: 2, name: cssKey, reasons: [{ moduleName: story }] },
+        {
+          id: 4,
+          name: rsbuildRuntimeKey,
+          reasons: [{ moduleName: rsbuildChain }, { moduleName: rsbuildRuntimeKey }],
+        },
+      ],
+    },
+  ])('links $name to the resource it loads', async ({ runtimeKey, runtime, modules }) => {
+    const stats: Stats = {
+      modules: [
+        { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+        ...modules,
+      ],
+    };
+    const { input } = createFixture({
+      isAbsent: syntheticAbsent,
+      fileHashes: { [story]: 'S', [css]: 'C', [runtime]: 'R' },
+    });
+
+    const manifest = await buildManifest(stats, input);
+    const serialized = serializeManifest(manifest);
+
+    expect(serialized.files[cssKey].dependencies).toContain(runtimeKey);
+    expect(Object.keys(serialized.files).filter((key) => key.includes('!'))).toEqual([]);
+    expect(manifest.attribution.storyReachable.has(runtimeKey)).toBe(true);
+    expect(manifest.attribution.storybookGlobals.has(runtimeKey)).toBe(false);
   });
 });
 
@@ -437,5 +495,298 @@ describe('countNodeModulesFiles', () => {
     };
 
     expect(countNodeModulesFiles(stats)).toBe(2);
+  });
+});
+
+describe('readStatsGraph global composition roots', () => {
+  // Builders use different names for the generated modules that load preview annotations. These
+  // cases verify that each supported name resolves to the canonical path stored in the graph.
+  const annotation = '/repo/packages/ui/node_modules/@storybook/react/dist/entry-preview.js';
+
+  function statsImportedFrom(rootSpelling: string): Stats {
+    return { modules: [{ id: 1, name: annotation, reasons: [{ moduleName: rootSpelling }] }] };
+  }
+
+  it.each([
+    // Webpack, plus Rsbuild's version without the leading `./`.
+    ['./storybook-config-entry.js', './storybook-config-entry.js'],
+    ['storybook-config-entry.js', './storybook-config-entry.js'],
+    // Rspack and Rsbuild cache the generated entry under `node_modules`.
+    [
+      './node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js',
+      './node_modules/.cache/storybook-rsbuild-builder/storybook-config-entry.js',
+    ],
+    [
+      './node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js',
+      './node_modules/.cache/storybook/storybook-rsbuild-builder/storybook-config-entry.js',
+    ],
+    // Vite's app module, plus the annotations module used by Storybook 10. Stats may report either
+    // the raw virtual ID or its resolved form.
+    [
+      '/virtual:/@storybook/builder-vite/vite-app.js',
+      '/virtual:/@storybook/builder-vite/vite-app.js',
+    ],
+    ['virtual:@storybook/builder-vite/vite-app.js', 'virtual:@storybook/builder-vite/vite-app.js'],
+    [
+      '/virtual:/@storybook/builder-vite/project-annotations.js',
+      '/virtual:/@storybook/builder-vite/project-annotations.js',
+    ],
+    [
+      'virtual:@storybook/builder-vite/project-annotations.js',
+      'virtual:@storybook/builder-vite/project-annotations.js',
+    ],
+  ])('recognizes %s as a global composition root', async (spelling, canonical) => {
+    const { input } = createFixture({ fileHashes: { [annotation]: 'EP' } });
+
+    const graph = await readStatsGraph(statsImportedFrom(spelling), input, skipNothing);
+
+    expect([...graph.globalRoots]).toEqual([canonical]);
+  });
+
+  it('finds the same root when stats paths are anchored outside the project root', async () => {
+    // In this monorepo fixture, relative stats paths start at `/repo` while the Storybook project is
+    // under `/repo/packages/ui`. The root must therefore be stored with a `../../` prefix.
+    const { input } = createFixture({ fileHashes: { [annotation]: 'EP' } });
+
+    const graph = await readStatsGraph(
+      statsImportedFrom('./storybook-config-entry.js'),
+      {
+        ...input,
+        statsRoot: '/repo',
+      },
+      skipNothing
+    );
+
+    expect([...graph.globalRoots]).toEqual(['../../storybook-config-entry.js']);
+  });
+
+  it('reports no root when the graph contains none', async () => {
+    const story = '/repo/packages/ui/src/Button.stories.tsx';
+    const { input } = createFixture({ fileHashes: { [story]: 'S' } });
+
+    const graph = await readStatsGraph(
+      { modules: [{ id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] }] },
+      input,
+      skipNothing
+    );
+
+    // The stories entry loads story modules, not global annotations, so it is not a global root.
+    expect([...graph.globalRoots]).toEqual([]);
+  });
+});
+
+describe('readStatsGraph skipped files', () => {
+  const story = '/repo/packages/ui/src/Button.stories.tsx';
+  const generated = '/repo/packages/ui/src/generated/schema.ts';
+  const stats: Stats = {
+    modules: [
+      { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+      { id: 2, name: generated, reasons: [{ moduleName: story }] },
+    ],
+  };
+
+  // The story reaches the given file only through the generated file, as through a barrel.
+  function throughBarrel(behind: string): Stats {
+    return {
+      modules: [...stats.modules, { id: 3, name: behind, reasons: [{ moduleName: generated }] }],
+    };
+  }
+
+  it('keeps a skipped file in the graph as a node with the skipped hash, and records it', async () => {
+    const { input } = createFixture({ fileHashes: { [story]: 'S', [generated]: 'G' } });
+
+    const graph = await readStatsGraph(stats, input, (candidate) =>
+      candidate === generated ? 'untracked' : undefined
+    );
+
+    expect(graph.hashes.get('./src/generated/schema.ts')).toBe(SKIPPED_HASH);
+    expect(graph.files.get('./src/generated/schema.ts')?.hash).toBe(SKIPPED_HASH);
+    expect([...(graph.files.get('./src/Button.stories.tsx')?.dependencies ?? [])]).toEqual([
+      './src/generated/schema.ts',
+    ]);
+    expect([...graph.skippedFiles]).toEqual([['./src/generated/schema.ts', 'untracked']]);
+  });
+
+  it('severs the edges of an untraced file and reports what they led to, since v1 stops its trace there', async () => {
+    const button = '/repo/packages/ui/src/Button.tsx';
+    const { input } = createFixture({
+      fileHashes: { [story]: 'S', [generated]: 'G', [button]: 'B' },
+    });
+
+    const graph = await readStatsGraph(throughBarrel(button), input, (candidate) =>
+      candidate === generated ? 'untraced' : undefined
+    );
+
+    expect([...(graph.files.get('./src/Button.stories.tsx')?.dependencies ?? [])]).toEqual([
+      './src/generated/schema.ts',
+    ]);
+    expect([...(graph.files.get('./src/generated/schema.ts')?.dependencies ?? [])]).toEqual([]);
+    expect(graph.hashes.get('./src/Button.tsx')).toBe('B');
+    expect([...graph.untracedSubtrees].sort()).toEqual([
+      './src/Button.tsx',
+      './src/generated/schema.ts',
+    ]);
+  });
+
+  it('keeps the edges of a gitignored file, so a tracked file behind a generated barrel still reaches the story', async () => {
+    const button = '/repo/packages/ui/src/Button.tsx';
+    const { input } = createFixture({
+      fileHashes: { [story]: 'S', [generated]: 'G', [button]: 'B' },
+    });
+
+    const graph = await readStatsGraph(throughBarrel(button), input, (candidate) =>
+      candidate === generated ? 'untracked' : undefined
+    );
+
+    expect([...(graph.files.get('./src/generated/schema.ts')?.dependencies ?? [])]).toEqual([
+      './src/Button.tsx',
+    ]);
+    expect([...graph.untracedSubtrees]).toEqual([]);
+  });
+
+  it('still detects a skipped story file as a story file', async () => {
+    const { input } = createFixture({ fileHashes: { [story]: 'S', [generated]: 'G' } });
+
+    const graph = await readStatsGraph(stats, input, (candidate) =>
+      candidate === story ? 'untraced' : undefined
+    );
+
+    expect([...graph.storyFiles]).toEqual(['./src/Button.stories.tsx']);
+    expect(graph.hashes.get('./src/Button.stories.tsx')).toBe(SKIPPED_HASH);
+  });
+
+  it('never asks the rule about a path with no file on disk', async () => {
+    const asked: string[] = [];
+    const { input } = createFixture({
+      isAbsent: (candidate) => candidate === generated || syntheticAbsent(candidate),
+    });
+
+    await readStatsGraph(stats, input, (candidate) => {
+      asked.push(candidate);
+      return undefined;
+    });
+
+    expect(asked).toEqual([story]);
+  });
+});
+
+describe('readStatsGraph proxy and query ids', () => {
+  it('does not link a folded block id to its own file as a dependency', async () => {
+    // A Vue SFC's script block is a proxy for the SFC file itself: folded, the importer and the
+    // imported are the same file, and the self-edge would otherwise survive serialization.
+    const { input } = createFixture({ fileHashes: { '/repo/packages/ui/src/Foo.vue': 'F' } });
+    const stats: Stats = {
+      modules: [
+        {
+          id: 1,
+          name: './src/Foo.vue?vue&type=script&lang.ts',
+          reasons: [{ moduleName: './src/Foo.vue' }],
+        },
+      ],
+    };
+
+    const graph = await readStatsGraph(stats, input, skipNothing);
+
+    expect(graph.files.get('./src/Foo.vue')?.hash).toBe('F');
+    expect([...(graph.files.get('./src/Foo.vue')?.dependencies ?? [])]).toEqual([]);
+  });
+
+  it('does not link a concatenated member that folds onto the root', async () => {
+    const { input } = createFixture({ fileHashes: { '/repo/packages/ui/src/Foo.vue': 'F' } });
+    const stats: Stats = {
+      modules: [
+        {
+          id: 1,
+          name: './src/Foo.vue?vue&type=script&lang.ts',
+          modules: [{ name: '\0./src/Foo.vue?vue&type=script&lang.ts' }],
+        },
+      ],
+    };
+
+    const graph = await readStatsGraph(stats, input, skipNothing);
+
+    expect(graph.files.has('./src/Foo.vue')).toBe(true);
+    expect([...(graph.files.get('./src/Foo.vue')?.dependencies ?? [])]).toEqual([]);
+  });
+
+  it('never asks the disk about bare-NUL or opaque proxy ids', async () => {
+    const asked: string[] = [];
+    const { input } = createFixture();
+    const ids = [
+      '\0commonjsHelpers.js',
+      '\0vite/preload-helper.js',
+      '\0/@data-uri/data:text/javascript,export default 1',
+    ];
+
+    const graph = await readStatsGraph(
+      { modules: ids.map((name, index) => ({ id: index + 1, name, reasons: [] })) },
+      {
+        ...input,
+        projectFiles: {
+          ...input.projectFiles,
+          isFile: (absolutePath) => {
+            asked.push(absolutePath);
+            return input.projectFiles.isFile(absolutePath);
+          },
+        },
+      },
+      skipNothing
+    );
+
+    expect(asked).toEqual([]);
+    for (const id of ids) {
+      expect(graph.files.get(id)?.hash).toBe('');
+    }
+    expect(graph.hashes.size).toBe(0);
+    // Unfolded, a bare-NUL id would key as a phantom on-disk path; folded, it keeps its raw id.
+    expect(graph.files.has('./commonjsHelpers.js')).toBe(false);
+  });
+
+  it('keeps a CommonJS proxy dependency through serialization', async () => {
+    // The measured regression this fold exists for: Button.tsx imports jsx-runtime through a Rollup
+    // CommonJS proxy id. Unfolded, the proxy keys as a phantom node with no hash, so serialization
+    // drops the edge and editing jsx-runtime.js recaptures nothing.
+    const { input } = createFixture({
+      fileHashes: {
+        '/repo/packages/ui/src/Button.stories.tsx': 'S',
+        '/repo/packages/ui/src/Button.tsx': 'B',
+        '/repo/node_modules/react/jsx-runtime.js': 'J',
+      },
+    });
+    const stats: Stats = {
+      modules: [
+        {
+          id: 1,
+          name: '/repo/packages/ui/src/Button.stories.tsx',
+          reasons: [{ moduleName: './storybook-stories.js' }],
+        },
+        {
+          id: 2,
+          name: '/repo/packages/ui/src/Button.tsx',
+          reasons: [{ moduleName: '/repo/packages/ui/src/Button.stories.tsx' }],
+        },
+        {
+          id: 3,
+          name: '\0./../../node_modules/react/jsx-runtime.js?commonjs-module',
+          reasons: [{ moduleName: '/repo/packages/ui/src/Button.tsx' }],
+        },
+        {
+          id: 4,
+          name: '\0commonjsHelpers.js',
+          reasons: [{ moduleName: '/repo/packages/ui/src/Button.tsx' }],
+        },
+      ],
+    };
+
+    const serialized = serializeManifest(await buildManifest(stats, input));
+
+    expect(serialized.files['./src/Button.tsx'].dependencies).toContain(
+      '../../node_modules/react/jsx-runtime.js'
+    );
+    expect(serialized.files['./src/Button.tsx'].dependencies).not.toContain('\0commonjsHelpers.js');
+    // No phantom key carries the builder's spelling, and synthetic ids keep their raw spelling.
+    expect(
+      Object.keys(serialized.files).filter((key) => key.includes('?') || key.includes('\0'))
+    ).toEqual([]);
   });
 });

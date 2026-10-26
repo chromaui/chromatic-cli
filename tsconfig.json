@@ -1,5 +1,5 @@
 {
-  "exclude": ["node_modules", "smoke-tests"],
+  "exclude": ["node_modules", "smoke-tests", "e2e/fixtures"],
   "extends": "@tsconfig/node16/tsconfig.json",
   "compilerOptions": {
     // Override module/moduleResolution since we're using tsup/esbuild

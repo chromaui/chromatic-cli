@@ -1,9 +1,8 @@
 /* eslint-disable max-lines */
-import { readFile } from 'fs/promises';
+import { mkdir, readFile } from 'fs/promises';
 import { EOL } from 'os';
 import pLimit from 'p-limit';
 import path from 'path';
-import { file as temporaryFile } from 'tmp-promise';
 
 import {
   AncestorMissingError,
@@ -15,6 +14,7 @@ import { DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS } from './constants';
 import {
   execGitCommand,
   execGitCommandCountLines,
+  execGitCommandEntries,
   execGitCommandOneLine,
   GitDeps,
 } from './execGit';
@@ -49,6 +49,10 @@ export async function getUserEmail(deps: GitDeps) {
  * The slug consists of the last two parts of the URL, at least for GitHub, GitLab and Bitbucket,
  * and is typically followed by `.git`. The regex matches the last two parts between slashes, and
  * ignores the `.git` suffix if it exists, so it matches something like `ownername/reponame`.
+ * Azure DevOps HTTPS remotes (`.../<project>/_git/<repo>`) produce `<project>/<repo>` just like
+ * Azure DevOps SSH remotes do. Short-form HTTPS remotes (`.../_git/<repo>`) omit the project when
+ * it shares the repo's name, so they produce `<repo>/<repo>`. Azure DevOps project and repo names
+ * may contain spaces, so their percent-encoded segments are decoded.
  *
  * @param deps Function dependencies.
  *
@@ -57,8 +61,40 @@ export async function getUserEmail(deps: GitDeps) {
 export async function getSlug(deps: GitDeps) {
   const result = await execGitCommand(deps, `git config --get remote.origin.url`);
   const downcasedResult = result?.toLowerCase() || '';
-  const [, slug] = downcasedResult.match(/([^/:]+\/[^/]+?)(\.git)?$/) || [];
-  return slug;
+  const [, genericSlug] = downcasedResult.match(/([^/:]+\/[^/]+?)(\.git)?$/) || [];
+  if (!/(dev\.azure\.com|visualstudio\.com)/.test(downcasedResult)) return genericSlug;
+
+  const slug = getAzureHttpsSlug(downcasedResult) ?? genericSlug;
+  return safeDecode(slug);
+}
+
+// Returns `<project>/<repo>` for Azure DevOps HTTPS remotes, or undefined for any other remote
+function getAzureHttpsSlug(remoteUrl: string) {
+  if (!remoteUrl.includes('/_git/')) return undefined;
+  let url: URL;
+  try {
+    url = new URL(remoteUrl);
+  } catch {
+    return undefined;
+  }
+  const segments = url.pathname.split('/').filter(Boolean);
+  const gitIndex = segments.indexOf('_git');
+  const repo = segments[gitIndex + 1]?.replace(/\.git$/, '');
+  if (!repo) return undefined;
+  // Skip the org on dev.azure.com, or the optional DefaultCollection on visualstudio.com
+  const prefixLength =
+    url.hostname === 'dev.azure.com' || segments[0] === 'defaultcollection' ? 1 : 0;
+  // Short-form URLs omit the project when it shares the repo's name
+  const project = gitIndex > prefixLength ? segments[gitIndex - 1] : repo;
+  return `${project}/${repo}`;
+}
+
+function safeDecode(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 // NOTE: At some point we should check that the commit has been pushed to the
@@ -129,7 +165,7 @@ export async function getBranch(deps: GitDeps) {
 export async function getUncommittedHash(deps: GitDeps) {
   const listStagedFiles = 'git diff --name-only --no-relative --diff-filter=d --cached';
   const listUnstagedFiles = 'git diff --name-only --no-relative --diff-filter=d';
-  const listUntrackedFiles = 'git ls-files --others --exclude-standard';
+  const listUntrackedFiles = 'git ls-files --others --exclude-standard --full-name';
 
   // Use `all: false` so only stdout is captured and we can ignore stderr output that doesn't impact
   // the result.
@@ -236,6 +272,62 @@ export async function fetchCommit(deps: GitDeps, commit: string) {
     deps.log.debug(`Failed to fetch commit ${commit} from origin: ${error.message}`);
     return false;
   }
+}
+
+/**
+ * Check commits one at a time with {@link commitExists}.
+ *
+ * @param deps Function dependencies.
+ * @param commits The commits to check.
+ *
+ * @returns The subset of `commits` that exist.
+ */
+async function checkEachCommit(deps: GitDeps, commits: string[]) {
+  const existing = new Set<string>();
+  for (const commit of commits) {
+    if (await commitExists(deps, commit)) existing.add(commit);
+  }
+  return existing;
+}
+
+/**
+ * Check which of several commits exist in the repository, using a single
+ * `git cat-file --batch-check` call rather than one process per commit.
+ *
+ * @param deps Function dependencies.
+ * @param commits The commits to check.
+ *
+ * @returns The subset of `commits` that exist, as given (not expanded to full SHAs).
+ */
+export async function commitsExist(deps: GitDeps, commits: string[]): Promise<Set<string>> {
+  if (commits.length === 0) return new Set();
+
+  let result: string;
+  try {
+    // Only read stdout so stray stderr output cannot shift the line positions.
+    result = await execGitCommand(deps, 'git cat-file --batch-check', {
+      input: commits.map((commit) => `${commit}^{commit}`).join('\n'),
+      all: false,
+    });
+  } catch (error) {
+    // The single call can fail where individual checks would not, e.g. by hitting the git timeout
+    // while a partial clone tries to lazily fetch several missing commits.
+    deps.log.debug(`git cat-file --batch-check failed, checking one at a time: ${error}`);
+    return checkEachCommit(deps, commits);
+  }
+
+  // Git prints one line per input line, in order. Match by position, since an existing commit is
+  // printed as its full SHA (`<sha> commit <size>`) which may differ from a short input SHA.
+  // Anything else, such as `<input> missing` or `<input> ambiguous`, means it doesn't exist.
+  const lines = result.split(newline);
+  if (lines.length !== commits.length) {
+    // Positions would no longer line up with the input, so don't trust any of them.
+    deps.log.debug(
+      `git cat-file --batch-check returned ${lines.length} lines for ${commits.length} commits, checking one at a time`
+    );
+    return checkEachCommit(deps, commits);
+  }
+  return new Set(commits.filter((_, index) => lines[index]?.split(' ')[1] === 'commit'));
 }
 
 /**
@@ -468,16 +560,20 @@ export async function checkout(deps: GitDeps, reference: string) {
 
 const limitConcurrency = pLimit(10);
 
+// Tree entry mode git assigns to symbolic links, as printed by `git ls-tree`
+// (regular files are 100644/100755, directories 040000, submodules 160000).
+const SYMLINK_MODE = '120000';
+
 /**
- * Checkout a file at the given reference and write the results to a temporary file.
+ * Checkout a file at the given reference and write it to the same relative path under `tmpdir`,
+ * so files checked out together keep their layout from the repository. If the path is a committed
+ * symlink, the linked file is checked out rather than the link itself.
  *
  * @param deps Function dependencies.
  * @param deps.log The logger found on the context object.
  * @param reference The reference (usually a commit or branch) to the file version in Git.
- * @param fileName The name of the file to check out.
- * @param tmpdir The directory to write the temporary file to.
- *
- * @returns The temporary file path of the checked out file.
+ * @param fileName The repository-relative path of the file to check out.
+ * @param tmpdir The directory to write the file to.
  */
 export async function checkoutFile(
   deps: GitDeps,
@@ -487,21 +583,53 @@ export async function checkoutFile(
 ) {
   const pathspec = `${reference}:${fileName}`;
 
-  return limitConcurrency(async () => {
-    const { path: targetFileName } = await temporaryFile({
-      name: path.basename(fileName),
-      tmpdir,
-    });
+  await limitConcurrency(async () => {
+    const targetFileName = path.join(tmpdir, fileName);
+    await mkdir(path.dirname(targetFileName), { recursive: true });
 
     deps.log.debug(`Checking out file ${pathspec} at ${targetFileName}`);
     try {
-      await execGitCommand(deps, `git show ${pathspec} > ${targetFileName}`);
+      const resolvedFileName = await resolveSymlinkAtReference(deps, reference, fileName);
+      await execGitCommand(
+        deps,
+        `git show "${reference}:${resolvedFileName}" > "${targetFileName}"`
+      );
     } catch (error) {
       throw new BaselineCheckoutFailedError(pathspec, { cause: error });
     }
-
-    return targetFileName;
   });
+}
+
+/**
+ * Follow committed symlinks at the given reference until reaching a regular file. `git show` on a
+ * symlink outputs the link target string rather than the linked file's contents, which is wrong
+ * for e.g. a `pnpm-lock.yaml` symlinked to a shared lockfile elsewhere in a monorepo.
+ *
+ * @param deps Function dependencies.
+ * @param reference The reference (usually a commit or branch) to resolve the path at.
+ * @param fileName The repository-relative path to resolve.
+ *
+ * @returns The repository-relative path of the regular file the symlink chain points to.
+ */
+async function resolveSymlinkAtReference(deps: GitDeps, reference: string, fileName: string) {
+  const visited = new Set<string>();
+  let current = fileName;
+
+  while (!visited.has(current)) {
+    visited.add(current);
+    const entry = await execGitCommand(
+      deps,
+      `git ls-tree --full-tree ${reference} -- "${current}"`
+    );
+    if (!entry?.startsWith(SYMLINK_MODE)) {
+      return current;
+    }
+
+    const target = await execGitCommand(deps, `git show "${reference}:${current}"`);
+    current = path.posix.join(path.posix.dirname(current), target.trim());
+  }
+
+  throw new Error(`Symbolic link cycle: ${reference}:${fileName}`);
 }
 
 /**
@@ -538,6 +666,87 @@ export async function getRepositoryRoot(deps: GitDeps) {
 }
 
 /**
+ * The paths git does not track, answered by absolute path; see {@link getUntrackedPaths}. The match
+ * is exact, as git names paths, so a caller resolves symlinks before asking.
+ */
+export interface UntrackedPaths {
+  has(absolutePath: string): boolean;
+}
+
+/**
+ * Lists what git does not track: every path in the repository's working tree that is not in the
+ * index, whether or not `.gitignore` or another exclude source matches it. A tracked file is never
+ * untracked, even with uncommitted edits, and nor is any path outside the repository or inside a
+ * submodule, whose files the superproject never lists.
+ *
+ * The listing is bounded by the repository's tracked shape rather than by what the untracked
+ * directories hold: a directory with nothing tracked beneath it comes back as one entry, so
+ * `node_modules` is one line, not a hundred thousand. That is what makes one listing cheaper than
+ * one git call per path.
+ *
+ * @param deps Function dependencies.
+ *
+ * @returns The listing, queried by absolute path.
+ *
+ * @throws {Error} When git lists no tracked files, as when the index is missing.
+ */
+export async function getUntrackedPaths(deps: GitDeps): Promise<UntrackedPaths> {
+  const repositoryRoot = await getRepositoryRoot(deps);
+
+  // `--others` means "not in the index", so with no index (a Docker build that copied `.git`
+  // without it, say) git lists the whole repository as untracked and still exits 0. Skipping every
+  // file would hide every change, so treat that like a git error. One tracked path proves the index
+  // is there: the loop stops at the first, which kills git before it lists the rest.
+  let hasTrackedFile = false;
+  for await (const _ of trackedFiles(deps, repositoryRoot)) {
+    hasTrackedFile = true;
+    break;
+  }
+  if (!hasTrackedFile) {
+    throw new Error(
+      'git lists no tracked files, so it cannot tell which files are untracked; is the git index missing?'
+    );
+  }
+
+  // `--full-name` with the `:/` pathspec lists the whole repository, not just the directory the CLI
+  // runs in. Only stdout is parsed, so a stderr warning can't masquerade as a path. The listing is
+  // unbounded, so it stays out of the debug log.
+  const output = await execGitCommand(
+    deps,
+    'git ls-files --others --directory -z --full-name -- :/',
+    { all: false, logResult: false }
+  );
+
+  // A wholly untracked directory keeps its trailing slash, which `path.join` preserves as the native
+  // separator, so an entry ending in a separator covers everything beneath it.
+  const untracked = new Set(
+    output
+      .split(NULL_BYTE)
+      .filter(Boolean)
+      .map((entry) => path.join(repositoryRoot, entry))
+  );
+
+  return {
+    has: (absolutePath) => {
+      if (untracked.has(absolutePath)) {
+        return true;
+      }
+
+      // Only a directory inside the repository can be in the listing, so the walk up stops there.
+      let directory = path.dirname(absolutePath);
+      while (directory.startsWith(repositoryRoot + path.sep)) {
+        if (untracked.has(directory + path.sep)) {
+          return true;
+        }
+        directory = path.dirname(directory);
+      }
+
+      return false;
+    },
+  };
+}
+
+/**
  * Find all files that match the given patterns within the repository.
  *
  * @param deps Function dependencies.
@@ -563,6 +772,22 @@ export async function findFilesFromRepositoryRoot(
   const gitCommand = `git ls-files --full-name -z ${patternsFromRoot.map((p) => `"${p}"`).join(' ')}`;
   const files = await execGitCommand(deps, gitCommand);
   return files?.split(NULL_BYTE).filter(Boolean);
+}
+
+/**
+ * Every path in the git index, relative to the repository root, streamed rather than listed: a
+ * monorepo's index can run to millions of entries, more than fits in one command result.
+ *
+ * @param deps Function dependencies.
+ * @param repoRoot The root path of the repository (usually from `getRepositoryRoot()`).
+ *
+ * @returns Every indexed path, relative to `repoRoot`, as git lists it. Includes paths whose file is
+ * gone from the working tree and submodule roots, since the index still names them.
+ */
+export function trackedFiles(deps: GitDeps, repoRoot: string): AsyncIterable<string> {
+  // Run from the root because git lists only the current directory's subtree, and the CLI may run
+  // from a subdirectory.
+  return execGitCommandEntries(deps, 'git ls-files --full-name -z', { cwd: repoRoot });
 }
 
 /**
@@ -735,7 +960,7 @@ const PROBABLE_SQUASH_MERGE_RE = /\(#\d+\)/;
  * Fetch parent SHAs and compute squash-merge likelihood for each of the given commits in a
  * single git call.
  *
- * Uses `git log --no-walk=unsorted` so git reads only the listed objects with no ancestor
+ * Uses `git log --no-walk=unsorted --stdin` so git reads only the listed objects with no ancestor
  * traversal. The commit subject is used to compute `isProbableSquashMerge` but is not
  * included in the returned objects. The `hasBuild` and `isMergePoint` fields are left as
  * `false` here; callers are responsible for annotating them from their own data.
@@ -744,7 +969,7 @@ const PROBABLE_SQUASH_MERGE_RE = /\(#\d+\)/;
  * @param commits The commit SHAs to look up.
  *
  * @returns One entry per commit containing its direct parent SHAs and squash-merge flag.
- *   Returns an empty array when `commits` is empty.
+ *   Returns an empty array when `commits` is empty or the git call fails.
  */
 export async function getVisitedCommitDetails(
   deps: GitDeps,
@@ -755,10 +980,20 @@ export async function getVisitedCommitDetails(
   // %H = full SHA, %P = space-separated parent SHAs, %s = subject line (first line of message)
   // %x00 = NUL field separator (safe even with special chars in subject)
   // --no-walk=unsorted shows only the listed objects, no ancestor traversal
-  const result = await execGitCommand(
-    deps,
-    `git log --no-walk=unsorted --format=%H%x00%P%x00%s%x00 ${commits.join(' ')}`
-  );
+  // The SHAs are passed via stdin rather than as arguments, since a long ancestor walk can visit
+  // enough commits to exceed the OS limit on command line length (E2BIG).
+  // This data is only used for diagnostics, so a failure here must never fail the build.
+  let result: string;
+  try {
+    result = await execGitCommand(
+      deps,
+      'git log --no-walk=unsorted --stdin --format=%H%x00%P%x00%s%x00',
+      { input: commits.join('\n') }
+    );
+  } catch (error) {
+    deps.log.debug(`Failed to retrieve visited commit details, skipping: ${error}`);
+    return [];
+  }
   if (!result?.trim()) return [];
 
   // Output is a sequence of: <sha>\0<parents>\0<subject>\0 per commit

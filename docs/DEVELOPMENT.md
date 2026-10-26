@@ -64,6 +64,10 @@ You can also combine this with the `CHROMATIC_INDEX_URL` environment variable to
 
 Also note: Since your `chromatic` dependency is symlinked, you can build your local CLI and your project will automatically get the updated code.
 
+## Test organization
+
+Tests normally live in `<module>.test.ts`. When a module's test suite becomes large, split substantial, cohesive behavioral concerns into `<module>.<concern>.test.ts`, such as `manifest.hashing.test.ts` or `projectFiles.ignoredPaths.test.ts`. Keep general coverage in `<module>.test.ts`.
+
 ## Publishing a new version
 
 We use `auto` to automate the release process. Versions are bumped, tags are created and the changelog is updated automatically. A new release goes out whenever a PR is merged to `main`. A PR **must** have **exactly one** of the following labels before merging:

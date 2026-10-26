@@ -43,6 +43,80 @@ describe('serializeManifest', () => {
     expect(JSON.parse(JSON.stringify(serialized))).toEqual(serialized);
   });
 
+  it('records why each file was skipped, from the graph and the sweeps, as one sorted object', async () => {
+    const story = '/repo/packages/ui/src/Button.stories.tsx';
+    const generated = '/repo/packages/ui/src/generated/schema.ts';
+    const { input } = createFixture({
+      directories: {
+        '/repo/packages/ui/.storybook': ['main.ts'],
+        '/repo/packages/ui/public': ['bundle.css'],
+      },
+      fileHashes: { [story]: 'S', [generated]: 'G' },
+      isUntracked: (candidate) =>
+        candidate.includes('generated') || candidate.endsWith('bundle.css'),
+    });
+    const stats: Stats = {
+      modules: [
+        { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+        { id: 2, name: generated, reasons: [{ moduleName: story }] },
+      ],
+    };
+
+    const serialized = serializeManifest(
+      await buildManifest(stats, { ...input, staticDirs: ['/repo/packages/ui/public'] })
+    );
+
+    expect(Object.entries(serialized.skippedFiles)).toEqual([
+      ['./public/bundle.css', 'untracked'],
+      ['./src/generated/schema.ts', 'untracked'],
+    ]);
+    expect(serialized.staticFiles).toEqual({});
+  });
+
+  it('skips a gitignored file in a static dir inside the config dir from both sections, recorded once', async () => {
+    const { input } = createFixture({
+      directories: {
+        '/repo/packages/ui/.storybook': ['main.ts', 'static'],
+        '/repo/packages/ui/.storybook/static': ['bundle.css'],
+      },
+      isUntracked: (candidate) => candidate.endsWith('bundle.css'),
+    });
+
+    const serialized = serializeManifest(await buildManifest({ modules: [] }, input));
+
+    expect(Object.keys(serialized.storybookConfigFiles)).toEqual(['./.storybook/main.ts']);
+    expect(serialized.staticFiles).toEqual({});
+    expect(serialized.skippedFiles).toEqual({ './.storybook/static/bundle.css': 'untracked' });
+  });
+
+  it('keeps a file git ignores in the graph, marked skipped, so the edges through it survive', async () => {
+    const story = '/repo/packages/ui/src/Button.stories.tsx';
+    const barrel = '/repo/packages/ui/src/generated/index.ts';
+    const button = '/repo/packages/ui/src/Button.tsx';
+    const { input } = createFixture({
+      fileHashes: { [story]: 'S', [barrel]: 'G', [button]: 'B' },
+      isUntracked: (candidate) => candidate === barrel,
+    });
+    const stats: Stats = {
+      modules: [
+        { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+        { id: 2, name: barrel, reasons: [{ moduleName: story }] },
+        { id: 3, name: button, reasons: [{ moduleName: barrel }] },
+      ],
+    };
+
+    const serialized = serializeManifest(await buildManifest(stats, input));
+
+    expect(serialized.files['./src/Button.stories.tsx'].dependencies).toEqual([
+      './src/generated/index.ts',
+    ]);
+    expect(serialized.files['./src/generated/index.ts']).toEqual({
+      hash: '<skipped>',
+      dependencies: ['./src/Button.tsx'],
+    });
+    expect(serialized.files['./src/Button.tsx'].hash).toBe('B');
+  });
+
   it('emits storybookConfigHashes as a JSON-safe object', async () => {
     const story = '/repo/packages/ui/src/Button.stories.tsx';
     const preview = '/repo/packages/ui/.storybook/preview.ts';

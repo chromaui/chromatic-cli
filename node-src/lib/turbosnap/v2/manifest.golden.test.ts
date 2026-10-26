@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Stats } from '../../../types';
 import { createFixture } from './__fixtures__/manifestFixtures';
 import { buildManifest } from './manifest';
+import { InMemoryDisk } from './projectFiles.fake';
 
 /**
  * ============================================================================
@@ -37,8 +38,10 @@ import { buildManifest } from './manifest';
  */
 
 // A fixture exercising every section that feeds a published hash: two stories with a shared and a
-// private dependency, a preview config with its own subtree, an orphan global reached only through
-// the framework's preview annotations, and both out-of-graph sweeps. Frozen — changing the fixture
+// private dependency, a preview config with its own subtree, a global reached only through
+// the framework's preview annotations, and both out-of-graph sweeps. The generated config entry is a
+// synthetic global root, so its forward closure seeds the globals roll-up, and the preview subtree is
+// then subtracted to keep the two Storybook-wide categories apart. Frozen — changing the fixture
 // changes the golden values without any recipe change, which defeats the point of the test.
 const buttonStory = '/repo/packages/ui/src/Button.stories.tsx';
 const headerStory = '/repo/packages/ui/src/Header.stories.tsx';
@@ -69,8 +72,9 @@ const GOLDEN_FILE_HASHES = {
   [previewTheme]: 'ffffffffffffffff',
   [entryPreview]: '1111111111111111',
   '/repo/packages/ui/.storybook/main.ts': '2222222222222222',
+  // The static dir is nested in the config dir, so its files feed both sweeps
   '/repo/packages/ui/.storybook/static/mockServiceWorker.js': '3333333333333333',
-  // Documentation in the static dir is included
+  // Documentation in the static dir is included there, but not in the config sweep
   '/repo/packages/ui/.storybook/static/README.md': '4444444444444444',
   // Documentation in the config dir is NOT included
   '/repo/packages/ui/.storybook/README.md': '5555555555555555',
@@ -82,7 +86,7 @@ const GOLDEN_DIRECTORY_TREE = {
 };
 
 // The published values. See the header before touching these.
-const GOLDEN_STORYBOOK_HASH = 'e1e50323c00bf67a';
+const GOLDEN_STORYBOOK_HASH = 'c8bde9dc3092fa75';
 
 const GOLDEN_STORY_FILES: Record<string, string> = {
   './src/Button.stories.tsx': '7b79c90e28f3ac31',
@@ -93,17 +97,18 @@ const GOLDEN_STORYBOOK_FILES: Record<string, string> = {
   preview: '9d9e21e4dd276f48',
   storybookGlobals: '372009144b241f17',
   storybookVersion: '9.1.20',
-  storybookConfigFiles: 'ccdd11764306552f',
+  storybookConfigFiles: 'dc883bfdd7638f40',
   staticFiles: '44658ab79756b51f',
 };
 
-function goldenFixture() {
+function goldenFixture(overrides: InMemoryDisk = {}) {
   return createFixture({
     fileHashes: { ...GOLDEN_FILE_HASHES },
     directories: { ...GOLDEN_DIRECTORY_TREE },
     // Pinned here rather than taken from the fixture default, so a Storybook release — or an edit to
     // that default — cannot move the golden values.
     packageVersions: { storybook: '9.1.20' },
+    ...overrides,
   });
 }
 
@@ -127,5 +132,46 @@ describe('manifest golden hashes', () => {
     const manifest = await buildManifest(GOLDEN_STATS, input);
 
     expect(Object.fromEntries(manifest.storybookConfigHashes)).toEqual(GOLDEN_STORYBOOK_FILES);
+  });
+});
+
+// The frozen fixture with `--externals` added: one tracked file above the project root, so the
+// roll-up folds in a `../` key, and one already in the graph, so it is covered twice on purpose.
+//
+// A diff in these values carries the same weight as one above, scoped to every project that passes
+// `--externals`: their baselines stop matching until each branch re-baselines. The base fixture is
+// kept separate rather than extended, so its goldens keep proving that a project without externals
+// publishes unchanged hashes.
+const tailwindConfig = '/repo/tailwind.config.js';
+
+const GOLDEN_EXTERNALS_STORYBOOK_HASH = '228e2d6599ec488b';
+const GOLDEN_EXTERNALS_ROLL_UP = '514589031a7051a4';
+
+function goldenExternalsFixture() {
+  const { input } = goldenFixture({
+    fileHashes: { ...GOLDEN_FILE_HASHES, [tailwindConfig]: '6666666666666666' },
+    trackedFiles: [tailwindConfig, tokens],
+  });
+  return { ...input, externals: ['tailwind.config.js', '**/tokens.ts'] };
+}
+
+describe('manifest golden hashes with externals', () => {
+  it('publishes the same storybookHash for the frozen fixture', async () => {
+    const manifest = await buildManifest(GOLDEN_STATS, goldenExternalsFixture());
+
+    expect(manifest.storybookHash).toBe(GOLDEN_EXTERNALS_STORYBOOK_HASH);
+  });
+
+  it('adds only the externals roll-up to storybookConfigHashes, leaving the other entries as they were', async () => {
+    const manifest = await buildManifest(GOLDEN_STATS, goldenExternalsFixture());
+
+    expect([...manifest.outOfGraphFiles.externals.keys()]).toEqual([
+      '../../tailwind.config.js',
+      './src/tokens.ts',
+    ]);
+    expect(Object.fromEntries(manifest.storybookConfigHashes)).toEqual({
+      ...GOLDEN_STORYBOOK_FILES,
+      externals: GOLDEN_EXTERNALS_ROLL_UP,
+    });
   });
 });

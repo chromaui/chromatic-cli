@@ -59,7 +59,7 @@ describe('verifyBuild', () => {
     );
     expect(client.runQuery).toHaveBeenNthCalledWith(
       4,
-      expect.stringMatching(/VerifyBuildQuery/),
+      expect.stringMatching(/VerifyBuildQuery[\S\s]*accessibilityTests\s*{\s*enabled\s*}/),
       { number: 1 },
       { headers: { Authorization: `Bearer report-token` } }
     );

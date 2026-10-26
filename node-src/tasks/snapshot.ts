@@ -12,10 +12,12 @@ import { delay, throttle } from '../lib/utilities';
 import { Context, Deps, TaskResult } from '../types';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';
-import buildPassedMessage from '../ui/messages/info/buildPassed';
+import buildSummaryMessage from '../ui/messages/info/buildSummary';
 import speedUpCI from '../ui/messages/info/speedUpCI';
 import { pending } from '../ui/tasks/snapshot';
 
+// `pendingCount`, `acceptedCount` and `deniedCount` are counted by test status, so IGNORED tests are
+// excluded by construction. `changeCount` is counted by test result and includes ignored tests.
 const SnapshotBuildQuery = `
   query SnapshotBuildQuery($number: Int!) {
     app {
@@ -27,6 +29,10 @@ const SnapshotBuildQuery = `
         testCount
         changeCount
         errorCount: testCount(statuses: [BROKEN])
+        ignoredCount: testCount(statuses: [IGNORED])
+        pendingCount: testCount(statuses: [PENDING])
+        acceptedCount: testCount(statuses: [ACCEPTED])
+        deniedCount: testCount(statuses: [DENIED])
         completedAt
       }
     }
@@ -43,6 +49,10 @@ interface BuildQueryResult {
       testCount: number;
       changeCount: number;
       errorCount: number;
+      ignoredCount: number;
+      pendingCount: number;
+      acceptedCount: number;
+      deniedCount: number;
       completedAt?: number;
     };
   };
@@ -95,8 +105,9 @@ export async function snapshotProject(
   let build = input.build;
   const { app, number, tests, testCount, actualTestCount, reportToken } = build;
 
-  if (app.repository && uploadedBytes && !options.junitReport) {
-    log.info(speedUpCI(app.repository.provider));
+  // Local builds (e.g. from the Visual Tests addon) need to wait for results, so don't suggest skipping that.
+  if (app.repository && uploadedBytes && !options.junitReport && !options.isLocalBuild) {
+    log.info(speedUpCI(app.repository.provider, options.inAction));
   }
 
   const testLabels =
@@ -270,7 +281,7 @@ export const applySnapshotOutput = (ctx: Context, output: SnapshotOutput) => {
 
   switch (output.log) {
     case 'passed':
-      ctx.log.info(buildPassedMessage(ctx));
+      ctx.log.info(buildSummaryMessage(ctx));
       return;
     case 'changes':
       ctx.log.error(buildHasChanges(ctx));

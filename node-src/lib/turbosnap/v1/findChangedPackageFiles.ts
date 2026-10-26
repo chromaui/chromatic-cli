@@ -95,7 +95,7 @@ export const findChangedPackageFiles = async (
   const changedManifestFiles = await Promise.all(
     packageMetadataChanges.map(({ changedFiles, commit }) => {
       const changedManifestFiles = changedFiles.filter((f) => isPackageMetadataFile(f));
-      if (!changedManifestFiles) return [];
+      if (changedManifestFiles.length === 0) return [];
       return getManifestFilesWithChangedDependencies(ctx, changedManifestFiles, commit);
     })
   );

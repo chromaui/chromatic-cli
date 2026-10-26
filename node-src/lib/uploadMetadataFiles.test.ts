@@ -89,6 +89,27 @@ describe('uploadMetadataFiles', () => {
     expect(logResumeCallOrder).toBeGreaterThan(uploadFilesCallOrder);
   });
 
+  it('uploads the first file when two metadata files share a target path', async () => {
+    const target = { filePath: '.chromatic/build.log', formAction: 'https://s3', formFields: {} };
+    const ctx = {
+      ...baseContext,
+      options: { logFile: 'first/build.log', storybookLogFile: 'second/build.log' },
+      announcedBuild: { id: '1' },
+      build: { storybookUrl: 'https://sample-storybook.dev-chromatic.com' },
+      client: {
+        runQuery: vi.fn().mockResolvedValue({
+          uploadMetadata: { info: { targets: [target] }, userErrors: [] },
+        }),
+      },
+    } as any;
+
+    await uploadMetadataFiles(ctx);
+
+    expect(uploadFiles).toHaveBeenCalledWith(ctx, [
+      expect.objectContaining({ ...target, localPath: 'first/build.log' }),
+    ]);
+  });
+
   it('uploads the TurboSnap Manifest from the internal build directory', async () => {
     const runQuery = vi.fn().mockResolvedValue({
       uploadMetadata: { info: { targets: [] }, userErrors: [] },

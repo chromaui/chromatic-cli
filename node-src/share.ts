@@ -10,6 +10,7 @@ import { createLogger } from './lib/log';
 import NonTTYRenderer from './lib/nonTTYRenderer';
 import parseArguments from './lib/parseArguments';
 import { confirmShare, ConfirmShareStatus, reserveShare } from './lib/share';
+import { getSecrets } from './lib/utilities';
 import { renderBuild } from './renderer/build';
 import { renderPrepare } from './renderer/prepare';
 import { runShare } from './tasks';
@@ -152,6 +153,7 @@ async function setupShareContext(shareOptions: ShareOptions): Promise<Context> {
   const ctx = initialContext as Context;
   ctx.options = getOptions(initialContext);
   ctx.options.logFile = logFile;
+  ctx.log.setSecrets(getSecrets(ctx));
   ctx.log.setLogFile(ctx.options.logFile);
   ctx.runtime = { forceRebuild: ctx.options.forceRebuild };
   return ctx;

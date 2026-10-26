@@ -10,8 +10,16 @@ import type { StorybookInfoDeps } from '../tasks/storybookInfo';
 import { AbsolutePath, Storybook } from '../types';
 import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
 import { builders } from './builders';
-import { raceFulfilled, timeout } from './promises';
 import { viewLayers } from './viewLayers';
+
+// The timer is unref'd so a lookup that wins the race doesn't keep the process alive until it fires.
+const timeout = (ms: number) =>
+  new Promise<never>((_, reject) => {
+    setTimeout(
+      () => reject(new Error('Timeout while resolving Storybook view layer package')),
+      ms
+    ).unref();
+  });
 
 /**
  * Reads the `-c` and `-s` flags out of the project's Storybook build script.
@@ -434,7 +442,7 @@ async function findStorybookVersion({ env, log, options, packageJson }: Storyboo
   // `@storybook/vue`). In this case we look for any viewlayer package present in node_modules,
   // and return the first one we find.
   return Promise.race([
-    raceFulfilled(
+    Promise.any(
       Object.entries(viewLayers).map(async ([key]) => {
         const json = await resolvePackageJson(key);
         return { version: json.version };

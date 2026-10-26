@@ -20,7 +20,7 @@ describe('getDiagnostics', () => {
   });
 
   it('omits certain fields', () => {
-    const ctx = { argv: [], client: {}, env: {}, log: {}, pkg: {}, title: {} };
+    const ctx = { analytics: {}, argv: [], client: {}, env: {}, log: {}, pkg: {}, title: {} };
     expect(getDiagnostics(ctx as any)).toEqual({});
   });
 
@@ -29,11 +29,18 @@ describe('getDiagnostics', () => {
       build: { number: 1, reportToken: 'foo' },
       flags: { projectToken: 'bar' },
       extraOptions: { userToken: 'baz' },
+      options: { originalArgv: ['-t', 'bar'] },
+      packageJson: { scripts: { chromatic: 'chromatic -t bar', ci: 'chromatic -t qux' } },
+      env: { CHROMATIC_PROJECT_TOKEN: 'qux' },
     };
     expect(getDiagnostics(ctx as any)).toEqual({
       build: { number: 1, reportToken: undefined },
       flags: { projectToken: undefined },
       extraOptions: { userToken: undefined },
+      options: { originalArgv: undefined },
+      packageJson: {
+        scripts: { chromatic: 'chromatic -t <redacted>', ci: 'chromatic -t <redacted>' },
+      },
     });
   });
 });

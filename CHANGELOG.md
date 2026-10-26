@@ -1,3 +1,282 @@
+# v18.13.3 (Thu Oct 22 2026)
+
+### Release Notes
+
+#### Lower default TurboSnap lockfile parse concurrency to 1 ([#1564](https://github.com/chromaui/chromatic-cli/pull/1564))
+
+TurboSnap now parses one lockfile at a time by default (previously 200), which greatly reduces peak memory in repositories with many package manifests. Wall time is unchanged, since parsing is synchronous. Set `CHROMATIC_TURBOSNAP_PACKAGE_CONCURRENCY` to override the default.
+
+---
+
+#### 🐛 Bug Fix
+
+- Lower default TurboSnap lockfile parse concurrency to 1 [#1564](https://github.com/chromaui/chromatic-cli/pull/1564) ([@codykaup](https://github.com/codykaup))
+- [TurboSnap v2] Skip generated directories under `node_modules` [#1557](https://github.com/chromaui/chromatic-cli/pull/1557) ([@codykaup](https://github.com/codykaup))
+- Replace raceFulfilled with Promise.any and fix findChangedPackageFiles short-circuit [#1556](https://github.com/chromaui/chromatic-cli/pull/1556) ([@codykaup](https://github.com/codykaup))
+- Show upload task as skipped when TurboSnap bypasses the build [#1559](https://github.com/chromaui/chromatic-cli/pull/1559) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v18.13.2 (Wed Oct 21 2026)
+
+#### 🐛 Bug Fix
+
+- [git] Speed up baseline commit filtering [#1561](https://github.com/chromaui/chromatic-cli/pull/1561) ([@sharmila-oai](https://github.com/sharmila-oai))
+- Fold webpack loader-chain stats ids onto their resource [#1550](https://github.com/chromaui/chromatic-cli/pull/1550) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Sharmila ([@sharmila-oai](https://github.com/sharmila-oai))
+
+---
+
+# v18.13.1 (Wed Oct 21 2026)
+
+#### 🐛 Bug Fix
+
+- Confirm COMPONENTOWNERS upload outside the interactive UI [#1551](https://github.com/chromaui/chromatic-cli/pull/1551) ([@justin-thurman](https://github.com/justin-thurman))
+- [TurboSnap v2] Tighten context-marker matching [#1554](https://github.com/chromaui/chromatic-cli/pull/1554) ([@ObviousApp](https://github.com/ObviousApp) [@codykaup](https://github.com/codykaup) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Authenticate action publish pushes with a credential helper [#1552](https://github.com/chromaui/chromatic-cli/pull/1552) ([@justin-thurman](https://github.com/justin-thurman))
+- Remove `no-secrets` lint rule [#1555](https://github.com/chromaui/chromatic-cli/pull/1555) ([@codykaup](https://github.com/codykaup))
+- [TurboSnap v2]: fold NUL-prefixed and query-suffixed stats ids into the file they stand for [#1529](https://github.com/chromaui/chromatic-cli/pull/1529) ([@ObviousApp](https://github.com/ObviousApp) [@codykaup](https://github.com/codykaup) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Keep credentials out of the diagnostics and log files [#1536](https://github.com/chromaui/chromatic-cli/pull/1536) ([@ObviousApp](https://github.com/ObviousApp) [@codykaup](https://github.com/codykaup) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Merge TurboSnap V1 modules that normalize to one name [#1530](https://github.com/chromaui/chromatic-cli/pull/1530) ([@ObviousApp](https://github.com/ObviousApp) [@codykaup](https://github.com/codykaup) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Skip tests on PRs that only change docs and agent files [#1540](https://github.com/chromaui/chromatic-cli/pull/1540) ([@codykaup](https://github.com/codykaup))
+- Skip release when there is nothing to release [#1545](https://github.com/chromaui/chromatic-cli/pull/1545) ([@codykaup](https://github.com/codykaup))
+- fix: preserve orb toolchain selection after environment reload [#1549](https://github.com/chromaui/chromatic-cli/pull/1549) ([@justin-thurman](https://github.com/justin-thurman))
+- Add CLI verification skills [#1533](https://github.com/chromaui/chromatic-cli/pull/1533) ([@codykaup](https://github.com/codykaup))
+- Add amp orb setup scripts [#1548](https://github.com/chromaui/chromatic-cli/pull/1548) ([@justin-thurman](https://github.com/justin-thurman))
+- Merge pull request #1547 from chromaui/cody/cap-5335-turbosnap-v1-rsbuild-concatenated-story-module-becomes-the [#1547](https://github.com/chromaui/chromatic-cli/pull/1547) ([@codykaup](https://github.com/codykaup))
+- Merge pull request #1546 from chromaui/cody/cap-5336-turbosnap-v1-opaque-nul-ids-0commonjshelpersjs-0vitepreload [#1546](https://github.com/chromaui/chromatic-cli/pull/1546) ([@codykaup](https://github.com/codykaup))
+- Merge pull request #1544 from chromaui/cody/cap-5104 [#1544](https://github.com/chromaui/chromatic-cli/pull/1544) ([@codykaup](https://github.com/codykaup))
+- Fix "Build passed" output for exit-zero builds with pending or denied changes [#1535](https://github.com/chromaui/chromatic-cli/pull/1535) ([@ObviousApp](https://github.com/ObviousApp) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Don't log "Traversing dependencies" when TurboSnap tracing will not run [#1539](https://github.com/chromaui/chromatic-cli/pull/1539) ([@ObviousApp](https://github.com/ObviousApp) [@coderabbitai[bot]](https://github.com/coderabbitai[bot]) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Fail fast when an explicit `--config-file` does not exist [#1534](https://github.com/chromaui/chromatic-cli/pull/1534) ([@ObviousApp](https://github.com/ObviousApp) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Remove `**/build/*` ESLint ignore [#1538](https://github.com/chromaui/chromatic-cli/pull/1538) ([@ObviousApp](https://github.com/ObviousApp) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Add AGENTS.md with public-repository guidance for agents [#1532](https://github.com/chromaui/chromatic-cli/pull/1532) ([@codykaup](https://github.com/codykaup))
+- Pass visited commit SHAs to git log via stdin to avoid E2BIG [#1531](https://github.com/chromaui/chromatic-cli/pull/1531) ([@b-pm](https://github.com/b-pm))
+
+#### Authors: 6
+
+- [@coderabbitai[bot]](https://github.com/coderabbitai[bot])
+- [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot])
+- B. ([@b-pm](https://github.com/b-pm))
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+- Obvious ([@ObviousApp](https://github.com/ObviousApp))
+
+---
+
+# v18.13.0 (Fri Oct 16 2026)
+
+#### 🚀 Enhancement
+
+- [TurboSnap v2] Apply gitignore values from sibling packages in monorepos [#1527](https://github.com/chromaui/chromatic-cli/pull/1527) ([@ObviousApp](https://github.com/ObviousApp) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- [TurboSnap v2] Skip gitignored files in the Storybook config directory [#1525](https://github.com/chromaui/chromatic-cli/pull/1525) ([@codykaup](https://github.com/codykaup))
+- [TurboSnap v2] Add `--untraced` support [#1522](https://github.com/chromaui/chromatic-cli/pull/1522) ([@codykaup](https://github.com/codykaup))
+- [TurboSnap v2] Add `--externals` support [#1516](https://github.com/chromaui/chromatic-cli/pull/1516) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Dedupe concurrent Release workflow runs [#1526](https://github.com/chromaui/chromatic-cli/pull/1526) ([@ObviousApp](https://github.com/ObviousApp) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+- Autobuild onboarding: add .obvious agent contract (validated local dev + snapshot) [#1521](https://github.com/chromaui/chromatic-cli/pull/1521) ([@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]) [@ObviousApp](https://github.com/ObviousApp))
+
+#### Authors: 3
+
+- [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot])
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Obvious ([@ObviousApp](https://github.com/ObviousApp))
+
+---
+
+# v18.12.2 (Wed Oct 14 2026)
+
+#### 🐛 Bug Fix
+
+- [WFL-1206] Azure DevOps slug parsing [#1517](https://github.com/chromaui/chromatic-cli/pull/1517) ([@ax-vasquez](https://github.com/ax-vasquez))
+- Remove alpha warning from React Native build [#1520](https://github.com/chromaui/chromatic-cli/pull/1520) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 2
+
+- Armando Vasquez ([@ax-vasquez](https://github.com/ax-vasquez))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
+# v18.12.1 (Tue Oct 13 2026)
+
+#### 🐛 Bug Fix
+
+- List untracked files relative to the repository root [#1519](https://github.com/chromaui/chromatic-cli/pull/1519) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v18.12.0 (Thu Oct 08 2026)
+
+#### 🚀 Enhancement
+
+- [TurboSnap v2] Skip files that git ignores [#1515](https://github.com/chromaui/chromatic-cli/pull/1515) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- [WFL-1014] fix: add ADO provider support and generic speedUpCI message [#1464](https://github.com/chromaui/chromatic-cli/pull/1464) ([@ax-vasquez](https://github.com/ax-vasquez))
+
+#### Authors: 2
+
+- Armando Vasquez ([@ax-vasquez](https://github.com/ax-vasquez))
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v18.11.0 (Mon Oct 05 2026)
+
+#### 🚀 Enhancement
+
+- Communicate the number of ignored tests [#1481](https://github.com/chromaui/chromatic-cli/pull/1481) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
+# v18.10.2 (Fri Oct 02 2026)
+
+#### 🐛 Bug Fix
+
+- Skip TurboSnap v2 hash collection when TurboSnap is explicitly disabled [#1511](https://github.com/chromaui/chromatic-cli/pull/1511) ([@codykaup](https://github.com/codykaup))
+- Hash single-file `staticDirs` entries in the TurboSnap v2 manifest [#1509](https://github.com/chromaui/chromatic-cli/pull/1509) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v18.10.1 (Mon Sep 28 2026)
+
+#### 🐛 Bug Fix
+
+- Advise users when the Storybook config directory is invalid [#1499](https://github.com/chromaui/chromatic-cli/pull/1499) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v18.10.0 (Mon Sep 28 2026)
+
+#### 🚀 Enhancement
+
+- Parse PNPM lock files and support PNPM workspaces [#1502](https://github.com/chromaui/chromatic-cli/pull/1502) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Parse PNPM 12 multi-document lockfiles [#1505](https://github.com/chromaui/chromatic-cli/pull/1505) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v18.9.6 (Mon Sep 28 2026)
+
+#### 🐛 Bug Fix
+
+- Run TurboSnap v1 when no files changed [#1508](https://github.com/chromaui/chromatic-cli/pull/1508) ([@codykaup](https://github.com/codykaup))
+- Remove unused dependencies [#1503](https://github.com/chromaui/chromatic-cli/pull/1503) ([@codykaup](https://github.com/codykaup))
+- Speed up CI installs and run checks in parallel [#1504](https://github.com/chromaui/chromatic-cli/pull/1504) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v18.9.5 (Tue Sep 22 2026)
+
+#### 🐛 Bug Fix
+
+- Follow committed symlinks when checking out baseline lockfiles [#1501](https://github.com/chromaui/chromatic-cli/pull/1501) ([@codykaup](https://github.com/codykaup))
+- Advise users when TurboSnap v2 runs without dependencies [#1498](https://github.com/chromaui/chromatic-cli/pull/1498) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v18.9.4 (Thu Sep 17 2026)
+
+#### 🐛 Bug Fix
+
+- Add TurboSnap v2 context to Sentry and log Storybook resolution paths [#1496](https://github.com/chromaui/chromatic-cli/pull/1496) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v18.9.3 (Thu Sep 17 2026)
+
+#### 🐛 Bug Fix
+
+- Determine globals by their imports [#1489](https://github.com/chromaui/chromatic-cli/pull/1489) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v18.9.2 (Thu Sep 17 2026)
+
+#### 🐛 Bug Fix
+
+- Upgrade bundled Lodash to 4.18.1 [#1495](https://github.com/chromaui/chromatic-cli/pull/1495) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 1
+
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
+# v18.9.1 (Wed Sep 16 2026)
+
+#### 🐛 Bug Fix
+
+- Read Storybook version from config directory then fallback [#1491](https://github.com/chromaui/chromatic-cli/pull/1491) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v18.9.0 (Tue Sep 15 2026)
+
+#### 🚀 Enhancement
+
+- Always upload TurboSnap v2 hashes [#1490](https://github.com/chromaui/chromatic-cli/pull/1490) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.8.1 (Fri Sep 11 2026)
 
 #### 🐛 Bug Fix
