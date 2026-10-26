@@ -1,17 +1,18 @@
+import { DepGraph } from '@snyk/dep-graph';
 import fs from 'fs';
 import os from 'os';
 import pLimit from 'p-limit';
 import path from 'path';
 
 import {
+  ChangedFileWithStatus,
   checkoutFile,
   findFilesFromRepositoryRoot,
-  getChangedFilesWithStatus,
   getRepositoryRoot,
 } from '../../../git/git';
 import { Context } from '../../../types';
 import { matchesFile, SUPPORTED_LOCK_FILES } from '../../utilities';
-import { classifyManifestChange } from './classifyBailRootCause';
+import { classifyManifestChange, getManifestChanges } from './classifyBailRootCause';
 import { compareBaseline } from './compareBaseline';
 import { BaselineCheckoutFailedError } from './errors';
 import { getDependencies } from './getDependencies';
@@ -119,8 +120,11 @@ export const findChangedDependencies = async (ctx: Context) => {
   let addedManifestError: BaselineCheckoutFailedError | undefined;
   let incompleteBaselineGraph = false;
   const addedWorkspaceNames = new Set<string>();
+  const addedWorkspaceDependencies = new Set<DepGraph>();
   const baselineDependencyNames = new Set<string>();
+  const baselinePackageIds = new Set<string>();
   const existingDependencyChanges = new Set<string>();
+  const manifestChangesByReference = new Map<string, Promise<ChangedFileWithStatus[]>>();
 
   const packageConcurrency = ctx.env.CHROMATIC_TURBOSNAP_PACKAGE_CONCURRENCY;
   const headDependenciesLimit = pLimit(packageConcurrency);
@@ -159,16 +163,15 @@ export const findChangedDependencies = async (ctx: Context) => {
                     rootPath,
                     reference,
                     manifestPath,
-                    error
+                    error,
+                    manifestChangesByReference
                   );
                   addedManifestError = addedWorkspace.error;
                   addedWorkspaceNames.add(addedWorkspace.name);
-                  for (const dependency of headDependencies.getPkgs()) {
-                    changedDependencyNames.add(dependency.name);
-                  }
+                  addedWorkspaceDependencies.add(headDependencies);
                   ctx.log.debug(
                     { manifestPath, reference },
-                    'Treating added workspace and its dependencies as changed'
+                    'Treating added workspace and its new dependencies as changed'
                   );
                   return;
                 }
@@ -183,11 +186,13 @@ export const findChangedDependencies = async (ctx: Context) => {
 
                 for (const dependency of baselineDependencies.getDepPkgs()) {
                   baselineDependencyNames.add(dependency.name);
+                  baselinePackageIds.add(packageId(dependency));
                 }
                 // Include the root package when checking for name collisions. A graph
                 // without root metadata must not qualify for the addition exception.
                 if (baselineDependencies.rootPkg) {
                   baselineDependencyNames.add(baselineDependencies.rootPkg.name);
+                  baselinePackageIds.add(packageId(baselineDependencies.rootPkg));
                 } else {
                   incompleteBaselineGraph = true;
                 }
@@ -224,8 +229,26 @@ export const findChangedDependencies = async (ctx: Context) => {
     throw addedManifestError;
   }
 
+  // An added workspace is itself changed, but its dependencies only count where the exact version
+  // is new to the repository. A version already present in a baseline graph installs the same
+  // files, and an existing workspace that now resolves a dependency differently is already caught
+  // by `compareBaseline` above. Marking every dependency would re-test any story importing a
+  // shared package such as `react`.
+  for (const name of addedWorkspaceNames) {
+    changedDependencyNames.add(name);
+  }
+  for (const dependencies of addedWorkspaceDependencies) {
+    for (const dependency of dependencies.getDepPkgs()) {
+      if (!baselinePackageIds.has(packageId(dependency))) {
+        changedDependencyNames.add(dependency.name);
+      }
+    }
+  }
+
   return [...changedDependencyNames];
 };
+
+const packageId = ({ name, version }: { name: string; version?: string }) => `${name}@${version}`;
 
 /**
  * Verify that a failed baseline checkout belongs to a newly added workspace.
@@ -235,6 +258,7 @@ export const findChangedDependencies = async (ctx: Context) => {
  * @param reference Baseline commit.
  * @param manifestPath Repository-relative manifest path.
  * @param error Original checkout failure to preserve for all other cases.
+ * @param manifestChangesByReference Manifest diffs already requested, keyed by baseline commit.
  *
  * @returns The new workspace name and original checkout failure.
  */
@@ -243,7 +267,8 @@ async function getAddedWorkspace(
   rootPath: string,
   reference: string,
   manifestPath: string,
-  error: unknown
+  error: unknown,
+  manifestChangesByReference: Map<string, Promise<ChangedFileWithStatus[]>>
 ) {
   if (
     !(error instanceof BaselineCheckoutFailedError) ||
@@ -251,9 +276,14 @@ async function getAddedWorkspace(
   ) {
     throw error;
   }
-  // Use the whole-tree diff so a rename is not mistaken for an addition.
-  const changes = await getChangedFilesWithStatus(ctx, reference, 'HEAD');
-  if (classifyManifestChange(changes, manifestPath) !== 'baselineManifestAdded') {
+  // Every manifest shares the `package.json` basename, so one diff per baseline covers all of
+  // them, and a manifest moved between directories still shows up as a rename, not an addition.
+  let changes = manifestChangesByReference.get(reference);
+  if (!changes) {
+    changes = getManifestChanges(ctx, reference, manifestPath);
+    manifestChangesByReference.set(reference, changes);
+  }
+  if (classifyManifestChange(await changes, manifestPath) !== 'baselineManifestAdded') {
     throw error;
   }
   const manifest = readAddedManifest(rootPath, manifestPath, error);

@@ -58,17 +58,7 @@ async function classifyBaselineCheckoutFailureTags(
 
     // Determine how the file changed between the baseline and HEAD (such as if it was added, moved,
     // renamed, etc).
-    const basename = path.basename(fileName);
-    const changes = await getChangedFilesWithStatus(
-      deps,
-      reference,
-      'HEAD',
-      // See https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-pathspec for details
-      //
-      // `glob` allows us to pass in a glob pattern
-      // `top` anchors the response to the root of the repository (so we can catch cross-directory changes)
-      `:(glob,top)**/${basename}`
-    );
+    const changes = await getManifestChanges(deps, reference, fileName);
     return { baseline_failure_kind: classifyManifestChange(changes, fileName) };
   } catch (err) {
     // We capture the exception higher in the stack so we can simply attach the error context here.
@@ -81,6 +71,34 @@ async function classifyBaselineCheckoutFailureTags(
 
     return { baseline_failure_kind: 'unknownBaselineCheckoutFailure' };
   }
+}
+
+/**
+ * Get how every file sharing `fileName`'s basename changed between a baseline and HEAD. Limiting the
+ * diff to that basename keeps it small in large repositories, while still catching a file moved
+ * between directories as a rename.
+ *
+ * @param deps Function dependencies.
+ * @param reference The baseline commit to diff from.
+ * @param fileName The repository-relative path whose basename limits the diff.
+ *
+ * @returns One entry per changed file with that basename.
+ */
+export async function getManifestChanges(
+  deps: GitDeps,
+  reference: string,
+  fileName: string
+): Promise<ChangedFileWithStatus[]> {
+  return getChangedFilesWithStatus(
+    deps,
+    reference,
+    'HEAD',
+    // See https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-pathspec for details
+    //
+    // `glob` allows us to pass in a glob pattern
+    // `top` anchors the response to the root of the repository (so we can catch cross-directory changes)
+    `:(glob,top)**/${path.basename(fileName)}`
+  );
 }
 
 /**

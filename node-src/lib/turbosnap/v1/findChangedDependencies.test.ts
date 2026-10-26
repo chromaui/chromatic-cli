@@ -17,6 +17,7 @@ import getEnvironment from '../../getEnvironment';
 import TestLogger from '../../testLogger';
 import { BaselineCheckoutFailedError, LockFileParseFailedError } from './errors';
 import { findChangedDependencies } from './findChangedDependencies';
+import { getDependentStoryFiles } from './getDependentStoryFiles';
 
 vi.mock('snyk-nodejs-lockfile-parser');
 vi.mock('snyk-nodejs-plugin');
@@ -418,6 +419,15 @@ describe('findChangedDependencies', () => {
   });
 });
 
+const csfGlob = String.raw`./src sync ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$`;
+
+// Builds a preview-stats module whose `reasons` name the modules that import it.
+const statsModule = (id: string, ...importers: string[]) => ({
+  id,
+  name: id,
+  reasons: importers.map((moduleName) => ({ moduleName })),
+});
+
 describe('findChangedDependencies with an added workspace', () => {
   const manifestPath = 'packages/new-workspace/package.json';
   const lockfilePath = 'pnpm-lock.yaml';
@@ -506,7 +516,12 @@ importers:
     await expect(findChangedDependencies(context)).resolves.toEqual(
       expect.arrayContaining([workspaceName, 'direct-dependency', 'transitive-dependency'])
     );
-    expect(getChangedFilesWithStatus).toHaveBeenCalledWith(context, 'A', 'HEAD');
+    expect(getChangedFilesWithStatus).toHaveBeenCalledWith(
+      context,
+      'A',
+      'HEAD',
+      ':(glob,top)**/package.json'
+    );
     expect(rmSync).toHaveBeenCalledWith(tmpdir, { recursive: true, force: true });
   });
 
@@ -590,9 +605,131 @@ importers:
       { commit: 'B', changedFiles: [lockfilePath] },
     ];
     mockGraphs(rootGraph, rootGraph, rootGraph, workspaceGraph, workspaceGraph);
-    await expect(findChangedDependencies(context)).resolves.toEqual(
-      expect.arrayContaining([workspaceName, 'direct-dependency', 'transitive-dependency'])
+    // Baseline B already installs the workspace's dependencies at these versions, so only the
+    // workspace itself is new.
+    await expect(findChangedDependencies(context)).resolves.toEqual([workspaceName]);
+  });
+
+  it('does not mark a dependency the repository already installs at the same version', async () => {
+    const root = graph('root', [
+      ['existing-dependency', '1.0.0'],
+      ['shared-dependency', '2.0.0'],
+    ]);
+    const workspace = graph(workspaceName, [
+      ['shared-dependency', '2.0.0'],
+      ['new-dependency', '1.0.0'],
+    ]);
+    mockGraphs(root, root, workspace);
+
+    const changes = await findChangedDependencies(context);
+    expect(changes.toSorted()).toEqual(['new-dependency', workspaceName]);
+  });
+
+  it('marks a dependency at a version the repository did not install before', async () => {
+    const root = graph('root', [['shared-dependency', '2.0.0']]);
+    mockGraphs(root, root, graph(workspaceName, [['shared-dependency', '3.0.0']]));
+
+    const changes = await findChangedDependencies(context);
+    expect(changes.toSorted()).toEqual([workspaceName, 'shared-dependency']);
+  });
+
+  it('runs one manifest diff per baseline for several added workspaces', async () => {
+    const secondManifestPath = 'packages/second-workspace/package.json';
+    const secondCheckoutError = new BaselineCheckoutFailedError(`A:${secondManifestPath}`);
+    findFilesFromRepositoryRoot.mockImplementation(async (_, __, ...patterns) => {
+      if (patterns[0] === 'package.json') return ['package.json'];
+      if (patterns[0] === '**/package.json') return [manifestPath, secondManifestPath];
+      return patterns.includes(lockfilePath) ? [lockfilePath] : [];
+    });
+    const parser = await vi.importActual<typeof import('snyk-nodejs-lockfile-parser')>(
+      'snyk-nodejs-lockfile-parser'
     );
+    pnpmLockfileParser.mockReturnValue(
+      parser.getPnpmLockfileParser(`
+lockfileVersion: '9.0'
+importers:
+  .: {}
+  packages/new-workspace: {}
+  packages/second-workspace: {}
+`)
+    );
+    readFileSync.mockImplementation((file) =>
+      JSON.stringify({
+        name: String(file).includes('second-workspace') ? 'second-workspace' : workspaceName,
+      })
+    );
+    getChangedFilesWithStatus.mockResolvedValue([
+      { path: manifestPath, status: 'added' },
+      { path: secondManifestPath, status: 'added' },
+    ]);
+    checkoutFile.mockImplementation(async (_, reference, file) => {
+      if (reference === 'A' && file === manifestPath) throw checkoutError;
+      if (reference === 'A' && file === secondManifestPath) throw secondCheckoutError;
+    });
+    context.git.packageMetadataChanges = [
+      { commit: 'A', changedFiles: [lockfilePath, manifestPath, secondManifestPath] },
+    ];
+    mockGraphs(rootGraph, rootGraph, workspaceGraph, graph('second-workspace'));
+
+    await expect(findChangedDependencies(context)).resolves.toEqual(
+      expect.arrayContaining([workspaceName, 'second-workspace'])
+    );
+    expect(getChangedFilesWithStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it('re-tests a story that uses the new workspace, but not one that only uses a shared dependency', async () => {
+    const root = graph('root', [
+      ['existing-dependency', '1.0.0'],
+      ['shared-dependency', '2.0.0'],
+    ]);
+    const workspace = graph(workspaceName, [
+      ['shared-dependency', '2.0.0'],
+      ['new-dependency', '1.0.0'],
+    ]);
+    mockGraphs(root, root, workspace);
+    const changedDependencies = await findChangedDependencies(context);
+
+    // An existing story can reach the workspace through its `node_modules` link, or through its
+    // source when the bundler resolves the link. The source files are new, so git reports them.
+    const modules = [
+      statsModule(`./node_modules/${workspaceName}/index.js`, './src/LinkedWorkspace.stories.js'),
+      statsModule(
+        './node_modules/new-dependency/index.js',
+        `./node_modules/${workspaceName}/index.js`
+      ),
+      statsModule(
+        './node_modules/shared-dependency/index.js',
+        './src/SharedDependency.stories.js',
+        `./node_modules/${workspaceName}/index.js`
+      ),
+      statsModule('./packages/new-workspace/src/index.js', './src/WorkspaceSource.stories.js'),
+      statsModule('./src/LinkedWorkspace.stories.js', csfGlob),
+      statsModule('./src/WorkspaceSource.stories.js', csfGlob),
+      statsModule('./src/SharedDependency.stories.js', csfGlob),
+      statsModule(csfGlob, './.storybook/generated-stories-entry.js'),
+    ];
+    const traceContext = {
+      log: new TestLogger(),
+      options: {},
+      turboSnap: {},
+      storybook: { projectRoot: '/root' },
+      git: { rootPath: '/root' },
+    } as unknown as Context;
+
+    const result = await getDependentStoryFiles(
+      traceContext,
+      { modules },
+      'preview-stats.json',
+      ['packages/new-workspace/src/index.js'],
+      changedDependencies
+    );
+
+    expect(result.status).toBe('traced');
+    const storyFiles = result.status === 'traced' ? Object.keys(result.onlyStoryFiles) : [];
+    expect(storyFiles.toSorted()).toEqual([
+      './src/LinkedWorkspace.stories.js',
+      './src/WorkspaceSource.stories.js',
+    ]);
   });
 
   describe('manifest qualification and error handling', () => {
