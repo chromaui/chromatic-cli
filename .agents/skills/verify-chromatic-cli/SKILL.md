@@ -1,6 +1,6 @@
 ---
 name: verify-chromatic-cli
-description: Drive the locally built Chromatic CLI (`chromatic` / `dist/bin.cjs` in chromaui/chromatic-cli) the way a user does from a terminal and capture proof — stdout, stderr, exit codes, written files, TTY output. Use when you need to show that a change to bin-src/ or node-src/ works in the real CLI, not just in vitest: the main publish command and its option/config preflight, `--only-changed` TurboSnap builds, `trace`, `turbosnap-manifest`, and `trim-stats-file`.
+description: "Drive the locally built Chromatic CLI (`chromatic` / `dist/bin.cjs` in chromaui/chromatic-cli) the way a user does from a terminal and capture proof — stdout, stderr, exit codes, written files, TTY output. Use when you need to show that a change to bin-src/ or node-src/ works in the real CLI, not just in vitest: the main publish command and its option/config preflight, `--only-changed` TurboSnap builds, `trace`, `turbosnap-manifest`, and `trim-stats-file`."
 ---
 
 # Verify the Chromatic CLI
