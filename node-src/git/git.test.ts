@@ -12,6 +12,7 @@ import {
   checkoutFile,
   commitExists,
   commitsExist,
+  fileExistsAtReference,
   findFilesFromRepositoryRoot,
   getBranch,
   getChangedFiles,
@@ -244,6 +245,20 @@ describe('commitExists', () => {
       new Error(`fatal: Not a valid object name 1234567890^{commit}`)
     );
     expect(await commitExists(ctx, '1234567890')).toEqual(false);
+  });
+});
+
+describe('fileExistsAtReference', () => {
+  it('returns true if the file exists at the reference', async () => {
+    execGitCommand.mockResolvedValue('');
+    expect(await fileExistsAtReference(ctx, 'abc123', 'packages/ui/package.json')).toEqual(true);
+  });
+
+  it('returns false if the file does not exist at the reference', async () => {
+    execGitCommand.mockRejectedValueOnce(
+      new Error(`fatal: path 'packages/ui/package.json' does not exist in 'abc123'`)
+    );
+    expect(await fileExistsAtReference(ctx, 'abc123', 'packages/ui/package.json')).toEqual(false);
   });
 });
 
