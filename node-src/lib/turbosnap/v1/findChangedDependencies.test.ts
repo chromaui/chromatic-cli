@@ -1041,13 +1041,16 @@ describe('findChangedDependencies with stats', () => {
     );
   });
 
-  it('throws when a manifest that exists at the baseline cannot be checked out', async () => {
+  it.each([
+    ['it exists at the baseline', () => Promise.resolve(true)],
+    ['the probe fails', () => Promise.reject(new Error('git failed'))],
+  ])('throws when a manifest cannot be checked out and %s', async (_, probe) => {
     mockWorkspace({ 'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] } });
     const error = new Error('checkout failed');
     checkoutFile.mockImplementation(async (_, __, file) => {
       if (file === 'packages/ui/package.json') throw error;
     });
-    fileExistsAtReference.mockResolvedValue(true);
+    fileExistsAtReference.mockImplementation(probe);
 
     await expect(findChangedDependencies(getStatsContext(), stats(...uiModules))).rejects.toBe(
       error
