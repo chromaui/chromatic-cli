@@ -266,6 +266,8 @@ async function getBaselineChanges(
     ]);
     if (lockfileCheckout.status === 'rejected') throw lockfileCheckout.reason;
     if (manifestCheckout.status === 'rejected') {
+      // The lockfile checked out, so the baseline commit is here. If git can't confirm the manifest
+      // is there too, treat it as added: that over-reports changes rather than missing any.
       if (await fileExistsAtReference(ctx, reference, manifestPath)) throw manifestCheckout.reason;
 
       ctx.log.debug({ reference, manifestPath }, 'Manifest was added since the baseline');
