@@ -228,12 +228,7 @@ export async function hasPreviousCommit(deps: GitDeps) {
  * @returns True if the commit exists.
  */
 export async function commitExists(deps: GitDeps, commit: string) {
-  try {
-    await execGitCommand(deps, `git cat-file -e "${commit}^{commit}"`);
-    return true;
-  } catch {
-    return false;
-  }
+  return objectExists(deps, `${commit}^{commit}`);
 }
 
 /**
@@ -246,14 +241,24 @@ export async function commitExists(deps: GitDeps, commit: string) {
  * @returns True if the file exists at the reference.
  */
 export async function fileExistsAtReference(deps: GitDeps, reference: string, fileName: string) {
-  return limitConcurrency(async () => {
-    try {
-      await execGitCommand(deps, `git cat-file -e "${reference}:${fileName}"`);
-      return true;
-    } catch {
-      return false;
-    }
-  });
+  return limitConcurrency(() => objectExists(deps, `${reference}:${fileName}`));
+}
+
+/**
+ * Check if a git object exists. Any git failure counts as missing.
+ *
+ * @param deps Function dependencies.
+ * @param object The object to look up, such as `<commit>^{commit}` or `<reference>:<path>`.
+ *
+ * @returns True if the object exists.
+ */
+async function objectExists(deps: GitDeps, object: string) {
+  try {
+    await execGitCommand(deps, `git cat-file -e "${object}"`);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
