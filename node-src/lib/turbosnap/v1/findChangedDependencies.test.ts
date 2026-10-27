@@ -859,6 +859,23 @@ describe('findChangedDependencies with stats', () => {
     expect(changes.toSorted()).toEqual(['@myorg/extra', '@myorg/unused', 'is-odd', 'moment']);
   });
 
+  it('throws when the baseline lockfile is missing, even if the manifest is too', async () => {
+    mockWorkspace({
+      '.': { name: 'root', head: [] },
+      'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] },
+    });
+    const error = new Error('missing lockfile');
+    checkoutFile.mockImplementation(async (_, __, file) => {
+      if (file === 'pnpm-lock.yaml') throw error;
+      if (file === 'packages/ui/package.json') throw new Error('missing manifest');
+    });
+    fileExistsAtReference.mockResolvedValue(false);
+
+    await expect(findChangedDependencies(getStatsContext(), stats(...uiModules))).rejects.toBe(
+      error
+    );
+  });
+
   it('throws when a manifest that exists at the baseline cannot be checked out', async () => {
     mockWorkspace({ 'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] } });
     const error = new Error('checkout failed');
