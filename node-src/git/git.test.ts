@@ -252,6 +252,10 @@ describe('fileExistsAtReference', () => {
   it('returns true if the file exists at the reference', async () => {
     execGitCommand.mockResolvedValue('');
     expect(await fileExistsAtReference(ctx, 'abc123', 'packages/ui/package.json')).toEqual(true);
+    expect(execGitCommand).toHaveBeenCalledWith(
+      ctx,
+      'git cat-file -e "abc123:packages/ui/package.json"'
+    );
   });
 
   it('returns false if the file does not exist at the reference', async () => {
