@@ -228,7 +228,12 @@ export async function hasPreviousCommit(deps: GitDeps) {
  * @returns True if the commit exists.
  */
 export async function commitExists(deps: GitDeps, commit: string) {
-  return objectExists(deps, `${commit}^{commit}`);
+  try {
+    await execGitCommand(deps, `git cat-file -e "${commit}^{commit}"`);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -238,27 +243,19 @@ export async function commitExists(deps: GitDeps, commit: string) {
  * @param reference The reference (usually a commit) to look in.
  * @param fileName The repository-relative path of the file.
  *
- * @returns True if the file exists at the reference.
+ * @returns True if the file exists at the reference, false if git reports it missing. Throws when
+ * git fails, so a failure is never mistaken for a missing file.
  */
 export async function fileExistsAtReference(deps: GitDeps, reference: string, fileName: string) {
-  return limitConcurrency(() => objectExists(deps, `${reference}:${fileName}`));
-}
-
-/**
- * Check if a git object exists. Any git failure counts as missing.
- *
- * @param deps Function dependencies.
- * @param object The object to look up, such as `<commit>^{commit}` or `<reference>:<path>`.
- *
- * @returns True if the object exists.
- */
-async function objectExists(deps: GitDeps, object: string) {
-  try {
-    await execGitCommand(deps, `git cat-file -e "${object}"`);
-    return true;
-  } catch {
-    return false;
-  }
+  return limitConcurrency(async () => {
+    // `--batch-check` prints `<object> missing` for a path that isn't there, and fails for anything
+    // else that goes wrong.
+    const result = await execGitCommand(deps, 'git cat-file --batch-check', {
+      input: `${reference}:${fileName}`,
+      all: false,
+    });
+    return !result.trimEnd().endsWith(' missing');
+  });
 }
 
 /**

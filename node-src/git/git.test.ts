@@ -250,19 +250,25 @@ describe('commitExists', () => {
 
 describe('fileExistsAtReference', () => {
   it('returns true if the file exists at the reference', async () => {
-    execGitCommand.mockResolvedValue('');
+    execGitCommand.mockResolvedValue('0123456789abcdef0123456789abcdef01234567 blob 42');
     expect(await fileExistsAtReference(ctx, 'abc123', 'packages/ui/package.json')).toEqual(true);
-    expect(execGitCommand).toHaveBeenCalledWith(
-      ctx,
-      'git cat-file -e "abc123:packages/ui/package.json"'
-    );
+    expect(execGitCommand).toHaveBeenCalledWith(ctx, 'git cat-file --batch-check', {
+      input: 'abc123:packages/ui/package.json',
+      all: false,
+    });
   });
 
-  it('returns false if the file does not exist at the reference', async () => {
-    execGitCommand.mockRejectedValueOnce(
-      new Error(`fatal: path 'packages/ui/package.json' does not exist in 'abc123'`)
-    );
+  it('returns false if git reports the file missing at the reference', async () => {
+    execGitCommand.mockResolvedValue('abc123:packages/ui/package.json missing');
     expect(await fileExistsAtReference(ctx, 'abc123', 'packages/ui/package.json')).toEqual(false);
+  });
+
+  it('throws when git fails', async () => {
+    const error = new Error('fatal: not a git repository');
+    execGitCommand.mockRejectedValueOnce(error);
+    await expect(fileExistsAtReference(ctx, 'abc123', 'packages/ui/package.json')).rejects.toBe(
+      error
+    );
   });
 });
 
