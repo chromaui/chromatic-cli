@@ -127,7 +127,13 @@ async function inspectLockfile(absoluteManifestPath: string, absoluteLockfilePat
   return result.scannedProjects[0].depGraph;
 }
 
-function ensureLockFileSize(ctx: Context, fullPath: string) {
+/**
+ * Throw when a lockfile is too large to parse without risking running out of memory.
+ *
+ * @param ctx The context set when executing the CLI.
+ * @param fullPath The absolute path of the lockfile.
+ */
+export function ensureLockFileSize(ctx: Context, fullPath: string) {
   const maxLockFileSize =
     Number.parseInt(process.env.MAX_LOCK_FILE_SIZE ?? '') || MAX_LOCK_FILE_SIZE;
 

@@ -5,7 +5,7 @@ import { TraceChangedFilesResult } from '../types';
 import { captureBailException } from './captureBailException';
 import { classifyChangedPackageFilesDetail } from './classifyBailDetail';
 import { classifyTagsFromError } from './classifyBailRootCause';
-import { findChangedDependencies } from './findChangedDependencies';
+import { ChangedDependencies, findChangedDependencies } from './findChangedDependencies';
 import { findChangedPackageFiles } from './findChangedPackageFiles';
 import { getDependentStoryFiles } from './getDependentStoryFiles';
 
@@ -27,12 +27,12 @@ export async function traceChangedFiles(
 ): Promise<TraceChangedFilesResult> {
   const { changedFiles = [], packageMetadataChanges } = ctx.git;
 
-  // Only set when lockfile analysis ran and succeeded; an empty array means "no changes found".
-  let changedDependencyNames: string[] | undefined;
+  // Only set when lockfile analysis ran and succeeded; empty `names` means "no changes found".
+  let changedDependencies: ChangedDependencies | undefined;
   let pendingError: unknown;
   let pendingPatch: Partial<ChangedPackageFilesBailReason> | undefined;
   if (packageMetadataChanges?.length) {
-    changedDependencyNames = await findChangedDependencies(ctx, stats).catch((err) => {
+    changedDependencies = await findChangedDependencies(ctx, stats).catch((err) => {
       pendingError = err;
       pendingPatch = classifyChangedPackageFilesDetail(err);
 
@@ -40,7 +40,8 @@ export async function traceChangedFiles(
       ctx.log.debug({ name, message, stack, code });
       return undefined;
     });
-    if (changedDependencyNames) {
+    if (changedDependencies) {
+      const changedDependencyNames = changedDependencies.names;
       if (!ctx.options.interactive) {
         const list =
           changedDependencyNames.length > 0
@@ -81,14 +82,14 @@ export async function traceChangedFiles(
     stats,
     statsPath,
     changedFiles,
-    changedDependencyNames || []
+    changedDependencies
   );
 
   if (result.status === 'bailed') {
     return result;
   }
 
-  return { ...result, changedDependencyNames };
+  return { ...result, changedDependencyNames: changedDependencies?.names };
 }
 
 export { findChangedDependencies } from './findChangedDependencies';

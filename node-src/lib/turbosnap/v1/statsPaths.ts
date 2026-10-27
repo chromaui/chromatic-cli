@@ -15,6 +15,22 @@ export const getPackageName = (modulePath: string) => {
 };
 
 /**
+ * Finds the installed copy a module belongs to: the last `node_modules/<name>` directory of the
+ * package `getPackageName` names in its path. Copies nested inside that package's own
+ * `node_modules` belong to it too.
+ *
+ * @param filePath The normalized module path.
+ * @param packageName The package name `getPackageName` returns for the module.
+ *
+ * @returns The `node_modules/<name>` directory, or `undefined` when the path doesn't contain one.
+ */
+export const getPackageDirectory = (filePath: string, packageName: string) => {
+  const marker = `node_modules/${packageName}/`;
+  const markerIndex = filePath.lastIndexOf(marker);
+  return markerIndex === -1 ? undefined : filePath.slice(0, markerIndex + marker.length - 1);
+};
+
+/**
  * Converts a module path found in the webpack stats to be relative to the (git) root path. Module
  * paths can be relative (`./module.js`) or absolute (`/path/to/project/module.js`). The webpack
  * stats may have been generated in a subdirectory, so relative paths are anchored to the Storybook
@@ -75,3 +91,29 @@ export function normalizeStatsName(
  */
 export const getStatsProjectRoot = (ctx: Context): AbsolutePath =>
   ctx.storybook?.projectRoot ?? process.cwd();
+
+/**
+ * Reads the version of an installed package from its path, for package managers that put it there:
+ * pnpm's store (`.pnpm/react@19.0.1_<peers>/node_modules/react`) and Yarn PnP's cache
+ * (`.yarn/cache/react-npm-19.0.1-<hash>.zip/node_modules/react`).
+ *
+ * @param directory The package's `node_modules/<name>` directory, as found in the stats.
+ * @param name The package name.
+ *
+ * @returns The version, or `undefined` when the path doesn't carry one.
+ */
+export function getVersionFromPath(directory: string, name: string) {
+  const parent = directory.split('/').at(-name.split('/').length - 2) ?? '';
+
+  const pnpmPrefix = `${name.replace('/', '+')}@`;
+  if (/(^|\/)\.pnpm\//.test(directory) && parent.startsWith(pnpmPrefix)) {
+    return parent.slice(pnpmPrefix.length).split(/[_(]/)[0] || undefined;
+  }
+
+  const yarnPrefix = `${name.replace('/', '-')}-npm-`;
+  if (/(^|\/)\.yarn\//.test(directory) && parent.startsWith(yarnPrefix)) {
+    const [, version] = parent.match(/-npm-(.+?)-[\da-f]{10}(?:-[\da-f]+)?(?:\.zip)?$/) || [];
+    return version;
+  }
+  return undefined;
+}

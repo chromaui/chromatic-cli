@@ -12,7 +12,13 @@ import {
   matchesFile,
 } from '../../utilities';
 import { TraceChangedFilesResult } from '../types';
-import { getPackageName, getStatsProjectRoot, normalizeStatsName } from './statsPaths';
+import { ChangedDependencies, noChanges } from './findChangedDependencies';
+import {
+  getPackageDirectory,
+  getPackageName,
+  getStatsProjectRoot,
+  normalizeStatsName,
+} from './statsPaths';
 
 type FilePath = string;
 type NormalizedName = string;
@@ -49,7 +55,8 @@ export type DependentStoryFilesResult = Exclude<TraceChangedFilesResult, { statu
  * @param statsPath The path to the stats file generated from the project's builder (Webpack, for
  * example).
  * @param changedFiles A list of changed files.
- * @param changedDependencies A list of changed dependencies.
+ * @param changedDependencies The changed dependencies. Copies of them whose version didn't change
+ * aren't traced.
  *
  * @returns `bailed` when TurboSnap gave up, or `traced` with the affected story files in
  * `onlyStoryFiles`.
@@ -61,8 +68,9 @@ export async function getDependentStoryFiles(
   stats: Stats,
   statsPath: string,
   changedFiles: string[],
-  changedDependencies: string[] = []
+  changedDependencies: ChangedDependencies = noChanges()
 ): Promise<DependentStoryFilesResult> {
+  const { names: changedDependencyNames, isUnchangedCopy } = changedDependencies;
   const { rootPath } = ctx.git || {};
   if (!rootPath) {
     throw new Error('Failed to determine repository root');
@@ -122,7 +130,8 @@ export async function getDependentStoryFiles(
     globalRootFiles.some((prefix) => name.startsWith(prefix));
 
   const modulesByName = new Map<NormalizedName, Module>();
-  const nodeModules = new Map<string, NormalizedName[]>();
+  // Installed modules by package name, then by the `node_modules/<name>` directory of their copy.
+  const nodeModules = new Map<string, Map<string, NormalizedName[]>>();
   const namesById = new Map<Module['id'], NormalizedName>();
   const reasonsById = new Map<Module['id'], NormalizedName[]>();
   const csfGlobsByName = new Set<NormalizedName>();
@@ -188,13 +197,17 @@ export async function getDependentStoryFiles(
       if (!membersByName.has(innerName)) modulesByName.set(innerName, representative);
     }
 
-    // Track all modules from any node_modules directory by their package name, so we can mark
-    // all those files "changed" if a dependency (version) changes, while still being able to
-    // "untrace" certain files (or globs) in those packages.
+    // Track all modules from any node_modules directory by their package name and copy, so we can
+    // mark the files of a copy "changed" if a dependency (version) changes, while still being able
+    // to "untrace" certain files (or globs) in those packages. A module whose copy can't be told
+    // goes under its own name, which the copy check never skips.
     for (const packageName of new Set(members.map((member) => getPackageName(member.name)))) {
       if (!packageName) continue;
-      if (!nodeModules.has(packageName)) nodeModules.set(packageName, []);
-      nodeModules.get(packageName)?.push(name);
+      const copies = nodeModules.get(packageName) ?? new Map<string, NormalizedName[]>();
+      nodeModules.set(packageName, copies);
+      const directory = getPackageDirectory(name, packageName) ?? name;
+      if (!copies.has(directory)) copies.set(directory, []);
+      copies.get(directory)?.push(name);
     }
 
     if (reasons.some((reason) => isGlobalRoot(reason))) {
@@ -256,11 +269,27 @@ export async function getDependentStoryFiles(
       : [normalize(module_.name)];
   }
 
-  const tracedFiles = [
-    // Convert dependency names into their corresponding files which occur in the stats file.
-    ...changedDependencies.flatMap((packageName) => nodeModules.get(packageName) || []),
-    ...changedFiles,
-  ].filter((file) => untrace(file));
+  // Convert dependency names into their corresponding files which occur in the stats file, leaving
+  // out copies whose version didn't change.
+  const copies = changedDependencyNames.flatMap((packageName) =>
+    [...(nodeModules.get(packageName) ?? [])].map(([directory, names]) => ({
+      directory,
+      names,
+      unchanged: isUnchangedCopy(directory, packageName),
+    }))
+  );
+  const changedDependencyFiles = copies
+    .filter((copy) => !copy.unchanged)
+    .flatMap((copy) => copy.names);
+  const unchangedCopies = copies.filter((copy) => copy.unchanged).map((copy) => copy.directory);
+  if (unchangedCopies.length > 0) {
+    ctx.log.debug(
+      { unchangedCopies },
+      'Not tracing copies of changed dependencies that did not change'
+    );
+  }
+
+  const tracedFiles = [...changedDependencyFiles, ...changedFiles].filter((file) => untrace(file));
   const tracedPaths = new Set<string>();
   const affectedModuleIds = new Set<string | number>();
   const checkedIds = {};
@@ -281,7 +310,7 @@ export async function getDependentStoryFiles(
 
   const changedPackageLockFiles = tracedFiles.filter((file) => isPackageLockFile(file));
 
-  if (nodeModules.size === 0 && changedDependencies.length > 0) {
+  if (nodeModules.size === 0 && changedDependencyNames.length > 0) {
     // If we didn't find any node_modules in the stats file, it's probably incomplete and we can't
     // trace changed dependencies, so we bail just in case.
     turboSnap.bailReason = {

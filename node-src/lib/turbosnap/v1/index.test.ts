@@ -194,7 +194,7 @@ describe('traceChangedFiles', () => {
   }
 
   it('returns dependency changes', async () => {
-    findChangedDependencies.mockResolvedValue(['moment']);
+    findChangedDependencies.mockResolvedValue({ names: ['moment'], isUnchangedCopy: () => false });
     findChangedPackageFiles.mockResolvedValue([]);
     getDependentStoryFiles.mockResolvedValue({
       status: 'traced',
@@ -225,7 +225,7 @@ describe('traceChangedFiles', () => {
 
   it('throws an error if storybookBaseDir is incorrect', async () => {
     const deps = { 123: ['./example.stories.js'] };
-    findChangedDependencies.mockResolvedValue([]);
+    findChangedDependencies.mockResolvedValue({ names: [], isUnchangedCopy: () => false });
     findChangedPackageFiles.mockResolvedValue([]);
     getDependentStoryFiles.mockResolvedValue({
       status: 'traced',

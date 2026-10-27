@@ -2,6 +2,7 @@
 import snykGraph from '@snyk/dep-graph';
 import {
   copyFileSync as unMockedCopyFileSync,
+  lstatSync as unMockedLstatSync,
   mkdtempSync as unMockedMkdtempSync,
   readFileSync as unMockedReadFileSync,
   statSync as unMockedStatSync,
@@ -30,6 +31,7 @@ const tmpdir = '/tmpdir';
 
 const statSync = unMockedStatSync as Mock;
 statSync.mockReturnValue({ size: 1 });
+(unMockedLstatSync as Mock).mockReturnValue({ isSymbolicLink: () => false });
 
 const copyFileSync = unMockedCopyFileSync as Mock;
 copyFileSync.mockReturnValue(undefined);
@@ -44,6 +46,9 @@ const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 const checkoutFile = vi.mocked(git.checkoutFile);
 const findFilesFromRepositoryRoot = vi.mocked(git.findFilesFromRepositoryRoot);
 const pnpmLockfileParser = vi.mocked(getPnpmLockfileParser);
+const { getPnpmLockfileParser: realPnpmLockfileParser } = await vi.importActual<typeof snykParser>(
+  'snyk-nodejs-lockfile-parser'
+);
 const pnpmWorkspaceProject = vi.mocked(parsePnpmWorkspaceProject);
 const inspect = vi.mocked(snyk.inspect);
 const createChangedPackagesGraph = vi.mocked(snykGraph.createChangedPackagesGraph);
@@ -82,6 +87,12 @@ const getContext = (
 // Stats that load no workspace, so every change counts, as it did before scoping.
 const noStats = { modules: [] };
 
+// The names of the changed dependencies.
+const changedNames = async (...args: Parameters<typeof findChangedDependencies>) => {
+  const { names } = await findChangedDependencies(...args);
+  return names;
+};
+
 const AMetadataChanges = [{ changedFiles: ['package.json'], commit: 'A' }];
 
 // Recursive input type for buildDepGraph
@@ -111,6 +122,8 @@ function mockInspect(...inspectCalls: builDepGraphInput[][]) {
         {
           depGraph: {
             getDepPkgs: () => buildDepGraph(dependencies),
+            getPkgs: () => buildDepGraph(dependencies),
+            toJSON: () => ({ pkgs: [], graph: { rootNodeId: 'root', nodes: [] } }),
           },
         },
       ],
@@ -132,7 +145,7 @@ describe('findChangedDependencies', () => {
   it('returns nothing given no changes', async () => {
     const context = getContext({ git: { packageMetadataChanges: [] } });
 
-    await expect(findChangedDependencies(context, noStats)).resolves.toEqual([]);
+    await expect(changedNames(context, noStats)).resolves.toEqual([]);
     expect(checkoutFile).not.toHaveBeenCalled();
     expect(inspect).not.toHaveBeenCalled();
   });
@@ -143,7 +156,7 @@ describe('findChangedDependencies', () => {
       git: { packageMetadataChanges: [{ changedFiles: ['foo/package.json'], commit: 'A' }] },
     });
 
-    await expect(findChangedDependencies(context, noStats)).resolves.toEqual([]);
+    await expect(changedNames(context, noStats)).resolves.toEqual([]);
 
     expect(checkoutFile).not.toHaveBeenCalled();
     expect(inspect).not.toHaveBeenCalled();
@@ -155,7 +168,7 @@ describe('findChangedDependencies', () => {
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
 
-    await expect(findChangedDependencies(context, noStats)).resolves.toEqual([]);
+    await expect(changedNames(context, noStats)).resolves.toEqual([]);
   });
 
   it('returns nothing when dependency tree is empty', async () => {
@@ -164,7 +177,7 @@ describe('findChangedDependencies', () => {
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
 
-    await expect(findChangedDependencies(context, noStats)).resolves.toEqual([]);
+    await expect(changedNames(context, noStats)).resolves.toEqual([]);
   });
 
   it('returns nothing when dependency tree is unchanged', async () => {
@@ -173,7 +186,7 @@ describe('findChangedDependencies', () => {
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
 
-    await expect(findChangedDependencies(context, noStats)).resolves.toEqual([]);
+    await expect(changedNames(context, noStats)).resolves.toEqual([]);
   });
 
   it('returns updated dependencies', async () => {
@@ -182,7 +195,7 @@ describe('findChangedDependencies', () => {
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
 
-    await expect(findChangedDependencies(context, noStats)).resolves.toEqual(['react']);
+    await expect(changedNames(context, noStats)).resolves.toEqual(['react']);
   });
 
   it('returns added/removed dependencies', async () => {
@@ -191,7 +204,7 @@ describe('findChangedDependencies', () => {
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
 
-    await expect(findChangedDependencies(context, noStats)).resolves.toEqual(['vue', 'react']);
+    await expect(changedNames(context, noStats)).resolves.toEqual(['vue', 'react']);
   });
 
   it('finds updated transient dependencies', async () => {
@@ -205,7 +218,7 @@ describe('findChangedDependencies', () => {
 
     const context = getContext({ git: { packageMetadataChanges: AMetadataChanges } });
 
-    await expect(findChangedDependencies(context, noStats)).resolves.toEqual(['loose-envify']);
+    await expect(changedNames(context, noStats)).resolves.toEqual(['loose-envify']);
   });
 
   it('combines and dedupes changes for multiple baselines', async () => {
@@ -229,10 +242,7 @@ describe('findChangedDependencies', () => {
       },
     });
 
-    await expect(findChangedDependencies(getContext(context), noStats)).resolves.toEqual([
-      'react',
-      'lodash',
-    ]);
+    await expect(changedNames(getContext(context), noStats)).resolves.toEqual(['react', 'lodash']);
   });
 
   it('looks for manifest and lock files in subpackages', async () => {
@@ -261,7 +271,7 @@ describe('findChangedDependencies', () => {
       },
     });
 
-    await expect(findChangedDependencies(context, noStats)).resolves.toEqual(
+    await expect(changedNames(context, noStats)).resolves.toEqual(
       expect.arrayContaining(['react', 'lodash'])
     );
 
@@ -296,13 +306,29 @@ describe('findChangedDependencies', () => {
       },
     });
 
-    await expect(findChangedDependencies(context, noStats)).resolves.toEqual([]);
+    await expect(changedNames(context, noStats)).resolves.toEqual([]);
 
     expect(inspect).toHaveBeenCalledWith(
       tmpdir,
       expect.stringContaining('/yarn.lock'), // root lockfile
       { dev: true, strictOutOfSync: false }
     );
+  });
+
+  it('traces copies when the root and a subpackage have no lockfile', async () => {
+    findFilesFromRepositoryRoot.mockImplementation((_, __, file) => {
+      if (file === '**/package.json') return Promise.resolve(['a/package.json', 'b/package.json']);
+      return Promise.resolve(file === 'package.json' || file === 'a/yarn.lock' ? [file] : []);
+    });
+    mockInspect(['react@18.2.0'], ['react@18.3.0']);
+    mockChangedPackagesGraph(['react@18.3.0']);
+
+    const context = getContext({
+      git: { packageMetadataChanges: [{ changedFiles: ['a/yarn.lock'], commit: 'A' }] },
+    });
+    const { names, isUnchangedCopy } = await findChangedDependencies(context, noStats);
+    expect(names).toEqual(['react']);
+    expect(isUnchangedCopy('node_modules/react', 'react')).toBe(false);
   });
 
   it('ignores lockfile changes if metadata file is untraced', async () => {
@@ -321,7 +347,7 @@ describe('findChangedDependencies', () => {
       },
     });
 
-    await expect(findChangedDependencies(context, noStats)).resolves.toEqual([]);
+    await expect(changedNames(context, noStats)).resolves.toEqual([]);
 
     expect(checkoutFile).not.toHaveBeenCalled();
     expect(inspect).not.toHaveBeenCalled();
@@ -343,7 +369,7 @@ describe('findChangedDependencies', () => {
       },
     });
 
-    await expect(findChangedDependencies(context, noStats)).resolves.toEqual([]);
+    await expect(changedNames(context, noStats)).resolves.toEqual([]);
 
     expect(inspect).toHaveBeenCalledWith(tmpdir, `${tmpdir}/package-lock.json`, {
       dev: true,
@@ -381,7 +407,7 @@ describe('findChangedDependencies', () => {
       },
     });
 
-    await expect(findChangedDependencies(context, noStats)).resolves.toEqual(['react']);
+    await expect(changedNames(context, noStats)).resolves.toEqual(['react']);
 
     expect(copyFileSync).toHaveBeenCalledWith(
       '/root/subdir/package.json',
@@ -404,7 +430,11 @@ describe('findChangedDependencies', () => {
     const importers: string[] = [];
     pnpmWorkspaceProject.mockImplementation(async (_manifest, _lockfile, _options, importer) => {
       importers.push(importer);
-      return { getDepPkgs: () => [] } as any;
+      return {
+        getDepPkgs: () => [],
+        getPkgs: () => [],
+        toJSON: () => ({ pkgs: [], graph: { rootNodeId: 'root', nodes: [] } }),
+      } as any;
     });
     mockChangedPackagesGraph(['moment@2.31.0']);
 
@@ -414,7 +444,7 @@ describe('findChangedDependencies', () => {
 
     // The changed dependency comes from the mocked graph comparison; the assertions on the
     // importer are what exercise the pnpm path.
-    await expect(findChangedDependencies(context, noStats)).resolves.toEqual(['moment']);
+    await expect(changedNames(context, noStats)).resolves.toEqual(['moment']);
 
     // HEAD and baseline for both the root and the nested package.
     expect(importers.toSorted()).toEqual(['.', '.', 'packages/ui', 'packages/ui']);
@@ -428,7 +458,11 @@ const fakeGraph = (name: string, dependencies: string[]) => {
     const [, depName, version] = dep.match(/^(.+)@(.+)$/) || [];
     return { name: depName, version };
   });
-  return { getDepPkgs: () => depPkgs, getPkgs: () => [{ name }, ...depPkgs] };
+  return {
+    getDepPkgs: () => depPkgs,
+    getPkgs: () => [{ name }, ...depPkgs],
+    toJSON: () => ({ pkgs: [], graph: { rootNodeId: 'root', nodes: [] } }),
+  };
 };
 
 // The last name only appears as the importer of the module before it, as Vite lists
@@ -473,6 +507,44 @@ const workspaces = (sharedDeclares: string[]) => ({
 const reactBump = {
   'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] },
   'packages/backend': { name: '@myorg/backend', head: ['react@19.0.2'], base: ['react@19.0.1'] },
+};
+
+// The pnpm store directory of an is-number copy.
+const pnpmCopy = (version: string) =>
+  `node_modules/.pnpm/is-number@${version}/node_modules/is-number`;
+
+// Serves these files, by absolute path, on top of what the `readFileSync` mock already serves.
+const mockFiles = (files: Record<string, string>) => {
+  const read = readFileSync.getMockImplementation() as (file: string) => string;
+  readFileSync.mockImplementation((file: string) => files[file] ?? read(file));
+};
+
+// A pnpm lockfile with the root and `packages/ui` that installs these `name@version` packages, from
+// the registry unless the version is a `file:` directory.
+const pnpmLockfile = (...packageIds: string[]) =>
+  [
+    "lockfileVersion: '9.0'",
+    'importers:',
+    '  .: {}',
+    '  packages/ui: {}',
+    'packages:',
+    ...packageIds.flatMap((id) => [
+      `  ${id}:`,
+      id.includes('@file:')
+        ? `    resolution: {directory: ${id.split('@file:')[1]}, type: directory}`
+        : '    resolution: {integrity: sha512-abc}',
+    ]),
+    'snapshots:',
+    ...packageIds.map((id) => `  ${id}: {}`),
+  ].join('\n');
+
+// Serves this lockfile at the repository root, and reads it with the real pnpm parser.
+const mockPnpmLockfile = (lockfile: string, files: Record<string, string> = {}) => {
+  mockFiles({ '/root/pnpm-lock.yaml': lockfile, ...files });
+  const parse = pnpmLockfileParser.getMockImplementation() as typeof getPnpmLockfileParser;
+  pnpmLockfileParser.mockImplementation((content, ...args) =>
+    content === lockfile ? realPnpmLockfileParser(content) : parse(content, ...args)
+  );
 };
 
 const packageKey = ({ name, version }: { name: string; version: string }) => `${name}@${version}`;
@@ -560,7 +632,7 @@ describe('findChangedDependencies with stats', () => {
     });
 
     await expect(
-      findChangedDependencies(
+      changedNames(
         getStatsContext(),
         stats(...uiModules, './../../node_modules/lodash.debounce/index.js')
       )
@@ -575,7 +647,7 @@ describe('findChangedDependencies with stats', () => {
     });
 
     await expect(
-      findChangedDependencies(
+      changedNames(
         getStatsContext(),
         stats('./src/Button.tsx', './../../node_modules/react/index.js')
       )
@@ -601,7 +673,7 @@ describe('findChangedDependencies with stats', () => {
       getStatsContext(),
       stats(...uiModules, './../shared/src/index.ts')
     );
-    expect(changes.toSorted()).toEqual(['lodash', 'react']);
+    expect(changes.names.toSorted()).toEqual(['lodash', 'react']);
     expect(maxActive).toBe(1);
   });
 
@@ -611,9 +683,7 @@ describe('findChangedDependencies with stats', () => {
       'packages/backend': { name: '@myorg/backend', head: ['react@18.3.1'], base: [] },
     });
 
-    await expect(findChangedDependencies(getStatsContext(), stats(...uiModules))).resolves.toEqual(
-      []
-    );
+    await expect(changedNames(getStatsContext(), stats(...uiModules))).resolves.toEqual([]);
   });
 
   it('reports a change to the copy the Storybook declares', async () => {
@@ -622,9 +692,7 @@ describe('findChangedDependencies with stats', () => {
       'packages/backend': { name: '@myorg/backend', head: ['react@19.0.1'], base: [] },
     });
 
-    await expect(findChangedDependencies(getStatsContext(), stats(...uiModules))).resolves.toEqual([
-      'react',
-    ]);
+    await expect(changedNames(getStatsContext(), stats(...uiModules))).resolves.toEqual(['react']);
   });
 
   it('reports changes of a workspace the Storybook loads through a relative import', async () => {
@@ -638,7 +706,7 @@ describe('findChangedDependencies with stats', () => {
     });
 
     await expect(
-      findChangedDependencies(getStatsContext(), stats(...uiModules, './../backend/src/index.ts'))
+      changedNames(getStatsContext(), stats(...uiModules, './../backend/src/index.ts'))
     ).resolves.toEqual(['react']);
   });
 
@@ -653,10 +721,7 @@ describe('findChangedDependencies with stats', () => {
     });
 
     await expect(
-      findChangedDependencies(
-        getStatsContext(),
-        statsWithImporter(...uiModules, './../backend/src/index.ts')
-      )
+      changedNames(getStatsContext(), statsWithImporter(...uiModules, './../backend/src/index.ts'))
     ).resolves.toEqual(['react']);
   });
 
@@ -671,10 +736,7 @@ describe('findChangedDependencies with stats', () => {
     });
 
     await expect(
-      findChangedDependencies(
-        getStatsContext(),
-        stats(...uiModules, './../../node_modules/lodash/index.js')
-      )
+      changedNames(getStatsContext(), stats(...uiModules, './../../node_modules/lodash/index.js'))
     ).resolves.toEqual(['lodash']);
   });
 
@@ -690,7 +752,7 @@ describe('findChangedDependencies with stats', () => {
     const ctx = getStatsContext();
     ctx.options.untraced = ['packages/ui/package.json'];
 
-    await expect(findChangedDependencies(ctx, stats(...uiModules))).resolves.toEqual(['react']);
+    await expect(changedNames(ctx, stats(...uiModules))).resolves.toEqual(['react']);
   });
 
   it.each([
@@ -712,7 +774,7 @@ describe('findChangedDependencies with stats', () => {
       },
     });
     await expect(
-      findChangedDependencies(
+      changedNames(
         getStatsContext(),
         statsWithImport('./../../node_modules/react/index.js', './src/Button.tsx', importer)
       )
@@ -726,7 +788,7 @@ describe('findChangedDependencies with stats', () => {
     it('ignores the change when only its own files import each other', async () => {
       mockWorkspace(reactBump);
       await expect(
-        findChangedDependencies(getStatsContext(), {
+        changedNames(getStatsContext(), {
           modules: [
             ...statsWithImport(react, './src/Button.tsx').modules,
             { id: reactImpl, name: reactImpl, reasons: [{ moduleName: react }] },
@@ -738,7 +800,7 @@ describe('findChangedDependencies with stats', () => {
     it('reports the change when nothing outside the package imports it', async () => {
       mockWorkspace(reactBump);
       await expect(
-        findChangedDependencies(getStatsContext(), {
+        changedNames(getStatsContext(), {
           modules: [
             ...stats('./src/Button.tsx').modules,
             { id: react, name: react, reasons: [{ moduleName: null }] },
@@ -752,7 +814,7 @@ describe('findChangedDependencies with stats', () => {
     it('ignores the change when every importing workspace declares it', async () => {
       mockWorkspace(workspaces(['lodash@4.17.21']));
       await expect(
-        findChangedDependencies(
+        changedNames(
           getStatsContext(),
           statsWithImport(lodash, './.storybook/preview.ts', './../shared/src/index.ts')
         )
@@ -762,7 +824,7 @@ describe('findChangedDependencies with stats', () => {
     it('reports the change when an importing workspace does not declare it', async () => {
       mockWorkspace(workspaces([]));
       await expect(
-        findChangedDependencies(
+        changedNames(
           getStatsContext(),
           statsWithImport(lodash, './.storybook/preview.ts', './../shared/src/index.ts')
         )
@@ -772,7 +834,7 @@ describe('findChangedDependencies with stats', () => {
     it('reports the change when the importer belongs to no workspace', async () => {
       mockWorkspace(workspaces(['lodash@4.17.21']));
       await expect(
-        findChangedDependencies(
+        changedNames(
           getStatsContext(),
           statsWithImport(lodash, './.storybook/preview.ts', '/elsewhere/src/index.js')
         )
@@ -788,7 +850,7 @@ describe('findChangedDependencies with stats', () => {
         reasons: [{ moduleName: './src/Button.tsx' }],
       };
       await expect(
-        findChangedDependencies(getStatsContext(), {
+        changedNames(getStatsContext(), {
           modules: [...stats('./src/Button.tsx').modules, concatenated],
         })
       ).resolves.toEqual(['lodash']);
@@ -812,7 +874,7 @@ describe('findChangedDependencies with stats', () => {
     });
 
     await expect(
-      findChangedDependencies(
+      changedNames(
         getStatsContext(),
         stats(...uiModules, './../../node_modules/is-number/index.js')
       )
@@ -827,7 +889,7 @@ describe('findChangedDependencies with stats', () => {
     });
 
     await expect(
-      findChangedDependencies(
+      changedNames(
         getStatsContext(),
         stats(...uiModules, './../../node_modules/storybook/dist/index.js')
       )
@@ -853,7 +915,82 @@ describe('findChangedDependencies with stats', () => {
       getStatsContext(),
       stats(...uiModules, './../extra/src/index.ts')
     );
-    expect(changes.toSorted()).toEqual(['@myorg/extra', 'is-odd', 'moment']);
+    expect(changes.names.toSorted()).toEqual(['@myorg/extra', 'is-odd', 'moment']);
+  });
+
+  describe('tells the tracer which copies of a changed dependency did not change', () => {
+    const addsNestedCopy = {
+      'packages/ui': {
+        name: '@myorg/ui',
+        head: ['react@19.0.1', 'is-number@7.0.0', 'is-odd@3.0.1', 'is-number@6.0.0'],
+        base: ['react@19.0.1', 'is-number@7.0.0'],
+      },
+    };
+
+    it('skips a copy at a version that was already installed', async () => {
+      mockWorkspace(addsNestedCopy);
+      mockPnpmLockfile(pnpmLockfile('react@19.0.1', 'is-number@7.0.0', 'is-number@6.0.0'));
+
+      const { names, isUnchangedCopy } = await findChangedDependencies(
+        getStatsContext(),
+        stats(...uiModules)
+      );
+      expect(names.toSorted()).toEqual(['is-number', 'is-odd']);
+      expect(isUnchangedCopy(pnpmCopy('7.0.0'), 'is-number')).toBe(true);
+      expect(isUnchangedCopy(pnpmCopy('6.0.0'), 'is-number')).toBe(false);
+      // A version nothing installs at HEAD is never skipped.
+      expect(isUnchangedCopy(pnpmCopy('5.0.0'), 'is-number')).toBe(false);
+      // Nor is a path that isn't a copy, even of a package the lockfile installs at one version.
+      expect(isUnchangedCopy('node_modules/react', 'react')).toBe(true);
+      expect(isUnchangedCopy('packages/ui/src/react.ts', 'react')).toBe(false);
+      // Nor a copy outside every lockfile's tree, even with a skippable version in its path.
+      expect(isUnchangedCopy(`../${pnpmCopy('7.0.0')}`, 'is-number')).toBe(false);
+    });
+
+    it('reads a hoisted copy from disk, and traces it when it cannot tell its version', async () => {
+      const lockfile = pnpmLockfile('is-number@7.0.0', 'is-number@6.0.0');
+      mockWorkspace(addsNestedCopy);
+      mockPnpmLockfile(lockfile, {
+        '/root/node_modules/is-number/package.json': '{"name":"is-number","version":"7.0.0"}',
+      });
+      const onDisk = await findChangedDependencies(getStatsContext(), stats(...uiModules));
+      expect(onDisk.isUnchangedCopy('node_modules/is-number', 'is-number')).toBe(true);
+
+      mockWorkspace(addsNestedCopy);
+      mockPnpmLockfile(lockfile);
+      const unknown = await findChangedDependencies(getStatsContext(), stats(...uiModules));
+      expect(unknown.isUnchangedCopy('node_modules/is-number', 'is-number')).toBe(false);
+    });
+
+    it('traces every copy of a package when a version of it was removed', async () => {
+      // Whatever loaded is-number@6 now loads is-number@7, which was already installed elsewhere.
+      mockWorkspace({
+        'packages/ui': {
+          name: '@myorg/ui',
+          head: ['react@19.0.1', 'is-number@7.0.0'],
+          base: ['react@19.0.1', 'is-number@7.0.0', 'is-number@6.0.0'],
+        },
+      });
+      mockPnpmLockfile(pnpmLockfile('react@19.0.1', 'is-number@7.0.0'));
+
+      const { names, isUnchangedCopy } = await findChangedDependencies(
+        getStatsContext(),
+        stats(...uiModules)
+      );
+      expect(names).toEqual(['is-number']);
+      expect(isUnchangedCopy(pnpmCopy('7.0.0'), 'is-number')).toBe(false);
+    });
+
+    it('traces every copy of a package the lockfile installs from outside the registry', async () => {
+      mockWorkspace(addsNestedCopy);
+      mockPnpmLockfile(pnpmLockfile('is-number@7.0.0', 'is-number@file:vendor/is-number'));
+
+      const { isUnchangedCopy } = await findChangedDependencies(
+        getStatsContext(),
+        stats(...uiModules)
+      );
+      expect(isUnchangedCopy(pnpmCopy('7.0.0'), 'is-number')).toBe(false);
+    });
   });
 
   it('throws when the baseline lockfile is missing, even if the manifest is too', async () => {
@@ -882,8 +1019,6 @@ describe('findChangedDependencies with stats', () => {
       if (file === 'packages/ui/package.json') throw error;
     });
 
-    await expect(findChangedDependencies(getStatsContext(), stats(...uiModules))).rejects.toBe(
-      error
-    );
+    await expect(changedNames(getStatsContext(), stats(...uiModules))).rejects.toBe(error);
   });
 });

@@ -17,6 +17,9 @@ const buildModule = (id: string, ...reasons: string[]) => ({
   reasons: reasons.map((moduleName) => ({ moduleName })),
 });
 
+// The changed dependencies, with every copy of them changed unless `isUnchangedCopy` says otherwise.
+const changedDeps = (...names: string[]) => ({ names, isUnchangedCopy: () => false });
+
 // Runs a grouping case with its two colliding modules in both possible orders.
 const bothOrders = <T>(first: T, second: T, rest: T[]) => [
   [[first, second, ...rest]],
@@ -332,7 +335,7 @@ describe('getDependentStoryFiles', () => {
 
   it('detects changes in module dependencies', async () => {
     const changedFiles = [];
-    const changedDependencies = ['react'];
+    const changedDependencies = changedDeps('react');
     const modules = [
       {
         id: './node_modules/react/index.js',
@@ -363,6 +366,45 @@ describe('getDependentStoryFiles', () => {
       onlyStoryFiles: {
         './src/foo.stories.js': ['src/foo.stories.js'],
       },
+    });
+  });
+
+  describe('with two copies of a changed dependency', () => {
+    // Preview loads the hoisted is-number@7, a story loads is-odd's nested is-number@6, which
+    // belongs to the is-odd copy.
+    const modules = [
+      buildModule('./node_modules/is-number/index.js', './.storybook/preview.js'),
+      buildModule('./.storybook/preview.js', './.storybook/generated-stories-entry.js'),
+      buildModule(
+        './node_modules/is-odd/node_modules/is-number/index.js',
+        './node_modules/is-odd/index.js'
+      ),
+      buildModule('./node_modules/is-odd/index.js', './src/foo.stories.js'),
+      buildModule('./src/foo.stories.js', CSF_GLOB),
+      buildModule(CSF_GLOB, './.storybook/generated-stories-entry.js'),
+    ];
+    const trace = (isUnchangedCopy?: (directory: string, name: string) => boolean) =>
+      getDependentStoryFiles(getContext(), { modules }, statsPath, [], {
+        names: ['is-number', 'is-odd'],
+        isUnchangedCopy: isUnchangedCopy ?? (() => false),
+      });
+
+    it('only traces the copies that changed', async () => {
+      const result = await trace(
+        (directory, name) => name === 'is-number' && directory === 'node_modules/is-number'
+      );
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: { './src/foo.stories.js': ['src/foo.stories.js'] },
+      });
+    });
+
+    it('traces every copy when it cannot tell which changed', async () => {
+      const result = await trace();
+      expect(result.status).toBe('bailed');
+      expect(result.turboSnap.bailReason).toEqual({
+        changedStorybookFiles: ['.storybook/preview.js'],
+      });
     });
   });
 
@@ -512,7 +554,10 @@ describe('getDependentStoryFiles', () => {
 
   it('only runs tests for stories affected by dependency changes', async () => {
     const changedFiles = [];
-    const changedDependencies = ['@adobe/css-tools'];
+    const changedDependencies = {
+      names: ['@adobe/css-tools'] as string[],
+      isUnchangedCopy: () => false,
+    };
     const modules = [
       {
         id: './node_modules/@adobe/css-tools/dist/index.js',
@@ -1212,7 +1257,7 @@ describe('getDependentStoryFiles', () => {
 
   it('bails with bailSubreason "nodeModulesMissingInStats" when the stats file has no node_modules entries', async () => {
     const changedFiles = ['package.json'];
-    const changedDependencies = ['some-pkg'];
+    const changedDependencies = changedDeps('some-pkg');
     const modules = [
       {
         id: './src/foo.stories.js',
@@ -1246,7 +1291,7 @@ describe('getDependentStoryFiles', () => {
 
   it('does not set bailSubreason when there are no changed dependencies', async () => {
     const changedFiles = ['package.json'];
-    const changedDependencies: string[] = [];
+    const changedDependencies = changedDeps();
     const modules = [
       {
         id: './src/foo.stories.js',
@@ -1326,7 +1371,13 @@ describe('getDependentStoryFiles', () => {
     'merges two NUL proxies of one dependency with different queries (module order %#)',
     async (modules) => {
       const ctx = getContext();
-      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, [], ['react']);
+      const result = await getDependentStoryFiles(
+        ctx,
+        { modules },
+        statsPath,
+        [],
+        changedDeps('react')
+      );
       expect(result).toMatchObject({
         status: 'traced',
         onlyStoryFiles: { './src/foo.stories.js': ['src/foo.stories.js'] },
@@ -1342,7 +1393,13 @@ describe('getDependentStoryFiles', () => {
     'merges a hoisted NUL proxy with the plain file it proxies, project root below git root (module order %#)',
     async (modules) => {
       const ctx = getContext({ storybookBaseDir: 'webapp' });
-      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, [], ['react']);
+      const result = await getDependentStoryFiles(
+        ctx,
+        { modules },
+        statsPath,
+        [],
+        changedDeps('react')
+      );
       expect(result.turboSnap.tracedFiles).toEqual(['node_modules/react/index.js']);
       expect(result).toMatchObject({
         status: 'traced',
@@ -1507,7 +1564,13 @@ describe('getDependentStoryFiles', () => {
       csfGlobModule,
     ];
     const ctx = getContext({ untraced: ['node_modules/**'] });
-    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, [], ['react']);
+    const result = await getDependentStoryFiles(
+      ctx,
+      { modules },
+      statsPath,
+      [],
+      changedDeps('react')
+    );
     if (result.status !== 'traced') throw new Error('expected traced');
     expect(result.onlyStoryFiles).toEqual({});
     expect(result.untracedFiles).toEqual([
@@ -1552,7 +1615,7 @@ describe('getDependentStoryFiles', () => {
         { modules },
         statsPath,
         changedFiles,
-        changedDependencies
+        changedDeps(...changedDependencies)
       );
 
     it('bails on a changed preview annotation outside the config dir', async () => {

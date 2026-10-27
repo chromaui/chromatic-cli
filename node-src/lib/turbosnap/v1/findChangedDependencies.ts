@@ -7,16 +7,31 @@ import path from 'path';
 import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../../../git/git';
 import { Context, Stats } from '../../../types';
 import { matchesFile, SUPPORTED_LOCK_FILES } from '../../utilities';
-import { compareBaseline } from './compareBaseline';
+import { BaselineChanges, compareBaseline, toPackageId } from './compareBaseline';
 import { BaselineCheckoutFailedError } from './errors';
 import { getDependencies } from './getDependencies';
 import { getStatsScope } from './getStatsScope';
+import { createVersionLookup } from './lockfileVersions';
 import { getStatsProjectRoot } from './statsPaths';
+import { getSkippablePackages, getUnchangedCopyCheck, IsUnchangedCopy } from './unchangedCopies';
 
 const PACKAGE_JSON = 'package.json';
 
-// Yields a list of dependency names which have changed since the baseline.
-// E.g. ['react', 'react-dom', '@storybook/react']
+/** The dependencies that changed since the baselines. */
+export interface ChangedDependencies {
+  /** The names of the changed dependencies, such as `['react', '@storybook/react']`. */
+  names: string[];
+  /**
+   * Tells whether an installed copy of a changed dependency is at a version that didn't change, so
+   * the tracer can leave it out. False whenever that can't be told for sure.
+   */
+  isUnchangedCopy: IsUnchangedCopy;
+}
+
+export const noChanges = (): ChangedDependencies => ({ names: [], isUnchangedCopy: () => false });
+
+// Finds the dependencies which have changed since the baseline, and which of their installed copies
+// didn't change.
 // TODO: refactor this function
 // eslint-disable-next-line complexity,max-statements
 export const findChangedDependencies = async (ctx: Context, stats: Stats) => {
@@ -25,7 +40,7 @@ export const findChangedDependencies = async (ctx: Context, stats: Stats) => {
 
   if (packageMetadataChanges?.length === 0) {
     ctx.log.debug('No package metadata changed found');
-    return [];
+    return noChanges();
   }
 
   ctx.log.debug(
@@ -107,17 +122,15 @@ export const findChangedDependencies = async (ctx: Context, stats: Stats) => {
 
   // Short circuit
   if (filteredPathPairs.length === 0) {
-    return [];
+    return noChanges();
   }
-
-  // The names of the dependencies that changed in each pair, compared to any baseline.
-  const changesByManifest = new Map<string, Set<string>>();
 
   const packageConcurrency = ctx.env.CHROMATIC_TURBOSNAP_PACKAGE_CONCURRENCY;
   const headDependenciesLimit = pLimit(packageConcurrency);
   const baseDependenciesLimit = pLimit(packageConcurrency);
 
-  await Promise.all(
+  // Each pair's packages at HEAD, and what changed in it compared to each baseline.
+  const pairs = await Promise.all(
     filteredPathPairs.map(([manifestPath, lockfilePath, commits]) =>
       headDependenciesLimit(async () => {
         const headDependencies = await getDependencies(ctx, {
@@ -128,33 +141,55 @@ export const findChangedDependencies = async (ctx: Context, stats: Stats) => {
 
         ctx.log.debug({ manifestPath, lockfilePath }, `Found HEAD dependencies`);
 
-        // Retrieve the union of dependencies which changed compared to each baseline.
-        await Promise.all(
+        const changes = await Promise.all(
           commits.map((reference) =>
-            baseDependenciesLimit(async () => {
-              const baselineChanges = await getBaselineChanges(ctx, {
+            baseDependenciesLimit(() =>
+              getBaselineChanges(ctx, {
                 rootPath,
                 reference,
                 manifestPath,
                 lockfilePath,
                 headDependencies,
-              });
-              const changes = changesByManifest.get(manifestPath) ?? new Set();
-              for (const change of baselineChanges) changes.add(change);
-              changesByManifest.set(manifestPath, changes);
-            })
+              })
+            )
           )
         );
+        return { manifestPath, headPackages: headDependencies.getDepPkgs(), changes };
       })
     )
   );
 
-  return keepChangesInScope(ctx, {
-    stats,
-    rootPath,
-    manifestPaths: [...new Set(metadataPathPairs.map(([manifestPath]) => manifestPath))],
-    changesByManifest,
-  });
+  // The names of the dependencies that changed in each pair, compared to any baseline.
+  const changesByManifest = new Map<string, Set<string>>();
+  for (const { manifestPath, changes } of pairs) {
+    const names = changesByManifest.get(manifestPath) ?? new Set();
+    for (const change of changes) for (const name of change.names) names.add(name);
+    changesByManifest.set(manifestPath, names);
+  }
+
+  // Every pair's HEAD packages and versioned changes count, even for names the scope then drops.
+  // The extra changes can only make fewer copies skippable. The extra HEAD packages can make more
+  // copies skippable, such as a hoisted copy only an out-of-scope workspace declares. That's still
+  // safe: each version passed its own pair's diff against the baseline, and a hoisted copy that
+  // was swapped out shows its old version as removed.
+  const skippablePackages = getSkippablePackages(
+    pairs.flatMap(({ headPackages }) => headPackages),
+    pairs.flatMap(({ changes }) => changes)
+  );
+
+  // A nested manifest has no lockfile when neither its directory nor the root has one.
+  const versions = createVersionLookup(ctx, rootPath, [
+    ...new Set(metadataPathPairs.flatMap(([, lockfilePath]) => lockfilePath || [])),
+  ]);
+  return {
+    names: keepChangesInScope(ctx, {
+      stats,
+      rootPath,
+      manifestPaths: [...new Set(metadataPathPairs.map(([manifestPath]) => manifestPath))],
+      changesByManifest,
+    }),
+    isUnchangedCopy: getUnchangedCopyCheck(versions, skippablePackages),
+  };
 };
 
 /**
@@ -242,7 +277,7 @@ function keepChangesInScope(
  * @param options.lockfilePath The repository-relative path of its lockfile.
  * @param options.headDependencies The pair's dependency graph at HEAD.
  *
- * @returns The names of the changed dependencies. Throws when the baseline lockfile, or a manifest
+ * @returns The changed dependencies. Throws when the baseline lockfile, or a manifest
  * that exists at the baseline, can't be checked out, which makes the caller bail.
  */
 async function getBaselineChanges(
@@ -260,7 +295,7 @@ async function getBaselineChanges(
     lockfilePath: string;
     headDependencies: DepGraph;
   }
-) {
+): Promise<BaselineChanges> {
   // Check the baseline pair out into a temporary directory that mirrors the repository layout, so
   // the manifest keeps its position relative to the lockfile.
   const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
@@ -279,10 +314,15 @@ async function getBaselineChanges(
       // The graph's root stands for the workspace itself, but the parser names it `package.json`
       // when the manifest has no name, so take the name from the manifest instead.
       const { name } = readManifest(rootPath, manifestPath);
-      return new Set([
-        ...(typeof name === 'string' && name ? [name] : []),
-        ...headDependencies.getDepPkgs().map(({ name }) => name),
-      ]);
+      const pkgs = headDependencies.getDepPkgs();
+      return {
+        names: new Set([
+          ...(typeof name === 'string' && name ? [name] : []),
+          ...pkgs.map((pkg) => pkg.name),
+        ]),
+        packages: new Set(pkgs.map((pkg) => toPackageId(pkg))),
+        removedNames: new Set(),
+      };
     }
 
     const baselineDependencies = await getDependencies(ctx, {
