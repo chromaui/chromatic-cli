@@ -1,7 +1,6 @@
 import path from 'path';
 
 import { InitialContext, Options } from '..';
-import { LEGACY_MILLISECONDS_GIT_TIMEOUT_THRESHOLD } from '../git/constants';
 import dependentOption from '../ui/messages/errors/dependentOption';
 import duplicatePatchBuild from '../ui/messages/errors/duplicatePatchBuild';
 import incompatibleOptions from '../ui/messages/errors/incompatibleOptions';
@@ -14,7 +13,6 @@ import invalidRepositorySlug from '../ui/messages/errors/invalidRepositorySlug';
 import invalidSingularOptions from '../ui/messages/errors/invalidSingularOptions';
 import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
-import gitTimeoutInMilliseconds from '../ui/messages/warnings/gitTimeoutInMilliseconds';
 import { isE2EBuild } from './e2eUtils';
 
 export const DEFAULT_LOG_FILE = 'chromatic.log';
@@ -185,16 +183,10 @@ export const getPartialOptions = (ctx: InitialContext): Partial<Options> => {
     gitTimeout,
     ...restOfConfiguration
   } = configuration || {};
-  // The configuration file sets gitTimeout in seconds; options carry milliseconds.
-  const isLegacyMillisecondsGitTimeout =
-    gitTimeout !== undefined && gitTimeout >= LEGACY_MILLISECONDS_GIT_TIMEOUT_THRESHOLD;
-  if (isLegacyMillisecondsGitTimeout) {
-    log.warn(gitTimeoutInMilliseconds({ gitTimeout }));
-  }
   const configurationOptions: Partial<Options> = stripUndefined({
     ...restOfConfiguration,
-    gitTimeout:
-      gitTimeout === undefined || isLegacyMillisecondsGitTimeout ? gitTimeout : gitTimeout * 1000,
+    // The configuration file sets gitTimeout in seconds; options carry milliseconds.
+    gitTimeout: gitTimeout === undefined ? undefined : gitTimeout * 1000,
     logFile: defaultUnlessSetOrFalse(logFile, DEFAULT_LOG_FILE),
     diagnosticsFile: defaultUnlessSetOrFalse(diagnosticsFile, DEFAULT_DIAGNOSTICS_FILE),
     junitReport: defaultUnlessSetOrFalse(junitReport, DEFAULT_REPORT_FILE),

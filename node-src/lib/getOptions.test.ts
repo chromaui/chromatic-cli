@@ -336,20 +336,13 @@ describe('getOptions', () => {
   });
 
   it.each([
-    { configured: undefined, expected: undefined, warns: false },
-    { configured: 30, expected: 30_000, warns: false },
-    { configured: 999, expected: 999_000, warns: false },
-    // Values from before the fix, when the configured value was used as milliseconds
-    { configured: 1000, expected: 1000, warns: true },
-    { configured: 60_000, expected: 60_000, warns: true },
+    { configured: undefined, expected: undefined },
+    { configured: 30, expected: 30_000 },
   ])(
-    'reads a configured gitTimeout of $configured as $expected milliseconds',
-    ({ configured, expected, warns }) => {
+    'reads a configured gitTimeout of $configured seconds as $expected milliseconds',
+    ({ configured, expected }) => {
       const ctx = { ...getContext([]), configuration: { gitTimeout: configured } };
       expect(getOptions(ctx).gitTimeout).toBe(expected);
-      expect((ctx.log as TestLogger).warnings.some((w: string) => w.includes('gitTimeout'))).toBe(
-        warns
-      );
     }
   );
 });
