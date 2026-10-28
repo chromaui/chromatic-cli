@@ -7,7 +7,6 @@ import path from 'path';
 import {
   AncestorMissingError,
   BaselineCheckoutFailedError,
-  BaselineFileMissingError,
   GitCommandError,
 } from '../lib/turbosnap/v1/errors';
 import { CloneDepth, CloneFilter, VisitedCommit } from '../types';
@@ -551,15 +550,17 @@ export async function checkoutFile(
     await mkdir(path.dirname(targetFileName), { recursive: true });
 
     deps.log.debug(`Checking out file ${pathspec} at ${targetFileName}`);
+    let fileMissing = false;
     try {
       const resolvedFileName = await resolveSymlinkAtReference(deps, reference, fileName);
+      fileMissing = resolvedFileName === undefined;
+      // A missing file still goes through `git show`, so the error it fails with is unchanged.
       await execGitCommand(
         deps,
-        `git show "${reference}:${resolvedFileName}" > "${targetFileName}"`
+        `git show "${reference}:${resolvedFileName ?? fileName}" > "${targetFileName}"`
       );
     } catch (error) {
-      if (error instanceof BaselineFileMissingError) throw error;
-      throw new BaselineCheckoutFailedError(pathspec, { cause: error });
+      throw new BaselineCheckoutFailedError(pathspec, { cause: error, fileMissing });
     }
   });
 }
@@ -573,9 +574,14 @@ export async function checkoutFile(
  * @param reference The reference (usually a commit or branch) to resolve the path at.
  * @param fileName The repository-relative path to resolve.
  *
- * @returns The repository-relative path of the regular file the symlink chain points to.
+ * @returns The repository-relative path of the regular file the symlink chain points to, or
+ * undefined when the path itself isn't at the reference.
  */
-async function resolveSymlinkAtReference(deps: GitDeps, reference: string, fileName: string) {
+async function resolveSymlinkAtReference(
+  deps: GitDeps,
+  reference: string,
+  fileName: string
+): Promise<string | undefined> {
   const visited = new Set<string>();
   let current = fileName;
 
@@ -589,9 +595,7 @@ async function resolveSymlinkAtReference(deps: GitDeps, reference: string, fileN
     );
     // `ls-tree` prints nothing for a path the tree doesn't have, and fails for a missing reference.
     // A symlink whose target is missing is a broken file, not an added one.
-    if (!entry.trim() && current === fileName) {
-      throw new BaselineFileMissingError(`${reference}:${fileName}`);
-    }
+    if (!entry.trim() && current === fileName) return undefined;
     if (!entry.startsWith(SYMLINK_MODE)) {
       return current;
     }
