@@ -36,6 +36,12 @@ describe('resolveStorybookVersion', () => {
     expect(resolveStorybookVersion(input(disk))).toBe('10.2.16');
   });
 
+  it('falls back to `@storybook/core-common` for Storybook 6, which has neither of the others', () => {
+    const disk = { packageVersions: { '@storybook/core-common': '6.5.4' } };
+
+    expect(resolveStorybookVersion(input(disk))).toBe('6.5.4');
+  });
+
   it('throws when no Storybook version is known because the Storybook version is required', () => {
     let err: Error | undefined;
     try {

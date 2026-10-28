@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { Stats } from '../../../types';
 import { createFixture, syntheticAbsent } from './__fixtures__/manifestFixtures';
 import { buildManifest, serializeManifest } from './manifest';
+import { MissingStorybookConfigError } from './outOfGraphFiles';
 
 describe('buildManifest storybookFiles', () => {
   // Two stories imported straight from the stories entry (Vite style). Button also imports moment,
@@ -369,6 +370,14 @@ describe('buildManifest out-of-graph inputs', () => {
       fileHashes: { [story]: 'S', [mainConfig]: 'M', [staticAsset]: 'A' },
     });
   }
+
+  it('reports a config directory without a main config before looking for Storybook in it', async () => {
+    // A wrong config directory also has no Storybook install to resolve from. The missing main
+    // config is the cause the user can act on, so it is the error that surfaces.
+    const { input } = createFixture({ directories: {}, packageVersions: {} });
+
+    await expect(buildManifest(stats, input)).rejects.toBeInstanceOf(MissingStorybookConfigError);
+  });
 
   it('emits a synthetic entry per out-of-graph section', async () => {
     const { input } = fixtureWithAssets();

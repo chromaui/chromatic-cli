@@ -130,16 +130,19 @@ export async function buildManifest(
     `Found ${attribution.storybookGlobals.size} files in Storybook globals (files that could impact rendering across the entire Storybook)`
   );
 
-  // The preview core runtime may not exist in the module graph, so no file hash can see a Storybook
-  // upgrade there. Track the version instead; it is a plain string, not a hash.
-  storybookConfigHashes.set(STORYBOOK_VERSION_KEY, resolveStorybookVersion(input));
-
   // Storybook's config directory, static assets and the user's externals are never bundler inputs, so
   // nothing above can see them change. They get their own roll-ups; see rollUpOutOfGraphFiles.
   const { files: outOfGraphFiles, skippedFiles: skippedSweptFiles } = await hashOutOfGraphFiles(
     input,
     skipRule
   );
+
+  // The preview core runtime may not exist in the module graph, so no file hash can see a Storybook
+  // upgrade there. Track the version instead; it is a plain string, not a hash. This resolves from
+  // the config directory, so it runs after the sweep above has confirmed that directory holds a main
+  // config: a wrong config directory is then reported as such instead of as missing dependencies.
+  storybookConfigHashes.set(STORYBOOK_VERSION_KEY, resolveStorybookVersion(input));
+
   for (const [key, hash] of rollUpOutOfGraphFiles(outOfGraphFiles, h64ToString)) {
     storybookConfigHashes.set(key, hash);
   }

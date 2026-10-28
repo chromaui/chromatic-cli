@@ -1,10 +1,11 @@
 import { ManifestInput } from './manifestInput';
 
-// The packages that own Storybook's preview runtime, most-preferred first. Both report the same
+// The packages that own Storybook's preview runtime, most-preferred first. All report the same
 // lockstep version when present; the order is about which one a given install can resolve.
 const STORYBOOK_CORE_PACKAGES = [
   'storybook', // the meta-package, when the project can resolve it
   '@storybook/core', // the core package it wraps; reachable under strict installs (pnpm, PnP) where the meta-package isn't
+  '@storybook/core-common', // Storybook 6, which has no meta-package and can nest `@storybook/core` under the renderer
 ];
 
 /**
