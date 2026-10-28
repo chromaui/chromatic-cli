@@ -6,6 +6,7 @@ import path from 'path';
 import {
   AncestorMissingError,
   BaselineCheckoutFailedError,
+  BaselineFileMissingError,
   GitCommandError,
 } from '../lib/turbosnap/v1/errors';
 import { CloneDepth, CloneFilter, VisitedCommit } from '../types';
@@ -233,28 +234,6 @@ export async function commitExists(deps: GitDeps, commit: string) {
   } catch {
     return false;
   }
-}
-
-/**
- * Check if a file exists at the given reference.
- *
- * @param deps Function dependencies.
- * @param reference The reference (usually a commit) to look in.
- * @param fileName The repository-relative path of the file.
- *
- * @returns True if the file exists at the reference, false if git reports it missing. Throws when
- * git fails, so a failure is never mistaken for a missing file.
- */
-export async function fileExistsAtReference(deps: GitDeps, reference: string, fileName: string) {
-  return limitConcurrency(async () => {
-    // `--batch-check` prints `<object> missing` for a path that isn't there, and fails for anything
-    // else that goes wrong.
-    const result = await execGitCommand(deps, 'git cat-file --batch-check', {
-      input: `${reference}:${fileName}`,
-      all: false,
-    });
-    return !result.trimEnd().endsWith(' missing');
-  });
 }
 
 /**
@@ -577,6 +556,7 @@ export async function checkoutFile(
         `git show "${reference}:${resolvedFileName}" > "${targetFileName}"`
       );
     } catch (error) {
+      if (error instanceof BaselineFileMissingError) throw error;
       throw new BaselineCheckoutFailedError(pathspec, { cause: error });
     }
   });
@@ -603,7 +583,12 @@ async function resolveSymlinkAtReference(deps: GitDeps, reference: string, fileN
       deps,
       `git ls-tree --full-tree ${reference} -- "${current}"`
     );
-    if (!entry?.startsWith(SYMLINK_MODE)) {
+    // `ls-tree` prints nothing for a path the tree doesn't have, and fails for a missing reference.
+    // A symlink whose target is missing is a broken file, not an added one.
+    if (!entry.trim() && current === fileName) {
+      throw new BaselineFileMissingError(`${reference}:${fileName}`);
+    }
+    if (!entry.startsWith(SYMLINK_MODE)) {
       return current;
     }
 

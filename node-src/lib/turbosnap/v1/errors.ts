@@ -51,6 +51,16 @@ export class BaselineCheckoutFailedError extends Error {
 }
 
 /**
+ * Error thrown when a baseline file doesn't exist at the baseline commit, because it was added since.
+ */
+export class BaselineFileMissingError extends BaselineCheckoutFailedError {
+  constructor(pathspec: string) {
+    super(pathspec);
+    this.name = 'BaselineFileMissingError';
+  }
+}
+
+/**
  * Error thrown when the baseline commit can't be resolved locally (e.g. `git diff` rejects with
  * "bad object").
  */

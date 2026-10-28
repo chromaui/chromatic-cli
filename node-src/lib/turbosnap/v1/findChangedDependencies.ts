@@ -5,17 +5,12 @@ import pLimit from 'p-limit';
 import path from 'path';
 import semver from 'semver';
 
-import {
-  checkoutFile,
-  fileExistsAtReference,
-  findFilesFromRepositoryRoot,
-  getRepositoryRoot,
-} from '../../../git/git';
+import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../../../git/git';
 import { Context, Stats } from '../../../types';
 import { matchesFile, SUPPORTED_LOCK_FILES } from '../../utilities';
 import { getStatsProjectRoot } from '../statsPaths';
 import { compareBaseline } from './compareBaseline';
-import { LockFileMissingError } from './errors';
+import { BaselineFileMissingError, LockFileMissingError } from './errors';
 import { getDependencies } from './getDependencies';
 import { getStatsScope } from './getStatsScope';
 
@@ -151,6 +146,7 @@ export const findChangedDependencies = async (ctx: Context, stats: Stats) => {
           commits.map((reference) =>
             baseDependenciesLimit(async () => {
               const baselineChanges = await getBaselineChanges(ctx, {
+                rootPath,
                 reference,
                 manifestPath,
                 lockfilePath,
@@ -293,6 +289,7 @@ async function keepChangesInScope(
  *
  * @param ctx The context set when executing the CLI.
  * @param options The pair and the baseline to compare it with.
+ * @param options.rootPath The absolute repository root.
  * @param options.reference The baseline commit.
  * @param options.manifestPath The repository-relative path of the `package.json`.
  * @param options.lockfilePath The repository-relative path of its lockfile.
@@ -304,11 +301,18 @@ async function keepChangesInScope(
 async function getBaselineChanges(
   ctx: Context,
   {
+    rootPath,
     reference,
     manifestPath,
     lockfilePath,
     headDependencies,
-  }: { reference: string; manifestPath: string; lockfilePath: string; headDependencies: DepGraph }
+  }: {
+    rootPath: string;
+    reference: string;
+    manifestPath: string;
+    lockfilePath: string;
+    headDependencies: DepGraph;
+  }
 ) {
   // Check the baseline pair out into a temporary directory that mirrors the repository layout, so
   // the manifest keeps its position relative to the lockfile.
@@ -320,14 +324,19 @@ async function getBaselineChanges(
     ]);
     if (lockfileCheckout.status === 'rejected') throw lockfileCheckout.reason;
     if (manifestCheckout.status === 'rejected') {
-      // Only a manifest git confirms is missing counts as added. If the probe fails too, bail.
-      const manifestExists = await fileExistsAtReference(ctx, reference, manifestPath).catch(
-        () => true
-      );
-      if (manifestExists) throw manifestCheckout.reason;
+      // Only a manifest git confirms is missing counts as added. Any other failure bails.
+      if (!(manifestCheckout.reason instanceof BaselineFileMissingError)) {
+        throw manifestCheckout.reason;
+      }
 
       ctx.log.debug({ reference, manifestPath }, 'Manifest was added since the baseline');
-      return new Set(headDependencies.getPkgs().map(({ name }) => name));
+      // The graph's root stands for the workspace itself, but the parser names it `package.json`
+      // when the manifest has no name, so take the name from the manifest instead.
+      const workspaceName = readManifestName(rootPath, manifestPath);
+      return new Set([
+        ...(workspaceName ? [workspaceName] : []),
+        ...headDependencies.getDepPkgs().map(({ name }) => name),
+      ]);
     }
 
     const baselineDependencies = await getDependencies(ctx, {
@@ -349,6 +358,23 @@ const isExact = (graph: DepGraph, name: string) => {
   const pkgs = graph.getDepPkgs().filter((pkg) => pkg.name === name);
   return pkgs.length > 0 && pkgs.every((pkg) => semver.valid(pkg.version));
 };
+
+/**
+ * Reads the `name` a manifest declares.
+ *
+ * @param rootPath The absolute repository root.
+ * @param manifestPath The repository-relative path of the `package.json`.
+ *
+ * @returns The name, or undefined when the manifest has none or can't be read.
+ */
+function readManifestName(rootPath: string, manifestPath: string): string | undefined {
+  try {
+    const { name } = JSON.parse(fs.readFileSync(path.join(rootPath, manifestPath), 'utf8'));
+    return typeof name === 'string' && name ? name : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /**
  * Lists the packages a manifest declares as its own dependencies. Peer dependencies are left out,
