@@ -1,4 +1,5 @@
 import { createReadStream } from 'node:fs';
+import { devNull } from 'node:os';
 import { stripVTControlCharacters } from 'node:util';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -95,7 +96,7 @@ describe('captureTask', () => {
 
   // `yarn build-storybook < /dev/null` gives the process an `fs.ReadStream` stdin, which has no `unref`.
   it('captures when stdin is redirected from a file', () => {
-    const fileStdin = createReadStream('/dev/null') as unknown as typeof process.stdin;
+    const fileStdin = createReadStream(devNull) as unknown as typeof process.stdin;
     vi.spyOn(process, 'stdin', 'get').mockReturnValue(fileStdin);
 
     expect(() => captureTask(state())).not.toThrow();
