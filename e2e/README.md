@@ -2,7 +2,7 @@
 
 Minimal Storybook projects to run the CLI against: one per builder and one monorepo per package manager. Use them to check a change by hand. Later they will back scenario scripts and an automated end-to-end suite.
 
-The fixtures are deliberately bare. Each Storybook has a `Button` that imports a `Badge`, with one story each. `react-vite` also has a `Changelog.mdx` docs page that imports the root `CHANGELOG.md` as raw text, so a change to a file with no stories of its own can be traced to a docs-only entry. Anything a test needs beyond that, such as a changed dependency or a story outside the package, should be set up by the scenario on a prepared copy, not added here.
+The fixtures are deliberately bare. Each Storybook has a `Button` that imports a `Badge`, with one story each. Anything a test needs beyond that, such as a changed dependency or a story outside the package, should be set up by the scenario on a prepared copy, not added here.
 
 ## Usage
 

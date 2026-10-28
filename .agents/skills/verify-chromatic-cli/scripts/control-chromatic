@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # control-chromatic — drive the locally built Chromatic CLI (dist/bin.cjs) and capture proof.
-# Usage: control-chromatic <setup|rebuild|env|doctor|fixture|e2e-fixture|commit|checkout|checkout-storybook|build-ref|install-published|run|tty|cleanup> [...]
+# Usage: control-chromatic <setup|rebuild|env|doctor|fixture|e2e-fixture|docs-page|commit|checkout|checkout-storybook|build-ref|install-published|run|tty|cleanup> [...]
 # Every run is scoped by RUN_ID (default: "default"); state lives in $VERIFY_ROOT/$RUN_ID.
 set -euo pipefail
 
@@ -177,6 +177,60 @@ cmd_commit() {
   git -C "$dir" -c user.name=verify -c user.email=verify@example.invalid -c commit.gpgsign=false \
     -c core.hooksPath=/dev/null commit -q -m "$msg"
   git -C "$dir" log --oneline -1
+}
+
+# docs-page <storybook dir> [changelog...]: add a docs-only MDX page to a prepared fixture copy and commit
+# it. `src/Changelog.mdx` imports each changelog as raw text, so a change to a file that no story imports
+# still reaches the Storybook, through a docs entry only. That is how release commits (version bumps and
+# changelogs) interact with TurboSnap in projects that render their changelog in Storybook. Changelog paths
+# are relative to the scratch repo root; the default is CHANGELOG.md next to the Storybook, and missing
+# changelogs are created. It adds the MDX glob and `@storybook/addon-docs` (pinned to the fixture's
+# `storybook` version) to the copy, never to e2e/fixtures/. Vite only: webpack has no `?raw` imports.
+cmd_docs_page() {
+  local sb="${1:-}"
+  shift || true
+  [[ -n "$sb" && -f "$sb/.storybook/main.ts" ]] \
+    || die "usage: docs-page <storybook dir> [changelog...] (the dir must contain .storybook/main.ts)"
+  sb="$(realpath "$sb")"
+  local root work
+  root="$(git -C "$sb" rev-parse --show-toplevel 2> /dev/null)" || die "$sb is not in a git repo"
+  root="$(realpath "$root")" work="$(realpath "$WORK")"
+  [[ "$root" == "$work"/* ]] || die "docs-page only works on scratch repos under $WORK (repo root: $root)"
+  local main="$sb/.storybook/main.ts"
+  grep -q "framework: '@storybook/react-vite'" "$main" || die "$main is not a Vite Storybook; ?raw imports need Vite"
+  grep -q "addons:" "$main" && die "$main already has addons; docs-page was already applied?"
+  local version
+  version="$(jq -r '.devDependencies.storybook // empty' "$sb/package.json")"
+  [[ -n "$version" ]] || die "$sb/package.json has no storybook devDependency to pin @storybook/addon-docs to"
+
+  local changelogs=("$@")
+  [[ ${#changelogs[@]} -gt 0 ]] || changelogs=("$(realpath -m --relative-to="$root" "$sb/CHANGELOG.md")")
+  local imports="" blocks="" index=0 changelog file import_path
+  for changelog in "${changelogs[@]}"; do
+    file="$root/$changelog"
+    [[ -f "$file" ]] || printf '# Changelog\n\n## 1.0.0\n\n- Initial release\n' > "$file"
+    import_path="$(realpath --relative-to="$sb/src" "$file")"
+    [[ "$import_path" == ../* ]] || import_path="./$import_path"
+    imports+="import changelog$index from '$import_path?raw';"$'\n'
+    blocks+=$'\n'"<Markdown>{changelog$index}</Markdown>"$'\n'
+    index=$((index + 1))
+  done
+  mkdir -p "$sb/src"
+  printf "import { Markdown, Meta } from '@storybook/addon-docs/blocks';\n%s\n<Meta title=\"Changelog\" />\n\n# Changelog\n%s" \
+    "$imports" "$blocks" > "$sb/src/Changelog.mdx"
+  sed -i -e "s#stories: \[#stories: ['../src/**/*.mdx', #" \
+    -e "s#^\(const config: StorybookConfig = {\)\$#\1\n  addons: ['@storybook/addon-docs'],#" "$main"
+
+  local package="@storybook/addon-docs@$version" manager log="$WORK/docs-page.log"
+  manager="$(jq -r '.packageManager // "npm"' "$root/package.json")"
+  manager="${manager%%+*}"
+  case "$manager" in
+    yarn@*) (cd "$sb" && corepack yarn add --dev --exact "$package") ;;
+    pnpm@*) (cd "$sb" && npx --yes "pnpm@${manager#pnpm@}" add --save-dev --save-exact "$package") ;;
+    *) (cd "$sb" && npm install --save-dev --save-exact "$package") ;;
+  esac > "$log" 2>&1 || { tail -30 "$log"; die "installing $package failed (log: $log)"; }
+  echo "==> $sb/src/Changelog.mdx renders: ${changelogs[*]}"
+  cmd_commit "$sb" "Add Changelog docs page"
 }
 
 # A git worktree of HEAD on a throwaway local branch, so journeys that need commits
@@ -398,6 +452,7 @@ case "$sub" in
   doctor) cmd_doctor ;;
   fixture) cmd_fixture ;;
   e2e-fixture) cmd_e2e_fixture "$@" ;;
+  docs-page) cmd_docs_page "$@" ;;
   commit) cmd_commit "$@" ;;
   checkout) cmd_checkout ;;
   checkout-storybook) cmd_checkout_storybook ;;
