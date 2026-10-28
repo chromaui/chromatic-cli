@@ -1004,11 +1004,8 @@ describe('findChangedDependencies with stats', () => {
 
   it('reports everything a workspace added since the baseline installs', async () => {
     mockWorkspace({
-      'packages/ui': {
-        name: '@myorg/ui',
-        head: ['react@19.0.1', '@myorg/extra@0.0.1'],
-        base: ['react@19.0.1'],
-      },
+      // The Storybook reaches the new workspace by path, so only its own pair names it.
+      'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] },
       'packages/extra': { name: '@myorg/extra', head: ['is-odd@3.0.1'] },
       // The Storybook doesn't load this one, so the `react` the Storybook declares is dropped. It
       // has no name, so nothing stands for the workspace itself.
