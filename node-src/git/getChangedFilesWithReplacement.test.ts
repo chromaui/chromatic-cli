@@ -92,6 +92,35 @@ describe('getChangedFilesWithReplacements', () => {
     expect(client.runQuery).toHaveBeenCalled();
   });
 
+  it.each(['exists', 'missing'])(
+    'preserves the configured git timeout when the baseline commit is %s',
+    async (commit) => {
+      const deps = { client, log: new TestLogger(), options: { gitTimeout: 60_000 } };
+      const baselineBuild = {
+        id: 'baseline',
+        number: 3,
+        commit,
+        uncommittedHash: '',
+        isLocalBuild: false,
+      };
+      const replacementBuild = { ...baselineBuild, id: 'replacement', number: 2, commit: 'exists' };
+      client.runQuery.mockResolvedValue({ app: { build: { ancestorBuilds: [replacementBuild] } } });
+
+      const result = await getChangedFilesWithReplacement(deps, baselineBuild);
+
+      expect(result.changedFiles).toEqual(['changed', 'files']);
+      expect(mockedGetChangedFiles).toHaveBeenNthCalledWith(1, deps, commit);
+      if (commit === 'missing') {
+        expect(gitModule.commitExists).toHaveBeenCalledWith(deps, replacementBuild.commit);
+        expect(mockedGetChangedFiles).toHaveBeenNthCalledWith(2, deps, replacementBuild.commit);
+        expect(result.replacementBuild).toEqual(replacementBuild);
+      } else {
+        expect(gitModule.commitExists).not.toHaveBeenCalled();
+        expect(result.replacementBuild).toBeUndefined();
+      }
+    }
+  );
+
   it('does not use a replacement when non-local build has uncommitted changes', async () => {
     const replacementBuild = {
       id: 'replacement',
