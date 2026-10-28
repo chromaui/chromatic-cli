@@ -2,6 +2,7 @@ import gql from 'fake-tag';
 
 import { isNetworkError, NetworkError, ReplacementFailedError } from '../lib/turbosnap/v1/errors';
 import { Deps } from '../types';
+import { GitDeps } from './execGit';
 import { commitExists } from './git';
 
 const AncestorBuildsQuery = gql`
@@ -44,7 +45,7 @@ export interface AncestorBuildsQueryResult {
  *
  * The purpose here is to allow us to substitute a build with a known clean commit for TurboSnap.
  *
- * @param deps Dependencies (client, log).
+ * @param deps Dependencies (client, log, options).
  * @param buildNumber The build number to start searching from.
  * @param options Page size and limit options.
  * @param options.page How many builds to fetch each time.
@@ -53,7 +54,7 @@ export interface AncestorBuildsQueryResult {
  * @returns A build to be substituted
  */
 export async function findAncestorBuildWithCommit(
-  deps: Pick<Deps, 'client' | 'log'>,
+  deps: GitDeps & Pick<Deps, 'client'>,
   buildNumber: number,
   { page = 10, limit = 80 } = {}
 ): Promise<AncestorBuildsQueryResult['app']['build']['ancestorBuilds'][0] | undefined> {

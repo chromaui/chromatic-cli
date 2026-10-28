@@ -177,6 +177,30 @@ describe('gatherGitInfo', () => {
     expect(result.output.git.replacementBuildIds).toEqual([]);
   });
 
+  it('preserves the configured git timeout when comparing baseline builds', async () => {
+    const deps = buildDeps();
+    const options = { ...deps.options, gitTimeout: 60_000 };
+    const baselineBuild = {
+      id: 'baseline',
+      number: 1,
+      status: 'PASSED',
+      commit: '012qwes',
+      committedAt: 1_640_131_291,
+      uncommittedHash: '',
+      isLocalBuild: false,
+      changeCount: 0,
+    };
+    getBaselineBuilds.mockResolvedValue([baselineBuild]);
+
+    const result = await gatherGitInfo({ ...deps, options }, buildInput({ onlyChanged: true }));
+
+    expectKind(result, 'continue');
+    expect(getChangedFilesWithReplacement).toHaveBeenCalledWith(
+      expect.objectContaining({ options: expect.objectContaining({ gitTimeout: 60_000 }) }),
+      baselineBuild
+    );
+  });
+
   it('sets replacementBuildIds when found', async () => {
     getBaselineBuilds.mockResolvedValue([{ id: 'rebased', commit: '012qwes' } as any]);
     getChangedFilesWithReplacement.mockResolvedValue({
