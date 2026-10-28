@@ -332,9 +332,9 @@ async function getBaselineChanges(
       ctx.log.debug({ reference, manifestPath }, 'Manifest was added since the baseline');
       // The graph's root stands for the workspace itself, but the parser names it `package.json`
       // when the manifest has no name, so take the name from the manifest instead.
-      const workspaceName = readManifestName(rootPath, manifestPath);
+      const { name } = readManifest(rootPath, manifestPath);
       return new Set([
-        ...(workspaceName ? [workspaceName] : []),
+        ...(typeof name === 'string' && name ? [name] : []),
         ...headDependencies.getDepPkgs().map(({ name }) => name),
       ]);
     }
@@ -360,19 +360,18 @@ const isExact = (graph: DepGraph, name: string) => {
 };
 
 /**
- * Reads the `name` a manifest declares.
+ * Reads and parses a manifest.
  *
  * @param rootPath The absolute repository root.
  * @param manifestPath The repository-relative path of the `package.json`.
  *
- * @returns The name, or undefined when the manifest has none or can't be read.
+ * @returns The parsed manifest, or an empty object when it can't be read.
  */
-function readManifestName(rootPath: string, manifestPath: string): string | undefined {
+function readManifest(rootPath: string, manifestPath: string): Record<string, any> {
   try {
-    const { name } = JSON.parse(fs.readFileSync(path.join(rootPath, manifestPath), 'utf8'));
-    return typeof name === 'string' && name ? name : undefined;
+    return JSON.parse(fs.readFileSync(path.join(rootPath, manifestPath), 'utf8'));
   } catch {
-    return undefined;
+    return {};
   }
 }
 
@@ -386,12 +385,8 @@ function readManifestName(rootPath: string, manifestPath: string): string | unde
  * @returns The package names, or none when the manifest can't be read.
  */
 function readDeclaredDependencies(rootPath: string, manifestPath: string) {
-  try {
-    const manifest = JSON.parse(fs.readFileSync(path.join(rootPath, manifestPath), 'utf8'));
-    return ['dependencies', 'devDependencies', 'optionalDependencies'].flatMap((field) =>
-      Object.keys(manifest[field] ?? {})
-    );
-  } catch {
-    return [];
-  }
+  const manifest = readManifest(rootPath, manifestPath);
+  return ['dependencies', 'devDependencies', 'optionalDependencies'].flatMap((field) =>
+    Object.keys(manifest[field] ?? {})
+  );
 }

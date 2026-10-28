@@ -477,7 +477,8 @@ describe('checkoutFile', () => {
     expect(execGitCommand).toHaveBeenNthCalledWith(
       1,
       ctx,
-      'git ls-tree --full-tree abc123 -- "package.json"'
+      'git ls-tree --full-tree abc123 -- "package.json"',
+      { all: false }
     );
     expect(execGitCommand).toHaveBeenLastCalledWith(
       ctx,

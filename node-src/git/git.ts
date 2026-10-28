@@ -583,7 +583,9 @@ async function resolveSymlinkAtReference(deps: GitDeps, reference: string, fileN
     visited.add(current);
     const entry = await execGitCommand(
       deps,
-      `git ls-tree --full-tree ${reference} -- "${current}"`
+      `git ls-tree --full-tree ${reference} -- "${current}"`,
+      // Only read stdout, so a stderr warning can't hide a missing path.
+      { all: false }
     );
     // `ls-tree` prints nothing for a path the tree doesn't have, and fails for a missing reference.
     // A symlink whose target is missing is a broken file, not an added one.
