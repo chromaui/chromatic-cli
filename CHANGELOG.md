@@ -1,3 +1,33 @@
+# v18.13.4 (Wed Oct 28 2026)
+
+#### 🐛 Bug Fix
+
+- Read the configured gitTimeout in seconds [#1595](https://github.com/chromaui/chromatic-cli/pull/1595) ([@codykaup](https://github.com/codykaup))
+- fix: honor gitTimeout when comparing TurboSnap baselines [#1594](https://github.com/chromaui/chromatic-cli/pull/1594) ([@ethriel3695](https://github.com/ethriel3695))
+- Add an overview, service map, and feature map to AGENTS.md [#1584](https://github.com/chromaui/chromatic-cli/pull/1584) ([@justin-thurman](https://github.com/justin-thurman))
+- Only run PR canary releases when shipped code or the release process changes [#1588](https://github.com/chromaui/chromatic-cli/pull/1588) ([@codykaup](https://github.com/codykaup))
+- Make the CLI verification skill cover main-vs-branch, canaries, and scratch projects [#1570](https://github.com/chromaui/chromatic-cli/pull/1570) ([@codykaup](https://github.com/codykaup))
+- Tell agents how to label PRs [#1571](https://github.com/chromaui/chromatic-cli/pull/1571) ([@codykaup](https://github.com/codykaup))
+- Check merged PR build commits with one git cat-file call [#1581](https://github.com/chromaui/chromatic-cli/pull/1581) ([@codykaup](https://github.com/codykaup))
+- Assign repository code ownership to capture team [#1586](https://github.com/chromaui/chromatic-cli/pull/1586) ([@justin-thurman](https://github.com/justin-thurman))
+- Normalize absolute paths passed to chromatic trace [#1580](https://github.com/chromaui/chromatic-cli/pull/1580) ([@codykaup](https://github.com/codykaup))
+- [TurboSnap v2] Skip every untracked file, not just gitignored ones [#1558](https://github.com/chromaui/chromatic-cli/pull/1558) ([@codykaup](https://github.com/codykaup))
+- Don't suggest `--exit-once-uploaded` for local builds [#1575](https://github.com/chromaui/chromatic-cli/pull/1575) ([@codykaup](https://github.com/codykaup))
+- Look up upload targets by path with a Map [#1579](https://github.com/chromaui/chromatic-cli/pull/1579) ([@codykaup](https://github.com/codykaup))
+- Use a Map for file lengths in buildFileList [#1577](https://github.com/chromaui/chromatic-cli/pull/1577) ([@codykaup](https://github.com/codykaup))
+- Reuse one Intl.DateTimeFormat for log timestamps [#1578](https://github.com/chromaui/chromatic-cli/pull/1578) ([@codykaup](https://github.com/codykaup))
+- Retry action-canary push when a concurrent canary release moves main [#1566](https://github.com/chromaui/chromatic-cli/pull/1566) ([@justin-thurman](https://github.com/justin-thurman))
+- Exit non-zero and support --help in `trim-stats-file` subcommand [#1560](https://github.com/chromaui/chromatic-cli/pull/1560) ([@codykaup](https://github.com/codykaup))
+- Add E2E fixture projects and a helper to prepare them [#1543](https://github.com/chromaui/chromatic-cli/pull/1543) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 3
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+- Reuben Ellis ([@ethriel3695](https://github.com/ethriel3695))
+
+---
+
 # v18.13.3 (Thu Oct 22 2026)
 
 ### Release Notes
