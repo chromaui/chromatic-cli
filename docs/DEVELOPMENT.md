@@ -84,7 +84,7 @@ Additionally, a PR **may** have exactly one of these labels:
 We have two types of releases:
 
 - `latest` releases are the general audience production releases, used by most people. Automatically created when merging a PR with the `release` label.
-- `canary` releases are intended for testing purposes and should not be used in production, as they may only work against a staging or dev environment. Automatically created on every PR, but does not auto-publish the GitHub Action.
+- `canary` releases are intended for testing purposes and should not be used in production, as they may only work against a staging or dev environment. Automatically created on every PR that changes the package source, its build, or the release process (see the `paths` filter in `.github/workflows/release.yml`), but does not auto-publish the GitHub Action.
 
 > For GitHub Actions, we may manually publish `chromaui/action-canary`.
 

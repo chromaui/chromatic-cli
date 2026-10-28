@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # control-chromatic — drive the locally built Chromatic CLI (dist/bin.cjs) and capture proof.
-# Usage: control-chromatic <setup|rebuild|env|doctor|fixture|checkout|checkout-storybook|run|tty|cleanup> [...]
+# Usage: control-chromatic <setup|rebuild|env|doctor|fixture|e2e-fixture|commit|checkout|checkout-storybook|build-ref|install-published|run|tty|cleanup> [...]
 # Every run is scoped by RUN_ID (default: "default"); state lives in $VERIFY_ROOT/$RUN_ID.
 set -euo pipefail
 
@@ -137,6 +137,48 @@ EOF
   echo "$FIXTURE"
 }
 
+# e2e-fixture <name> [copy]: prepare e2e/fixtures/<name> with `yarn fixture` (own git repo, frozen install) at
+# $WORK/e2e-<name>[.<copy>], on branch vcc-$RUN_ID-<name>[.<copy>]-<short sha>. A copy name allows several
+# independent copies of one fixture in a run (parallel publishes, or a fresh one-commit copy for TurboSnap).
+# Names can't contain '.', so a copy can't collide with another fixture (monorepo-yarn.classic is not
+# monorepo-yarn-classic). The fixture's commit is on `main`, and every copy of every fixture publishing to
+# one project would share that branch: the CLI adds the last build on the branch as a parent even when its
+# commit is from another copy's history, and TurboSnap then fails with "missing git history".
+# The copy's own commit SHA (it has a fresh timestamp) keeps the name unique across sessions with the same RUN_ID.
+cmd_e2e_fixture() {
+  local name="${1:-}" copy="${2:-}"
+  [[ -n "$name" ]] || die "usage: e2e-fixture <name> [copy] (name is one of: $(ls "$REPO/e2e/fixtures" | tr '\n' ' '))"
+  require_safe_name name "$name"
+  local id="$name"
+  if [[ -n "$copy" ]]; then require_safe_name copy "$copy"; id="$name.$copy"; fi
+  [[ -d "$REPO/e2e/fixtures/$name" ]] || die "no fixture e2e/fixtures/$name (have: $(ls "$REPO/e2e/fixtures" | tr '\n' ' '))"
+  local dir="$WORK/e2e-$id"
+  [[ -e "$dir" ]] && die "$dir already exists; reuse it, pass another copy name, or run cleanup first"
+  mkdir -p "$WORK"
+  (cd "$REPO" && yarn fixture "$name" "$dir" > "$WORK/e2e-$id.log" 2>&1) \
+    || { tail -30 "$WORK/e2e-$id.log"; die "yarn fixture $name failed (log: $WORK/e2e-$id.log)"; }
+  local branch="vcc-$RUN_ID-$id-$(git -C "$dir" rev-parse --short HEAD)"
+  git -C "$dir" checkout -q -b "$branch"
+  echo "==> $dir is on branch $branch"
+  echo "$dir"
+}
+
+# commit <dir> <message>: commit every change in a scratch repo (a prepared fixture or $CHECKOUT) without
+# the user's signing config or hooks.
+cmd_commit() {
+  local dir="${1:-}" msg="${2:-}"
+  [[ -d "$dir" && -n "$msg" ]] || die "usage: commit <dir> <message>"
+  # Compare canonical paths of the repo root, so `..` or a symlink can't reach the developer's repo.
+  local root work
+  root="$(git -C "$dir" rev-parse --show-toplevel 2> /dev/null)" || die "$dir is not in a git repo"
+  root="$(realpath "$root")" work="$(realpath "$WORK")"
+  [[ "$root" == "$work"/* ]] || die "commit only works on scratch repos under $WORK (repo root: $root)"
+  git -C "$root" add -A
+  git -C "$dir" -c user.name=verify -c user.email=verify@example.invalid -c commit.gpgsign=false \
+    -c core.hooksPath=/dev/null commit -q -m "$msg"
+  git -C "$dir" log --oneline -1
+}
+
 # A git worktree of HEAD on a throwaway local branch, so journeys that need commits
 # (TurboSnap) never commit on or reset the developer's branch. cleanup removes both.
 cmd_checkout() {
@@ -148,6 +190,52 @@ cmd_checkout() {
   # Share the repo's install instead of installing again; node_modules is gitignored.
   ln -s "$REPO/node_modules" "$CHECKOUT/node_modules"
   echo "$CHECKOUT"
+}
+
+# build-ref <name> <git-ref>: build the CLI at another ref (usually origin/main) in a detached worktree at
+# $WORK/cli-<name>, sharing the repo's node_modules, so a change can be compared against it. Prints the
+# bundle path to pass as `run --cli`. Running a dist/ copied out of the repo fails with "Cannot find
+# module 'semver'", because the bundle resolves its externals from node_modules next to it.
+# Sharing node_modules means <ref> is built and run against this checkout's dependencies, so when the
+# manifests differ the comparison is not a true picture of <ref>; it warns on stderr in that case.
+cmd_build_ref() {
+  local name="${1:-}" ref="${2:-}"
+  [[ -n "$name" && -n "$ref" ]] || die "usage: build-ref <name> <git-ref>"
+  require_safe_name name "$name"
+  local dir="$WORK/cli-$name"
+  [[ -e "$dir" ]] && die "$dir already exists; run cleanup first"
+  git -C "$REPO" rev-parse --verify --quiet "$ref^{commit}" > /dev/null || die "unknown git ref $ref"
+  git -C "$REPO" diff --quiet "$ref" -- package.json yarn.lock \
+    || echo "control-chromatic: WARNING: package.json or yarn.lock differ between $ref and this checkout; $ref will be built and run with this checkout's node_modules, so dependency-related differences won't show. Compare against a published release or canary (install-published) instead." >&2
+  mkdir -p "$WORK"
+  git -C "$REPO" worktree add -q --detach "$dir" "$ref"
+  ln -s "$REPO/node_modules" "$dir/node_modules"
+  echo "==> yarn build ($ref in $dir)"
+  (cd "$dir" && yarn build > "$WORK/build-$name.log" 2>&1) \
+    || { tail -30 "$WORK/build-$name.log"; die "build of $ref failed (log: $WORK/build-$name.log)"; }
+  echo "$dir/dist/bin.cjs"
+}
+
+# install-published <name> <version>: install a published chromatic (a release or a PR canary such as
+# 18.13.4--canary.1568.<run>.0) into $WORK/npm-<name>. Prints the bundle path to pass as `run --cli`.
+# A canary shows up on npm about a minute after the release job passes; this retries until then.
+cmd_install_published() {
+  local name="${1:-}" version="${2:-}" attempt err
+  [[ -n "$name" && -n "$version" ]] || die "usage: install-published <name> <version>"
+  require_safe_name name "$name"
+  local dir="$WORK/npm-$name"
+  [[ -e "$dir" ]] && die "$dir already exists; run cleanup first"
+  # Only a 404 means "not published yet"; any other failure (network, auth) is reported at once.
+  for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    err="$(npm view "chromatic@$version" version 2>&1 > /dev/null)" && break
+    grep -q 'code E404' <<< "$err" || die "npm view chromatic@$version failed: $(grep -m3 'npm error' <<< "$err")"
+    (( attempt < 12 )) || die "chromatic@$version is not on npm after 2 minutes"
+    sleep 10
+  done
+  mkdir -p "$dir"
+  (cd "$dir" && npm init -y > /dev/null && npm install --no-audit --no-fund "chromatic@$version" > "$WORK/install-$name.log" 2>&1) \
+    || { tail -20 "$WORK/install-$name.log"; die "npm install chromatic@$version failed"; }
+  echo "$dir/node_modules/chromatic/dist/bin.cjs"
 }
 
 cmd_checkout_storybook() {
@@ -169,21 +257,28 @@ redacted_args() {
   done
 }
 
+# run and tty cd into --cwd before starting node, so a relative --cli is resolved against the caller's cwd first.
+cli_path() {
+  [[ -f "$1" ]] || die "--cli $1 is not a file"
+  realpath "$1"
+}
+
 # record_command <out dir> <cwd> <mode suffix> <cli args...>
 record_command() {
   local out="$1" cwd="$2" mode="$3"; shift 3
   printf 'cwd: %s\ncommand%s: node %s%s\n' "$cwd" "$mode" "$CLI" "$(redacted_args "$@")" > "$out/command.txt"
 }
 
-# run <label> [--cwd DIR] -- <cli args...>
+# run <label> [--cwd DIR] [--cli BUNDLE] -- <cli args...>
 cmd_run() {
   local label="${1:-}"; shift || true
   [[ -n "$label" ]] || die "run needs a label"
   require_safe_name label "$label"
-  local cwd="$REPO"
+  local cwd="$REPO" CLI="$CLI"   # local CLI: --cli swaps the bundle for this drive only
   while [[ $# -gt 0 && "$1" != "--" ]]; do
     case "$1" in
       --cwd) cwd="$2"; shift 2 ;;
+      --cli) CLI="$(cli_path "$2")"; shift 2 ;;
       *) die "unknown run option $1" ;;
     esac
   done
@@ -209,15 +304,16 @@ kill_tmux() {
   return 0
 }
 
-# tty <label> [--cwd DIR] [--timeout SECS] -- <cli args...>
+# tty <label> [--cwd DIR] [--cli BUNDLE] [--timeout SECS] -- <cli args...>
 cmd_tty() {
   local label="${1:-}"; shift || true
   [[ -n "$label" ]] || die "tty needs a label"
   require_safe_name label "$label"
-  local cwd="$REPO" timeout=120
+  local cwd="$REPO" timeout=120 CLI="$CLI"
   while [[ $# -gt 0 && "$1" != "--" ]]; do
     case "$1" in
       --cwd) cwd="$2"; shift 2 ;;
+      --cli) CLI="$(cli_path "$2")"; shift 2 ;;
       --timeout) timeout="$2"; shift 2 ;;
       *) die "unknown tty option $1" ;;
     esac
@@ -246,9 +342,9 @@ cmd_tty() {
   grep -v '^$' "$out/pane.txt" | head -40
 }
 
-# Until CAP-5317 ships, diagnostics hold the raw project token and session JWT under
-# .analytics and any -t value in .options.originalArgv, so scrub both before evidence
-# outlives the run.
+# CLIs before 18.13.1 (CAP-5317) put the raw project token and session JWT under .analytics
+# and any -t value in .options.originalArgv. install-published can run those, so scrub both
+# before evidence outlives the run.
 SCRUB_JQ='
   def token_flag: . == "-t" or . == "--project-token";
   del(.analytics)
@@ -277,6 +373,12 @@ cmd_cleanup() {
     rm -f "$CHECKOUT/node_modules"
     git -C "$REPO" worktree remove --force "$CHECKOUT" || true
   fi
+  local wt
+  for wt in "$WORK"/cli-*; do
+    [[ -d "$wt" ]] || continue
+    rm -f "$wt/node_modules"
+    git -C "$REPO" worktree remove --force "$wt" || true
+  done
   rm -rf "$WORK"
   git -C "$REPO" worktree prune
   if git -C "$REPO" show-ref --verify --quiet "refs/heads/$CHECKOUT_BRANCH"; then
@@ -295,8 +397,12 @@ case "$sub" in
   env) cmd_env ;;
   doctor) cmd_doctor ;;
   fixture) cmd_fixture ;;
+  e2e-fixture) cmd_e2e_fixture "$@" ;;
+  commit) cmd_commit "$@" ;;
   checkout) cmd_checkout ;;
   checkout-storybook) cmd_checkout_storybook ;;
+  build-ref) cmd_build_ref "$@" ;;
+  install-published) cmd_install_published "$@" ;;
   run) cmd_run "$@" ;;
   tty) cmd_tty "$@" ;;
   cleanup) cmd_cleanup ;;

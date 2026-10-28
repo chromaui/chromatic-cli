@@ -1,17 +1,14 @@
 name: Release
 
 on:
-  # PRs have their own canary releases which always run but don't publish the GitHub Action.
+  # PRs have their own canary releases which don't publish the GitHub Action. They only run when
+  # the PR changes the published package or its build, or the release process itself, so the
+  # release can be debugged on a PR. `release` is not a required check, so not running is safe.
   # Types are configured so this also runs when labels are added or removed.
-  # To allow debugging the release process, this does not have a paths filter.
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
-
-  # Pushes to main trigger a release and publish the GitHub Action. To allow the occasional update
-  # to markdown and config files, only changes to actual source code trigger a release.
-  push:
-    branches:
-      - main
+    # Keep in sync with `push.paths` below: every path there must also be here, followed by the
+    # build and release files that only matter for canaries.
     paths:
       - action-src/**
       - bin-src/**
@@ -20,6 +17,32 @@ on:
       - isChromatic.*
       - package.json
       - storybook-addon.*
+      - yarn.lock
+      - tsconfig.json
+      - tsdown.config.ts
+      - .tool-versions
+      - .yarnrc.yml
+      - .github/actions/setup/**
+      - .github/workflows/release.yml
+      - scripts/publishAction.mjs
+      - scripts/release.mjs
+
+  # Pushes to main trigger a release and publish the GitHub Action. To allow the occasional update
+  # to markdown and config files, only changes to actual source code and the dependencies bundled
+  # with it trigger a release.
+  push:
+    branches:
+      - main
+    # Keep in sync with `pull_request.paths` above: add any path here to that list too.
+    paths:
+      - action-src/**
+      - bin-src/**
+      - node-src/**
+      - action.yml
+      - isChromatic.*
+      - package.json
+      - storybook-addon.*
+      - yarn.lock
 
 permissions:
   id-token: write
