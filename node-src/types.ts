@@ -69,12 +69,6 @@ export interface Options extends Configuration {
   projectToken: string;
   userToken?: string;
 
-  /**
-   * Git command timeout in milliseconds. The configuration file sets it in seconds; `getOptions`
-   * converts it.
-   */
-  gitTimeout?: number;
-
   configFile?: Flags['configFile'];
   logFile?: Flags['logFile'];
   /**
