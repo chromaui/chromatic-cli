@@ -49,23 +49,26 @@ export const findChangedDependencies = async (ctx: Context) => {
     (await findFilesFromRepositoryRoot(ctx, rootPath, `**/${PACKAGE_JSON}`)) || [];
   ctx.log.debug({ nestedManifestPaths: nestedManifestPaths.length }, 'Found nested manifest paths');
 
-  const manifestConcurrency = ctx.env.CHROMATIC_TURBOSNAP_MANIFEST_CONCURRENCY;
-  const manifestLimit = pLimit(manifestConcurrency);
-  const metadataPathPairs = await Promise.all(
-    nestedManifestPaths.map((manifestPath) =>
-      manifestLimit(async () => {
-        const dirname = path.dirname(manifestPath);
-        const [lockfilePath] =
-          (await findFilesFromRepositoryRoot(
-            ctx,
-            rootPath,
-            ...SUPPORTED_LOCK_FILES.map((lockfile) => `${dirname}/${lockfile}`)
-          )) || [];
-        // Fall back to the root lockfile if we can't find one in the same directory.
-        return [manifestPath, lockfilePath || rootLockfilePath];
-      })
-    )
-  );
+  // List every nested lockfile in one call rather than one call per manifest, since each call
+  // reads the whole git index. `git ls-files` prints paths in index order, so the first lockfile
+  // seen for a directory is the one a per-directory lookup would have picked.
+  const nestedLockfilePaths =
+    (await findFilesFromRepositoryRoot(
+      ctx,
+      rootPath,
+      ...SUPPORTED_LOCK_FILES.map((lockfile) => `**/${lockfile}`)
+    )) || [];
+  const lockfilesByDirectory = new Map<string, string>();
+  for (const lockfilePath of nestedLockfilePaths) {
+    const dirname = path.posix.dirname(lockfilePath);
+    if (!lockfilesByDirectory.has(dirname)) lockfilesByDirectory.set(dirname, lockfilePath);
+  }
+
+  const metadataPathPairs = nestedManifestPaths.map((manifestPath) => [
+    manifestPath,
+    // Fall back to the root lockfile if we can't find one in the same directory.
+    lockfilesByDirectory.get(path.posix.dirname(manifestPath)) || rootLockfilePath,
+  ]);
 
   if (rootManifestPath && rootLockfilePath) {
     metadataPathPairs.unshift([rootManifestPath, rootLockfilePath]);
