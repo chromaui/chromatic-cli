@@ -36,8 +36,8 @@ beforeEach(() => {
 });
 
 describe('uploadHashes', () => {
-  it('uploads the Storybook hash, the config hashes, and the story file hashes', async () => {
-    await uploadHashes(graphqlClient, 'build-id', manifest);
+  it('uploads the Storybook hash, the config hashes, the story file hashes, and the flags', async () => {
+    await uploadHashes(graphqlClient, 'build-id', manifest, { onlyChanged: true });
 
     expect(client.runQuery).toHaveBeenCalledWith(
       expect.stringContaining('buildUploadHashes'),
@@ -47,6 +47,7 @@ describe('uploadHashes', () => {
           storybookHash: 'storybook-hash',
           storybookConfigHashes: { preview: 'preview-hash', storybookGlobals: 'globals-hash' },
           storyFileHashes: { './src/Button.stories.ts': 'story-hash' },
+          flags: { onlyChanged: true },
         },
       },
       { retries: 3 }
@@ -54,7 +55,7 @@ describe('uploadHashes', () => {
   });
 
   it('returns the mechanism the Index decided by, so a caller can tell it decided at all', async () => {
-    const result = await uploadHashes(graphqlClient, 'build-id', manifest);
+    const result = await uploadHashes(graphqlClient, 'build-id', manifest, { onlyChanged: true });
 
     expect(result.build?.turboSnapMechanism).toBe('HASH_BASED');
   });
@@ -66,7 +67,7 @@ describe('uploadHashes', () => {
       },
     });
 
-    const result = await uploadHashes(graphqlClient, 'build-id', manifest);
+    const result = await uploadHashes(graphqlClient, 'build-id', manifest, { onlyChanged: true });
 
     expect(result.errors).toEqual([
       { message: 'Uploading hashes is only allowed for announced builds.' },

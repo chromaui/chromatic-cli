@@ -40,6 +40,19 @@ interface BuildUploadHashesInput {
   storybookHash: string;
   storybookConfigHashes: Record<string, string>;
   storyFileHashes: Record<string, string>;
+  flags: BuildUploadHashesFlags;
+}
+
+/**
+ * How the CLI was invoked. The Index defaults to `{ onlyChanged: true }` when `flags` is missing, so
+ * CLI versions that predate it still get hash-based TurboSnap.
+ */
+interface BuildUploadHashesFlags {
+  /**
+   * Whether the user requested TurboSnap for this build. When false, the Index only stores the
+   * hashes for future builds to diff against and skips deciding which stories to capture.
+   */
+  onlyChanged: boolean;
 }
 
 /**
@@ -68,19 +81,22 @@ interface BuildUploadHashesResult {
  * @param graphqlClient The GraphQL client to use.
  * @param buildId The build ID associated with the manifest.
  * @param manifest The manifest whose Storybook and story file hashes are sent to the Index.
+ * @param flags How the CLI was invoked, so the Index knows whether to apply TurboSnap to this build.
  *
  * @returns The mutation result: the updated build on success, or the errors that prevented the upload.
  */
 export async function uploadHashes(
   graphqlClient: GraphQLClient,
   buildId: string,
-  manifest: TurboSnapManifest
+  manifest: TurboSnapManifest,
+  flags: BuildUploadHashesFlags
 ): Promise<BuildUploadHashesResponse> {
   const input: BuildUploadHashesInput = {
     buildId,
     storybookHash: manifest.storybookHash,
     storybookConfigHashes: Object.fromEntries(manifest.storybookConfigHashes),
     storyFileHashes: Object.fromEntries(manifest.storyFileHashes),
+    flags,
   };
 
   const { buildUploadHashes } = await graphqlClient.runQuery<BuildUploadHashesResult>(

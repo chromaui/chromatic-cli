@@ -178,6 +178,7 @@ describe('traceChangedFiles', () => {
     expect(traceChangedFilesV2).toHaveBeenCalledWith({
       log: ctx.log,
       failureLogLevel: 'error',
+      onlyChanged: true,
       graphqlClient: ctx.client,
       buildId: 'head-build',
       stats,
@@ -270,18 +271,19 @@ describe('traceChangedFiles', () => {
 
   // The user sees a failure of the feature they asked for; they never see a failure of an
   // optimisation for a build they have not heard of.
+  // The Index applies TurboSnap only when the user asked for it.
   it.each([
-    ['error', {}, 'true'],
-    ['debug', undefined, 'false'],
+    ['error', {}, 'true', true],
+    ['debug', undefined, 'false', false],
   ])(
-    'gives v2 the %s log level and tags the run when turboSnap is %o',
-    async (failureLogLevel, turboSnap, tag) => {
+    'gives v2 the %s log level and onlyChanged, and tags the run, when turboSnap is %o',
+    async (failureLogLevel, turboSnap, tag, onlyChanged) => {
       const ctx = { ...makeContext(), turboSnap };
 
       await traceChangedFiles(ctx);
 
       expect(traceChangedFilesV2).toHaveBeenCalledWith(
-        expect.objectContaining({ failureLogLevel })
+        expect.objectContaining({ failureLogLevel, onlyChanged })
       );
       expect(scopeSetTag).toHaveBeenCalledWith('turbosnap_requested', tag);
     }

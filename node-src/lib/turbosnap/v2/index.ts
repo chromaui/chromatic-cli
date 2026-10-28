@@ -23,6 +23,7 @@ export type FailureLogLevel = 'error' | 'debug';
  */
 interface TraceChangedFilesInput extends Omit<ManifestInput, 'gitRoot'> {
   failureLogLevel: FailureLogLevel;
+  onlyChanged: boolean;
   graphqlClient: GraphQLClient;
   buildId: string;
   stats: Stats;
@@ -47,6 +48,8 @@ export type TraceChangedFilesV2Result = TraceChangedFilesResult | { status: 'fal
  * always sets it; its absence is reported as a v2 failure.
  * @param input.failureLogLevel The level to log a v2 failure at, required rather than defaulted so a
  * caller cannot pick a level by accident.
+ * @param input.onlyChanged Whether the user requested TurboSnap for this build. The Index stores the
+ * hashes either way but only applies TurboSnap when this is true.
  *
  * @returns The TurboSnap result.
  */
@@ -79,7 +82,9 @@ export async function traceChangedFiles(
   input.log.debug(`Wrote manifest for TurboSnap v2 to ${input.manifestPath}`);
 
   try {
-    const response = await uploadHashes(input.graphqlClient, input.buildId, manifest);
+    const response = await uploadHashes(input.graphqlClient, input.buildId, manifest, {
+      onlyChanged: input.onlyChanged,
+    });
     // The Index refuses in the payload rather than as a GraphQL error, so a refusal resolves instead
     // of throwing. We ignore the build it returns, but `errors` says whether the upload happened.
     if (response.errors?.length) {
