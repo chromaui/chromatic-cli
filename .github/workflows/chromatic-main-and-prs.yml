@@ -11,6 +11,9 @@ permissions:
 
 jobs:
   chromatic:
+    # Pull requests from forks run without the project token, so skip them. Dependabot PRs get
+    # it from the Dependabot secrets store, where CHROMATIC_PROJECT_TOKEN must also be set.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.fork == false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

@@ -16,6 +16,10 @@ permissions:
 jobs:
   chromatic:
     runs-on: ubuntu-latest
+    env:
+      # Dependabot runs only get Dependabot secrets, which need not include the Upstash ones.
+      # Without them the comment still reports the size, just without the comparison to main.
+      HAS_UPSTASH: ${{ secrets.UPSTASH_REDIS_REST_URL != '' && secrets.UPSTASH_API_KEY != '' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -33,10 +37,12 @@ jobs:
           echo "Package Size: $DIST_SIZE KB"
           echo "size=$DIST_SIZE" >> "$GITHUB_OUTPUT"
       - name: Update Database
+        if: env.HAS_UPSTASH == 'true'
         run: |
           curl "${{ secrets.UPSTASH_REDIS_REST_URL }}/set/$GITHUB_SHA/${{ steps.package_size.outputs.size }}" -H "Authorization: Bearer ${{ secrets.UPSTASH_API_KEY }}"
       - name: Get Previous Size
         id: previous
+        if: env.HAS_UPSTASH == 'true'
         run: |
           export MAIN_HEAD_SHA="$(git rev-parse origin/main)"
           echo "origin/main: $MAIN_HEAD_SHA"
@@ -62,7 +68,9 @@ jobs:
 
             const output = ["📦 Package Size: ${{ steps.package_size.outputs.size }} KB"];
 
-            const main_head_json = JSON.parse(`${{ steps.previous.outputs.main_head_size }}`);
+            // Empty when the Get Previous Size step was skipped.
+            const main_head_size = `${{ steps.previous.outputs.main_head_size }}`;
+            const main_head_json = main_head_size ? JSON.parse(main_head_size) : null;
             if(main_head_json && main_head_json.result) {
               const diff = parseInt("${{ steps.package_size.outputs.size }}") - parseInt(main_head_json.result);
               const diffEmoji = diff > 0 ? '⚠️' : '✅';

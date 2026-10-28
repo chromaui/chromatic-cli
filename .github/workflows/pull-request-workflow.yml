@@ -13,12 +13,25 @@ on:
 permissions:
   contents: read
 
+# Which secrets a run gets depends on who opened the pull request:
+#
+# - Pull requests from this repository get the repository's Actions secrets.
+# - Pull requests from Dependabot get the Dependabot secrets store instead (Settings > Secrets
+#   and variables > Dependabot, or `gh secret set --app dependabot`). Every secret a job below
+#   needs must also exist there, with the same name, or the job fails. A maintainer re-running
+#   the workflow does not change this.
+# - Pull requests from forks get no secrets at all, even after a maintainer approves the run.
+#   The jobs that need secrets skip for them and `ci-required` ignores skipped jobs, so the
+#   PR can be reviewed. Those jobs run with secrets once the PR is in the merge queue, before
+#   it lands on main. To run them earlier, review the commit and push it to a branch with the
+#   same name in this repository; GitHub then runs this workflow for the PR with secrets.
 jobs:
   changes:
     name: Detect code changes
     runs-on: ubuntu-latest
     outputs:
       code: ${{ steps.diff.outputs.code }}
+      fork: ${{ github.event.pull_request.head.repo.fork == true }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -44,9 +57,10 @@ jobs:
             echo "code=false" >> "$GITHUB_OUTPUT"
           fi
 
+  # Comments on the PR, which the read-only token of a fork PR cannot do.
   package-size:
     needs: changes
-    if: github.event_name == 'pull_request' && needs.changes.outputs.code == 'true'
+    if: github.event_name == 'pull_request' && needs.changes.outputs.code == 'true' && needs.changes.outputs.fork == 'false'
     uses: ./.github/workflows/package-size.yml
     permissions:
       contents: read
@@ -78,23 +92,24 @@ jobs:
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
+  # The three jobs below publish to Chromatic, so they need a project token and skip for forks.
   chromatic:
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.fork == 'false'
     uses: ./.github/workflows/chromatic-prod.yml
     secrets:
       CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test-action:
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.fork == 'false'
     uses: ./.github/workflows/smoke-test-action.yml
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
   smoke-test:
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' && needs.changes.outputs.fork == 'false'
     uses: ./.github/workflows/smoke-test.yml
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}

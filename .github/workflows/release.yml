@@ -59,6 +59,10 @@ concurrency:
 
 jobs:
   release:
+    # Publishing needs the repository's tokens, which runs for pull requests from forks or from
+    # Dependabot do not get (Dependabot runs only see Dependabot secrets). Those PRs also hold
+    # unreviewed code, so they get no canary.
+    if: github.event_name == 'push' || (github.event.pull_request.head.repo.fork == false && github.event.pull_request.user.login != 'dependabot[bot]')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
