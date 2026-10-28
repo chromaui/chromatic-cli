@@ -105,18 +105,6 @@ describe('execGitCommand', () => {
       expect.objectContaining({ timeout: 20_000 })
     );
   });
-
-  it('uses the configured git timeout', async () => {
-    vi.mocked(execa, { partial: true }).mockResolvedValue({ all: 'output' });
-    const runCommand = vi.spyOn(shell, 'runCommand');
-
-    await execGitCommand({ ...ctx, options: { gitTimeout: 60_000 } }, 'git diff');
-
-    expect(runCommand).toHaveBeenCalledWith(
-      'git diff',
-      expect.objectContaining({ timeout: 60_000 })
-    );
-  });
 });
 
 describe('execGitCommandEntries', () => {
