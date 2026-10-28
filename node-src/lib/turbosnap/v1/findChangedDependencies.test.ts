@@ -16,6 +16,7 @@ import { Context } from '../../..';
 import * as git from '../../../git/git';
 import getEnvironment from '../../getEnvironment';
 import TestLogger from '../../testLogger';
+import { BaselineCheckoutFailedError, BaselineFileMissingError } from './errors';
 import { findChangedDependencies } from './findChangedDependencies';
 
 vi.mock('snyk-nodejs-lockfile-parser');
@@ -477,13 +478,12 @@ const reactBump = {
 const packageKey = ({ name, version }: { name: string; version: string }) => `${name}@${version}`;
 
 describe('findChangedDependencies with stats', () => {
-  const fileExistsAtReference = vi.mocked(git.fileExistsAtReference);
   const parsePnpmProject = vi.mocked(snykParser.parsePnpmProject);
 
   // `declares` lists the packages a workspace's manifest declares, by default all of `head`.
   type Graphs = Record<
     string,
-    { name: string; head: string[]; base?: string[]; declares?: string[] }
+    { name?: string; head: string[]; base?: string[]; declares?: string[] }
   >;
 
   // Serve each workspace's HEAD or baseline graph from the pnpm workspace parser, keyed by its
@@ -518,7 +518,8 @@ describe('findChangedDependencies with stats', () => {
       importers: Object.fromEntries(Object.keys(graphs).map((directory) => [directory, {}])),
     } as any);
     pnpmWorkspaceProject.mockImplementation(async (manifest, _lockfile, _options, importer) => {
-      const { name, head, base = head } = graphs[importer];
+      // The parser names the root of a manifest without a name `package.json`.
+      const { name = 'package.json', head, base = head } = graphs[importer];
       return fakeGraph(name, JSON.parse(manifest).file.startsWith(tmpdir) ? base : head) as any;
     });
     createChangedPackagesGraph.mockImplementation(async (from: any, to: any) => {
@@ -544,7 +545,6 @@ describe('findChangedDependencies with stats', () => {
   afterEach(() => {
     readFileSync.mockReset();
     readFileSync.mockReturnValue('');
-    fileExistsAtReference.mockReset();
     parsePnpmProject.mockReset();
   });
 
@@ -842,50 +842,44 @@ describe('findChangedDependencies with stats', () => {
         base: ['react@19.0.1'],
       },
       'packages/extra': { name: '@myorg/extra', head: ['is-odd@3.0.1'] },
-      // The Storybook doesn't load this one, so the `react` the Storybook declares is dropped.
-      'packages/unused': { name: '@myorg/unused', head: ['react@19.0.1', 'moment@2.31.0'] },
+      // The Storybook doesn't load this one, so the `react` the Storybook declares is dropped. It
+      // has no name, so nothing stands for the workspace itself.
+      'packages/unused': { head: ['react@19.0.1', 'moment@2.31.0'] },
     });
-    checkoutFile.mockImplementation(async (_, __, file) => {
+    checkoutFile.mockImplementation(async (_, reference, file) => {
       if (file === 'packages/extra/package.json' || file === 'packages/unused/package.json') {
-        throw new Error('missing');
+        throw new BaselineFileMissingError(`${reference}:${file}`);
       }
     });
-    fileExistsAtReference.mockResolvedValue(false);
 
     const changes = await findChangedDependencies(
       getStatsContext(),
       stats(...uiModules, './../extra/src/index.ts')
     );
-    expect(changes.toSorted()).toEqual(['@myorg/extra', '@myorg/unused', 'is-odd', 'moment']);
+    expect(changes.toSorted()).toEqual(['@myorg/extra', 'is-odd', 'moment']);
   });
 
   it('throws when the baseline lockfile is missing, even if the manifest is too', async () => {
-    mockWorkspace({
-      '.': { name: 'root', head: [] },
-      'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] },
-    });
-    const error = new Error('missing lockfile');
-    checkoutFile.mockImplementation(async (_, __, file) => {
+    mockWorkspace({ 'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] } });
+    const error = new BaselineFileMissingError('A:pnpm-lock.yaml');
+    checkoutFile.mockImplementation(async (_, reference, file) => {
       if (file === 'pnpm-lock.yaml') throw error;
-      if (file === 'packages/ui/package.json') throw new Error('missing manifest');
+      if (file === 'packages/ui/package.json') {
+        throw new BaselineFileMissingError(`${reference}:${file}`);
+      }
     });
-    fileExistsAtReference.mockResolvedValue(false);
 
     await expect(findChangedDependencies(getStatsContext(), stats(...uiModules))).rejects.toBe(
       error
     );
   });
 
-  it.each([
-    ['it exists at the baseline', () => Promise.resolve(true)],
-    ['the probe fails', () => Promise.reject(new Error('git failed'))],
-  ])('throws when a manifest cannot be checked out and %s', async (_, probe) => {
+  it('throws when a manifest that may exist at the baseline cannot be checked out', async () => {
     mockWorkspace({ 'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] } });
-    const error = new Error('checkout failed');
+    const error = new BaselineCheckoutFailedError('A:packages/ui/package.json');
     checkoutFile.mockImplementation(async (_, __, file) => {
       if (file === 'packages/ui/package.json') throw error;
     });
-    fileExistsAtReference.mockImplementation(probe);
 
     await expect(findChangedDependencies(getStatsContext(), stats(...uiModules))).rejects.toBe(
       error

@@ -5,6 +5,7 @@ import TestLogger from '../lib/testLogger';
 import {
   AncestorMissingError,
   BaselineCheckoutFailedError,
+  BaselineFileMissingError,
   GitCommandError,
 } from '../lib/turbosnap/v1/errors';
 import * as execGit from './execGit';
@@ -12,7 +13,6 @@ import {
   checkoutFile,
   commitExists,
   commitsExist,
-  fileExistsAtReference,
   findFilesFromRepositoryRoot,
   getBranch,
   getChangedFiles,
@@ -245,30 +245,6 @@ describe('commitExists', () => {
       new Error(`fatal: Not a valid object name 1234567890^{commit}`)
     );
     expect(await commitExists(ctx, '1234567890')).toEqual(false);
-  });
-});
-
-describe('fileExistsAtReference', () => {
-  it('returns true if the file exists at the reference', async () => {
-    execGitCommand.mockResolvedValue('0123456789abcdef0123456789abcdef01234567 blob 42');
-    expect(await fileExistsAtReference(ctx, 'abc123', 'packages/ui/package.json')).toEqual(true);
-    expect(execGitCommand).toHaveBeenCalledWith(ctx, 'git cat-file --batch-check', {
-      input: 'abc123:packages/ui/package.json',
-      all: false,
-    });
-  });
-
-  it('returns false if git reports the file missing at the reference', async () => {
-    execGitCommand.mockResolvedValue('abc123:packages/ui/package.json missing');
-    expect(await fileExistsAtReference(ctx, 'abc123', 'packages/ui/package.json')).toEqual(false);
-  });
-
-  it('throws when git fails', async () => {
-    const error = new Error('fatal: not a git repository');
-    execGitCommand.mockRejectedValueOnce(error);
-    await expect(fileExistsAtReference(ctx, 'abc123', 'packages/ui/package.json')).rejects.toBe(
-      error
-    );
   });
 });
 
@@ -552,6 +528,34 @@ describe('checkoutFile', () => {
       name: 'BaselineCheckoutFailedError',
       cause: { message: 'Symbolic link cycle: abc123:a/one' },
     });
+  });
+
+  it('throws BaselineFileMissingError when the file is not at the reference', async () => {
+    execGitCommand.mockResolvedValueOnce('');
+
+    const checkout = checkoutFile(ctx, 'abc123', 'packages/new/package.json', '/tmp/anywhere');
+    await expect(checkout).rejects.toBeInstanceOf(BaselineFileMissingError);
+    await expect(checkout).rejects.toBeInstanceOf(BaselineCheckoutFailedError);
+    expect(execGitCommand).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['the reference is missing', () => execGitCommand.mockRejectedValueOnce(new Error('bad ref'))],
+    [
+      'a symlink target is missing',
+      () => {
+        execGitCommand.mockResolvedValueOnce('120000 blob abc123\tpackages/ui/package.json');
+        execGitCommand.mockResolvedValueOnce('../gone/package.json\n');
+        execGitCommand.mockResolvedValueOnce('');
+        execGitCommand.mockRejectedValueOnce(new Error('git show failed'));
+      },
+    ],
+  ])('does not report a missing file when %s', async (_, mockGit) => {
+    mockGit();
+
+    const checkout = checkoutFile(ctx, 'abc123', 'packages/ui/package.json', '/tmp/anywhere');
+    await expect(checkout).rejects.toBeInstanceOf(BaselineCheckoutFailedError);
+    await expect(checkout).rejects.not.toBeInstanceOf(BaselineFileMissingError);
   });
 
   it('wraps a failing `git show` in BaselineCheckoutFailedError with cause', async () => {
