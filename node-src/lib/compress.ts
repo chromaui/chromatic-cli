@@ -1,6 +1,6 @@
-import archiver from 'archiver';
-import { createReadStream, createWriteStream } from 'fs';
+import { createWriteStream } from 'fs';
 import { file as temporaryFile } from 'tmp-promise';
+import { ZipFile } from 'yazl';
 
 import { Context, FileDesc } from '../types';
 
@@ -13,31 +13,29 @@ import { Context, FileDesc } from '../types';
  * @returns A promise that resolves with details of the created zip.
  */
 export default async function makeZipFile(ctx: Context, files: FileDesc[]) {
-  const archive = archiver('zip', { zlib: { level: 9 } });
+  const zipFile = new ZipFile();
   const temporary = await temporaryFile({ postfix: '.zip' });
   // Passing a fd will cause `createWriteStream` to ignore the path (first) argument
   const sink = createWriteStream('', { fd: temporary.fd });
 
   return new Promise<{ path: string; size: number }>((resolve, reject) => {
     sink.on('close', () => {
-      resolve({ path: temporary.path, size: archive.pointer() });
+      resolve({ path: temporary.path, size: sink.bytesWritten });
     });
-
-    // 'warning' messages contain non-blocking errors
-    archive.on('warning', (err) => {
-      ctx.log.debug({ err }, 'Received warning when creating zip file');
-    });
-    archive.on('error', (err) => {
+    sink.on('error', reject);
+    zipFile.on('error', (err) => {
+      sink.destroy();
       reject(err);
     });
-    archive.pipe(sink);
+    zipFile.outputStream.pipe(sink);
 
-    for (const { localPath, targetPath: name } of files) {
-      ctx.log.debug(`Adding to zip archive: ${name}`);
-      archive.append(createReadStream(localPath), { name });
+    // yazl opens each file only when its entry is written, so this doesn't hold a descriptor per file.
+    for (const { localPath, targetPath } of files) {
+      ctx.log.debug(`Adding to zip archive: ${targetPath}`);
+      zipFile.addFile(localPath, targetPath, { compressionLevel: 9 });
     }
 
     ctx.log.debug('Finalizing zip archive');
-    archive.finalize().catch((err) => reject(err));
+    zipFile.end();
   });
 }
