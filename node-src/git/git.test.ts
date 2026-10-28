@@ -5,7 +5,6 @@ import TestLogger from '../lib/testLogger';
 import {
   AncestorMissingError,
   BaselineCheckoutFailedError,
-  BaselineFileMissingError,
   GitCommandError,
 } from '../lib/turbosnap/v1/errors';
 import * as execGit from './execGit';
@@ -531,13 +530,23 @@ describe('checkoutFile', () => {
     });
   });
 
-  it('throws BaselineFileMissingError when the file is not at the reference', async () => {
+  it('marks the error when the file is not at the reference, and otherwise fails as before', async () => {
+    const cause = new Error("fatal: path 'packages/new/package.json' does not exist in 'abc123'");
     execGitCommand.mockResolvedValueOnce('');
+    execGitCommand.mockRejectedValueOnce(cause);
 
-    const checkout = checkoutFile(ctx, 'abc123', 'packages/new/package.json', '/tmp/anywhere');
-    await expect(checkout).rejects.toBeInstanceOf(BaselineFileMissingError);
-    await expect(checkout).rejects.toBeInstanceOf(BaselineCheckoutFailedError);
-    expect(execGitCommand).toHaveBeenCalledTimes(1);
+    await expect(
+      checkoutFile(ctx, 'abc123', 'packages/new/package.json', '/tmp/anywhere')
+    ).rejects.toEqual(
+      Object.assign(
+        new BaselineCheckoutFailedError('abc123:packages/new/package.json', { cause }),
+        { fileMissing: true }
+      )
+    );
+    expect(execGitCommand).toHaveBeenLastCalledWith(
+      ctx,
+      'git show "abc123:packages/new/package.json" > "/tmp/anywhere/packages/new/package.json"'
+    );
   });
 
   it.each([
@@ -554,9 +563,9 @@ describe('checkoutFile', () => {
   ])('does not report a missing file when %s', async (_, mockGit) => {
     mockGit();
 
-    const checkout = checkoutFile(ctx, 'abc123', 'packages/ui/package.json', '/tmp/anywhere');
-    await expect(checkout).rejects.toBeInstanceOf(BaselineCheckoutFailedError);
-    await expect(checkout).rejects.not.toBeInstanceOf(BaselineFileMissingError);
+    await expect(
+      checkoutFile(ctx, 'abc123', 'packages/ui/package.json', '/tmp/anywhere')
+    ).rejects.toMatchObject({ name: 'BaselineCheckoutFailedError', fileMissing: false });
   });
 
   it('wraps a failing `git show` in BaselineCheckoutFailedError with cause', async () => {

@@ -10,7 +10,7 @@ import { Context, Stats } from '../../../types';
 import { matchesFile, SUPPORTED_LOCK_FILES } from '../../utilities';
 import { getStatsProjectRoot } from '../statsPaths';
 import { compareBaseline } from './compareBaseline';
-import { BaselineFileMissingError, LockFileMissingError } from './errors';
+import { BaselineCheckoutFailedError, LockFileMissingError } from './errors';
 import { getDependencies } from './getDependencies';
 import { getStatsScope } from './getStatsScope';
 
@@ -325,9 +325,8 @@ async function getBaselineChanges(
     if (lockfileCheckout.status === 'rejected') throw lockfileCheckout.reason;
     if (manifestCheckout.status === 'rejected') {
       // Only a manifest git confirms is missing counts as added. Any other failure bails.
-      if (!(manifestCheckout.reason instanceof BaselineFileMissingError)) {
-        throw manifestCheckout.reason;
-      }
+      const { reason } = manifestCheckout;
+      if (!(reason instanceof BaselineCheckoutFailedError && reason.fileMissing)) throw reason;
 
       ctx.log.debug({ reference, manifestPath }, 'Manifest was added since the baseline');
       // The graph's root stands for the workspace itself, but the parser names it `package.json`

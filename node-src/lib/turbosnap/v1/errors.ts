@@ -41,22 +41,16 @@ export class LockFileParseFailedError extends Error {
  * Error thrown when checking out a baseline file via `git show` fails.
  */
 export class BaselineCheckoutFailedError extends Error {
+  /** Whether git reported that the file isn't at the baseline, as for a file added since. */
+  public fileMissing: boolean;
+
   constructor(
     public pathspec: string,
-    options?: { cause?: unknown }
+    { fileMissing = false, ...options }: { cause?: unknown; fileMissing?: boolean } = {}
   ) {
     super(`Failed to check out baseline file: ${pathspec}`, options);
     this.name = 'BaselineCheckoutFailedError';
-  }
-}
-
-/**
- * Error thrown when a baseline file doesn't exist at the baseline commit, because it was added since.
- */
-export class BaselineFileMissingError extends BaselineCheckoutFailedError {
-  constructor(pathspec: string) {
-    super(pathspec);
-    this.name = 'BaselineFileMissingError';
+    this.fileMissing = fileMissing;
   }
 }
 

@@ -17,11 +17,7 @@ import { Context } from '../../..';
 import * as git from '../../../git/git';
 import getEnvironment from '../../getEnvironment';
 import TestLogger from '../../testLogger';
-import {
-  BaselineCheckoutFailedError,
-  BaselineFileMissingError,
-  LockFileMissingError,
-} from './errors';
+import { BaselineCheckoutFailedError, LockFileMissingError } from './errors';
 import { findChangedDependencies } from './findChangedDependencies';
 
 vi.mock('snyk-nodejs-lockfile-parser');
@@ -1013,7 +1009,7 @@ describe('findChangedDependencies with stats', () => {
     });
     checkoutFile.mockImplementation(async (_, reference, file) => {
       if (file === 'packages/extra/package.json' || file === 'packages/unused/package.json') {
-        throw new BaselineFileMissingError(`${reference}:${file}`);
+        throw new BaselineCheckoutFailedError(`${reference}:${file}`, { fileMissing: true });
       }
     });
 
@@ -1026,17 +1022,21 @@ describe('findChangedDependencies with stats', () => {
 
   it('throws when the baseline lockfile is missing, even if the manifest is too', async () => {
     mockWorkspace({ 'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] } });
-    const error = new BaselineFileMissingError('A:pnpm-lock.yaml');
+    const error = new BaselineCheckoutFailedError('A:pnpm-lock.yaml', { fileMissing: true });
     checkoutFile.mockImplementation(async (_, reference, file) => {
       if (file === 'pnpm-lock.yaml') throw error;
       if (file === 'packages/ui/package.json') {
-        throw new BaselineFileMissingError(`${reference}:${file}`);
+        throw new BaselineCheckoutFailedError(`${reference}:${file}`, { fileMissing: true });
       }
     });
 
-    await expect(findChangedDependencies(getStatsContext(), stats(...uiModules))).rejects.toBe(
-      error
-    );
+    // A bail reaches Sentry under the same error name as before added workspaces were handled.
+    await expect(
+      findChangedDependencies(getStatsContext(), stats(...uiModules))
+    ).rejects.toMatchObject({
+      name: 'BaselineCheckoutFailedError',
+      message: 'Failed to check out baseline file: A:pnpm-lock.yaml',
+    });
   });
 
   it('throws when a manifest that may exist at the baseline cannot be checked out', async () => {
