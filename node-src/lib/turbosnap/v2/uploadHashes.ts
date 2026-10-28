@@ -75,8 +75,8 @@ interface BuildUploadHashesResult {
 
 /**
  * Sends the whole-Storybook hash and the per-story hashes from the TurboSnap manifest to the Index,
- * which compares them against the build's ancestors to determine which stories need to be
- * recaptured.
+ * which stores them and, when `flags.onlyChanged` is set, compares them against the build's ancestors
+ * to determine which stories need to be recaptured.
  *
  * @param graphqlClient The GraphQL client to use.
  * @param buildId The build ID associated with the manifest.
