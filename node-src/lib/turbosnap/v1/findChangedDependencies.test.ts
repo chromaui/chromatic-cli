@@ -1020,24 +1020,38 @@ describe('findChangedDependencies with stats', () => {
     expect(changes.toSorted()).toEqual(['@myorg/extra', 'is-odd', 'moment']);
   });
 
-  it('throws when the baseline lockfile is missing, even if the manifest is too', async () => {
+  it('throws when the baseline lockfile is missing', async () => {
     mockWorkspace({ 'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] } });
     const error = new BaselineCheckoutFailedError('A:pnpm-lock.yaml', { fileMissing: true });
-    checkoutFile.mockImplementation(async (_, reference, file) => {
+    checkoutFile.mockImplementation(async (_, __, file) => {
       if (file === 'pnpm-lock.yaml') throw error;
-      if (file === 'packages/ui/package.json') {
-        throw new BaselineCheckoutFailedError(`${reference}:${file}`, { fileMissing: true });
-      }
     });
 
-    // A bail reaches Sentry under the same error name as before added workspaces were handled.
-    await expect(
-      findChangedDependencies(getStatsContext(), stats(...uiModules))
-    ).rejects.toMatchObject({
-      name: 'BaselineCheckoutFailedError',
-      message: 'Failed to check out baseline file: A:pnpm-lock.yaml',
-    });
+    await expect(findChangedDependencies(getStatsContext(), stats(...uiModules))).rejects.toBe(
+      error
+    );
   });
+
+  it.each([true, false])(
+    'throws the manifest error when both checkouts fail (manifest missing: %s)',
+    async (fileMissing) => {
+      mockWorkspace({ 'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] } });
+      checkoutFile.mockImplementation(async (_, reference, file) => {
+        throw new BaselineCheckoutFailedError(`${reference}:${file}`, {
+          fileMissing: fileMissing || file === 'pnpm-lock.yaml',
+        });
+      });
+
+      // A bail reaches Sentry with the same error and pathspec as before added workspaces were
+      // handled. Every pair fails, so any manifest may be the one reported.
+      await expect(
+        findChangedDependencies(getStatsContext(), stats(...uiModules))
+      ).rejects.toMatchObject({
+        name: 'BaselineCheckoutFailedError',
+        message: expect.stringMatching(/^Failed to check out baseline file: A:.*package\.json$/),
+      });
+    }
+  );
 
   it('throws when a manifest that may exist at the baseline cannot be checked out', async () => {
     mockWorkspace({ 'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] } });

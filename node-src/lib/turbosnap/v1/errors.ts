@@ -42,7 +42,7 @@ export class LockFileParseFailedError extends Error {
  */
 export class BaselineCheckoutFailedError extends Error {
   /** Whether git reported that the file isn't at the baseline, as for a file added since. */
-  public fileMissing: boolean;
+  public readonly fileMissing: boolean;
 
   constructor(
     public pathspec: string,

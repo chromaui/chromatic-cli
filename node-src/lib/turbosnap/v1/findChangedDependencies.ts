@@ -322,11 +322,13 @@ async function getBaselineChanges(
       checkoutFile(ctx, reference, manifestPath, tmpdir),
       checkoutFile(ctx, reference, lockfilePath, tmpdir),
     ]);
-    if (lockfileCheckout.status === 'rejected') throw lockfileCheckout.reason;
     if (manifestCheckout.status === 'rejected') {
-      // Only a manifest git confirms is missing counts as added. Any other failure bails.
+      // Only a manifest git confirms is missing counts as added. Any other failure bails. A bail
+      // reports the manifest whenever its checkout failed, as it did before added manifests were
+      // handled.
       const { reason } = manifestCheckout;
-      if (!(reason instanceof BaselineCheckoutFailedError && reason.fileMissing)) throw reason;
+      const isAdded = reason instanceof BaselineCheckoutFailedError && reason.fileMissing;
+      if (!isAdded || lockfileCheckout.status === 'rejected') throw reason;
 
       ctx.log.debug({ reference, manifestPath }, 'Manifest was added since the baseline');
       // The graph's root stands for the workspace itself, but the parser names it `package.json`
@@ -337,6 +339,7 @@ async function getBaselineChanges(
         ...headDependencies.getDepPkgs().map(({ name }) => name),
       ]);
     }
+    if (lockfileCheckout.status === 'rejected') throw lockfileCheckout.reason;
 
     const baselineDependencies = await getDependencies(ctx, {
       rootPath: tmpdir,
