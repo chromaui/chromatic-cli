@@ -30,9 +30,32 @@ export const findChangedDependencies = async (ctx: Context) => {
   );
 
   const rootPath = (await getRepositoryRoot(ctx)) || '';
-  const [rootManifestPath] = (await findFilesFromRepositoryRoot(ctx, rootPath, PACKAGE_JSON)) || [];
-  const [rootLockfilePath] =
-    (await findFilesFromRepositoryRoot(ctx, rootPath, ...SUPPORTED_LOCK_FILES)) || [];
+
+  // List every manifest and lockfile, at the root and in nested packages (monorepos), with one
+  // call, since each call reads the whole git index. Paths use forward slashes, even on Windows.
+  const metadataFiles =
+    (await findFilesFromRepositoryRoot(
+      ctx,
+      rootPath,
+      ...[PACKAGE_JSON, ...SUPPORTED_LOCK_FILES].flatMap((file) => [file, `**/${file}`])
+    )) || [];
+  let rootManifestPath: string | undefined;
+  const nestedManifestPaths: string[] = [];
+  const lockfilesByDirectory = new Map<string, string>();
+  for (const file of metadataFiles) {
+    const dirname = path.posix.dirname(file);
+    if (file === PACKAGE_JSON) {
+      rootManifestPath = file;
+    } else if (path.posix.basename(file) === PACKAGE_JSON) {
+      nestedManifestPaths.push(file);
+    } else if (!lockfilesByDirectory.has(dirname)) {
+      // `git ls-files` prints paths in index order, so this prefers package-lock.json, then
+      // pnpm-lock.yaml, then yarn.lock, as a lookup of one directory's lockfiles would.
+      lockfilesByDirectory.set(dirname, file);
+    }
+  }
+
+  const rootLockfilePath = lockfilesByDirectory.get('.');
   if (!rootManifestPath || !rootLockfilePath) {
     ctx.log.debug(
       { rootPath, rootManifestPath, rootLockfilePath },
@@ -41,33 +64,14 @@ export const findChangedDependencies = async (ctx: Context) => {
   }
 
   ctx.log.debug({ rootPath, rootManifestPath, rootLockfilePath }, `Found manifest and lockfile`);
-
-  // Handle monorepos with (multiple) nested package.json files.
-  // Note that this does not use `path.join` to concatenate the file paths because
-  // git uses forward slashes, even on windows
-  const nestedManifestPaths =
-    (await findFilesFromRepositoryRoot(ctx, rootPath, `**/${PACKAGE_JSON}`)) || [];
   ctx.log.debug({ nestedManifestPaths: nestedManifestPaths.length }, 'Found nested manifest paths');
-
-  // List every nested lockfile in one call rather than one call per manifest, since each call
-  // reads the whole git index. `git ls-files` prints paths in index order, so the first lockfile
-  // seen for a directory is the one a per-directory lookup would have picked.
-  const nestedLockfilePaths =
-    (await findFilesFromRepositoryRoot(
-      ctx,
-      rootPath,
-      ...SUPPORTED_LOCK_FILES.map((lockfile) => `**/${lockfile}`)
-    )) || [];
-  const lockfilesByDirectory = new Map<string, string>();
-  for (const lockfilePath of nestedLockfilePaths) {
-    const dirname = path.posix.dirname(lockfilePath);
-    if (!lockfilesByDirectory.has(dirname)) lockfilesByDirectory.set(dirname, lockfilePath);
-  }
 
   const metadataPathPairs = nestedManifestPaths.map((manifestPath) => [
     manifestPath,
-    // Fall back to the root lockfile if we can't find one in the same directory.
-    lockfilesByDirectory.get(path.posix.dirname(manifestPath)) || rootLockfilePath,
+    // Fall back to the root lockfile if we can't find one in the same directory. With neither,
+    // the lockfile stays undefined, so `getDependencies` throws if this manifest changed and
+    // TurboSnap falls back to diffing package.json files.
+    (lockfilesByDirectory.get(path.posix.dirname(manifestPath)) || rootLockfilePath) as string,
   ]);
 
   if (rootManifestPath && rootLockfilePath) {

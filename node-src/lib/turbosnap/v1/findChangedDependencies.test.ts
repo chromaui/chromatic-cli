@@ -330,6 +330,8 @@ describe('findChangedDependencies', () => {
     mockTrackedFiles([
       'package.json',
       'yarn.lock',
+      // Sorts before the root manifest in index order, without a lockfile of its own.
+      '.storybook/package.json',
       // A lockfile in a deeper directory doesn't belong to this manifest.
       'packages/a/package.json',
       'packages/a/sub/yarn.lock',
@@ -350,6 +352,7 @@ describe('findChangedDependencies', () => {
       git: {
         packageMetadataChanges: [
           { changedFiles: ['package.json'], commit: 'root' },
+          { changedFiles: ['.storybook/package.json'], commit: 'storybook' },
           { changedFiles: ['packages/a/package.json'], commit: 'a' },
           { changedFiles: ['packages/ab/package.json'], commit: 'ab' },
           { changedFiles: ['packages/c/package.json'], commit: 'c' },
@@ -367,6 +370,7 @@ describe('findChangedDependencies', () => {
       Object.fromEntries(Object.entries(checkedOut).map(([k, v]) => [k, v.toSorted()]))
     ).toEqual({
       root: ['package.json', 'yarn.lock'],
+      storybook: ['.storybook/package.json', 'yarn.lock'],
       a: ['packages/a/package.json', 'yarn.lock'],
       ab: ['packages/ab/package.json', 'packages/ab/yarn.lock'],
       c: ['packages/c/package-lock.json', 'packages/c/package.json'],
