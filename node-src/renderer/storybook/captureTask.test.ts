@@ -100,6 +100,7 @@ describe('captureTask', () => {
     vi.spyOn(process, 'stdin', 'get').mockReturnValue(fileStdin);
 
     expect(() => captureTask(state())).not.toThrow();
+    fileStdin.destroy();
   });
 
   // Clack's progress bar draws only inside its `setInterval` callback, which a synchronous,
