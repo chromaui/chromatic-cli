@@ -12,3 +12,6 @@ export const TurboSnapEnabled = (args: any) => turboSnapEnabled(args);
 
 export const TurboSnapEnabledInteractive = (args: any) =>
   turboSnapEnabled({ ...args, options: { interactive: true } });
+
+export const TurboSnapEnabledHashBased = (args: any) =>
+  turboSnapEnabled({ ...args, hashBasedTurboSnap: { bailed: false } });

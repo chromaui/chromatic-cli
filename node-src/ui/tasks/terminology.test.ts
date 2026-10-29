@@ -102,6 +102,21 @@ describe('TurboSnap terminology', () => {
     ).toBe(output);
   });
 
+  // TurboSnap 2.0 ignores the 1.0 story files, so only its own decision says whether it applied.
+  it.each([
+    {
+      hashBasedTurboSnap: { bailed: false },
+      title: 'Running 2 tests affected by recent changes',
+    },
+    { hashBasedTurboSnap: { bailed: true }, title: 'Running 2 tests' },
+  ])('snapshot pending follows TurboSnap 2.0: $title', ({ hashBasedTurboSnap, title }) => {
+    const build = { actualTestCount: 2, testCount: 2, errorCount: 0 };
+    expect(
+      snapshotPending({ build, options: {}, onlyStoryFiles: ['a'], hashBasedTurboSnap } as Context)
+        .title
+    ).toBe(title);
+  });
+
   it.each([
     ...cases(
       'Traced 1 changed file to 1 affected story file',

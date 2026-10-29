@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/node';
 import semver from 'semver';
 
 import { readStatsFile } from '../../tasks/readStatsFile';
-import { Context, Stats } from '../../types';
+import { Context, HashBasedTurboSnap, Stats } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import { isHashCollectionDisabled } from './isHashCollectionDisabled';
 import { isTurboSnapV1Enabled, shouldTraceWithV1 } from './shouldTraceWithV1';
@@ -18,14 +18,24 @@ import { realProjectFiles } from './v2/projectFiles';
  * Also attempts to write and upload a v2 hash manifest when hash collection is enabled, even
  * when v1 tracing is skipped. V2 failures do not prevent v1 tracing.
  *
- * @param ctx The context set when executing the CLI.
+ * When the Index applies v2 to the build, v1 still traces and its result is still sent, but its
+ * warnings and info logs drop to debug: the Index ignores that result, so they would contradict
+ * what gets captured.
  *
- * @returns The trace result: skipped, bailed, or traced with the affected story files.
+ * @param ctx The context set when executing the CLI.
+ * @param hooks Callbacks into the caller's progress reporting.
+ * @param hooks.onTraceWithV1 Called just before v1 tracing starts, unless the Index applied v2.
+ *
+ * @returns The trace result: skipped, bailed, or traced with the affected story files, plus the
+ * Index's v2 decision when it applies v2.
  *
  * @throws {Error} If v1 is enabled without a stats path, or if reading or parsing the stats file
  * or v1 tracing fails.
  */
-export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFilesResult> {
+export async function traceChangedFiles(
+  ctx: Context,
+  { onTraceWithV1 }: { onTraceWithV1?: () => void } = {}
+): Promise<TraceChangedFilesResult> {
   if (!ctx.fileInfo?.statsPath) {
     if (isTurboSnapV1Enabled(ctx)) {
       throw missingStatsFileError(ctx);
@@ -43,18 +53,33 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
 
   const statsPath = ctx.fileInfo.statsPath;
   const stats = await readStatsFile(statsPath);
-
-  // V2 runs for its side effects only; it never affects the v1 decision or the customer's build.
-  if (collectHashes) {
-    await runTurboSnapV2(ctx, stats);
-  }
+  // V2 never affects the v1 decision; it only reports whether the Index applies v2 to this build.
+  const hashBased = collectHashes ? await runTurboSnapV2(ctx, stats) : undefined;
 
   if (!traceWithV1) {
-    return { status: 'skipped' };
+    return { status: 'skipped', ...(hashBased && { hashBased }) };
   }
 
   ctx.log.debug('Tracing changed files with TurboSnap v1');
-  return traceChangedFilesV1(ctx, stats, statsPath);
+  return runTurboSnapV1(ctx, stats, statsPath, { hashBased, onTraceWithV1 });
+}
+
+// The Index ignores v1's result when it applies v2, so v1 then traces without reporting progress
+// and with its warnings and info logs dropped to debug.
+async function runTurboSnapV1(
+  ctx: Context,
+  stats: Stats,
+  statsPath: string,
+  { hashBased, onTraceWithV1 }: { hashBased?: HashBasedTurboSnap; onTraceWithV1?: () => void }
+): Promise<TraceChangedFilesResult> {
+  if (!hashBased) {
+    onTraceWithV1?.();
+    return traceChangedFilesV1(ctx, stats, statsPath);
+  }
+
+  const log = { ...ctx.log, info: ctx.log.debug, warn: ctx.log.debug };
+  const result = await traceChangedFilesV1({ ...ctx, log }, stats, statsPath);
+  return { ...result, hashBased };
 }
 
 function missingStatsFileError(ctx: Context) {
@@ -70,7 +95,7 @@ function shouldCollectHashes(ctx: Context) {
   return !isHashCollectionDisabled(ctx) && !!ctx.fileInfo?.statsPath;
 }
 
-async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
+async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<HashBasedTurboSnap | undefined> {
   // Set the default log level for v2 so errors don't show up in the interactive flow when the user
   // didn't request TurboSnap.
   const turboSnapRequested = !!ctx.turboSnap;
@@ -85,7 +110,7 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
   try {
     // Run TurboSnap v2 with scoped Sentry tags so all events from v2 are tagged the same. Then the
     // scope is removed once this function returns.
-    await Sentry.withScope(async (scope) => {
+    return await Sentry.withScope(async (scope) => {
       scope.setTag('turbosnap', 'v2');
       // Without this, a refusal from a silent build and one from an opted-in build look the same.
       scope.setTag('turbosnap_requested', turboSnapRequested ? 'true' : 'false');
@@ -100,7 +125,7 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
       });
       ctx.log.debug('Tracing changed files with TurboSnap v2');
 
-      await traceChangedFilesV2({
+      const result = await traceChangedFilesV2({
         log: ctx.log,
         failureLogLevel,
         onlyChanged: turboSnapRequested,
@@ -116,6 +141,7 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
         externals: ctx.options.externals ?? [],
         projectFiles: realProjectFiles({ log: ctx.log, options: ctx.options }),
       });
+      return result.status === 'fallback' ? result.hashBased : undefined;
     });
   } catch (error) {
     // An error that escaped v2's own handling is the same kind of failure, so it takes the same
@@ -125,5 +151,6 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
       error
     );
     Sentry.captureException(error);
+    return undefined;
   }
 }

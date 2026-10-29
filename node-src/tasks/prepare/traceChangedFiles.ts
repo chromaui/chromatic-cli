@@ -1,9 +1,10 @@
 import * as turbosnap from '@cli/turbosnap';
 
-import { isTurboSnapV1Enabled, shouldTraceWithV1 } from '../../lib/turbosnap/shouldTraceWithV1';
+import { isTurboSnapV1Enabled } from '../../lib/turbosnap/shouldTraceWithV1';
 import { groupUntracedFilesByGlob, rewriteErrorMessage } from '../../lib/utilities';
-import { Context, Deps } from '../../types';
-import { bailed, traced, tracing } from '../../ui/tasks/prepare';
+import { Context, Deps, HashBasedTurboSnap } from '../../types';
+import hashBasedBailed from '../../ui/messages/warnings/hashBasedBailed';
+import { bailed, hashBased, traced, tracing } from '../../ui/tasks/prepare';
 import { testType } from '../../ui/tasks/utilities';
 
 // These are the special characters that need to be escaped in the filename
@@ -36,19 +37,26 @@ export interface TraceChangedFilesOutput {
  * message is prefixed with context about retrieving dependent files.
  */
 // TODO: refactor this function
-// eslint-disable-next-line complexity
+// eslint-disable-next-line complexity, max-statements
 export async function traceChangedFiles(
   deps: TraceChangedFilesDeps,
   input: TraceChangedFilesInput
 ): Promise<TraceChangedFilesOutput> {
   const ctx = input.turboSnapContext;
 
-  if (shouldTraceWithV1(ctx)) {
-    deps.report(tracing({ git: ctx.git, options: deps.options }));
-  }
-
   try {
-    const result = await turbosnap.traceChangedFiles(ctx);
+    const result = await turbosnap.traceChangedFiles(ctx, {
+      onTraceWithV1: () => deps.report(tracing({ git: ctx.git, options: deps.options })),
+    });
+
+    // The Index decides this build with TurboSnap 2.0 and ignores the 1.0 result below, so report
+    // 2.0's decision instead of 1.0's. The 1.0 result is still sent along with the build.
+    const { hashBased: hashBasedTurboSnap } = result;
+    if (hashBasedTurboSnap) {
+      ctx.hashBasedTurboSnap = hashBasedTurboSnap;
+      reportHashBased(deps, hashBasedTurboSnap);
+    }
+
     if (result.status === 'skipped') {
       return {};
     }
@@ -56,7 +64,9 @@ export async function traceChangedFiles(
     ctx.turboSnap = result.turboSnap;
 
     if (result.status === 'bailed') {
-      deps.report(bailed({ turboSnap: result.turboSnap }));
+      if (!hashBasedTurboSnap) {
+        deps.report(bailed({ turboSnap: result.turboSnap }));
+      }
       return {};
     }
 
@@ -69,6 +79,10 @@ export async function traceChangedFiles(
     const escaped = Object.keys(result.onlyStoryFiles).map((key) =>
       key.replaceAll(SPECIAL_CHARS_REGEXP, String.raw`\$1`)
     );
+
+    if (hashBasedTurboSnap) {
+      return { onlyStoryFiles: escaped };
+    }
 
     if (!deps.options.interactive) {
       if (!deps.options.traceChanged) {
@@ -108,5 +122,12 @@ export async function traceChangedFiles(
       err,
       `Could not retrieve dependent ${testType(deps)} files.\n${err.message}`
     );
+  }
+}
+
+function reportHashBased(deps: TraceChangedFilesDeps, hashBasedTurboSnap: HashBasedTurboSnap) {
+  deps.report(hashBased({ options: deps.options, hashBasedTurboSnap }));
+  if (hashBasedTurboSnap.bailed) {
+    deps.log.warn(hashBasedBailed({ hashBasedTurboSnap }));
   }
 }

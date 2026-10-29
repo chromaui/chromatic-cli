@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/node';
 
 import GraphQLClient from '../../../io/graphqlClient';
-import type { AbsolutePath, Stats } from '../../../types';
+import type { AbsolutePath, HashBasedTurboSnap, Stats } from '../../../types';
 import missingStorybookConfig from '../../../ui/messages/warnings/missingStorybookConfig';
 import { TraceChangedFilesResult } from '../types';
 import { buildManifest, TurboSnapManifest, writeManifest } from './manifest';
@@ -34,8 +34,11 @@ interface TraceChangedFilesInput extends Omit<ManifestInput, 'gitRoot'> {
 /**
  * The result of running TurboSnap v2. In addition to the shared trace statuses, v2 can return
  * 'fallback' to tell the caller it can't be trusted to trace this build and v1 should run instead.
+ * A fallback carries the Index's decision when it applies TurboSnap 2.0 to the build.
  */
-export type TraceChangedFilesV2Result = TraceChangedFilesResult | { status: 'fallback' };
+export type TraceChangedFilesV2Result =
+  | TraceChangedFilesResult
+  | { status: 'fallback'; hashBased?: HashBasedTurboSnap };
 
 /**
  * Determines which story files are affected by the changed source file hashes, bailing out of
@@ -97,14 +100,24 @@ export async function traceChangedFiles(
   }
 
   // Log what the Index decided for this build (its TurboSnap mechanism, status, and hash bail
-  // reason), so a CI log can tell whether it ran hash-based TurboSnap and, if not, why. It does not
-  // affect what this build does.
+  // reason), so a CI log can tell whether it ran hash-based TurboSnap and, if not, why.
   input.log.debug(
     `Uploaded hashes for TurboSnap v2 to Chromatic: ${JSON.stringify(response.build)}`
   );
 
-  // Until we want to lean on the v2 output, we always fallback to v1.
-  return { status: 'fallback' };
+  // V1 still runs and sends its result either way; this only tells the caller whether the Index
+  // decides this build by hash, so the terminal can report that instead of v1's result.
+  return { status: 'fallback', hashBased: toHashBased(response.build) };
+}
+
+function toHashBased(build: BuildUploadHashesResponse['build']): HashBasedTurboSnap | undefined {
+  if (build?.turboSnapMechanism !== 'HASH_BASED') return undefined;
+
+  const bailed = build.turboSnapStatus === 'BAILED';
+  return {
+    bailed,
+    ...(bailed && build.turboSnapHashBailReason && { bailReason: build.turboSnapHashBailReason }),
+  };
 }
 
 /**

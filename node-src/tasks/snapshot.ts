@@ -75,6 +75,7 @@ export interface SnapshotInput {
   uploadedBytes?: number;
   matchesBranch: Context['git']['matchesBranch'];
   onlyStoryFiles?: Context['onlyStoryFiles'];
+  hashBasedTurboSnap?: Context['hashBasedTurboSnap'];
 }
 
 export type SnapshotDeps = Pick<Deps, 'client' | 'log' | 'env' | 'options' | 'report'>;
@@ -95,7 +96,7 @@ export async function snapshotProject(
   input: SnapshotInput
 ): Promise<TaskResult<SnapshotOutput>> {
   const { client, log, env, options } = deps;
-  const { skipSnapshots, uploadedBytes, matchesBranch, onlyStoryFiles } = input;
+  const { skipSnapshots, uploadedBytes, matchesBranch, onlyStoryFiles, hashBasedTurboSnap } = input;
 
   if (skipSnapshots || options.dryRun) {
     return { kind: 'skip-self' };
@@ -122,7 +123,8 @@ export async function snapshotProject(
   const updateProgress = throttle(
     ({ cursor, label }) => {
       deps.report({
-        output: pending({ build, options, onlyStoryFiles }, { cursor, label }).output,
+        output: pending({ build, options, onlyStoryFiles, hashBasedTurboSnap }, { cursor, label })
+          .output,
         progress: { progress: cursor, total: actualTestCount, unit: 'snapshots' },
         build,
       });
@@ -273,6 +275,7 @@ export const extractSnapshotInput = (ctx: Context): SnapshotInput => ({
   uploadedBytes: ctx.uploadedBytes,
   matchesBranch: ctx.git.matchesBranch,
   onlyStoryFiles: ctx.onlyStoryFiles,
+  hashBasedTurboSnap: ctx.hashBasedTurboSnap,
 });
 
 export const applySnapshotOutput = (ctx: Context, output: SnapshotOutput) => {
