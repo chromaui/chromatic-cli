@@ -566,6 +566,28 @@ export async function checkoutFile(
 }
 
 /**
+ * Check whether a path, such as a directory, is in the tree at the given reference.
+ *
+ * @param deps Function dependencies.
+ * @param reference The reference (usually a commit or branch) to look at.
+ * @param repositoryPath The repository-relative path to look for.
+ *
+ * @returns Whether the reference's tree has the path. Throws when the reference is missing.
+ */
+export async function pathExistsAtReference(
+  deps: GitDeps,
+  reference: string,
+  repositoryPath: string
+) {
+  const entry = await execGitCommand(
+    deps,
+    `git ls-tree --full-tree ${reference} -- "${repositoryPath}"`,
+    { all: false }
+  );
+  return entry.trim() !== '';
+}
+
+/**
  * Follow committed symlinks at the given reference until reaching a regular file. `git show` on a
  * symlink outputs the link target string rather than the linked file's contents, which is wrong
  * for e.g. a `pnpm-lock.yaml` symlinked to a shared lockfile elsewhere in a monorepo.

@@ -46,6 +46,7 @@ readFileSync.mockReturnValue('');
 const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 const checkoutFile = vi.mocked(git.checkoutFile);
 const findFilesFromRepositoryRoot = vi.mocked(git.findFilesFromRepositoryRoot);
+const pathExistsAtReference = vi.mocked(git.pathExistsAtReference);
 const pnpmLockfileParser = vi.mocked(getPnpmLockfileParser);
 const pnpmWorkspaceProject = vi.mocked(parsePnpmWorkspaceProject);
 const inspect = vi.mocked(snyk.inspect);
@@ -72,6 +73,7 @@ beforeEach(() => {
   getRepositoryRoot.mockResolvedValue('/root');
   mockTrackedFiles(['package.json', 'yarn.lock']);
   checkoutFile.mockResolvedValue();
+  pathExistsAtReference.mockResolvedValue(false);
 });
 afterEach(() => {
   getRepositoryRoot.mockReset();
@@ -1018,6 +1020,26 @@ describe('findChangedDependencies with stats', () => {
       stats(...uiModules, './../extra/src/index.ts')
     );
     expect(changes.toSorted()).toEqual(['@myorg/extra', 'is-odd', 'moment']);
+  });
+
+  it.each([
+    ['the folder existed at the baseline', () => pathExistsAtReference.mockResolvedValue(true)],
+    ['git cannot tell', () => pathExistsAtReference.mockRejectedValue(new Error('bad ref'))],
+  ])('throws when a manifest is added and %s', async (_, mockFolder) => {
+    // A `package.json` added to an existing folder can change what the folder resolves to.
+    mockWorkspace({ 'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] } });
+    const error = new BaselineCheckoutFailedError('A:packages/ui/package.json', {
+      fileMissing: true,
+    });
+    checkoutFile.mockImplementation(async (_, __, file) => {
+      if (file === 'packages/ui/package.json') throw error;
+    });
+    mockFolder();
+
+    await expect(findChangedDependencies(getStatsContext(), stats(...uiModules))).rejects.toBe(
+      error
+    );
+    expect(pathExistsAtReference).toHaveBeenCalledWith(expect.anything(), 'A', 'packages/ui');
   });
 
   it('throws when the baseline lockfile is missing', async () => {
