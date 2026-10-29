@@ -4067,7 +4067,7 @@ __metadata:
     ws: "npm:^8.18.2"
     xxhash-wasm: "npm:^1.0.2"
     yarn-or-npm: "npm:^3.0.1"
-    yazl: "npm:^3.3.1"
+    yazl: "patch:yazl@npm%3A3.3.1#~/.yarn/patches/yazl-npm-3.3.1-2e7f415791.patch"
     zen-observable: "npm:^0.8.15"
     zod: "npm:^3.22.2"
   peerDependencies:
@@ -11014,12 +11014,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"yazl@npm:^3.3.1":
+"yazl@npm:3.3.1":
   version: 3.3.1
   resolution: "yazl@npm:3.3.1"
   dependencies:
     buffer-crc32: "npm:^1.0.0"
   checksum: 10c0/8290dffd8afc4ea32459c0ce5d7e22af250515aa0170f289cbc896530d3cd40c5be4788b5e3e7aa5cd21889778071f424e1824faadbd257dbd5ff80fb60d1fa6
+  languageName: node
+  linkType: hard
+
+"yazl@patch:yazl@npm%3A3.3.1#~/.yarn/patches/yazl-npm-3.3.1-2e7f415791.patch":
+  version: 3.3.1
+  resolution: "yazl@patch:yazl@npm%3A3.3.1#~/.yarn/patches/yazl-npm-3.3.1-2e7f415791.patch::version=3.3.1&hash=52626a"
+  dependencies:
+    buffer-crc32: "npm:^1.0.0"
+  checksum: 10c0/3d73938c1eb77e9d661439d4f15144cd73a6562eb65da2a966bacd8074344a7ad63e11e27448c2f83ab9a0609d35db5d37488cfef22752fbd78f194a8d065249
   languageName: node
   linkType: hard
 
