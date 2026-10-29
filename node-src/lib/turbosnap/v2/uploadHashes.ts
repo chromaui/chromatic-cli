@@ -48,10 +48,6 @@ interface BuildUploadHashesInput {
  * CLI versions that predate it still get hash-based TurboSnap.
  */
 interface BuildUploadHashesFlags {
-  /**
-   * Whether the user requested TurboSnap for this build. When false, the Index only stores the
-   * hashes for future builds to diff against and skips deciding which stories to capture.
-   */
   onlyChanged: boolean;
 }
 
