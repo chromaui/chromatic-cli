@@ -103,6 +103,7 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
       await traceChangedFilesV2({
         log: ctx.log,
         failureLogLevel,
+        onlyChanged: turboSnapRequested,
         graphqlClient: ctx.client,
         buildId: ctx.announcedBuild.id,
         stats,

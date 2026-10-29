@@ -64,6 +64,7 @@ describe('traceChangedFiles', () => {
         staticFiles: expect.any(String),
       },
       storyFileHashes: { [STORY]: expect.any(String) },
+      flags: { onlyChanged: true },
     });
     expect(writtenManifest(fixture).storybookConfigHashes).toEqual({
       preview: expect.any(String),
@@ -198,6 +199,16 @@ describe('traceChangedFiles', () => {
     );
   });
 
+  // The Index still stores the hashes of a build that did not request TurboSnap, but must not apply
+  // TurboSnap to it.
+  it('tells the Index when the user did not request TurboSnap', async () => {
+    const fixture = setup();
+
+    await trace(fixture, {}, 'debug', { onlyChanged: false });
+
+    expect(uploaded(fixture).flags).toEqual({ onlyChanged: false });
+  });
+
   it.each<[FailureLogLevel, FailureLogLevel]>([
     ['error', 'debug'],
     ['debug', 'error'],
@@ -261,11 +272,12 @@ function trace(
   { log, projectFiles, runQuery }: Fixture,
   patchFiles: Partial<ProjectFiles> = {},
   failureLogLevel: FailureLogLevel = 'error',
-  overrides: { gitRoot?: string; externals?: string[] } = {}
+  overrides: { gitRoot?: string; externals?: string[]; onlyChanged?: boolean } = {}
 ) {
   return traceChangedFiles({
     log,
     failureLogLevel,
+    onlyChanged: true,
     graphqlClient: { runQuery } as unknown as GraphQLClient,
     buildId: 'build-id',
     stats: stats(),
