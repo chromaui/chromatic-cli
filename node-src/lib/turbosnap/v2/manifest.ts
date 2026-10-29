@@ -2,15 +2,9 @@ import path from 'path';
 import xxHashWasm from 'xxhash-wasm';
 
 import { Stats } from '../../../types';
-import {
-  collectTransitiveDependencies,
-  FileHash,
-  FilePath,
-  hashEntryIdentities,
-  rollUpFileHashes,
-  TurboSnapFile,
-} from './graph';
+import { FileHash, FilePath, hashEntryIdentities, TurboSnapFile } from './graph';
 import { ManifestInput } from './manifestInput';
+import { createManifestFileHasher, createStoryFileHasher } from './manifestOptimizations';
 import { hashOutOfGraphFiles, OutOfGraphFiles, rollUpOutOfGraphFiles } from './outOfGraphFiles';
 import { normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
@@ -109,9 +103,10 @@ export async function buildManifest(
 
   const { h64ToString } = await xxHashWasm();
   const storyFileHashes = new Map<FilePath, FileHash>();
+  const hashFiles = createManifestFileHasher(hashes, h64ToString);
+  const hashStoryFile = createStoryFileHasher(files, hashes, storyFiles, h64ToString, hashFiles);
   for (const storyFile of storyFiles) {
-    const subtree = collectTransitiveDependencies(files, storyFile);
-    storyFileHashes.set(storyFile, rollUpFileHashes(hashes, subtree, h64ToString));
+    storyFileHashes.set(storyFile, hashStoryFile(storyFile));
   }
 
   const { storybookConfigHashes, attribution } = collectStorybookFiles(
@@ -121,7 +116,8 @@ export async function buildManifest(
     normalizeStatsPath(input.configDir, input.projectRoot),
     globalRoots,
     untracedSubtrees,
-    h64ToString
+    h64ToString,
+    hashFiles
   );
   input.log.debug(
     `Attributed ${attribution.previewSubtree.size} files to the preview config subtree`

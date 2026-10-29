@@ -135,7 +135,9 @@ export function collectTransitiveDependencies(
     }
 
     dependencies.add(current);
-    unvisited.push(...(files.get(current)?.dependencies ?? []));
+    for (const dependency of files.get(current)?.dependencies ?? []) {
+      unvisited.push(dependency);
+    }
   }
 
   return dependencies;
