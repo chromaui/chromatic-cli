@@ -1,3 +1,5 @@
+import semver from 'semver';
+
 import { ManifestInput } from './manifestInput';
 
 // The packages that own Storybook's preview runtime, most-preferred first. All report the same
@@ -5,8 +7,17 @@ import { ManifestInput } from './manifestInput';
 const STORYBOOK_CORE_PACKAGES = [
   'storybook', // the meta-package, when the project can resolve it
   '@storybook/core', // the core package it wraps; reachable under strict installs (pnpm, PnP) where the meta-package isn't
-  '@storybook/core-common', // Storybook 6, which has no meta-package and can nest `@storybook/core` under the renderer
+  // Storybook 6, which has no meta-package and can nest `@storybook/core` under the renderer. It
+  // first shipped in 6.2, so 6.0 and 6.1 installs still fail to resolve a version.
+  '@storybook/core-common',
 ];
+
+// `@storybook/core-common` also exists for Storybook 7 and 8, so on a newer install a stale hoisted
+// copy could answer with the wrong version. A wrong version silently skips recapture after an
+// upgrade, which is worse than failing, so only trust it for the Storybook 6 case it is here for.
+function isTrustedVersion(packageName: string, version: string) {
+  return packageName !== '@storybook/core-common' || semver.major(version) === 6;
+}
 
 /**
  * Reads the installed Storybook version from the resolved core package's own `package.json`.
@@ -37,7 +48,7 @@ export function resolveStorybookVersion(
 ): string {
   for (const packageName of STORYBOOK_CORE_PACKAGES) {
     const version = input.projectFiles.packageVersion(input.configDir, packageName);
-    if (version) {
+    if (version && isTrustedVersion(packageName, version)) {
       return version;
     }
   }

@@ -42,6 +42,14 @@ describe('resolveStorybookVersion', () => {
     expect(resolveStorybookVersion(input(disk))).toBe('6.5.4');
   });
 
+  it('ignores `@storybook/core-common` from a Storybook other than 6, so a stale copy cannot misreport', () => {
+    const disk = { packageVersions: { '@storybook/core-common': '7.6.20' } };
+
+    expect(() => resolveStorybookVersion(input(disk))).toThrow(
+      'Could not resolve a Storybook version'
+    );
+  });
+
   it('throws when no Storybook version is known because the Storybook version is required', () => {
     let err: Error | undefined;
     try {
