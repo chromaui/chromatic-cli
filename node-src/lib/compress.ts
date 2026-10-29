@@ -1,4 +1,6 @@
 import { createWriteStream } from 'fs';
+import { rm } from 'fs/promises';
+import { Readable } from 'stream';
 import { file as temporaryFile } from 'tmp-promise';
 import { ZipFile } from 'yazl';
 
@@ -19,25 +21,36 @@ export default async function makeZipFile(ctx: Context, files: FileDesc[]) {
   const sink = createWriteStream('', { fd: temporary.fd });
 
   return new Promise<{ path: string; size: number }>((resolve, reject) => {
+    // Reject first: destroying the sink emits 'close', which would otherwise resolve.
+    // The partial zip is deleted by path because `sink.destroy()` already closes its descriptor.
+    const fail = (err: Error) => {
+      reject(err);
+      (zipFile.outputStream as Readable).destroy();
+      sink.destroy();
+      rm(temporary.path, { force: true }).catch(() => {});
+    };
+
     sink.on('close', () => {
       resolve({ path: temporary.path, size: sink.bytesWritten });
     });
-    sink.on('error', reject);
-    zipFile.on('error', (err) => {
-      sink.destroy();
-      reject(err);
-    });
+    sink.on('error', fail);
+    zipFile.on('error', fail);
     zipFile.outputStream.pipe(sink);
 
-    // yazl opens each file only when its entry is written, so this doesn't hold a descriptor per file.
-    for (const { localPath, targetPath } of files) {
-      ctx.log.debug(`Adding to zip archive: ${targetPath}`);
-      // `forceDosTimestamp` skips yazl's Unix timestamp field, which throws outside the zip's error
-      // handling for files modified before 1970.
-      zipFile.addFile(localPath, targetPath, { compressionLevel: 9, forceDosTimestamp: true });
-    }
+    try {
+      // yazl opens each file only when its entry is written, so this doesn't hold a descriptor per file.
+      for (const { localPath, targetPath } of files) {
+        ctx.log.debug(`Adding to zip archive: ${targetPath}`);
+        // `forceDosTimestamp` skips yazl's Unix timestamp field, which throws outside the zip's error
+        // handling for files modified before 1970.
+        zipFile.addFile(localPath, targetPath, { compressionLevel: 9, forceDosTimestamp: true });
+      }
 
-    ctx.log.debug('Finalizing zip archive');
-    zipFile.end();
+      ctx.log.debug('Finalizing zip archive');
+      zipFile.end();
+    } catch (err) {
+      // yazl validates entry names synchronously, e.g. absolute paths or `..` segments.
+      fail(err as Error);
+    }
   });
 }

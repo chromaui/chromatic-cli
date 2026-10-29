@@ -64,4 +64,13 @@ describe('makeZipFile', () => {
 
     await expect(makeZipFile(testContext, files)).rejects.toThrow('ENOENT');
   });
+
+  it('rejects when yazl refuses an entry name', async () => {
+    const localPath = path.join(sourceDirectory, 'index.html');
+    writeFileSync(localPath, '<html></html>');
+
+    await expect(
+      makeZipFile(testContext, [{ localPath, targetPath: '/index.html', contentLength: 13 }])
+    ).rejects.toThrow('absolute path');
+  });
 });
