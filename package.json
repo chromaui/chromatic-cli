@@ -212,7 +212,7 @@
     "ws": "^8.18.2",
     "xxhash-wasm": "^1.0.2",
     "yarn-or-npm": "^3.0.1",
-    "yazl": "^3.3.1",
+    "yazl": "patch:yazl@npm%3A3.3.1#~/.yarn/patches/yazl-npm-3.3.1-2e7f415791.patch",
     "zen-observable": "^0.8.15",
     "zod": "^3.22.2"
   },
