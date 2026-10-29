@@ -199,6 +199,38 @@ describe('traceChangedFiles', () => {
     );
   });
 
+  // A build where the Index ran every test should say in the CI log why hash-based TurboSnap bailed,
+  // without changing what the build does.
+  it('logs what the Index decided at debug level and still falls back to v1', async () => {
+    const fixture = setup();
+    fixture.runQuery.mockResolvedValue({
+      buildUploadHashes: {
+        build: {
+          turboSnapStatus: 'BAILED',
+          turboSnapMechanism: 'HASH_BASED',
+          turboSnapHashBailReason: 'NO_ANCESTOR_HASHES',
+        },
+      },
+    });
+
+    await expect(trace(fixture)).resolves.toEqual({ status: 'fallback' });
+
+    expect(fixture.runQuery.mock.calls[0][0]).toContain('turboSnapHashBailReason');
+    expect(fixture.log.debug).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /^Uploaded hashes for TurboSnap v2 .*"turboSnapHashBailReason":"NO_ANCESTOR_HASHES"/
+      )
+    );
+    expect(fixture.log.debug).toHaveBeenCalledWith(
+      expect.stringMatching(/^Uploaded hashes for TurboSnap v2 .*"turboSnapStatus":"BAILED"/)
+    );
+    expect(fixture.log.debug).toHaveBeenCalledWith(
+      expect.stringMatching(/^Uploaded hashes for TurboSnap v2 .*"turboSnapMechanism":"HASH_BASED"/)
+    );
+    expect(fixture.log.info).not.toHaveBeenCalled();
+    expect(fixture.log.error).not.toHaveBeenCalled();
+  });
+
   // The Index still stores the hashes of a build that did not request TurboSnap, but must not apply
   // TurboSnap to it.
   it('tells the Index when the user did not request TurboSnap', async () => {

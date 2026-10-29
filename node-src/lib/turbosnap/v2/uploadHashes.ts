@@ -8,6 +8,7 @@ const BuildUploadHashesMutation = `
         build {
           turboSnapStatus
           turboSnapMechanism
+          turboSnapHashBailReason
         }
       }
       ... on BuildUploadHashesFailure {
@@ -60,6 +61,8 @@ export interface BuildUploadHashesResponse {
   build?: {
     turboSnapStatus?: string;
     turboSnapMechanism?: TurboSnapMechanism;
+    /** Why hash-based TurboSnap bailed for the whole build. Absent means it did not bail. */
+    turboSnapHashBailReason?: string;
   };
   /** Present on failure. */
   errors?: { message?: string }[];
