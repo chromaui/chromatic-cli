@@ -7,7 +7,7 @@ import { TraceChangedFilesResult } from '../types';
 import { buildManifest, TurboSnapManifest, writeManifest } from './manifest';
 import { ManifestInput } from './manifestInput';
 import { MissingStorybookConfigError } from './outOfGraphFiles';
-import { uploadHashes } from './uploadHashes';
+import { BuildUploadHashesResponse, uploadHashes } from './uploadHashes';
 
 /**
  * The level a v2 failure is logged at. We do this because we don't need logs showing up if the
@@ -81,12 +81,13 @@ export async function traceChangedFiles(
   }
   input.log.debug(`Wrote manifest for TurboSnap v2 to ${input.manifestPath}`);
 
+  let response: BuildUploadHashesResponse;
   try {
-    const response = await uploadHashes(input.graphqlClient, input.buildId, manifest, {
+    response = await uploadHashes(input.graphqlClient, input.buildId, manifest, {
       onlyChanged: input.onlyChanged,
     });
     // The Index refuses in the payload rather than as a GraphQL error, so a refusal resolves instead
-    // of throwing. We ignore the build it returns, but `errors` says whether the upload happened.
+    // of throwing. `errors` says whether the upload happened.
     if (response.errors?.length) {
       const messages = response.errors.map((error) => error.message ?? 'unknown error').join('; ');
       throw new Error(`The backend API rejected the hash upload: ${messages}`);
@@ -95,7 +96,12 @@ export async function traceChangedFiles(
     return failed(input, 'Failed to upload hashes for TurboSnap v2', error);
   }
 
-  input.log.debug('Uploaded hashes for TurboSnap v2 to Chromatic');
+  // Log what the Index decided for this build (its TurboSnap mechanism, status, and hash bail
+  // reason), so a CI log can tell whether it ran hash-based TurboSnap and, if not, why. It does not
+  // affect what this build does.
+  input.log.debug(
+    `Uploaded hashes for TurboSnap v2 to Chromatic: ${JSON.stringify(response.build)}`
+  );
 
   // Until we want to lean on the v2 output, we always fallback to v1.
   return { status: 'fallback' };
