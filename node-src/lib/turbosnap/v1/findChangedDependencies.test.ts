@@ -13,6 +13,7 @@ import { Context } from '../../..';
 import * as git from '../../../git/git';
 import getEnvironment from '../../getEnvironment';
 import TestLogger from '../../testLogger';
+import { LockFileMissingError } from './errors';
 import { findChangedDependencies } from './findChangedDependencies';
 
 vi.mock('snyk-nodejs-lockfile-parser');
@@ -375,6 +376,17 @@ describe('findChangedDependencies', () => {
       ab: ['packages/ab/package.json', 'packages/ab/yarn.lock'],
       c: ['packages/c/package-lock.json', 'packages/c/package.json'],
     });
+  });
+
+  it('throws a named error when a changed manifest has no lockfile anywhere', async () => {
+    mockTrackedFiles(['package.json', 'subdir/package.json']);
+
+    const context = getContext({
+      git: { packageMetadataChanges: [{ changedFiles: ['subdir/package.json'], commit: 'A' }] },
+    });
+
+    await expect(findChangedDependencies(context)).rejects.toThrow(LockFileMissingError);
+    expect(checkoutFile).not.toHaveBeenCalled();
   });
 
   it('uses package-lock.json if yarn.lock is missing', async () => {

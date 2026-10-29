@@ -7,6 +7,7 @@ import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '..
 import { Context } from '../../../types';
 import { matchesFile, SUPPORTED_LOCK_FILES } from '../../utilities';
 import { compareBaseline } from './compareBaseline';
+import { LockFileMissingError } from './errors';
 import { getDependencies } from './getDependencies';
 
 const PACKAGE_JSON = 'package.json';
@@ -66,13 +67,14 @@ export const findChangedDependencies = async (ctx: Context) => {
   ctx.log.debug({ rootPath, rootManifestPath, rootLockfilePath }, `Found manifest and lockfile`);
   ctx.log.debug({ nestedManifestPaths: nestedManifestPaths.length }, 'Found nested manifest paths');
 
-  const metadataPathPairs = nestedManifestPaths.map((manifestPath) => [
-    manifestPath,
-    // Fall back to the root lockfile if we can't find one in the same directory. With neither,
-    // the lockfile stays undefined, so `getDependencies` throws if this manifest changed and
-    // TurboSnap falls back to diffing package.json files.
-    (lockfilesByDirectory.get(path.posix.dirname(manifestPath)) || rootLockfilePath) as string,
-  ]);
+  const metadataPathPairs: [string, string | undefined][] = nestedManifestPaths.map(
+    (manifestPath) => [
+      manifestPath,
+      // Fall back to the root lockfile if we can't find one in the same directory. With neither,
+      // there is no lockfile, and we throw below if this manifest changed.
+      lockfilesByDirectory.get(path.posix.dirname(manifestPath)) || rootLockfilePath,
+    ]
+  );
 
   if (rootManifestPath && rootLockfilePath) {
     metadataPathPairs.unshift([rootManifestPath, rootLockfilePath]);
@@ -125,6 +127,8 @@ export const findChangedDependencies = async (ctx: Context) => {
     await Promise.all(
       filteredPathPairs.map(([manifestPath, lockfilePath, commits]) =>
         headDependenciesLimit(async () => {
+          if (!lockfilePath) throw new LockFileMissingError(manifestPath);
+
           const headDependencies = await getDependencies(ctx, {
             rootPath,
             manifestPath,
