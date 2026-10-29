@@ -1,0 +1,26 @@
+# Default-deny the build context so ignored diagnostics, tokens, and local credentials cannot enter
+# BuildKit's context or cache. Re-include only what this Storybook build needs.
+**
+
+!package.json
+!yarn.lock
+!.yarnrc.yml
+!tsconfig.json
+
+!.yarn/
+!.yarn/releases/
+!.yarn/releases/**
+
+!.storybook/
+!.storybook/**
+
+!bin-src/
+!bin-src/**
+!node-src/
+!node-src/**
+!static/
+!static/**
+
+!examples/
+!examples/bazel-gitless/
+!examples/bazel-gitless/**

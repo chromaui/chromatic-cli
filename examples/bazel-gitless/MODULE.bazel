@@ -1,0 +1,4 @@
+module(
+    name = "chromatic_bazel_gitless_example",
+    version = "0.0.0",
+)

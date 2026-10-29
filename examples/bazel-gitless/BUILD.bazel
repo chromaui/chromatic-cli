@@ -1,0 +1,9 @@
+sh_binary(
+    name = "storybook",
+    srcs = ["build-storybook.sh"],
+    data = [
+        "non-tty-stdin-shim.cjs",
+        "verify-storybook.cjs",
+    ],
+    visibility = ["//visibility:public"],
+)
