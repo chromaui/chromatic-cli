@@ -6,7 +6,7 @@ import { Context, HashBasedTurboSnap, Stats } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import { isHashCollectionDisabled } from './isHashCollectionDisabled';
 import { isTurboSnapV1Enabled, shouldTraceWithV1 } from './shouldTraceWithV1';
-import { TraceChangedFilesResult } from './types';
+import { TurboSnapResult } from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
 import { getManifestPath } from './v2/manifest';
@@ -35,7 +35,7 @@ import { realProjectFiles } from './v2/projectFiles';
 export async function traceChangedFiles(
   ctx: Context,
   { onTraceWithV1 }: { onTraceWithV1?: () => void } = {}
-): Promise<TraceChangedFilesResult> {
+): Promise<TurboSnapResult> {
   if (!ctx.fileInfo?.statsPath) {
     if (isTurboSnapV1Enabled(ctx)) {
       throw missingStatsFileError(ctx);
@@ -71,7 +71,7 @@ async function runTurboSnapV1(
   stats: Stats,
   statsPath: string,
   { hashBased, onTraceWithV1 }: { hashBased?: HashBasedTurboSnap; onTraceWithV1?: () => void }
-): Promise<TraceChangedFilesResult> {
+): Promise<TurboSnapResult> {
   if (!hashBased) {
     onTraceWithV1?.();
     return traceChangedFilesV1(ctx, stats, statsPath);

@@ -1,6 +1,6 @@
 import { HashBasedTurboSnap, TurboSnap, UntracedFile } from '../../../types';
 
-export type TraceChangedFilesResult = (
+export type TraceChangedFilesResult =
   | { status: 'skipped' } // turboSnap unavailable / no changed files from `git diff`
   | {
       status: 'bailed';
@@ -12,8 +12,10 @@ export type TraceChangedFilesResult = (
       turboSnap: TurboSnap;
       changedDependencyNames?: string[];
       untracedFiles: UntracedFile[];
-    }
-) & {
-  // Set when the Index applies TurboSnap 2.0, so the 1.0 result above doesn't decide what is captured.
-  hashBased?: HashBasedTurboSnap;
-};
+    };
+
+/**
+ * The TurboSnap dispatcher's result: the 1.0 trace result, plus the Index's TurboSnap 2.0 decision
+ * when it applies 2.0, in which case the 1.0 result doesn't decide what is captured.
+ */
+export type TurboSnapResult = TraceChangedFilesResult & { hashBased?: HashBasedTurboSnap };
