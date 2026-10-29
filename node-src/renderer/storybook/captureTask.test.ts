@@ -1,3 +1,5 @@
+import { createReadStream } from 'node:fs';
+import { devNull } from 'node:os';
 import { stripVTControlCharacters } from 'node:util';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -41,6 +43,7 @@ describe('captureTask', () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
     process.stdout.columns = previousColumns as number;
   });
 
@@ -89,6 +92,15 @@ describe('captureTask', () => {
     captureTask(state());
 
     expect(process.stdout.columns).toBe(123);
+  });
+
+  // `yarn build-storybook < /dev/null` gives the process an `fs.ReadStream` stdin, which has no `unref`.
+  it('captures when stdin is redirected from a file', () => {
+    const fileStdin = createReadStream(devNull) as unknown as typeof process.stdin;
+    vi.spyOn(process, 'stdin', 'get').mockReturnValue(fileStdin);
+
+    expect(() => captureTask(state())).not.toThrow();
+    fileStdin.destroy();
   });
 
   // Clack's progress bar draws only inside its `setInterval` callback, which a synchronous,
