@@ -32,7 +32,9 @@ export default async function makeZipFile(ctx: Context, files: FileDesc[]) {
     // yazl opens each file only when its entry is written, so this doesn't hold a descriptor per file.
     for (const { localPath, targetPath } of files) {
       ctx.log.debug(`Adding to zip archive: ${targetPath}`);
-      zipFile.addFile(localPath, targetPath, { compressionLevel: 9 });
+      // `forceDosTimestamp` skips yazl's Unix timestamp field, which throws outside the zip's error
+      // handling for files modified before 1970.
+      zipFile.addFile(localPath, targetPath, { compressionLevel: 9, forceDosTimestamp: true });
     }
 
     ctx.log.debug('Finalizing zip archive');

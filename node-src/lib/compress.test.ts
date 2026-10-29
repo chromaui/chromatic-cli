@@ -1,5 +1,5 @@
 import AdmZip from 'adm-zip';
-import { mkdtempSync, rmSync, statSync, writeFileSync } from 'fs';
+import { mkdtempSync, rmSync, statSync, utimesSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -43,6 +43,18 @@ describe('makeZipFile', () => {
     expect(entries.map((entry) => entry.entryName)).toEqual(['index.html', 'assets/main.js']);
     expect(entries[0].getData().toString()).toBe('<html></html>');
     expect(entries[1].getData().toString()).toBe('console.log("Storybook");'.repeat(100));
+  });
+
+  it('zips files modified before 1970', async () => {
+    const localPath = path.join(sourceDirectory, 'old.js');
+    writeFileSync(localPath, 'old');
+    utimesSync(localPath, new Date('1960-01-01'), new Date('1960-01-01'));
+
+    const result = await makeZipFile(testContext, [
+      { localPath, targetPath: 'old.js', contentLength: 3 },
+    ]);
+
+    expect(new AdmZip(result.path).getEntry('old.js')?.getData().toString()).toBe('old');
   });
 
   it('rejects when a file is missing', async () => {
