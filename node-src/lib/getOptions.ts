@@ -175,10 +175,18 @@ export const getPartialOptions = (ctx: InitialContext): Partial<Options> => {
   });
 
   // We need to parse boolean values and set their defaults
-  const { logFile, diagnosticsFile, junitReport, storybookLogFile, ...restOfConfiguration } =
-    configuration || {};
+  const {
+    logFile,
+    diagnosticsFile,
+    junitReport,
+    storybookLogFile,
+    gitTimeout,
+    ...restOfConfiguration
+  } = configuration || {};
   const configurationOptions: Partial<Options> = stripUndefined({
     ...restOfConfiguration,
+    // The configuration file sets gitTimeout in seconds; options carry milliseconds.
+    gitTimeout: gitTimeout === undefined ? undefined : gitTimeout * 1000,
     logFile: defaultUnlessSetOrFalse(logFile, DEFAULT_LOG_FILE),
     diagnosticsFile: defaultUnlessSetOrFalse(diagnosticsFile, DEFAULT_DIAGNOSTICS_FILE),
     junitReport: defaultUnlessSetOrFalse(junitReport, DEFAULT_REPORT_FILE),

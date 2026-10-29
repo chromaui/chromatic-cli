@@ -1,5 +1,6 @@
 import { AncestorMissingError, BaselineDirtyError } from '../lib/turbosnap/v1/errors';
 import { Deps } from '../types';
+import { GitDeps } from './execGit';
 import { findAncestorBuildWithCommit } from './findAncestorBuildWithCommit';
 import { fetchCommit, getChangedFiles } from './git';
 
@@ -28,7 +29,7 @@ export interface BuildWithCommitInfo {
  * @returns The changed files against the recovered commit, or undefined if recovery failed.
  */
 async function recoverOrphanedCommit(
-  deps: Pick<Deps, 'log'> & { options?: Deps['options'] },
+  deps: GitDeps,
   build: BuildWithCommitInfo,
   error: unknown
 ): Promise<string[] | undefined> {
@@ -56,13 +57,13 @@ async function recoverOrphanedCommit(
  * that *does* have a valid commit, and return the differences along with the two builds (for
  * tracking purposes).
  *
- * @param deps Dependencies (log, client).
+ * @param deps Dependencies (log, client, options).
  * @param build The build details for gathering changed files.
  *
  * @returns A list of changed files for the build, adding a replacement build if necessary.
  */
 export async function getChangedFilesWithReplacement(
-  deps: Pick<Deps, 'log' | 'client'> & { options?: Deps['options'] },
+  deps: GitDeps & Pick<Deps, 'client'>,
   build: BuildWithCommitInfo
 ): Promise<{ changedFiles: string[]; replacementBuild?: BuildWithCommitInfo }> {
   try {

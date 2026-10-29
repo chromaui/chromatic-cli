@@ -334,6 +334,17 @@ describe('getOptions', () => {
       diagnosticsFile: 'output.json',
     });
   });
+
+  it.each([
+    { configured: undefined, expected: undefined },
+    { configured: 30, expected: 30_000 },
+  ])(
+    'reads a configured gitTimeout of $configured seconds as $expected milliseconds',
+    ({ configured, expected }) => {
+      const ctx = { ...getContext([]), configuration: { gitTimeout: configured } };
+      expect(getOptions(ctx).gitTimeout).toBe(expected);
+    }
+  );
 });
 
 describe('findBuildScriptName', () => {
