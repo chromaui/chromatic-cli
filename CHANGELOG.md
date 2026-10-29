@@ -1,3 +1,15 @@
+# v18.13.6 (Thu Oct 29 2026)
+
+#### 🐛 Bug Fix
+
+- Tell the Index whether TurboSnap was requested when uploading hashes [#1596](https://github.com/chromaui/chromatic-cli/pull/1596) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.13.5 (Thu Oct 29 2026)
 
 #### 🐛 Bug Fix
