@@ -1,3 +1,17 @@
+# v18.13.5 (Thu Oct 29 2026)
+
+#### 🐛 Bug Fix
+
+- Resolve the Storybook version for Storybook 6 and report a wrong config dir first [#1600](https://github.com/chromaui/chromatic-cli/pull/1600) ([@codykaup](https://github.com/codykaup))
+- Bump uuid, https-proxy-agent, and semver [#1601](https://github.com/chromaui/chromatic-cli/pull/1601) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v18.13.4 (Wed Oct 28 2026)
 
 #### 🐛 Bug Fix
