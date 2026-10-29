@@ -22,7 +22,7 @@ const BuildUploadHashesMutation = `
   }
 `;
 
-/** How the Index decided `onlyStoryFiles`. Absent means it did not decide by hash. */
+/** How the Index decided `onlyStoryFiles`. `null` means it did not decide by hash. */
 type TurboSnapMechanism = 'GIT_BASED' | 'HASH_BASED';
 
 /**
@@ -57,12 +57,15 @@ interface BuildUploadHashesFlags {
  * not distinguish the individual error types, only whether the upload failed and what it reported.
  */
 export interface BuildUploadHashesResponse {
-  /** Present on success. The Index sets these itself; the CLI does not send them. */
+  /**
+   * Present on success. The Index sets these itself; the CLI does not send them. GraphQL returns
+   * `null` for each one the Index left unset.
+   */
   build?: {
-    turboSnapStatus?: string;
-    turboSnapMechanism?: TurboSnapMechanism;
-    /** Why hash-based TurboSnap bailed for the whole build. Absent means it did not bail. */
-    turboSnapHashBailReason?: string;
+    turboSnapStatus: string | null;
+    turboSnapMechanism: TurboSnapMechanism | null;
+    /** Why hash-based TurboSnap bailed for the whole build. `null` means it did not bail. */
+    turboSnapHashBailReason: string | null;
   };
   /** Present on failure. */
   errors?: { message?: string }[];
