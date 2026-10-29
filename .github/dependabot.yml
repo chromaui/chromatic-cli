@@ -10,3 +10,7 @@ updates:
     exclude-paths:
       - "node-src/__mocks__/**"
       - "e2e/fixtures/**"
+    ignore:
+      # yazl is pinned to 3.3.1 through a Yarn patch (.yarn/patches/), which a version bump would
+      # break. Bump it by hand and regenerate or drop the patch.
+      - dependency-name: "yazl"
