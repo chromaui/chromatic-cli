@@ -32,6 +32,7 @@ import {
   getVisitedCommitDetails,
   hasPreviousCommit,
   NULL_BYTE,
+  pathExistsAtReference,
   trackedFiles,
 } from './git';
 
@@ -463,6 +464,22 @@ describe('findFilesFromRepositoryRoot', () => {
       'git ls-files --full-name -z "/root/package.json" "/root/**/package.json"'
     );
     expect(results).toEqual(filesFound);
+  });
+});
+
+describe('pathExistsAtReference', () => {
+  it.each([
+    ['040000 tree abc123\tpackages/ui', true],
+    ['', false],
+  ])('reads `git ls-tree` output %j as %s', async (output, expected) => {
+    execGitCommand.mockResolvedValueOnce(output);
+
+    await expect(pathExistsAtReference(ctx, 'abc123', 'packages/ui')).resolves.toBe(expected);
+    expect(execGitCommand).toHaveBeenCalledWith(
+      ctx,
+      'git ls-tree --full-tree abc123 -- "packages/ui"',
+      { all: false }
+    );
   });
 });
 

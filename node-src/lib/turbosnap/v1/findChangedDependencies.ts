@@ -5,7 +5,12 @@ import pLimit from 'p-limit';
 import path from 'path';
 import semver from 'semver';
 
-import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../../../git/git';
+import {
+  checkoutFile,
+  findFilesFromRepositoryRoot,
+  getRepositoryRoot,
+  pathExistsAtReference,
+} from '../../../git/git';
 import { Context, Stats } from '../../../types';
 import { matchesFile, SUPPORTED_LOCK_FILES } from '../../utilities';
 import { getStatsProjectRoot } from '../statsPaths';
@@ -329,8 +334,17 @@ async function getBaselineChanges(
       const { reason } = manifestCheckout;
       const isAdded = reason instanceof BaselineCheckoutFailedError && reason.fileMissing;
       if (!isAdded || lockfileCheckout.status === 'rejected') throw reason;
+      // A manifest added to a folder that already existed can change what that folder resolves
+      // to, which the tracer can't see, so only a new folder counts as an added workspace. When
+      // git can't tell, bail rather than guess.
+      const directoryExisted = await pathExistsAtReference(
+        ctx,
+        reference,
+        path.posix.dirname(manifestPath)
+      ).catch(() => true);
+      if (directoryExisted) throw reason;
 
-      ctx.log.debug({ reference, manifestPath }, 'Manifest was added since the baseline');
+      ctx.log.debug({ reference, manifestPath }, 'Workspace was added since the baseline');
       // The graph's root stands for the workspace itself, but the parser names it `package.json`
       // when the manifest has no name, so take the name from the manifest instead.
       const { name } = readManifest(rootPath, manifestPath);
