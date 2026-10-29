@@ -16,7 +16,7 @@ import { matchesFile, SUPPORTED_LOCK_FILES } from '../../utilities';
 import { getStatsProjectRoot } from '../statsPaths';
 import { compareBaseline } from './compareBaseline';
 import { BaselineCheckoutFailedError, LockFileMissingError } from './errors';
-import { getDependencies } from './getDependencies';
+import { getDependencies, getWorkspaceName } from './getDependencies';
 import { getStatsScope } from './getStatsScope';
 
 const PACKAGE_JSON = 'package.json';
@@ -345,11 +345,9 @@ async function getBaselineChanges(
       if (directoryExisted) throw reason;
 
       ctx.log.debug({ reference, manifestPath }, 'Workspace was added since the baseline');
-      // The graph's root stands for the workspace itself, but the parser names it `package.json`
-      // when the manifest has no name, so take the name from the manifest instead.
-      const { name } = readManifest(rootPath, manifestPath);
+      const name = getWorkspaceName(readManifest(rootPath, manifestPath));
       return new Set([
-        ...(typeof name === 'string' && name ? [name] : []),
+        ...(name ? [name] : []),
         ...headDependencies.getDepPkgs().map(({ name }) => name),
       ]);
     }
