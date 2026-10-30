@@ -1,8 +1,8 @@
 import { Stats } from '../../../types';
+import { isNodeModulesPath } from '../statsPaths';
 import { FilePath } from './graph';
 import {
   canonicalImporters,
-  isNodeModulesPath,
   LAZY_CONTEXT_MARKER,
   normalizeStatsPath,
   rootFilePath,

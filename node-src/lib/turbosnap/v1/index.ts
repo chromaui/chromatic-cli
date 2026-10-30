@@ -32,7 +32,7 @@ export async function traceChangedFiles(
   let pendingError: unknown;
   let pendingPatch: Partial<ChangedPackageFilesBailReason> | undefined;
   if (packageMetadataChanges?.length) {
-    changedDependencyNames = await findChangedDependencies(ctx).catch((err) => {
+    changedDependencyNames = await findChangedDependencies(ctx, stats).catch((err) => {
       pendingError = err;
       pendingPatch = classifyChangedPackageFilesDetail(err);
 
