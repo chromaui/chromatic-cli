@@ -100,7 +100,7 @@ export async function buildManifest(
   stats: Stats,
   input: ManifestInput
 ): Promise<TurboSnapManifest> {
-  // Built once, since it asks git once, and shared by the graph and the out-of-graph sweep.
+  // Collect the graph and sweep inputs before asking Git which files are untracked.
   const graphFiles = locateOnDiskFiles(stats, input);
   const swept = listConfigAndStaticFiles(input);
   const skipRule = await buildSkipRule(input, [
