@@ -89,17 +89,18 @@ const VITE_COMPOSITION_ROOTS = new Set([
  * @param context The context the stats file was built in, which is needed to resolve module paths to
  * absolute files; see {@link StatsContext}.
  * @param skipRule Which on-disk files to leave unhashed; see {@link buildSkipRule}.
+ * @param onDiskFiles The graph file inventory, when already gathered to scope the git query.
  *
  * @returns The unpruned graph; see {@link StatsGraph}.
  */
 export async function readStatsGraph(
   stats: Stats,
   context: StatsContext,
-  skipRule: SkipRule
+  skipRule: SkipRule,
+  onDiskFiles = locateOnDiskFiles(stats, context)
 ): Promise<StatsGraph> {
   const { projectRoot, statsRoot = projectRoot, projectFiles } = context;
   const roots = { projectRoot, statsRoot };
-  const onDiskFiles = locateOnDiskFiles(stats, roots, projectFiles);
   const { hashes, skippedFiles } = await hashOnDiskFiles(onDiskFiles, skipRule, projectFiles);
 
   // Story detection sees every file on disk, skipped or not: a generated story file is still a
@@ -291,16 +292,15 @@ function hashableAbsolutePath(
  * Finds the file on disk behind every path the stats file names, keyed by canonical path.
  *
  * @param stats The stats file to parse.
- * @param roots The roots to anchor against; see {@link StatsRoots}.
- * @param projectFiles How to read the disk.
+ * @param context The roots and disk for this build.
  *
  * @returns The absolute on-disk path of each hashable file, keyed by its canonical path.
  */
-function locateOnDiskFiles(
+export function locateOnDiskFiles(
   stats: Stats,
-  roots: StatsRoots,
-  projectFiles: ProjectFiles
+  context: StatsContext
 ): Map<FilePath, AbsolutePath> {
+  const { projectRoot, statsRoot = projectRoot, projectFiles } = context;
   // Collect every referenced stats id once, folded onto the file it stands for and expanded into
   // concatenated real files, skipping importers with a null moduleName. Folding at insertion makes
   // the dedupe canonical: every spelling of one file stats the disk and keys the node once.
@@ -316,9 +316,9 @@ function locateOnDiskFiles(
 
   const onDiskFiles = new Map<FilePath, AbsolutePath>();
   for (const id of fileIds) {
-    const absolutePath = hashableAbsolutePath(id, roots.statsRoot, projectFiles);
+    const absolutePath = hashableAbsolutePath(id, statsRoot, projectFiles);
     if (absolutePath) {
-      onDiskFiles.set(normalizeStatsPath(id, roots.projectRoot, roots.statsRoot), absolutePath);
+      onDiskFiles.set(normalizeStatsPath(id, projectRoot, statsRoot), absolutePath);
     }
   }
   return onDiskFiles;

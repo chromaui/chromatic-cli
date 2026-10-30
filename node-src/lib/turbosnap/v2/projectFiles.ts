@@ -68,7 +68,7 @@ export interface ProjectFiles {
    * cannot answer: a guess of "everything is tracked" would hash every generated file as a real
    * change, which is the over-capture the skip rule exists to prevent.
    */
-  untrackedPaths(): Promise<UntrackedPaths>;
+  untrackedPaths(realPaths?: Iterable<AbsolutePath>): Promise<UntrackedPaths>;
 }
 
 /**
@@ -100,7 +100,7 @@ export function realProjectFiles(deps: GitDeps): ProjectFiles {
       writeFileSync(absolutePath, contents);
     },
     realPath,
-    untrackedPaths: () => getUntrackedPaths(deps),
+    untrackedPaths: (realPaths) => getUntrackedPaths(deps, realPaths),
   };
 }
 

@@ -19,7 +19,7 @@ function context(disk: InMemoryDisk, untraced: string[] = []): SkipContext {
 }
 
 async function skipped(absolutePaths: string[], skipContext: SkipContext) {
-  const skipRule = await buildSkipRule(skipContext);
+  const skipRule = await buildSkipRule(skipContext, absolutePaths);
   return absolutePaths.flatMap((absolutePath) => {
     const reason = skipRule(absolutePath);
     return reason ? [[absolutePath, reason]] : [];

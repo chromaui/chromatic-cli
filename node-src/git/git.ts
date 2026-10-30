@@ -18,6 +18,7 @@ import {
   execGitCommandOneLine,
   GitDeps,
 } from './execGit';
+import { getUntrackedScopes, untrackedScope } from './untrackedPathspecs';
 
 const newline = /\r\n|\r|\n/; // Git may return \n even on Windows, so we can't use EOL
 export const NULL_BYTE = '\0'; // Separator used when running `git ls-files` with `-z`
@@ -647,12 +648,16 @@ export interface UntrackedPaths {
  * one git call per path.
  *
  * @param deps Function dependencies.
+ * @param realPaths Limit the listing to these known real file locations when provided.
  *
  * @returns The listing, queried by absolute path.
  *
  * @throws {Error} When git lists no tracked files, as when the index is missing.
  */
-export async function getUntrackedPaths(deps: GitDeps): Promise<UntrackedPaths> {
+export async function getUntrackedPaths(
+  deps: GitDeps,
+  realPaths?: Iterable<string>
+): Promise<UntrackedPaths> {
   const repositoryRoot = await getRepositoryRoot(deps);
 
   // `--others` means "not in the index", so with no index (a Docker build that copied `.git`
@@ -670,26 +675,28 @@ export async function getUntrackedPaths(deps: GitDeps): Promise<UntrackedPaths> 
     );
   }
 
-  // `--full-name` with the `:/` pathspec lists the whole repository, not just the directory the CLI
-  // runs in. Only stdout is parsed, so a stderr warning can't masquerade as a path. The listing is
-  // unbounded, so it stays out of the debug log.
-  const output = await execGitCommand(
-    deps,
-    'git ls-files --others --directory -z --full-name -- :/',
-    { all: false, logResult: false }
-  );
-
-  // A wholly untracked directory keeps its trailing slash, which `path.join` preserves as the native
-  // separator, so an entry ending in a separator covers everything beneath it.
-  const untracked = new Set(
-    output
-      .split(NULL_BYTE)
-      .filter(Boolean)
-      .map((entry) => path.join(repositoryRoot, entry))
-  );
+  const scopes = realPaths && (await getUntrackedScopes(deps, repositoryRoot, realPaths));
+  const untracked = new Set<string>();
+  if (scopes?.size !== 0) {
+    // A trailing slash marks a wholly untracked directory. path.join preserves the separator.
+    const pathspecs = scopes ? [...scopes].map((scope) => `:(top,literal)${scope}`) : [':/'];
+    for await (const entry of execGitCommandEntries(
+      deps,
+      ['git', 'ls-files', '--others', '--directory', '-z', '--full-name', '--', ...pathspecs],
+      { cwd: repositoryRoot }
+    )) {
+      untracked.add(path.join(repositoryRoot, entry));
+    }
+  }
 
   return {
     has: (absolutePath) => {
+      if (scopes) {
+        const parts = untrackedScope(repositoryRoot, absolutePath);
+        if (parts.length > 0 && !scopes.has(parts[0]) && !scopes.has(parts.join('/'))) {
+          throw new Error(`Untracked file check outside the requested paths: ${absolutePath}`);
+        }
+      }
       if (untracked.has(absolutePath)) {
         return true;
       }

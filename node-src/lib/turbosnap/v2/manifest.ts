@@ -11,11 +11,16 @@ import {
   TurboSnapFile,
 } from './graph';
 import { ManifestInput } from './manifestInput';
-import { hashOutOfGraphFiles, OutOfGraphFiles, rollUpOutOfGraphFiles } from './outOfGraphFiles';
+import {
+  hashOutOfGraphFiles,
+  listConfigAndStaticFiles,
+  OutOfGraphFiles,
+  rollUpOutOfGraphFiles,
+} from './outOfGraphFiles';
 import { normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
 import { buildSkipRule, SkipReason } from './skippedFiles';
-import { readStatsGraph } from './statsGraph';
+import { locateOnDiskFiles, readStatsGraph } from './statsGraph';
 import { STORYBOOK_VERSION_KEY, StorybookFileKey } from './storybookFileKeys';
 import { collectStorybookFiles, FileAttribution } from './storybookFiles';
 import { resolveStorybookVersion } from './storybookVersion';
@@ -96,7 +101,13 @@ export async function buildManifest(
   input: ManifestInput
 ): Promise<TurboSnapManifest> {
   // Built once, since it asks git once, and shared by the graph and the out-of-graph sweep.
-  const skipRule = await buildSkipRule(input);
+  const graphFiles = locateOnDiskFiles(stats, input);
+  const swept = listConfigAndStaticFiles(input);
+  const skipRule = await buildSkipRule(input, [
+    ...graphFiles.values(),
+    ...swept.configTree,
+    ...swept.staticTree,
+  ]);
   const {
     files,
     hashes,
@@ -104,7 +115,7 @@ export async function buildManifest(
     globalRoots,
     skippedFiles: skippedGraphFiles,
     untracedSubtrees,
-  } = await readStatsGraph(stats, input, skipRule);
+  } = await readStatsGraph(stats, input, skipRule, graphFiles);
   input.log.debug(`Found ${storyFiles.size} story files from preview-stats.json`);
 
   const { h64ToString } = await xxHashWasm();
@@ -134,7 +145,8 @@ export async function buildManifest(
   // nothing above can see them change. They get their own roll-ups; see rollUpOutOfGraphFiles.
   const { files: outOfGraphFiles, skippedFiles: skippedSweptFiles } = await hashOutOfGraphFiles(
     input,
-    skipRule
+    skipRule,
+    swept
   );
 
   // The preview core runtime may not exist in the module graph, so no file hash can see a Storybook

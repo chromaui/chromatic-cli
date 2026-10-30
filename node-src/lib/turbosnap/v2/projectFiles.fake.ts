@@ -106,8 +106,16 @@ export function inMemoryProjectFiles(disk: InMemoryDisk): ProjectFiles {
     },
     // Symlinks are not modelled, so every path is already the real one.
     realPath: (absolutePath: AbsolutePath) => absolutePath,
-    untrackedPaths: async () => ({
-      has: (absolutePath: AbsolutePath) => disk.isUntracked?.(absolutePath) ?? false,
-    }),
+    untrackedPaths: async (realPaths) => {
+      const candidates = realPaths && new Set(realPaths);
+      return {
+        has: (absolutePath) => {
+          if (candidates && !candidates.has(absolutePath)) {
+            throw new Error(`Untracked lookup outside the file inventory: ${absolutePath}`);
+          }
+          return disk.isUntracked?.(absolutePath) ?? false;
+        },
+      };
+    },
   };
 }
