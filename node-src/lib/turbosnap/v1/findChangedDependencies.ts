@@ -7,6 +7,7 @@ import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '..
 import { Context } from '../../../types';
 import { matchesFile, SUPPORTED_LOCK_FILES } from '../../utilities';
 import { compareBaseline } from './compareBaseline';
+import { LockFileMissingError } from './errors';
 import { getDependencies } from './getDependencies';
 
 const PACKAGE_JSON = 'package.json';
@@ -30,9 +31,32 @@ export const findChangedDependencies = async (ctx: Context) => {
   );
 
   const rootPath = (await getRepositoryRoot(ctx)) || '';
-  const [rootManifestPath] = (await findFilesFromRepositoryRoot(ctx, rootPath, PACKAGE_JSON)) || [];
-  const [rootLockfilePath] =
-    (await findFilesFromRepositoryRoot(ctx, rootPath, ...SUPPORTED_LOCK_FILES)) || [];
+
+  // List every manifest and lockfile, at the root and in nested packages (monorepos), with one
+  // call, since each call reads the whole git index. Paths use forward slashes, even on Windows.
+  const metadataFiles =
+    (await findFilesFromRepositoryRoot(
+      ctx,
+      rootPath,
+      ...[PACKAGE_JSON, ...SUPPORTED_LOCK_FILES].flatMap((file) => [file, `**/${file}`])
+    )) || [];
+  let rootManifestPath: string | undefined;
+  const nestedManifestPaths: string[] = [];
+  const lockfilesByDirectory = new Map<string, string>();
+  for (const file of metadataFiles) {
+    const dirname = path.posix.dirname(file);
+    if (file === PACKAGE_JSON) {
+      rootManifestPath = file;
+    } else if (path.posix.basename(file) === PACKAGE_JSON) {
+      nestedManifestPaths.push(file);
+    } else if (!lockfilesByDirectory.has(dirname)) {
+      // `git ls-files` prints paths in index order, so this prefers package-lock.json, then
+      // pnpm-lock.yaml, then yarn.lock, as a lookup of one directory's lockfiles would.
+      lockfilesByDirectory.set(dirname, file);
+    }
+  }
+
+  const rootLockfilePath = lockfilesByDirectory.get('.');
   if (!rootManifestPath || !rootLockfilePath) {
     ctx.log.debug(
       { rootPath, rootManifestPath, rootLockfilePath },
@@ -41,30 +65,15 @@ export const findChangedDependencies = async (ctx: Context) => {
   }
 
   ctx.log.debug({ rootPath, rootManifestPath, rootLockfilePath }, `Found manifest and lockfile`);
-
-  // Handle monorepos with (multiple) nested package.json files.
-  // Note that this does not use `path.join` to concatenate the file paths because
-  // git uses forward slashes, even on windows
-  const nestedManifestPaths =
-    (await findFilesFromRepositoryRoot(ctx, rootPath, `**/${PACKAGE_JSON}`)) || [];
   ctx.log.debug({ nestedManifestPaths: nestedManifestPaths.length }, 'Found nested manifest paths');
 
-  const manifestConcurrency = ctx.env.CHROMATIC_TURBOSNAP_MANIFEST_CONCURRENCY;
-  const manifestLimit = pLimit(manifestConcurrency);
-  const metadataPathPairs = await Promise.all(
-    nestedManifestPaths.map((manifestPath) =>
-      manifestLimit(async () => {
-        const dirname = path.dirname(manifestPath);
-        const [lockfilePath] =
-          (await findFilesFromRepositoryRoot(
-            ctx,
-            rootPath,
-            ...SUPPORTED_LOCK_FILES.map((lockfile) => `${dirname}/${lockfile}`)
-          )) || [];
-        // Fall back to the root lockfile if we can't find one in the same directory.
-        return [manifestPath, lockfilePath || rootLockfilePath];
-      })
-    )
+  const metadataPathPairs: [string, string | undefined][] = nestedManifestPaths.map(
+    (manifestPath) => [
+      manifestPath,
+      // Fall back to the root lockfile if we can't find one in the same directory. With neither,
+      // there is no lockfile, and we throw below if this manifest changed.
+      lockfilesByDirectory.get(path.posix.dirname(manifestPath)) || rootLockfilePath,
+    ]
   );
 
   if (rootManifestPath && rootLockfilePath) {
@@ -118,6 +127,8 @@ export const findChangedDependencies = async (ctx: Context) => {
     await Promise.all(
       filteredPathPairs.map(([manifestPath, lockfilePath, commits]) =>
         headDependenciesLimit(async () => {
+          if (!lockfilePath) throw new LockFileMissingError(manifestPath);
+
           const headDependencies = await getDependencies(ctx, {
             rootPath,
             manifestPath,
