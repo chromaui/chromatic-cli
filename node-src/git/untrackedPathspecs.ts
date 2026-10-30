@@ -41,7 +41,7 @@ function requestedScopes(
   return requested;
 }
 
-async function trackedParents(deps: GitDeps, repositoryRoot: string, requested: Set<string>) {
+async function trackedParents(deps: GitDeps, requested: Set<string>) {
   const wanted = new Set(
     [...requested].filter((scope) => scope.includes('/')).map((scope) => scope.split('/', 1)[0])
   );
@@ -51,11 +51,15 @@ async function trackedParents(deps: GitDeps, repositoryRoot: string, requested: 
   // Only a witness is needed. Stopping early leaves any unconfirmed directory at its top-level
   // scope and bounds the output even when a workspace holds a very large flat directory.
   let entries = 0;
-  for await (const child of execGitCommandEntries(
-    deps,
-    ['git', 'ls-files', '--cached', '--full-name', '-z', '--', ':(top,glob)*/*'],
-    { cwd: repositoryRoot }
-  )) {
+  for await (const child of execGitCommandEntries(deps, [
+    'git',
+    'ls-files',
+    '--cached',
+    '--full-name',
+    '-z',
+    '--',
+    ':(top,glob)*/*',
+  ])) {
     const top = child.split('/', 1)[0];
     if (wanted.has(top)) tracked.add(top);
     if (tracked.size === wanted.size || ++entries === 4096) break;
@@ -93,7 +97,7 @@ export async function getUntrackedScopes(
   }
   const requested = requestedScopes(repositoryRoot, realPaths);
   if (!requested || requested.size === 0) return requested;
-  const tracked = await trackedParents(deps, repositoryRoot, requested);
+  const tracked = await trackedParents(deps, requested);
   const scopes = new Set<string>();
   for (const scope of requested) {
     const top = scope.split('/', 1)[0];

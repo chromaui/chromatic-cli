@@ -1,5 +1,5 @@
 import { execFileSync } from 'child_process';
-import { mkdirSync, rmSync, symlinkSync } from 'fs';
+import { existsSync, mkdirSync, renameSync, rmSync, symlinkSync } from 'fs';
 import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -142,6 +142,23 @@ describe('realProjectFiles untrackedPaths', () => {
     expect(() => scoped.has(sibling)).toThrow(/outside the requested paths/);
   });
 
+  it('matches the whole-repository answer after a case-only directory rename', async ({ skip }) => {
+    const root = ignoringRepository();
+    track(root, 'Packages/anchor');
+    renameSync(path.join(root, 'Packages'), path.join(root, 'temporary'));
+    renameSync(path.join(root, 'temporary'), path.join(root, 'packages'));
+    write(root, 'packages/ui/build-info.json');
+    const alias = path.join(root, 'Packages/ui/build-info.json');
+    skip(!existsSync(alias), 'requires a case-insensitive filesystem');
+
+    const adapter = realProjectFiles({ log: new TestLogger() });
+    const candidate = adapter.realPath(alias);
+    const broad = await adapter.untrackedPaths();
+    const scoped = await adapter.untrackedPaths([candidate]);
+
+    expect(scoped.has(candidate)).toBe(broad.has(candidate));
+  });
+
   it('retains the full Git listing when the caller configures pathspec matching', async () => {
     const root = ignoringRepository();
     vi.stubEnv('GIT_GLOB_PATHSPECS', '1');
@@ -152,6 +169,20 @@ describe('realProjectFiles untrackedPaths', () => {
     expect(listing.has(first)).toBe(true);
     expect(listing.has(other)).toBe(true);
   });
+
+  it.skipIf(process.platform === 'win32')(
+    'preserves a literal pathspec relative to the CLI directory',
+    async () => {
+      const root = ignoringRepository();
+      const atRoot = write(root, ':/root.txt');
+      const atPackage = write(root, 'package/:/asset.txt');
+      process.chdir(path.join(root, 'package'));
+      // In literal mode, Git reads the original :/ selector as a directory named ":".
+      vi.stubEnv('GIT_LITERAL_PATHSPECS', '1');
+
+      expect(await untrackedAmong([atRoot, atPackage])).toEqual([atPackage]);
+    }
+  );
 
   it('rejects when git cannot answer, rather than guessing that everything is tracked', async () => {
     const root = temporaryDirectory();

@@ -680,11 +680,19 @@ export async function getUntrackedPaths(
   if (scopes?.size !== 0) {
     // A trailing slash marks a wholly untracked directory. path.join preserves the separator.
     const pathspecs = scopes ? [...scopes].map((scope) => `:(top,literal)${scope}`) : [':/'];
-    for await (const entry of execGitCommandEntries(
-      deps,
-      ['git', 'ls-files', '--others', '--directory', '-z', '--full-name', '--', ...pathspecs],
-      { cwd: repositoryRoot }
-    )) {
+    // Git can start inside a common pathspec prefix and echo its spelling. Include the reserved
+    // root entry so Git reads directory names from disk, as it does for a whole-repository scan.
+    if (scopes) pathspecs.push(':(top,literal).git');
+    for await (const entry of execGitCommandEntries(deps, [
+      'git',
+      'ls-files',
+      '--others',
+      '--directory',
+      '-z',
+      '--full-name',
+      '--',
+      ...pathspecs,
+    ])) {
       untracked.add(path.join(repositoryRoot, entry));
     }
   }
