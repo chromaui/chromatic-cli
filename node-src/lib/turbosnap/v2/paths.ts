@@ -42,6 +42,29 @@ export interface StatsRoots {
   statsRoot: AbsolutePath;
 }
 
+export type CanonicalizeStatsId = (id: FilePath) => FilePath;
+
+/**
+ * Resolves each distinct builder module id once while reading a stats graph. Shared importers can
+ * occur in many module reasons, and story detection and graph construction read the same ids.
+ *
+ * @param roots The roots for this graph.
+ *
+ * @returns A resolver scoped to these roots.
+ */
+export function createStatsIdResolver(roots: StatsRoots): CanonicalizeStatsId {
+  const { projectRoot, statsRoot } = roots;
+  const paths = new Map<FilePath, FilePath>();
+  return (id) => {
+    let filePath = paths.get(id);
+    if (filePath === undefined) {
+      filePath = normalizeStatsPath(foldStatsId(id), projectRoot, statsRoot);
+      paths.set(id, filePath);
+    }
+    return filePath;
+  };
+}
+
 /**
  * The canonical paths of a stats module's source files: its {@link moduleFileNames}, each folded
  * onto the file it stands for (see {@link foldStatsId}) and normalized, root first. The single
@@ -49,14 +72,12 @@ export interface StatsRoots {
  * `stats.modules` reads the same definition.
  *
  * @param module The stats module.
- * @param roots The roots to anchor against. See {@link StatsRoots}.
+ * @param canonicalize The resolver for this stats graph.
  *
  * @returns The canonical file paths, root first, with empty entries and duplicates dropped.
  */
-export function canonicalFileNames(module: Module, roots: StatsRoots): FilePath[] {
-  return moduleFileNames(module).map((name) =>
-    normalizeStatsPath(foldStatsId(name), roots.projectRoot, roots.statsRoot)
-  );
+export function canonicalFileNames(module: Module, canonicalize: CanonicalizeStatsId): FilePath[] {
+  return moduleFileNames(module).map((name) => canonicalize(name));
 }
 
 /**
@@ -66,15 +87,15 @@ export function canonicalFileNames(module: Module, roots: StatsRoots): FilePath[
  * so `readStatsGraph` and story detection cannot drift apart.
  *
  * @param module The stats module.
- * @param roots The roots to anchor against. See {@link StatsRoots}.
+ * @param canonicalize The resolver for this stats graph.
  *
  * @returns The canonical importer paths.
  */
-export function canonicalImporters(module: Module, roots: StatsRoots): FilePath[] {
+export function canonicalImporters(module: Module, canonicalize: CanonicalizeStatsId): FilePath[] {
   return (module.reasons ?? [])
     .map((reason) => reason.moduleName)
     .filter((name): name is FilePath => typeof name === 'string')
-    .map((name) => normalizeStatsPath(foldStatsId(name), roots.projectRoot, roots.statsRoot));
+    .map((name) => canonicalize(name));
 }
 
 /**
@@ -83,12 +104,15 @@ export function canonicalImporters(module: Module, roots: StatsRoots): FilePath[
  * concatenation group are its descendants.
  *
  * @param module The stats module.
- * @param roots The roots to anchor against. See {@link StatsRoots}.
+ * @param canonicalize The resolver for this stats graph.
  *
  * @returns The canonical root path, or undefined when the module names no files.
  */
-export function rootFilePath(module: Module, roots: StatsRoots): FilePath | undefined {
-  return canonicalFileNames(module, roots)[0];
+export function rootFilePath(
+  module: Module,
+  canonicalize: CanonicalizeStatsId
+): FilePath | undefined {
+  return canonicalFileNames(module, canonicalize)[0];
 }
 
 // A `node_modules` segment anywhere in a path. Matched segment-wise rather than by substring so a

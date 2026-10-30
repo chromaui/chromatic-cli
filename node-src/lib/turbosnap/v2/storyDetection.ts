@@ -2,11 +2,10 @@ import { Stats } from '../../../types';
 import { FilePath } from './graph';
 import {
   canonicalImporters,
+  CanonicalizeStatsId,
   isNodeModulesPath,
   LAZY_CONTEXT_MARKER,
-  normalizeStatsPath,
   rootFilePath,
-  StatsRoots,
 } from './paths';
 
 /**
@@ -21,7 +20,8 @@ export interface OnDiskFiles {
  * What story detection needs to resolve stats paths and tell real files apart from the
  * require-context glob.
  */
-interface StoryDetectionContext extends StatsRoots {
+interface StoryDetectionContext {
+  canonicalize: CanonicalizeStatsId;
   // Which canonical paths have a real file on disk.
   onDiskFiles: OnDiskFiles;
 }
@@ -127,12 +127,12 @@ function processModules(context: StoryDetectionContext, stats: Stats): Processed
       continue;
     }
 
-    const filePath = rootFilePath(module, context);
+    const filePath = rootFilePath(module, context.canonicalize);
     if (!filePath) {
       continue;
     }
 
-    const importers = canonicalImporters(module, context);
+    const importers = canonicalImporters(module, context.canonicalize);
 
     processed.push({
       rawName: module.name,
@@ -195,8 +195,7 @@ function collectStoryImporters(
   storyImporters: Set<string>;
   contextsExcludingNodeModules: Set<string>;
 } {
-  const { projectRoot, statsRoot } = context;
-  const canonical = (name: string) => normalizeStatsPath(name, projectRoot, statsRoot);
+  const { canonicalize } = context;
 
   // The stories entry directly imports stories (Vite), so it is a story importer on its own; the
   // config entry only helps locate the require-context, so it is not. The catalogue holds raw builder
@@ -204,9 +203,9 @@ function collectStoryImporters(
   // canonicalise the same way: rsbuild spells the same entry both `storybook-stories.js` and
   // `./storybook-stories.js`, and the raw spelling never matched.
   const entryFiles = new Set(
-    [...STORIES_ENTRY_FILES, ...CONFIG_ENTRY_FILES].map((name) => canonical(name))
+    [...STORIES_ENTRY_FILES, ...CONFIG_ENTRY_FILES].map((name) => canonicalize(name))
   );
-  const storyImporters = new Set([...STORIES_ENTRY_FILES].map((name) => canonical(name)));
+  const storyImporters = new Set([...STORIES_ENTRY_FILES].map((name) => canonicalize(name)));
   const contextsExcludingNodeModules = new Set<string>();
 
   for (const module of modules) {

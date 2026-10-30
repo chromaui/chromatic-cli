@@ -10,6 +10,7 @@ import { ManifestInput } from './manifestInput';
 import {
   canonicalFileNames,
   canonicalImporters,
+  createStatsIdResolver,
   foldStatsId,
   isNodeModulesPath,
   isSyntheticFile,
@@ -104,18 +105,19 @@ export async function readStatsGraph(
 
   // Story detection sees every file on disk, skipped or not: a generated story file is still a
   // story file, so its stories keep a hash that moves with the tracked files they import.
-  const storyFiles = detectStoryFiles({ ...roots, onDiskFiles }, stats);
+  const canonicalize = createStatsIdResolver(roots);
+  const storyFiles = detectStoryFiles({ canonicalize, onDiskFiles }, stats);
 
   const files = new Map<FilePath, TurboSnapFile>();
   for (const module of stats.modules) {
     // A module may bundle several real files (webpack/rspack module concatenation), so resolve its
     // canonical file paths, root first. Modules with no usable name (e.g. externals) are skipped.
-    const fileNames = canonicalFileNames(module, roots);
+    const fileNames = canonicalFileNames(module, canonicalize);
     if (fileNames.length === 0) continue;
     const [sourceFilePath, ...concatenated] = fileNames;
 
     // Canonicalised so a dependency edge names the same key wherever the builder spells it.
-    const importers = canonicalImporters(module, roots);
+    const importers = canonicalImporters(module, canonicalize);
 
     linkConcatenatedFiles(files, sourceFilePath, concatenated, hashes);
 
