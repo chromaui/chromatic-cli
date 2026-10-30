@@ -26,19 +26,20 @@ function sampleSubtree(files: Files, root: FilePath): Set<FilePath> {
 function hasLargeSharedSubtrees(files: Files, roots: FilePath[]): boolean {
   const samples = 8;
   const seen = new Set<FilePath>();
-  let large = 0;
-  let shared = 0;
+  let largeSamples = 0;
+  let repeatedPaths = 0;
   for (let sample = 0; sample < samples; sample++) {
     const root = roots[Math.floor((sample * roots.length) / samples)];
     const reached = sampleSubtree(files, root);
     if (reached.size < SAMPLE_SIZE) continue;
-    large++;
+    largeSamples++;
     for (const path of reached) {
-      if (seen.has(path)) shared++;
+      if (seen.has(path)) repeatedPaths++;
       seen.add(path);
     }
   }
-  return large >= samples / 2 && shared >= WORD_BITS;
+  // A few common helpers do not justify indexing otherwise private dependency trees.
+  return largeSamples >= samples / 2 && repeatedPaths >= (largeSamples * SAMPLE_SIZE) / 4;
 }
 
 interface ReachableFile {

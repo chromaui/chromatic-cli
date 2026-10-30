@@ -24,10 +24,13 @@ describe('tryRankedStoryHashes', () => {
     // A skipped module still connects its importers to a cycle and a file absent from the graph.
     add('barrel', ['cycle', 'missing', ...shared], SKIPPED_HASH);
     add('cycle', ['barrel', 'quoted"\n', '😀', '\uE000']);
+    // Some stories reach the barrel two steps later, after its dependencies were already visited.
+    add('wrapper', ['intermediate']);
+    add('intermediate', ['barrel']);
     for (const file of shared) add(file, []);
     for (const [index, story] of stories.entries()) {
       if (index === 0) add(story, [], SKIPPED_HASH);
-      else add(story, ['barrel', `private/${index % 7}`, shared[index]]);
+      else add(story, [index % 2 ? 'wrapper' : 'barrel', `private/${index % 7}`, shared[index]]);
     }
 
     const expected = stories.map((story) =>
@@ -48,14 +51,18 @@ describe('tryRankedStoryHashes', () => {
     );
   });
 
-  it('leaves large disjoint subtrees to the ordinary story hasher', async () => {
+  it('uses the ordinary story hasher when large subtrees share only a few imports', async () => {
     const stories = Array.from({ length: 128 }, (_, index) => `story/${index}`);
+    const common = ['a', 'b', 'c', 'd', 'e'];
     const files = new Map(
       stories.map((story) => [
         story,
         {
           hash: story,
-          dependencies: new Set(Array.from({ length: 150 }, (_, index) => `${story}/${index}`)),
+          dependencies: new Set([
+            ...common,
+            ...Array.from({ length: 150 }, (_, index) => `${story}/${index}`),
+          ]),
         },
       ])
     );
