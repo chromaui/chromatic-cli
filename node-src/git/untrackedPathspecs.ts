@@ -1,3 +1,4 @@
+import pLimit from 'p-limit';
 import path from 'path';
 
 import { execGitCommandEntries, GitDeps } from './execGit';
@@ -5,6 +6,7 @@ import { execGitCommandEntries, GitDeps } from './execGit';
 // Stay well below the command-line limit on Windows. Wider builds use the whole repository.
 const MAX_SCOPES = 128;
 const MAX_ARG_BYTES = 8192;
+const limitProbes = pLimit(10);
 
 /**
  * Finds the top one or two components of a real path inside the repository, in Git's spelling.
@@ -36,38 +38,49 @@ function requestedScopes(
     if (!path.isAbsolute(filePath)) return undefined;
     const parts = untrackedScope(repositoryRoot, filePath);
     if (parts.length > 0) requested.add(parts.join('/'));
-    if (requested.size > MAX_SCOPES) return undefined;
   }
   return requested;
 }
 
-async function trackedParents(deps: GitDeps, repositoryRoot: string, requested: Set<string>) {
-  const wanted = new Set(
-    [...requested].filter((scope) => scope.includes('/')).map((scope) => scope.split('/', 1)[0])
-  );
-  const tracked = new Set<string>();
-  if (wanted.size === 0) return tracked;
+const topOf = (scope: string) => scope.split('/', 1)[0];
 
-  // Only a witness is needed. Stopping early leaves any unconfirmed directory at its top-level
-  // scope and bounds the output even when a workspace holds a very large flat directory.
-  let entries = 0;
-  for await (const child of execGitCommandEntries(
-    deps,
-    ['git', 'ls-files', '--cached', '--full-name', '-z', '--', ':(top,glob)*/*'],
-    { cwd: repositoryRoot }
-  )) {
-    const top = child.split('/', 1)[0];
-    if (wanted.has(top)) tracked.add(top);
-    if (tracked.size === wanted.size || ++entries === 4096) break;
+function fitsCommandLine(scopes: Set<string>) {
+  const bytes = [...scopes].reduce((total, scope) => total + Buffer.byteLength(scope) + 1, 0);
+  return scopes.size <= MAX_SCOPES && bytes <= MAX_ARG_BYTES;
+}
+
+// Each probe stops at its first entry, so a large directory listed before another can't hide it.
+async function hasTrackedChild(deps: GitDeps, top: string) {
+  for await (const entry of execGitCommandEntries(deps, [
+    'git',
+    'ls-files',
+    '--cached',
+    '--full-name',
+    '-z',
+    '--',
+    `:(top,literal)${top}/`,
+  ])) {
+    // Only Git's own spelling counts, so a case-only rename on disk keeps the top-level scope.
+    return entry.startsWith(`${top}/`);
   }
-  return tracked;
+  return false;
+}
+
+async function trackedParents(deps: GitDeps, requested: Set<string>) {
+  const wanted = [
+    ...new Set([...requested].filter((scope) => scope.includes('/')).map((scope) => topOf(scope))),
+  ];
+  const found = await Promise.all(
+    wanted.map((top) => limitProbes(() => hasTrackedChild(deps, top)))
+  );
+  return new Set(wanted.filter((_, index) => found[index]));
 }
 
 /**
- * Limits the untracked scan to the areas this manifest actually reads. A tracked child proves
- * Git enters its top-level directory on an unrestricted scan. Without that witness, query the
- * top-level entry itself: Git may report an untracked nested repository as one directory, or
- * skip a tracked file/symlink that the working tree has replaced with a directory.
+ * Limits the untracked scan to the areas this manifest actually reads. A tracked file anywhere
+ * below a top-level directory proves Git enters it on an unrestricted scan. Without that witness,
+ * query the top-level entry itself: Git may report an untracked nested repository as one directory,
+ * or skip a tracked file/symlink that the working tree has replaced with a directory.
  *
  * @param deps Git command dependencies.
  * @param repositoryRoot The root used to interpret the paths.
@@ -92,13 +105,18 @@ export async function getUntrackedScopes(
     return undefined;
   }
   const requested = requestedScopes(repositoryRoot, realPaths);
-  if (!requested || requested.size === 0) return requested;
-  const tracked = await trackedParents(deps, repositoryRoot, requested);
-  const scopes = new Set<string>();
-  for (const scope of requested) {
-    const top = scope.split('/', 1)[0];
-    scopes.add(tracked.has(top) && !requested.has(top) ? scope : top);
-  }
-  const bytes = [...scopes].reduce((total, scope) => total + Buffer.byteLength(scope) + 1, 0);
-  return bytes <= MAX_ARG_BYTES ? scopes : undefined;
+  if (!requested) return undefined;
+  const tops = new Set([...requested].map((scope) => topOf(scope)));
+  if (!fitsCommandLine(tops)) return undefined;
+
+  const tracked = await trackedParents(deps, requested);
+  const scopes = new Set(
+    [...requested].map((scope) => {
+      const top = topOf(scope);
+      return tracked.has(top) && !requested.has(top) ? scope : top;
+    })
+  );
+  // Many files directly inside one directory each become a scope; the top-level directories
+  // cover them in fewer arguments.
+  return fitsCommandLine(scopes) ? scopes : tops;
 }
