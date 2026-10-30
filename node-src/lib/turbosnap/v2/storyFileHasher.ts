@@ -110,7 +110,11 @@ function collectOutsideSharedClosure(
 // splice in each extra entry at its sorted position without copying every shared entry.
 function createSharedHashInput(entries: string[]): (extras: string[]) => string {
   const offsets = [0];
-  for (const entry of entries) offsets.push(offsets.at(-1) + entry.length);
+  let offset = 0;
+  for (const entry of entries) {
+    offset += entry.length;
+    offsets.push(offset);
+  }
   const joined = entries.join('');
 
   return (extras) => {
