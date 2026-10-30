@@ -126,7 +126,7 @@ describe('traceChangedFiles', () => {
     });
 
     expect(fixture.log.error).toHaveBeenCalledWith(
-      'Failed to build manifest for TurboSnap v2',
+      'Failed to build manifest for TurboSnap 2.0',
       expect.objectContaining({ message: expect.stringContaining('git.rootPath') })
     );
     expect(Sentry.captureException).toHaveBeenCalledOnce();
@@ -143,7 +143,7 @@ describe('traceChangedFiles', () => {
       await expect(trace(fixture, {}, level)).resolves.toEqual({ status: 'fallback' });
 
       expect(fixture.log[level]).toHaveBeenCalledWith(
-        'Failed to build manifest for TurboSnap v2',
+        'Failed to build manifest for TurboSnap 2.0',
         expect.objectContaining({
           message: expect.stringContaining('must be installed before running Chromatic'),
         })
@@ -195,7 +195,7 @@ describe('traceChangedFiles', () => {
       })
     );
     expect(fixture.log.debug).not.toHaveBeenCalledWith(
-      expect.stringContaining('Uploaded hashes for TurboSnap v2')
+      expect.stringContaining('Uploaded hashes for TurboSnap 2.0')
     );
   });
 
@@ -218,14 +218,16 @@ describe('traceChangedFiles', () => {
     expect(fixture.runQuery.mock.calls[0][0]).toContain('turboSnapHashBailReason');
     expect(fixture.log.debug).toHaveBeenCalledWith(
       expect.stringMatching(
-        /^Uploaded hashes for TurboSnap v2 .*"turboSnapHashBailReason":"NO_ANCESTOR_HASHES"/
+        /^Uploaded hashes for TurboSnap 2\.0 .*"turboSnapHashBailReason":"NO_ANCESTOR_HASHES"/
       )
     );
     expect(fixture.log.debug).toHaveBeenCalledWith(
-      expect.stringMatching(/^Uploaded hashes for TurboSnap v2 .*"turboSnapStatus":"BAILED"/)
+      expect.stringMatching(/^Uploaded hashes for TurboSnap 2\.0 .*"turboSnapStatus":"BAILED"/)
     );
     expect(fixture.log.debug).toHaveBeenCalledWith(
-      expect.stringMatching(/^Uploaded hashes for TurboSnap v2 .*"turboSnapMechanism":"HASH_BASED"/)
+      expect.stringMatching(
+        /^Uploaded hashes for TurboSnap 2\.0 .*"turboSnapMechanism":"HASH_BASED"/
+      )
     );
     expect(fixture.log.info).not.toHaveBeenCalled();
     expect(fixture.log.error).not.toHaveBeenCalled();
@@ -253,13 +255,13 @@ describe('traceChangedFiles', () => {
     await expect(trace(fixture, {}, level)).resolves.toEqual({ status: 'fallback' });
 
     expect(fixture.log[level]).toHaveBeenCalledWith(
-      'Failed to upload hashes for TurboSnap v2',
+      'Failed to upload hashes for TurboSnap 2.0',
       expect.objectContaining({
         message: expect.stringContaining('Uploading hashes is not allowed'),
       })
     );
     expect(fixture.log[otherLevel]).not.toHaveBeenCalledWith(
-      'Failed to upload hashes for TurboSnap v2',
+      'Failed to upload hashes for TurboSnap 2.0',
       expect.anything()
     );
   });
@@ -290,7 +292,7 @@ describe('traceChangedFiles', () => {
     await expect(trace(fixture)).resolves.toEqual({ status: 'fallback' });
 
     expect(fixture.log.error).toHaveBeenCalledWith(
-      'Failed to upload hashes for TurboSnap v2',
+      'Failed to upload hashes for TurboSnap 2.0',
       expect.objectContaining({
         message: 'The backend API rejected the hash upload: unknown error',
       })

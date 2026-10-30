@@ -53,7 +53,7 @@ export async function traceChangedFiles(ctx: Context): Promise<TraceChangedFiles
     return { status: 'skipped' };
   }
 
-  ctx.log.debug('Tracing changed files with TurboSnap v1');
+  ctx.log.debug('Tracing changed files with TurboSnap 1.0');
   return traceChangedFilesV1(ctx, stats, statsPath);
 }
 
@@ -78,7 +78,7 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
 
   if (!turboSnapRequested) {
     ctx.log.debug(
-      'Running TurboSnap v2 to populate file hashes for future TurboSnap builds. This will not affect what stories are captured.'
+      'Running TurboSnap 2.0 to populate file hashes for future TurboSnap builds. This will not affect what stories are captured.'
     );
   }
 
@@ -98,7 +98,7 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
         configDir: ctx.storybook.configDir,
         storybookBuildDir: ctx.options.storybookBuildDir,
       });
-      ctx.log.debug('Tracing changed files with TurboSnap v2');
+      ctx.log.debug('Tracing changed files with TurboSnap 2.0');
 
       await traceChangedFilesV2({
         log: ctx.log,
@@ -121,7 +121,7 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<void> {
     // An error that escaped v2's own handling is the same kind of failure, so it takes the same
     // level rather than always printing.
     ctx.log[failureLogLevel](
-      'Failed to trace changed files with TurboSnap v2; this does not affect TurboSnap v1',
+      'Failed to trace changed files with TurboSnap 2.0; this does not affect TurboSnap 1.0',
       error
     );
     Sentry.captureException(error);
