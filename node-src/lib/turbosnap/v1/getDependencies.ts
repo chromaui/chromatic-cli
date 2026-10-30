@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { copyFileSync, mkdtempSync, readFileSync, rmSync, statSync } from 'fs';
 import os from 'os';
 import path from 'path';
@@ -33,6 +34,7 @@ const PNPM_PARSE_OPTIONS = {
  * the repository, because the manifest's position relative to the lockfile identifies it.
  * @param options.manifestPath The path to a `package.json`, relative to `rootPath`.
  * @param options.lockfilePath The path to the lockfile it is installed from, relative to `rootPath`.
+ * @param pnpmImporters Importer names shared by manifests using the same lockfile content.
  *
  * @returns The dependency graph.
  */
@@ -46,7 +48,8 @@ export const getDependencies = async (
     rootPath: string;
     manifestPath: string;
     lockfilePath: string;
-  }
+  },
+  pnpmImporters = new Map<string, Set<string>>()
 ) => {
   const absoluteLockfilePath = path.resolve(rootPath, lockfilePath);
   const absoluteManifestPath = path.resolve(rootPath, manifestPath);
@@ -57,7 +60,7 @@ export const getDependencies = async (
 
   try {
     return path.basename(absoluteLockfilePath) === PNPM_LOCK_FILE
-      ? await parsePnpmLockfile(absoluteManifestPath, absoluteLockfilePath)
+      ? await parsePnpmLockfile(absoluteManifestPath, absoluteLockfilePath, pnpmImporters)
       : await inspectLockfile(absoluteManifestPath, absoluteLockfilePath);
   } catch (err) {
     ctx.log.debug({ rootPath, manifestPath, lockfilePath }, 'Failed to get dependencies');
@@ -68,22 +71,31 @@ export const getDependencies = async (
 // `snyk-nodejs-plugin` always resolves a pnpm manifest against the root importer, which leaves
 // `catalog:` and `workspace:` specifiers of nested packages unresolved. Drive the parser directly
 // so each manifest is resolved against its own importer table.
-async function parsePnpmLockfile(absoluteManifestPath: string, absoluteLockfilePath: string) {
+async function parsePnpmLockfile(
+  absoluteManifestPath: string,
+  absoluteLockfilePath: string,
+  pnpmImporters: Map<string, Set<string>>
+) {
   const importer = getImporter(absoluteManifestPath, absoluteLockfilePath);
   try {
     const manifest = readFileSync(absoluteManifestPath, 'utf8');
     const lockfile = readFileSync(absoluteLockfilePath, 'utf8');
 
-    // Parsing the YAML here and again inside the parser below is cheap at our 10 MB cap, and
-    // simpler than catching the workspace parser's failure and retrying.
-    const isWorkspaceMember = Object.hasOwn(getPnpmLockfileParser(lockfile).importers, importer);
+    // Baseline checkouts can have different paths for identical files. Key on the contents
+    // without retaining the lockfile text or the parser's full dependency graph.
+    const digest = createHash('sha256').update(lockfile).digest('hex');
+    let importers = pnpmImporters.get(digest);
+    if (!importers) {
+      importers = new Set(Object.keys(getPnpmLockfileParser(lockfile).importers));
+      pnpmImporters.set(digest, importers);
+    }
 
     // The workspace parser throws when the importer has no entry: standalone lockfiles before v9
     // have no importers table, and a `package.json` outside the workspace globs is never
     // installed. Fall back to the single-project parser, which resolves against the root importer
     // when there is one and otherwise keeps the manifest's raw specifiers. That matches how the
     // yarn and npm parsers treat manifests the lockfile can't place, rather than failing.
-    return isWorkspaceMember
+    return importers.has(importer)
       ? await parsePnpmWorkspaceProject(manifest, lockfile, PNPM_PARSE_OPTIONS, importer)
       : await parsePnpmProject(manifest, lockfile, PNPM_PARSE_OPTIONS);
   } catch (error) {

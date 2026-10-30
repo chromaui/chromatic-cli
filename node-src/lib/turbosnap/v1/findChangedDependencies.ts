@@ -109,6 +109,7 @@ export const findChangedDependencies = async (ctx: Context) => {
   // Use a Set so we only keep distinct package names.
   const changedDependencyNames = new Set<string>();
   const tmpdirsCreated = new Set<string>();
+  const pnpmImporters = new Map<string, Set<string>>();
 
   const packageConcurrency = ctx.env.CHROMATIC_TURBOSNAP_PACKAGE_CONCURRENCY;
   const headDependenciesLimit = pLimit(packageConcurrency);
@@ -118,11 +119,11 @@ export const findChangedDependencies = async (ctx: Context) => {
     await Promise.all(
       filteredPathPairs.map(([manifestPath, lockfilePath, commits]) =>
         headDependenciesLimit(async () => {
-          const headDependencies = await getDependencies(ctx, {
-            rootPath,
-            manifestPath,
-            lockfilePath,
-          });
+          const headDependencies = await getDependencies(
+            ctx,
+            { rootPath, manifestPath, lockfilePath },
+            pnpmImporters
+          );
 
           ctx.log.debug({ manifestPath, lockfilePath }, `Found HEAD dependencies`);
 
@@ -141,11 +142,11 @@ export const findChangedDependencies = async (ctx: Context) => {
                   checkoutFile(ctx, reference, lockfilePath, tmpdir),
                 ]);
 
-                const baselineDependencies = await getDependencies(ctx, {
-                  rootPath: tmpdir,
-                  manifestPath,
-                  lockfilePath,
-                });
+                const baselineDependencies = await getDependencies(
+                  ctx,
+                  { rootPath: tmpdir, manifestPath, lockfilePath },
+                  pnpmImporters
+                );
 
                 ctx.log.debug({ reference }, `Found baseline dependencies`);
 
