@@ -185,7 +185,7 @@ async function listExternalFiles(
   const start = Date.now();
   let indexedPaths = 0;
   const externalFiles: AbsolutePath[] = [];
-  for await (const absolutePath of projectFiles.trackedFiles(gitRoot)) {
+  for await (const absolutePath of projectFiles.trackedFiles(gitRoot, externals)) {
     indexedPaths += 1;
     // The index can name a file deleted from the working tree or a submodule root; neither has
     // bytes to hash.
@@ -193,8 +193,6 @@ async function listExternalFiles(
       externalFiles.push(absolutePath);
     }
   }
-  // The walk is the one cost here that grows with the repository rather than with the globs, so it
-  // is timed to show when a monorepo has outgrown matching against the whole index.
   log.debug(
     `Matched ${externalFiles.length} external files against ${indexedPaths} indexed paths in ${Date.now() - start}ms`
   );

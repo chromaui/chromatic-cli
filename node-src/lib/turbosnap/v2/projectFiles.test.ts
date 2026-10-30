@@ -146,6 +146,35 @@ describe('realProjectFiles trackedFiles', () => {
     ]);
   });
 
+  it('lists candidates from each literal prefix and skips unrelated directories', async () => {
+    const root = repository();
+    track(root, 'ui/deep/main.css');
+    track(root, 'ui/button.ts');
+    track(root, 'theme/index.js');
+    track(root, 'other/deep/main.css');
+
+    const files = await Array.fromAsync(
+      realProjectFiles({ log }).trackedFiles(root, ['./ui/**/*.css', 'theme/index.js'])
+    );
+
+    expect(files).toEqual(
+      ['theme/index.js', 'ui/button.ts', 'ui/deep/main.css'].map((file) => path.join(root, file))
+    );
+  });
+
+  it.each(['**/*.css', 'ui/theme|theme.js', 'constructor'])(
+    'keeps the full listing for an unscoped pattern %s',
+    async (glob) => {
+      const root = repository();
+      track(root, 'ui/main.css');
+      track(root, 'theme.js');
+      const files = await Array.fromAsync(
+        realProjectFiles({ log }).trackedFiles(root, ['ui/main.css', glob])
+      );
+      expect(files).toEqual(['theme.js', 'ui/main.css'].map((file) => path.join(root, file)));
+    }
+  );
+
   it('keeps an indexed file that was deleted from the working tree, for the caller to filter', async () => {
     const root = repository();
     track(root, 'tailwind.config.js');
