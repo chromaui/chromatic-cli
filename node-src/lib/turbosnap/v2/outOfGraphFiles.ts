@@ -51,6 +51,24 @@ export class MissingStorybookConfigError extends Error {
 }
 
 /**
+ * Collects the config and static paths that will be checked against git.
+ *
+ * @param input The config and static locations and disk for this build.
+ *
+ * @returns The paths in each sweep.
+ */
+export function listConfigAndStaticFiles(input: OutOfGraphInput) {
+  const configTree = input.projectFiles.listTree(input.configDir);
+  if (!configTree.some((filePath) => isMainConfigFile(filePath, input.configDir))) {
+    throw new MissingStorybookConfigError(input.configDir);
+  }
+  return {
+    configTree,
+    staticTree: input.staticDirs.flatMap((directory) => input.projectFiles.listTree(directory)),
+  };
+}
+
+/**
  * Content-hashes every file in the Storybook config directory, every file in the configured static
  * directories, and every git-tracked file matching the user's `--externals` globs.
  *
@@ -77,6 +95,7 @@ export class MissingStorybookConfigError extends Error {
  *
  * @param input Where to look and what to read it with; see {@link OutOfGraphInput}.
  * @param skipRule Which config and static files to leave unhashed; see {@link buildSkipRule}.
+ * @param inventory The config and static paths already gathered for the Git query.
  *
  * @returns The content hash of every config file, static file and external file, keyed by canonical
  * manifest path, beside the swept config and static files that were skipped instead, keyed the same
@@ -87,21 +106,16 @@ export class MissingStorybookConfigError extends Error {
  */
 export async function hashOutOfGraphFiles(
   input: OutOfGraphInput,
-  skipRule: SkipRule
+  skipRule: SkipRule,
+  inventory = listConfigAndStaticFiles(input)
 ): Promise<OutOfGraphSweep> {
-  const configTree = input.projectFiles.listTree(input.configDir);
-  if (!configTree.some((filePath) => isMainConfigFile(filePath, input.configDir))) {
-    throw new MissingStorybookConfigError(input.configDir);
-  }
+  const { configTree, staticTree } = inventory;
 
   // Documentation in the config dir (e.g. `.storybook/README.md`) shouldn't affect the built
   // Storybook, so it stays out of the config roll-up.
   const { hashable: configFilePaths, skipped: skippedConfigFiles } = partitionSkipped(
     configTree.filter((filePath) => !isDocumentationFile(filePath)),
     hashMainConfigRegardless(skipRule, input)
-  );
-  const staticTree = input.staticDirs.flatMap((directory) =>
-    input.projectFiles.listTree(directory)
   );
   const { hashable: staticFilePaths, skipped: skippedStaticFiles } = partitionSkipped(
     staticTree,

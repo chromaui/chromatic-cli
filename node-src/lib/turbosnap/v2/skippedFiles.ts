@@ -51,9 +51,8 @@ export function partitionSkipped(
 
 /**
  * Builds the rule for which files TurboSnap v2 skips hashing: the files the user untraced, and the
- * files git does not track anywhere in the repository (see {@link untrackedFileCheck}). Built once per
- * manifest, since it asks git once, and then answers synchronously for every file the graph and the
- * out-of-graph sweep hold.
+ * files git does not track anywhere in the repository. One listing covers the graph and the config
+ * and static sweeps.
  *
  * An `--untraced` glob is the user saying a file's changes should not recapture stories, so it is
  * honored wherever the file is: inside a dependency, since v1 lets a user untrace files inside a
@@ -69,66 +68,37 @@ export function partitionSkipped(
  * since its paths come from git and the bundler; a glob written for v1 therefore spells the real
  * path, and matching anything else would hash a file the user untraced.
  *
+ * An installed package is hashed even when Git ignores it, so dependency upgrades remain visible.
+ * Generated directories such as `.federation` still need Git's answer. A workspace package reached
+ * through a node_modules symlink follows its real path, so untracked build output there is skipped
+ * just as it is in v1. An external glob on tracked workspace sources can still capture those changes.
+ *
  * @param context Where the repository is, what is untraced, and how to ask git and the disk.
+ * @param paths All disk paths the graph and sweeps will check.
  *
  * @returns The rule, by the path as given.
  */
-export async function buildSkipRule(context: SkipContext): Promise<SkipRule> {
+export async function buildSkipRule(
+  context: SkipContext,
+  paths: Iterable<AbsolutePath>
+): Promise<SkipRule> {
   const isUntraced = gitRootGlobMatcher(context.gitRoot, context.untraced);
-  const isUntrackedFile = await untrackedFileCheck(context);
+  const reasons = new Map<AbsolutePath, SkipReason | undefined>();
+  const gitCandidates = new Map<AbsolutePath, AbsolutePath>();
+  for (const file of new Set(paths)) {
+    const realPath = context.projectFiles.realPath(file);
+    if (isUntraced(realPath)) reasons.set(file, 'untraced');
+    else if (isInstalledPackagePath(realPath)) reasons.set(file, undefined);
+    else gitCandidates.set(file, realPath);
+  }
 
-  return (absolutePath) => {
-    const realPath = context.projectFiles.realPath(absolutePath);
-    if (isUntraced(realPath)) return 'untraced';
-    if (isUntrackedFile(realPath)) return 'untracked';
-    return undefined;
+  const untracked = await context.projectFiles.untrackedPaths(gitCandidates.values());
+  for (const [file, realPath] of gitCandidates) {
+    reasons.set(file, untracked.has(realPath) ? 'untracked' : undefined);
+  }
+
+  return (file) => {
+    if (!reasons.has(file)) throw new Error(`File missing from the manifest inventory: ${file}`);
+    return reasons.get(file);
   };
-}
-
-/**
- * Builds the check for whether git does not track a real path. "Untracked" is git's answer;
- * "skipped" is our policy on top of it.
- *
- * We lean on git because generated files are often left out of git, ignored or merely uncommitted,
- * and they can be non-deterministic: a build stamp or a manifest written by a CI step before the
- * Storybook build. Recapturing based on those hashing changes would be more "correct" but a much
- * worse experience, so we opted to match TurboSnap v1's behavior, which draws its changed files
- * from `git diff` and never sees an untracked file, ignored or not. A tracked file with uncommitted
- * edits is still hashed, since v1 sees it through the working-tree diff. The same holds for an
- * untracked story file: it is still a story, but its own edits go unseen until it is tracked, as in
- * v1.
- *
- * Git's answer is taken for the whole repository, as v1 sees it: a file git does not track in any
- * workspace package is skipped, not just the Storybook package's own. The accepted cost: a workspace
- * package the graph holds only through its gitignored `dist` — the bundler resolves the
- * `node_modules` link to it, so its source never appears — is no longer hashed, which is v1's
- * behavior today. `--externals` does not rescue such a `dist`: `listExternalFiles` walks the git
- * index, which never holds an untracked file, so a glob like `packages/icons/dist/**` matches
- * nothing — the same reason v1's `git diff` never sees the `dist`, which is why the flag needs no
- * change. The hatch that works is a glob on the sibling's tracked source: any change there
- * recaptures Storybook-wide, which detects changes to the built `dist` too.
- *
- * Two exceptions. An installed package under `node_modules` keeps a real change visible: it is in
- * nearly every `.gitignore`, yet a dependency upgrade is a real change. The exemption covers only
- * installed packages, not the directories build tools generate under `node_modules` (such as
- * `.federation`; see {@link isInstalledPackagePath}): their output can change on every
- * build, and v1 never sees it either. The Storybook config directory gets no exemption: an
- * untracked file there is generated like any other, and hashing it over-captures just the same;
- * the main config is the one file hashed regardless, by the config sweep; see
- * `hashOutOfGraphFiles`.
- *
- * The check takes a real path because that is how git names files; see
- * {@link ProjectFiles.untrackedPaths}.
- *
- * @param context Where the repository is, and how to ask git and the disk.
- *
- * @returns The check, by real path.
- */
-async function untrackedFileCheck(
-  context: SkipContext
-): Promise<(realPath: AbsolutePath) => boolean> {
-  const { projectFiles } = context;
-  const untracked = await projectFiles.untrackedPaths();
-
-  return (realPath) => !isInstalledPackagePath(realPath) && untracked.has(realPath);
 }
