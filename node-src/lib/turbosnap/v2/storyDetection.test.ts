@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
+import { createStatsIdResolver } from './paths';
 import { detectStoryFiles } from './storyDetection';
 
 const projectRoot = '/repo/packages/ui';
@@ -18,8 +19,7 @@ const projectRoot = '/repo/packages/ui';
 function detect(stats: Stats, onDiskFiles: string[]) {
   return detectStoryFiles(
     {
-      projectRoot,
-      statsRoot: projectRoot,
+      canonicalize: createStatsIdResolver({ projectRoot, statsRoot: projectRoot }),
       onDiskFiles: new Set(onDiskFiles),
     },
     stats

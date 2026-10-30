@@ -5,6 +5,7 @@ import { Module } from '../../../types';
 import {
   canonicalFileNames,
   canonicalImporters,
+  createStatsIdResolver,
   foldStatsId,
   gitRootGlobMatcher,
   isInstalledPackagePath,
@@ -17,7 +18,7 @@ import {
 } from './paths';
 
 const projectRoot = '/repo/packages/ui';
-const roots = { projectRoot, statsRoot: projectRoot };
+const canonicalize = createStatsIdResolver({ projectRoot, statsRoot: projectRoot });
 
 function module(module: Partial<Module>): Module {
   return { id: 0, name: '', ...module };
@@ -96,9 +97,19 @@ describe('moduleFileNames', () => {
   });
 });
 
+describe('createStatsIdResolver', () => {
+  it('resolves the same stats id independently for builds with different roots', () => {
+    const fromRepository = createStatsIdResolver({ projectRoot, statsRoot: '/repo' });
+    const id = './src/Button.tsx';
+
+    expect(canonicalize(id)).toBe('./src/Button.tsx');
+    expect(fromRepository(id)).toBe('../../src/Button.tsx');
+  });
+});
+
 describe('rootFilePath', () => {
   it('normalizes the root name against the project root', () => {
-    expect(rootFilePath(module({ name: '/repo/packages/ui/src/Button.tsx' }), roots)).toBe(
+    expect(rootFilePath(module({ name: '/repo/packages/ui/src/Button.tsx' }), canonicalize)).toBe(
       './src/Button.tsx'
     );
   });
@@ -112,13 +123,13 @@ describe('rootFilePath', () => {
           name: './src/Button.stories.tsx',
           modules: [{ name: String.raw`./src sync recursive \.stories\.tsx$` }],
         }),
-        roots
+        canonicalize
       )
     ).toBe('./src/Button.stories.tsx');
   });
 
   it('returns undefined when the module names no files', () => {
-    expect(rootFilePath(module({ name: '' }), roots)).toBeUndefined();
+    expect(rootFilePath(module({ name: '' }), canonicalize)).toBeUndefined();
   });
 });
 
@@ -151,7 +162,7 @@ describe('canonicalFileNames', () => {
       expected: ['../../node_modules/react/index.js'],
     },
   ])('normalizes the file names of $name', ({ module: input, expected }) => {
-    expect(canonicalFileNames(input, roots)).toEqual(expected);
+    expect(canonicalFileNames(input, canonicalize)).toEqual(expected);
   });
 });
 
@@ -188,7 +199,7 @@ describe('canonicalImporters', () => {
       expected: [],
     },
   ])('$name', ({ module: input, expected }) => {
-    expect(canonicalImporters(input, roots)).toEqual(expected);
+    expect(canonicalImporters(input, canonicalize)).toEqual(expected);
   });
 
   it('resolves the resource of a loader chain reason from the stats root', () => {
@@ -198,7 +209,9 @@ describe('canonicalImporters', () => {
       ],
     });
 
-    expect(canonicalImporters(input, { projectRoot, statsRoot: '/repo' })).toEqual(['./src/a.css']);
+    expect(
+      canonicalImporters(input, createStatsIdResolver({ projectRoot, statsRoot: '/repo' }))
+    ).toEqual(['./src/a.css']);
   });
 });
 
