@@ -92,7 +92,6 @@ export interface FileAttribution {
  * @param untracedSubtrees The untraced files and everything they reached before their edges were
  * severed; see `StatsGraph.untracedSubtrees`.
  * @param h64ToString The hash function.
- * @param hashFiles A file roll-up scoped to this manifest, shared with the per-story hashes.
  *
  * @returns The rolled-up hash per Storybook config file, and the {@link FileAttribution} recording
  * which of the three hashing homes each real file landed in.
@@ -104,9 +103,7 @@ export function collectStorybookFiles(
   configDirectory: FilePath,
   globalRoots: Set<FilePath>,
   untracedSubtrees: Set<FilePath>,
-  h64ToString: (input: string) => string,
-  hashFiles: (filePaths: Iterable<FilePath>) => FileHash = (filePaths) =>
-    rollUpFileHashes(hashes, filePaths, h64ToString)
+  h64ToString: (input: string) => string
 ): { storybookConfigHashes: Map<StorybookFileKey, FileHash>; attribution: FileAttribution } {
   // Every preview config subtree, unioned into one `preview` roll-up rather than one entry per path,
   // so the map stays a homogeneous set of category roll-ups (preview, globals, config, static). The
@@ -124,7 +121,10 @@ export function collectStorybookFiles(
   }
   const previewFiles = contentHashed(hashes, previewSubtree);
   if (previewFiles.size > 0) {
-    storybookConfigHashes.set(STORYBOOK_PREVIEW_KEY, hashFiles(previewSubtree));
+    storybookConfigHashes.set(
+      STORYBOOK_PREVIEW_KEY,
+      rollUpFileHashes(hashes, previewSubtree, h64ToString)
+    );
   }
 
   const storyReachable = new Set<FilePath>();
@@ -150,7 +150,10 @@ export function collectStorybookFiles(
     )
   );
   if (globals.size > 0) {
-    storybookConfigHashes.set(STORYBOOK_GLOBALS_KEY, hashFiles(globals));
+    storybookConfigHashes.set(
+      STORYBOOK_GLOBALS_KEY,
+      rollUpFileHashes(hashes, globals, h64ToString)
+    );
   }
 
   // Report only content-hashed files, matching how the globals set is defined, so the three sets cover

@@ -9,7 +9,7 @@ import {
   rollUpFileHashes,
   TurboSnapFile,
 } from './graph';
-import { createManifestFileHasher, createStoryFileHasher } from './manifestOptimizations';
+import { createStoryFileHasher } from './storyFileHasher';
 
 type HashString = (input: string) => string;
 type GraphShape = 'sparse' | 'shared';
@@ -92,8 +92,7 @@ async function originalStoryHashes({ files, hashes, storyFiles }: Workload) {
 
 async function optimizedStoryHashes({ files, hashes, storyFiles }: Workload) {
   const { h64ToString } = await xxHashWasm();
-  const hashFiles = createManifestFileHasher(hashes, h64ToString);
-  const hashStoryFile = createStoryFileHasher(files, hashes, storyFiles, h64ToString, hashFiles);
+  const hashStoryFile = createStoryFileHasher(files, hashes, storyFiles, h64ToString);
   const storyFileHashes = new Map<FilePath, FileHash>();
   for (const storyFile of storyFiles) {
     storyFileHashes.set(storyFile, hashStoryFile(storyFile));

@@ -4,7 +4,6 @@ import xxHashWasm from 'xxhash-wasm';
 import { Stats } from '../../../types';
 import { FileHash, FilePath, hashEntryIdentities, TurboSnapFile } from './graph';
 import { ManifestInput } from './manifestInput';
-import { createManifestFileHasher, createStoryFileHasher } from './manifestOptimizations';
 import { hashOutOfGraphFiles, OutOfGraphFiles, rollUpOutOfGraphFiles } from './outOfGraphFiles';
 import { normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
@@ -13,6 +12,7 @@ import { readStatsGraph } from './statsGraph';
 import { STORYBOOK_VERSION_KEY, StorybookFileKey } from './storybookFileKeys';
 import { collectStorybookFiles, FileAttribution } from './storybookFiles';
 import { resolveStorybookVersion } from './storybookVersion';
+import { createStoryFileHasher } from './storyFileHasher';
 
 type StorybookVersion = string;
 
@@ -103,8 +103,7 @@ export async function buildManifest(
 
   const { h64ToString } = await xxHashWasm();
   const storyFileHashes = new Map<FilePath, FileHash>();
-  const hashFiles = createManifestFileHasher(hashes, h64ToString);
-  const hashStoryFile = createStoryFileHasher(files, hashes, storyFiles, h64ToString, hashFiles);
+  const hashStoryFile = createStoryFileHasher(files, hashes, storyFiles, h64ToString);
   for (const storyFile of storyFiles) {
     storyFileHashes.set(storyFile, hashStoryFile(storyFile));
   }
@@ -116,8 +115,7 @@ export async function buildManifest(
     normalizeStatsPath(input.configDir, input.projectRoot),
     globalRoots,
     untracedSubtrees,
-    h64ToString,
-    hashFiles
+    h64ToString
   );
   input.log.debug(
     `Attributed ${attribution.previewSubtree.size} files to the preview config subtree`
