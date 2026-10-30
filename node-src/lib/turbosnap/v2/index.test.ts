@@ -52,7 +52,10 @@ describe('traceChangedFiles', () => {
   it('uploads and writes a manifest when the stats build a healthy manifest', async () => {
     const fixture = setup();
 
-    await expect(trace(fixture)).resolves.toEqual({ status: 'fallback' });
+    await expect(trace(fixture)).resolves.toEqual({
+      status: 'fallback',
+      hashBased: { bailed: false },
+    });
 
     expect(uploaded(fixture)).toEqual({
       buildId: 'build-id',
@@ -199,9 +202,9 @@ describe('traceChangedFiles', () => {
     );
   });
 
-  // A build where the Index ran every test should say in the CI log why hash-based TurboSnap bailed,
-  // without changing what the build does.
-  it('logs what the Index decided at debug level and still falls back to v1', async () => {
+  // A build where the Index ran every test should say why hash-based TurboSnap bailed, without
+  // changing what the build does.
+  it('returns and logs why the Index bailed and still falls back to v1', async () => {
     const fixture = setup();
     fixture.runQuery.mockResolvedValue({
       buildUploadHashes: {
@@ -213,7 +216,10 @@ describe('traceChangedFiles', () => {
       },
     });
 
-    await expect(trace(fixture)).resolves.toEqual({ status: 'fallback' });
+    await expect(trace(fixture)).resolves.toEqual({
+      status: 'fallback',
+      hashBased: { bailed: true, bailReason: 'NO_ANCESTOR_HASHES' },
+    });
 
     expect(fixture.runQuery.mock.calls[0][0]).toContain('turboSnapHashBailReason');
     expect(fixture.log.debug).toHaveBeenCalledWith(
@@ -229,6 +235,22 @@ describe('traceChangedFiles', () => {
     );
     expect(fixture.log.info).not.toHaveBeenCalled();
     expect(fixture.log.error).not.toHaveBeenCalled();
+  });
+
+  // Without the turboSnapHash feature the Index records a reason but leaves the build to v1.
+  it('returns no hash-based decision when the Index did not apply TurboSnap 2.0', async () => {
+    const fixture = setup();
+    fixture.runQuery.mockResolvedValue({
+      buildUploadHashes: {
+        build: {
+          turboSnapStatus: null,
+          turboSnapMechanism: null,
+          turboSnapHashBailReason: 'UNAVAILABLE',
+        },
+      },
+    });
+
+    await expect(trace(fixture)).resolves.toEqual({ status: 'fallback' });
   });
 
   // The Index still stores the hashes of a build that did not request TurboSnap, but must not apply

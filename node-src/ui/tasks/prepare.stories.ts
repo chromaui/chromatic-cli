@@ -15,5 +15,7 @@ export const BailedPackageFile = () => frames.BailedPackageFile;
 export const BailedLockfile = () => frames.BailedLockfile;
 export const BailedSiblings = () => frames.BailedSiblings;
 export const Traced = () => frames.Traced;
+export const HashBased = () => frames.HashBased;
+export const HashBasedBailed = () => frames.HashBasedBailed;
 export const Hashing = () => frames.Hashing;
 export const Success = () => frames.Success;

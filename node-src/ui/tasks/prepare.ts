@@ -2,7 +2,8 @@ import path from 'path';
 import pluralize from 'pluralize';
 
 import { isPackageManifestFile } from '../../lib/utilities';
-import { Context } from '../../types';
+import { Context, HashBasedTurboSnap } from '../../types';
+import { hashBasedBailReason } from '../messages/warnings/hashBasedBailed';
 import { buildType, capitalize, testType } from './utilities';
 
 export const initial = (ctx: Context) => ({
@@ -133,6 +134,21 @@ export const traced = (ctx: Pick<Context, 'options' | 'onlyStoryFiles'>) => {
     output: `Found ${files} affected by recent changes`,
   };
 };
+
+export const hashBased = (
+  ctx: Pick<Context, 'options'> & { hashBasedTurboSnap: HashBasedTurboSnap }
+) =>
+  ctx.hashBasedTurboSnap.bailed
+    ? {
+        status: 'updating',
+        title: 'TurboSnap 2.0 disabled',
+        output: `A full build is required because ${hashBasedBailReason(ctx.hashBasedTurboSnap.bailReason)}`,
+      }
+    : {
+        status: 'updating',
+        title: 'Using TurboSnap 2.0',
+        output: `Chromatic will compare file hashes to find ${testType(ctx)} files affected by recent changes`,
+      };
 
 export const hashing = (ctx: Pick<Context, 'options'>) => ({
   status: 'updating',

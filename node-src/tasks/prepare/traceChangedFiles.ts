@@ -1,9 +1,11 @@
 import * as turbosnap from '@cli/turbosnap';
 
-import { isTurboSnapV1Enabled, shouldTraceWithV1 } from '../../lib/turbosnap/shouldTraceWithV1';
+import { isTurboSnapV1Enabled } from '../../lib/turbosnap/shouldTraceWithV1';
+import { TurboSnapResult } from '../../lib/turbosnap/types';
 import { groupUntracedFilesByGlob, rewriteErrorMessage } from '../../lib/utilities';
-import { Context, Deps } from '../../types';
-import { bailed, traced, tracing } from '../../ui/tasks/prepare';
+import { Context, Deps, HashBasedTurboSnap } from '../../types';
+import hashBasedBailed from '../../ui/messages/warnings/hashBasedBailed';
+import { bailed, hashBased, traced, tracing } from '../../ui/tasks/prepare';
 import { testType } from '../../ui/tasks/utilities';
 
 // These are the special characters that need to be escaped in the filename
@@ -35,59 +37,26 @@ export interface TraceChangedFilesOutput {
  * @throws {Error} When TurboSnap v1 is enabled and stats loading or tracing fails. The error
  * message is prefixed with context about retrieving dependent files.
  */
-// TODO: refactor this function
-// eslint-disable-next-line complexity
 export async function traceChangedFiles(
   deps: TraceChangedFilesDeps,
   input: TraceChangedFilesInput
 ): Promise<TraceChangedFilesOutput> {
   const ctx = input.turboSnapContext;
 
-  if (shouldTraceWithV1(ctx)) {
-    deps.report(tracing({ git: ctx.git, options: deps.options }));
-  }
-
   try {
-    const result = await turbosnap.traceChangedFiles(ctx);
-    if (result.status === 'skipped') {
-      return {};
+    const result = await turbosnap.traceChangedFiles(ctx, {
+      onTraceWithV1: () => deps.report(tracing({ git: ctx.git, options: deps.options })),
+    });
+    const output = applyTraceResult(ctx, result);
+
+    // When the Index applies TurboSnap 2.0 it ignores the 1.0 result, so report 2.0's decision
+    // instead of 1.0's. The 1.0 story files are still sent along with the build.
+    if (result.hashBased) {
+      reportHashBased(deps, result.hashBased);
+    } else {
+      reportTraceResult(deps, result, output.onlyStoryFiles);
     }
-
-    ctx.turboSnap = result.turboSnap;
-
-    if (result.status === 'bailed') {
-      deps.report(bailed({ turboSnap: result.turboSnap }));
-      return {};
-    }
-
-    ctx.untracedFiles = result.untracedFiles;
-    if (result.changedDependencyNames) {
-      ctx.git.changedDependencyNames = result.changedDependencyNames;
-    }
-
-    // Escape special characters in the filename so it does not conflict with picomatch
-    const escaped = Object.keys(result.onlyStoryFiles).map((key) =>
-      key.replaceAll(SPECIAL_CHARS_REGEXP, String.raw`\$1`)
-    );
-
-    if (!deps.options.interactive) {
-      if (!deps.options.traceChanged) {
-        deps.log.info(
-          `Found affected ${testType(deps)} files:\n${Object.entries(result.onlyStoryFiles)
-            .flatMap(([id, files]) => files.map((f) => `  ${f} [${id}]`))
-            .join('\n')}`
-        );
-      }
-      if (result.untracedFiles.length > 0) {
-        deps.log.info(
-          `Encountered ${result.untracedFiles.length} untraced files:\n${groupUntracedFilesByGlob(
-            result.untracedFiles
-          )}`
-        );
-      }
-    }
-    deps.report(traced({ options: deps.options, onlyStoryFiles: escaped }));
-    return { onlyStoryFiles: escaped };
+    return output;
   } catch (err) {
     // The lib still collects hashes when TurboSnap v1 is disabled, and that build must stay
     // silent and must never fail because of it.
@@ -108,5 +77,69 @@ export async function traceChangedFiles(
       err,
       `Could not retrieve dependent ${testType(deps)} files.\n${err.message}`
     );
+  }
+}
+
+// Writes the trace results onto the context and returns the picomatch-escaped affected story files.
+function applyTraceResult(ctx: Context, result: TurboSnapResult): TraceChangedFilesOutput {
+  if (result.hashBased) {
+    ctx.hashBasedTurboSnap = result.hashBased;
+  }
+  if (result.status === 'skipped') {
+    return {};
+  }
+
+  ctx.turboSnap = result.turboSnap;
+  if (result.status === 'bailed') {
+    return {};
+  }
+
+  ctx.untracedFiles = result.untracedFiles;
+  if (result.changedDependencyNames) {
+    ctx.git.changedDependencyNames = result.changedDependencyNames;
+  }
+
+  // Escape special characters in the filename so it does not conflict with picomatch
+  const onlyStoryFiles = Object.keys(result.onlyStoryFiles).map((key) =>
+    key.replaceAll(SPECIAL_CHARS_REGEXP, String.raw`\$1`)
+  );
+  return { onlyStoryFiles };
+}
+
+function reportTraceResult(
+  deps: TraceChangedFilesDeps,
+  result: TurboSnapResult,
+  onlyStoryFiles: TraceChangedFilesOutput['onlyStoryFiles']
+) {
+  if (result.status === 'bailed') {
+    deps.report(bailed({ turboSnap: result.turboSnap }));
+  }
+  if (result.status !== 'traced') {
+    return;
+  }
+
+  if (!deps.options.interactive) {
+    if (!deps.options.traceChanged) {
+      deps.log.info(
+        `Found affected ${testType(deps)} files:\n${Object.entries(result.onlyStoryFiles)
+          .flatMap(([id, files]) => files.map((f) => `  ${f} [${id}]`))
+          .join('\n')}`
+      );
+    }
+    if (result.untracedFiles.length > 0) {
+      deps.log.info(
+        `Encountered ${result.untracedFiles.length} untraced files:\n${groupUntracedFilesByGlob(
+          result.untracedFiles
+        )}`
+      );
+    }
+  }
+  deps.report(traced({ options: deps.options, onlyStoryFiles }));
+}
+
+function reportHashBased(deps: TraceChangedFilesDeps, hashBasedTurboSnap: HashBasedTurboSnap) {
+  deps.report(hashBased({ options: deps.options, hashBasedTurboSnap }));
+  if (hashBasedTurboSnap.bailed) {
+    deps.log.warn(hashBasedBailed({ hashBasedTurboSnap }));
   }
 }
