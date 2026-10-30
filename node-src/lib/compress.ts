@@ -13,7 +13,7 @@ import { Context, FileDesc } from '../types';
  * @returns A promise that resolves with details of the created zip.
  */
 export default async function makeZipFile(ctx: Context, files: FileDesc[]) {
-  const archive = archiver('zip', { zlib: { level: 9 } });
+  const archive = archiver('zip', { zlib: { level: 6 } });
   const temporary = await temporaryFile({ postfix: '.zip' });
   // Passing a fd will cause `createWriteStream` to ignore the path (first) argument
   const sink = createWriteStream('', { fd: temporary.fd });
