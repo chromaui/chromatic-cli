@@ -269,6 +269,19 @@ export default [
       '@eslint-community/eslint-comments/no-restricted-disable': 'off',
       'jsdoc/require-jsdoc': 'off',
       'unicorn/no-null': 'off', // GraphQL returns `null` when there is no value
+      'no-restricted-syntax': [
+        'error',
+        ...[
+          // `trace` and `trim-stats` are package.json scripts that also run dist/bin.cjs.
+          String.raw`Literal[value=/yarn (run )?(chromatic|trace|trim-stats)\b|dist\/bin/]`,
+          String.raw`TemplateElement[value.raw=/yarn (run )?(chromatic|trace|trim-stats)\b|dist\/bin/]`,
+          String.raw`CallExpression:matches([callee.name=/^(exec|execFile|spawn|execa)(Sync)?$/], [callee.property.name=/^(exec|execFile|spawn|execa)(Sync)?$/])[arguments.0.value='yarn']`,
+        ].map((selector) => ({
+          selector,
+          message:
+            'Call the command in-process (for example `main()` from bin-src/trace.ts). Spawning `yarn chromatic` runs dist/bin.cjs, which is missing on a fresh checkout and stale after a source change.',
+        })),
+      ],
     },
   },
 ];

@@ -1,4 +1,3 @@
-import { execFileSync, execSync } from 'child_process';
 import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -14,73 +13,56 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('Test trace script from package.json', () => {
-  it('returns the default output successfully', () => {
-    const scriptName =
-      'chromatic trace ./node-src/ui/messages/errors/invalidReportPath.ts -s bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json';
+// Call main() in-process rather than spawning `yarn chromatic trace`, which runs dist/bin.cjs:
+// that build is missing on a fresh checkout and stale after a source change, so a spawned
+// test either fails for no reason or passes against old code.
+async function trace(args: string[]) {
+  const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
+  await main([...args, '-s', 'bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json']);
+  return info.mock.calls.flat().join('\n');
+}
 
-    // Execute the script as a child process
-    const output = execSync(`yarn ${scriptName}`).toString().trim();
+describe('chromatic trace', () => {
+  it('returns the default output successfully', async () => {
+    const output = await trace(['./node-src/ui/messages/errors/invalidReportPath.ts']);
 
-    // Verify that the output does not contain the expanded output
+    expect(output).toContain('Traced 1 changed file to 1 affected story file');
     expect(output).not.toContain(rootDirectoryNote);
   });
-  it('traces absolute changed file paths the same as repository-relative ones', () => {
-    // Pass arguments without a shell, so a checkout path with spaces stays one argument
-    const output = execFileSync('yarn', [
-      'chromatic',
-      'trace',
+
+  it('traces absolute changed file paths the same as repository-relative ones', async () => {
+    const output = await trace([
       path.join(process.cwd(), 'node-src/ui/messages/errors/invalidReportPath.ts'),
-      '-s',
-      'bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json',
-    ])
-      .toString()
-      .trim();
+    ]);
 
     expect(output).toContain('Traced 1 changed file to 1 affected story file');
   });
-  it('traces absolute changed file paths when main is called in-process', async () => {
-    const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
 
-    await main([
-      path.join(process.cwd(), 'node-src/ui/messages/errors/invalidReportPath.ts'),
-      '-s',
-      'bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json',
+  it('outputs directory info when -m expanded is passed', async () => {
+    const output = await trace([
+      './node-src/ui/messages/errors/invalidReportPath.ts',
+      '-m',
+      'expanded',
     ]);
 
-    expect(info.mock.calls.flat().join('\n')).toContain(
-      'Traced 1 changed file to 1 affected story file'
-    );
-  });
-  it('outputs directory info when -m expanded is passed', () => {
-    const scriptName =
-      "chromatic trace ./node-src/ui/messages/errors/invalidReportPath.ts -s bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json -m 'expanded'";
-
-    // Execute the script as a child process
-    const output = execSync(`yarn ${scriptName}`).toString().trim();
-
-    const expandedStoryModule = `node-src/ui/messages/errors/invalidReportPath.stories.ts`;
-    const expandedFileModule = `node-src/ui/messages/errors/invalidReportPath.ts`;
-
-    // Add your assertions based on the expected output or behavior of the script
     expect(output).toContain(rootDirectoryNote);
     expect(output).toContain(baseDirectoryNote);
     expect(output).toContain(storybookDirectoryNote);
     expect(output).toContain(traceSuggestions);
-    expect(output).toContain(expandedStoryModule);
-    expect(output).toContain(expandedFileModule);
+    expect(output).toContain('node-src/ui/messages/errors/invalidReportPath.stories.ts');
+    expect(output).toContain('node-src/ui/messages/errors/invalidReportPath.ts');
   });
-  it('outputs untraced info when --mode expanded is passed with -u and an untraced file', () => {
-    const scriptName =
-      "chromatic trace ./node-src/ui/messages/errors/invalidReportPath.ts -s bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json -m expanded -u './node-src/ui/messages/errors/invalidReportPath.ts'";
 
-    // Execute the script as a child process
-    const output = execSync(`yarn ${scriptName}`).toString().trim();
+  it('outputs untraced info when --mode expanded is passed with -u and an untraced file', async () => {
+    const output = await trace([
+      './node-src/ui/messages/errors/invalidReportPath.ts',
+      '-m',
+      'expanded',
+      '-u',
+      './node-src/ui/messages/errors/invalidReportPath.ts',
+    ]);
 
-    const untracedFile = `node-src/ui/messages/errors/invalidReportPath.ts`;
-    const untracedFileNote = `We detected some untraced files`;
-
-    expect(output).toContain(untracedFileNote);
-    expect(output).toContain(untracedFile);
+    expect(output).toContain('We detected some untraced files');
+    expect(output).toContain('node-src/ui/messages/errors/invalidReportPath.ts');
   });
 });
