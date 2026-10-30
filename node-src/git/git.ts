@@ -236,6 +236,55 @@ export async function commitExists(deps: GitDeps, commit: string) {
   }
 }
 
+// One fetch at a time. Baseline recovery runs inside a Promise.all over the baseline builds
+// (see gitInfo.ts), so several orphaned commits can be fetched at once — and concurrent
+// `git fetch` calls in one repository contend for the same locks, most visibly
+// `.git/shallow.lock` when a shallow clone adds `--depth=1`. A loser fails with
+// "Unable to create '.../shallow.lock': File exists", which this function would report as an
+// unrecoverable baseline rather than a retryable clash. These fetches are rare and small, so
+// serialising costs little against losing a baseline to a race.
+const limitFetches = pLimit(1);
+
+/**
+ * Fetch a single commit from the `origin` remote by hash.
+ *
+ * A rebase or amend leaves a baseline build's commit orphaned: unreachable from every ref, so
+ * no ordinary fetch restores it. Most Git hosts (GitHub included) still serve such commits when
+ * requested by hash, so this is a last attempt to recover a baseline before falling back to a
+ * replacement build.
+ *
+ * In a shallow clone, `--depth=1` bounds the transfer to the commit and its tree: diffing
+ * against the baseline needs no ancestry, and an unbounded fetch could otherwise download all
+ * missing history reachable from the orphaned commit. A full clone is fetched without a depth so
+ * that no shallow graft is recorded, which could later truncate history if the commit became
+ * reachable again (e.g. the branch is force-pushed back); there, only the orphaned objects are
+ * missing anyway.
+ *
+ * @param deps Function dependencies.
+ * @param commit The commit hash to fetch.
+ *
+ * @returns True if the fetch succeeded.
+ */
+export async function fetchCommit(deps: GitDeps, commit: string) {
+  // Git commands run through a shell, so only ever interpolate a well-formed commit hash.
+  if (!/^[\da-f]{7,64}$/i.test(commit)) {
+    deps.log.debug(`Not fetching invalid commit hash '${commit}'`);
+    return false;
+  }
+
+  return limitFetches(async () => {
+    try {
+      const cloneDepth = await getCloneDepth(deps).catch(() => 'full');
+      const depth = cloneDepth === 'shallow' ? ' --depth=1' : '';
+      await execGitCommand(deps, `git fetch --no-tags${depth} origin "${commit}"`);
+      return true;
+    } catch (error) {
+      deps.log.debug(`Failed to fetch commit ${commit} from origin: ${error.message}`);
+      return false;
+    }
+  });
+}
+
 /**
  * Check commits one at a time with {@link commitExists}.
  *
