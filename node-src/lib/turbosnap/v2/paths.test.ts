@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Module } from '../../../types';
 import {
+  buildRollUpPath,
   canonicalFileNames,
   canonicalImporters,
   foldStatsId,
@@ -575,5 +576,75 @@ describe('gitRootGlobMatcher', () => {
 
     expect(isMatch('/repo/packages/ui/src/theme.css')).toBe(true);
     expect(isMatch('/repo/packages/ui/src/Button.tsx')).toBe(false);
+  });
+});
+
+describe('buildRollUpPath', () => {
+  const store = '../../node_modules/.pnpm';
+
+  it.each([
+    [
+      'a plain package',
+      `${store}/storybook@10.6.3_@types+react@19.2.2/node_modules/storybook/dist/index.js`,
+      '../../node_modules/storybook/dist/index.js',
+    ],
+    [
+      'a scoped package',
+      `${store}/@emotion+react@11.14.0_react@19.2.0/node_modules/@emotion/react/dist/index.js`,
+      '../../node_modules/@emotion/react/dist/index.js',
+    ],
+    [
+      'a store directory pnpm shortened to a hash',
+      `${store}/@storybook+react@10.6.3_@types+react@19.2.2_react-dom@19.2.0__ebefc3a230a019e610e5c2df45b9ad69/node_modules/@storybook/react/dist/index.js`,
+      '../../node_modules/@storybook/react/dist/index.js',
+    ],
+    [
+      'a node_modules nested inside the package',
+      `${store}/a@1.0.0_b@2.0.0/node_modules/a/node_modules/c/index.js`,
+      '../../node_modules/a/node_modules/c/index.js',
+    ],
+    [
+      'Windows separators',
+      String.raw`..\..\node_modules\.pnpm\a@1.0.0_b@2.0.0\node_modules\a\index.js`,
+      String.raw`..\..\node_modules\a\index.js`,
+    ],
+    ['a project file', './src/Button.tsx', './src/Button.tsx'],
+    ['an npm package', '../../node_modules/a/index.js', '../../node_modules/a/index.js'],
+  ])('drops the store directory of %s with one copy', (_, filePath, expected) => {
+    expect(buildRollUpPath([filePath])(filePath)).toBe(expected);
+  });
+
+  it('gives the same path to one copy of a package before and after a peer rename', () => {
+    const before = `${store}/a@1.0.0_b@2.0.0/node_modules/a/index.js`;
+    const after = `${store}/a@1.0.0_b@2.0.1/node_modules/a/index.js`;
+
+    expect(buildRollUpPath([before])(before)).toBe(buildRollUpPath([after])(after));
+  });
+
+  it('keeps the real path of every file of a package with two copies in the build', () => {
+    // Counted per package: `b` has a second copy only through a different file, so its index.js
+    // keeps its real path too, and a package split across copies still moves the roll-ups.
+    const first = `${store}/b@1.0.0_c@1.0.0/node_modules/b/index.js`;
+    const second = `${store}/b@1.0.0_c@2.0.0/node_modules/b/other.js`;
+    const rollUpPath = buildRollUpPath([first, second]);
+
+    expect(rollUpPath(first)).toBe(first);
+    expect(rollUpPath(second)).toBe(second);
+  });
+
+  it('keeps the real path of a store copy when another copy is installed at the path it would take', () => {
+    const storeCopy = `${store}/b@1.0.0_c@1.0.0/node_modules/b/index.js`;
+    const installedCopy = '../../node_modules/b/index.js';
+
+    expect(buildRollUpPath([storeCopy, installedCopy])(storeCopy)).toBe(storeCopy);
+  });
+
+  it('counts the copies of a package in different stores apart', () => {
+    const root = `${store}/b@1.0.0_c@1.0.0/node_modules/b/index.js`;
+    const nested = './node_modules/.pnpm/b@1.0.0_c@2.0.0/node_modules/b/index.js';
+    const rollUpPath = buildRollUpPath([root, nested]);
+
+    expect(rollUpPath(root)).toBe('../../node_modules/b/index.js');
+    expect(rollUpPath(nested)).toBe('./node_modules/b/index.js');
   });
 });

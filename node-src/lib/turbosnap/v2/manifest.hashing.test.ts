@@ -543,3 +543,81 @@ describe('buildManifest relocation stability', () => {
     expect(second.storybookHash).toBe(first.storybookHash);
   });
 });
+
+// A file of `@emotion/react` in the pnpm store directory named `directory`.
+function theme(directory: string) {
+  return `/repo/node_modules/.pnpm/${directory}/node_modules/@emotion/react/dist/index.js`;
+}
+
+describe('buildManifest across a pnpm peer rename', () => {
+  const story = '/repo/packages/ui/src/Button.stories.tsx';
+  const preview = '/repo/packages/ui/.storybook/preview.ts';
+
+  // Preview and the story each import `@emotion/react`, from the store directory named for them.
+  // pnpm renames a directory when a peer changes, and a rename can leave the two in different copies.
+  async function manifestFor(directories: { preview: string; story: string }, themeHash = 'E') {
+    const { input } = createFixture({
+      fileHashes: {
+        [story]: 'S',
+        [preview]: 'P',
+        [theme(directories.preview)]: themeHash,
+        [theme(directories.story)]: themeHash,
+      },
+    });
+    const themeImporters = (directory: string) =>
+      [
+        directory === directories.preview && { moduleName: preview },
+        directory === directories.story && { moduleName: story },
+      ].filter((reason) => !!reason);
+    return buildManifest(
+      {
+        modules: [
+          { id: 1, name: story, reasons: [{ moduleName: './storybook-stories.js' }] },
+          { id: 2, name: preview, reasons: [{ moduleName: './storybook-config-entry.js' }] },
+          ...[...new Set([directories.preview, directories.story])].map((directory, index) => ({
+            id: 3 + index,
+            name: theme(directory),
+            reasons: themeImporters(directory),
+          })),
+        ],
+      },
+      input
+    );
+  }
+
+  const peerA = '@emotion+react@11.14.0_@types+react@19.2.2_react@19.2.0';
+  const peerB = '@emotion+react@11.14.0_@types+react@19.2.3_react@19.2.0';
+
+  it('leaves every hash alone when only the store directory of a single copy is renamed', async () => {
+    const before = await manifestFor({ preview: peerA, story: peerA });
+    const after = await manifestFor({ preview: peerB, story: peerB });
+
+    expect([...after.files.keys()]).not.toEqual([...before.files.keys()]);
+    expect([...after.storybookConfigHashes]).toEqual([...before.storybookConfigHashes]);
+    expect([...after.storyFileHashes]).toEqual([...before.storyFileHashes]);
+    expect(after.storybookHash).toBe(before.storybookHash);
+  });
+
+  it('changes the hashes when the package content changes', async () => {
+    const before = await manifestFor({ preview: peerA, story: peerA }, 'E1');
+    const after = await manifestFor({ preview: peerB, story: peerB }, 'E2');
+
+    expect(after.storybookConfigHashes.get('preview')).not.toBe(
+      before.storybookConfigHashes.get('preview')
+    );
+    expect(after.storyFileHashes.get('./src/Button.stories.tsx')).not.toBe(
+      before.storyFileHashes.get('./src/Button.stories.tsx')
+    );
+  });
+
+  it('changes the hashes when a rename splits the package into a second copy', async () => {
+    // Both copies have identical bytes, but each holds its own module state: the story's copy no
+    // longer sees the theme preview provides through the other one.
+    const before = await manifestFor({ preview: peerA, story: peerA });
+    const after = await manifestFor({ preview: peerA, story: peerB });
+
+    expect(after.storyFileHashes.get('./src/Button.stories.tsx')).not.toBe(
+      before.storyFileHashes.get('./src/Button.stories.tsx')
+    );
+  });
+});
