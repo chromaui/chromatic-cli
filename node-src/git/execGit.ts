@@ -90,10 +90,11 @@ export async function execGitCommand(
  */
 export async function* execGitCommandEntries(
   { log, options: depOptions }: GitDeps,
-  command: string,
+  command: string | [string, ...string[]],
   options?: Options
 ): AsyncGenerator<string> {
-  log.debug(`execGitCommandEntries: ${command}`);
+  const description = typeof command === 'string' ? command : JSON.stringify(command);
+  log.debug(`execGitCommandEntries: ${description}`);
   const timeout = getGitTimeout(depOptions);
   const process = runCommand(command, {
     timeout,
@@ -130,7 +131,7 @@ export async function* execGitCommandEntries(
     // If the process errors, this will throw
     await process;
   } catch (error) {
-    throw translateGitError(log, command, error);
+    throw translateGitError(log, description, error);
   } finally {
     // A consumer that stops early must not leave git running.
     if (running) {

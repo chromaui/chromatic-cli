@@ -70,15 +70,23 @@ export function partitionSkipped(
  * path, and matching anything else would hash a file the user untraced.
  *
  * @param context Where the repository is, what is untraced, and how to ask git and the disk.
+ * @param paths All disk paths the graph and sweeps will check.
  *
  * @returns The rule, by the path as given.
  */
-export async function buildSkipRule(context: SkipContext): Promise<SkipRule> {
+export async function buildSkipRule(
+  context: SkipContext,
+  paths: Iterable<AbsolutePath>
+): Promise<SkipRule> {
   const isUntraced = gitRootGlobMatcher(context.gitRoot, context.untraced);
-  const isUntrackedFile = await untrackedFileCheck(context);
+  const realPaths = new Map<AbsolutePath, AbsolutePath>();
+  for (const filePath of paths) {
+    if (!realPaths.has(filePath)) realPaths.set(filePath, context.projectFiles.realPath(filePath));
+  }
+  const isUntrackedFile = await untrackedFileCheck(context, realPaths.values());
 
   return (absolutePath) => {
-    const realPath = context.projectFiles.realPath(absolutePath);
+    const realPath = realPaths.get(absolutePath) ?? context.projectFiles.realPath(absolutePath);
     if (isUntraced(realPath)) return 'untraced';
     if (isUntrackedFile(realPath)) return 'untracked';
     return undefined;
@@ -121,14 +129,16 @@ export async function buildSkipRule(context: SkipContext): Promise<SkipRule> {
  * {@link ProjectFiles.untrackedPaths}.
  *
  * @param context Where the repository is, and how to ask git and the disk.
+ * @param realPaths The resolved candidates to check against the index.
  *
  * @returns The check, by real path.
  */
 async function untrackedFileCheck(
-  context: SkipContext
+  context: SkipContext,
+  realPaths: Iterable<AbsolutePath>
 ): Promise<(realPath: AbsolutePath) => boolean> {
   const { projectFiles } = context;
-  const untracked = await projectFiles.untrackedPaths();
+  const untracked = await projectFiles.untrackedPaths(realPaths);
 
   return (realPath) => !isInstalledPackagePath(realPath) && untracked.has(realPath);
 }

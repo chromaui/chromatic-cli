@@ -67,9 +67,10 @@ export interface ProjectFiles {
    * a path outside the repository. Paths are matched exactly as git names them, so a path reached
    * through a symlink is answered as tracked; resolve it with `realPath` first. Rejects when git
    * cannot answer: a guess of "everything is tracked" would hash every generated file as a real
-   * change, which is the over-capture the skip rule exists to prevent.
+   * change, which is the over-capture the skip rule exists to prevent. Given `realPaths`, git lists
+   * only the areas holding them, and asking about any other path in the repository throws.
    */
-  untrackedPaths(): Promise<UntrackedPaths>;
+  untrackedPaths(realPaths?: Iterable<AbsolutePath>): Promise<UntrackedPaths>;
 }
 
 /**
@@ -101,7 +102,7 @@ export function realProjectFiles(deps: GitDeps): ProjectFiles {
       writeFileSync(absolutePath, contents);
     },
     realPath,
-    untrackedPaths: () => getUntrackedPaths(deps),
+    untrackedPaths: (realPaths) => getUntrackedPaths(deps, realPaths),
   };
 }
 

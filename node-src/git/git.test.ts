@@ -395,18 +395,11 @@ describe('getUntrackedPaths', () => {
   it('answers by absolute path, covering everything under a wholly untracked directory', async () => {
     // first call from getRepositoryRoot()
     execGitCommand.mockResolvedValueOnce('/root');
-    execGitCommand.mockResolvedValueOnce(
-      ['generated/', 'debug.log', 'node_modules/'].join(NULL_BYTE) + NULL_BYTE
-    );
-
+    execGitCommandEntries.mockImplementationOnce(async function* () {
+      yield* ['generated/', 'debug.log', 'node_modules/'];
+    });
     const untracked = await getUntrackedPaths(ctx);
 
-    expect(execGitCommand).toHaveBeenNthCalledWith(
-      2,
-      ctx,
-      'git ls-files --others --directory -z --full-name -- :/',
-      { all: false, logResult: false }
-    );
     expect(untracked.has('/root/generated/schema.ts')).toBe(true);
     expect(untracked.has('/root/generated/deep/schema.ts')).toBe(true);
     expect(untracked.has('/root/debug.log')).toBe(true);
@@ -419,7 +412,9 @@ describe('getUntrackedPaths', () => {
 
   it('reports nothing when git lists nothing', async () => {
     execGitCommand.mockResolvedValueOnce('/root');
-    execGitCommand.mockResolvedValueOnce('');
+    execGitCommandEntries.mockImplementationOnce(async function* () {
+      yield* [];
+    });
 
     const untracked = await getUntrackedPaths(ctx);
 
