@@ -17,7 +17,7 @@ import { Context } from '../../..';
 import * as git from '../../../git/git';
 import getEnvironment from '../../getEnvironment';
 import TestLogger from '../../testLogger';
-import { LockFileMissingError } from './errors';
+import { BaselineCheckoutFailedError, LockFileMissingError } from './errors';
 import { findChangedDependencies } from './findChangedDependencies';
 
 vi.mock('snyk-nodejs-lockfile-parser');
@@ -46,6 +46,7 @@ readFileSync.mockReturnValue('');
 const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 const checkoutFile = vi.mocked(git.checkoutFile);
 const findFilesFromRepositoryRoot = vi.mocked(git.findFilesFromRepositoryRoot);
+const pathExistsAtReference = vi.mocked(git.pathExistsAtReference);
 const pnpmLockfileParser = vi.mocked(getPnpmLockfileParser);
 const pnpmWorkspaceProject = vi.mocked(parsePnpmWorkspaceProject);
 const inspect = vi.mocked(snyk.inspect);
@@ -72,6 +73,7 @@ beforeEach(() => {
   getRepositoryRoot.mockResolvedValue('/root');
   mockTrackedFiles(['package.json', 'yarn.lock']);
   checkoutFile.mockResolvedValue();
+  pathExistsAtReference.mockResolvedValue(false);
 });
 afterEach(() => {
   getRepositoryRoot.mockReset();
@@ -536,7 +538,7 @@ describe('findChangedDependencies with stats', () => {
   // `declares` lists the packages a workspace's manifest declares, by default all of `head`.
   type Graphs = Record<
     string,
-    { name: string; head: string[]; base?: string[]; declares?: string[] }
+    { name?: string; head: string[]; base?: string[]; declares?: string[] }
   >;
 
   // Serve each workspace's HEAD or baseline graph from the pnpm workspace parser, keyed by its
@@ -563,7 +565,8 @@ describe('findChangedDependencies with stats', () => {
       importers: Object.fromEntries(Object.keys(graphs).map((directory) => [directory, {}])),
     } as any);
     pnpmWorkspaceProject.mockImplementation(async (manifest, _lockfile, _options, importer) => {
-      const { name, head, base = head } = graphs[importer];
+      // The parser names the root of a manifest without a name `package.json`.
+      const { name = 'package.json', head, base = head } = graphs[importer];
       return fakeGraph(name, JSON.parse(manifest).file.startsWith(tmpdir) ? base : head) as any;
     });
     createChangedPackagesGraph.mockImplementation(async (from: any, to: any) => {
@@ -995,5 +998,92 @@ describe('findChangedDependencies with stats', () => {
         stats(...uiModules, './../../node_modules/storybook/dist/index.js')
       )
     ).resolves.toEqual(['storybook']);
+  });
+
+  it('reports everything a workspace added since the baseline installs', async () => {
+    mockWorkspace({
+      // The Storybook reaches the new workspace by path, so only its own pair names it.
+      'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] },
+      'packages/extra': { name: '@myorg/extra', head: ['is-odd@3.0.1'] },
+      // The Storybook doesn't load this one, so the `react` the Storybook declares is dropped. It
+      // has no name, so nothing stands for the workspace itself.
+      'packages/unused': { head: ['react@19.0.1', 'moment@2.31.0'] },
+    });
+    checkoutFile.mockImplementation(async (_, reference, file) => {
+      if (file === 'packages/extra/package.json' || file === 'packages/unused/package.json') {
+        throw new BaselineCheckoutFailedError(`${reference}:${file}`, { fileMissing: true });
+      }
+    });
+
+    const changes = await findChangedDependencies(
+      getStatsContext(),
+      stats(...uiModules, './../extra/src/index.ts')
+    );
+    expect(changes.toSorted()).toEqual(['@myorg/extra', 'is-odd', 'moment']);
+  });
+
+  it.each([
+    ['the folder existed at the baseline', () => pathExistsAtReference.mockResolvedValue(true)],
+    ['git cannot tell', () => pathExistsAtReference.mockRejectedValue(new Error('bad ref'))],
+  ])('throws when a manifest is added and %s', async (_, mockFolder) => {
+    // A `package.json` added to an existing folder can change what the folder resolves to.
+    mockWorkspace({ 'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] } });
+    const error = new BaselineCheckoutFailedError('A:packages/ui/package.json', {
+      fileMissing: true,
+    });
+    checkoutFile.mockImplementation(async (_, __, file) => {
+      if (file === 'packages/ui/package.json') throw error;
+    });
+    mockFolder();
+
+    await expect(findChangedDependencies(getStatsContext(), stats(...uiModules))).rejects.toBe(
+      error
+    );
+    expect(pathExistsAtReference).toHaveBeenCalledWith(expect.anything(), 'A', 'packages/ui');
+  });
+
+  it('throws when the baseline lockfile is missing', async () => {
+    mockWorkspace({ 'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] } });
+    const error = new BaselineCheckoutFailedError('A:pnpm-lock.yaml', { fileMissing: true });
+    checkoutFile.mockImplementation(async (_, __, file) => {
+      if (file === 'pnpm-lock.yaml') throw error;
+    });
+
+    await expect(findChangedDependencies(getStatsContext(), stats(...uiModules))).rejects.toBe(
+      error
+    );
+  });
+
+  it.each([true, false])(
+    'throws the manifest error when both checkouts fail (manifest missing: %s)',
+    async (fileMissing) => {
+      mockWorkspace({ 'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] } });
+      checkoutFile.mockImplementation(async (_, reference, file) => {
+        throw new BaselineCheckoutFailedError(`${reference}:${file}`, {
+          fileMissing: fileMissing || file === 'pnpm-lock.yaml',
+        });
+      });
+
+      // A bail reaches Sentry with the same error and pathspec as before added workspaces were
+      // handled. Every pair fails, so any manifest may be the one reported.
+      await expect(
+        findChangedDependencies(getStatsContext(), stats(...uiModules))
+      ).rejects.toMatchObject({
+        name: 'BaselineCheckoutFailedError',
+        message: expect.stringMatching(/^Failed to check out baseline file: A:.*package\.json$/),
+      });
+    }
+  );
+
+  it('throws when a manifest that may exist at the baseline cannot be checked out', async () => {
+    mockWorkspace({ 'packages/ui': { name: '@myorg/ui', head: ['react@19.0.1'] } });
+    const error = new BaselineCheckoutFailedError('A:packages/ui/package.json');
+    checkoutFile.mockImplementation(async (_, __, file) => {
+      if (file === 'packages/ui/package.json') throw error;
+    });
+
+    await expect(findChangedDependencies(getStatsContext(), stats(...uiModules))).rejects.toBe(
+      error
+    );
   });
 });

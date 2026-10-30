@@ -65,6 +65,18 @@ export const getDependencies = async (
   }
 };
 
+/**
+ * Get a workspace's own package name from its manifest. The parsers name the root of a graph whose
+ * manifest has no `name` `package.json`, so the graph root can't stand for the workspace.
+ *
+ * @param manifest The parsed `package.json`.
+ *
+ * @returns The name the manifest sets, or undefined when it sets none.
+ */
+export function getWorkspaceName(manifest: Record<string, any>) {
+  return typeof manifest.name === 'string' && manifest.name ? manifest.name : undefined;
+}
+
 // `snyk-nodejs-plugin` always resolves a pnpm manifest against the root importer, which leaves
 // `catalog:` and `workspace:` specifiers of nested packages unresolved. Drive the parser directly
 // so each manifest is resolved against its own importer table.

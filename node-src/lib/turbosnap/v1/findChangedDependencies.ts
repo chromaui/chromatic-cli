@@ -5,13 +5,18 @@ import pLimit from 'p-limit';
 import path from 'path';
 import semver from 'semver';
 
-import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../../../git/git';
+import {
+  checkoutFile,
+  findFilesFromRepositoryRoot,
+  getRepositoryRoot,
+  pathExistsAtReference,
+} from '../../../git/git';
 import { Context, Stats } from '../../../types';
 import { matchesFile, SUPPORTED_LOCK_FILES } from '../../utilities';
 import { getStatsProjectRoot } from '../statsPaths';
 import { compareBaseline } from './compareBaseline';
-import { LockFileMissingError } from './errors';
-import { getDependencies } from './getDependencies';
+import { BaselineCheckoutFailedError, LockFileMissingError } from './errors';
+import { getDependencies, getWorkspaceName } from './getDependencies';
 import { getStatsScope } from './getStatsScope';
 
 const PACKAGE_JSON = 'package.json';
@@ -146,6 +151,7 @@ export const findChangedDependencies = async (ctx: Context, stats: Stats) => {
           commits.map((reference) =>
             baseDependenciesLimit(async () => {
               const baselineChanges = await getBaselineChanges(ctx, {
+                rootPath,
                 reference,
                 manifestPath,
                 lockfilePath,
@@ -282,35 +288,70 @@ async function keepChangesInScope(
 
 /**
  * Finds the dependencies of a manifest/lockfile pair that changed since a baseline. A change means
- * either the version number is different or the dependency was added or removed.
+ * either the version number is different or the dependency was added or removed. A manifest added
+ * since the baseline makes everything it installs, and the workspace itself, a change; the tracer
+ * then decides which stories that reaches.
  *
  * @param ctx The context set when executing the CLI.
  * @param options The pair and the baseline to compare it with.
+ * @param options.rootPath The absolute repository root.
  * @param options.reference The baseline commit.
  * @param options.manifestPath The repository-relative path of the `package.json`.
  * @param options.lockfilePath The repository-relative path of its lockfile.
  * @param options.headDependencies The pair's dependency graph at HEAD.
  *
- * @returns The names of the changed dependencies. Throws when the baseline manifest or lockfile
- * can't be checked out, which makes the caller bail.
+ * @returns The names of the changed dependencies. Throws when the baseline lockfile, or a manifest
+ * that exists at the baseline, can't be checked out, which makes the caller bail.
  */
 async function getBaselineChanges(
   ctx: Context,
   {
+    rootPath,
     reference,
     manifestPath,
     lockfilePath,
     headDependencies,
-  }: { reference: string; manifestPath: string; lockfilePath: string; headDependencies: DepGraph }
+  }: {
+    rootPath: string;
+    reference: string;
+    manifestPath: string;
+    lockfilePath: string;
+    headDependencies: DepGraph;
+  }
 ) {
   // Check the baseline pair out into a temporary directory that mirrors the repository layout, so
   // the manifest keeps its position relative to the lockfile.
   const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'chromatic'));
   try {
-    await Promise.all([
+    const [manifestCheckout, lockfileCheckout] = await Promise.allSettled([
       checkoutFile(ctx, reference, manifestPath, tmpdir),
       checkoutFile(ctx, reference, lockfilePath, tmpdir),
     ]);
+    if (manifestCheckout.status === 'rejected') {
+      // Only a manifest git confirms is missing counts as added. Any other failure bails. A bail
+      // reports the manifest whenever its checkout failed, as it did before added manifests were
+      // handled.
+      const { reason } = manifestCheckout;
+      const isAdded = reason instanceof BaselineCheckoutFailedError && reason.fileMissing;
+      if (!isAdded || lockfileCheckout.status === 'rejected') throw reason;
+      // A manifest added to a folder that already existed can change what that folder resolves
+      // to, which the tracer can't see, so only a new folder counts as an added workspace. When
+      // git can't tell, bail rather than guess.
+      const directoryExisted = await pathExistsAtReference(
+        ctx,
+        reference,
+        path.posix.dirname(manifestPath)
+      ).catch(() => true);
+      if (directoryExisted) throw reason;
+
+      ctx.log.debug({ reference, manifestPath }, 'Workspace was added since the baseline');
+      const name = getWorkspaceName(readManifest(rootPath, manifestPath));
+      return new Set([
+        ...(name ? [name] : []),
+        ...headDependencies.getDepPkgs().map(({ name }) => name),
+      ]);
+    }
+    if (lockfileCheckout.status === 'rejected') throw lockfileCheckout.reason;
 
     const baselineDependencies = await getDependencies(ctx, {
       rootPath: tmpdir,
@@ -333,6 +374,22 @@ const isExact = (graph: DepGraph, name: string) => {
 };
 
 /**
+ * Reads and parses a manifest.
+ *
+ * @param rootPath The absolute repository root.
+ * @param manifestPath The repository-relative path of the `package.json`.
+ *
+ * @returns The parsed manifest, or an empty object when it can't be read.
+ */
+function readManifest(rootPath: string, manifestPath: string): Record<string, any> {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(rootPath, manifestPath), 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+/**
  * Lists the packages a manifest declares as its own dependencies. Peer dependencies are left out,
  * because the copy a peer resolves to belongs to whoever installs it.
  *
@@ -342,12 +399,8 @@ const isExact = (graph: DepGraph, name: string) => {
  * @returns The package names, or none when the manifest can't be read.
  */
 function readDeclaredDependencies(rootPath: string, manifestPath: string) {
-  try {
-    const manifest = JSON.parse(fs.readFileSync(path.join(rootPath, manifestPath), 'utf8'));
-    return ['dependencies', 'devDependencies', 'optionalDependencies'].flatMap((field) =>
-      Object.keys(manifest[field] ?? {})
-    );
-  } catch {
-    return [];
-  }
+  const manifest = readManifest(rootPath, manifestPath);
+  return ['dependencies', 'devDependencies', 'optionalDependencies'].flatMap((field) =>
+    Object.keys(manifest[field] ?? {})
+  );
 }

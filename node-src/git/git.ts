@@ -550,16 +550,41 @@ export async function checkoutFile(
     await mkdir(path.dirname(targetFileName), { recursive: true });
 
     deps.log.debug(`Checking out file ${pathspec} at ${targetFileName}`);
+    let fileMissing = false;
     try {
       const resolvedFileName = await resolveSymlinkAtReference(deps, reference, fileName);
+      fileMissing = resolvedFileName === undefined;
+      // A missing file still goes through `git show`, so the error it fails with is unchanged.
       await execGitCommand(
         deps,
-        `git show "${reference}:${resolvedFileName}" > "${targetFileName}"`
+        `git show "${reference}:${resolvedFileName ?? fileName}" > "${targetFileName}"`
       );
     } catch (error) {
-      throw new BaselineCheckoutFailedError(pathspec, { cause: error });
+      throw new BaselineCheckoutFailedError(pathspec, { cause: error, fileMissing });
     }
   });
+}
+
+/**
+ * Check whether a path, such as a directory, is in the tree at the given reference.
+ *
+ * @param deps Function dependencies.
+ * @param reference The reference (usually a commit or branch) to look at.
+ * @param repositoryPath The repository-relative path to look for.
+ *
+ * @returns Whether the reference's tree has the path. Throws when the reference is missing.
+ */
+export async function pathExistsAtReference(
+  deps: GitDeps,
+  reference: string,
+  repositoryPath: string
+) {
+  const entry = await execGitCommand(
+    deps,
+    `git ls-tree --full-tree ${reference} -- "${repositoryPath}"`,
+    { all: false }
+  );
+  return entry.trim() !== '';
 }
 
 /**
@@ -571,7 +596,8 @@ export async function checkoutFile(
  * @param reference The reference (usually a commit or branch) to resolve the path at.
  * @param fileName The repository-relative path to resolve.
  *
- * @returns The repository-relative path of the regular file the symlink chain points to.
+ * @returns The repository-relative path of the regular file the symlink chain points to, or
+ * undefined when the path itself isn't at the reference.
  */
 async function resolveSymlinkAtReference(deps: GitDeps, reference: string, fileName: string) {
   const visited = new Set<string>();
@@ -581,9 +607,13 @@ async function resolveSymlinkAtReference(deps: GitDeps, reference: string, fileN
     visited.add(current);
     const entry = await execGitCommand(
       deps,
-      `git ls-tree --full-tree ${reference} -- "${current}"`
+      `git ls-tree --full-tree ${reference} -- "${current}"`,
+      { all: false } // Only stdout, so a stderr warning can't hide a missing path.
     );
-    if (!entry?.startsWith(SYMLINK_MODE)) {
+    // `ls-tree` prints nothing for a path the tree doesn't have, and fails for a missing reference.
+    // A symlink whose target is missing is a broken file, not an added one.
+    if (!entry.trim() && current === fileName) return undefined;
+    if (!entry.startsWith(SYMLINK_MODE)) {
       return current;
     }
 

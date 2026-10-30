@@ -32,6 +32,7 @@ import {
   getVisitedCommitDetails,
   hasPreviousCommit,
   NULL_BYTE,
+  pathExistsAtReference,
   trackedFiles,
 } from './git';
 
@@ -466,6 +467,22 @@ describe('findFilesFromRepositoryRoot', () => {
   });
 });
 
+describe('pathExistsAtReference', () => {
+  it.each([
+    ['040000 tree abc123\tpackages/ui', true],
+    ['', false],
+  ])('reads `git ls-tree` output %j as %s', async (output, expected) => {
+    execGitCommand.mockResolvedValueOnce(output);
+
+    await expect(pathExistsAtReference(ctx, 'abc123', 'packages/ui')).resolves.toBe(expected);
+    expect(execGitCommand).toHaveBeenCalledWith(
+      ctx,
+      'git ls-tree --full-tree abc123 -- "packages/ui"',
+      { all: false }
+    );
+  });
+});
+
 describe('checkoutFile', () => {
   it('shows the file at the reference when it is a regular file', async () => {
     execGitCommand.mockResolvedValueOnce('100644 blob abc123\tpackage.json');
@@ -476,7 +493,8 @@ describe('checkoutFile', () => {
     expect(execGitCommand).toHaveBeenNthCalledWith(
       1,
       ctx,
-      'git ls-tree --full-tree abc123 -- "package.json"'
+      'git ls-tree --full-tree abc123 -- "package.json"',
+      { all: false }
     );
     expect(execGitCommand).toHaveBeenLastCalledWith(
       ctx,
@@ -527,6 +545,44 @@ describe('checkoutFile', () => {
       name: 'BaselineCheckoutFailedError',
       cause: { message: 'Symbolic link cycle: abc123:a/one' },
     });
+  });
+
+  it('marks the error when the file is not at the reference, and otherwise fails as before', async () => {
+    const cause = new Error("fatal: path 'packages/new/package.json' does not exist in 'abc123'");
+    execGitCommand.mockResolvedValueOnce('');
+    execGitCommand.mockRejectedValueOnce(cause);
+
+    await expect(
+      checkoutFile(ctx, 'abc123', 'packages/new/package.json', '/tmp/anywhere')
+    ).rejects.toEqual(
+      Object.assign(
+        new BaselineCheckoutFailedError('abc123:packages/new/package.json', { cause }),
+        { fileMissing: true }
+      )
+    );
+    expect(execGitCommand).toHaveBeenLastCalledWith(
+      ctx,
+      'git show "abc123:packages/new/package.json" > "/tmp/anywhere/packages/new/package.json"'
+    );
+  });
+
+  it.each([
+    ['the reference is missing', () => execGitCommand.mockRejectedValueOnce(new Error('bad ref'))],
+    [
+      'a symlink target is missing',
+      () => {
+        execGitCommand.mockResolvedValueOnce('120000 blob abc123\tpackages/ui/package.json');
+        execGitCommand.mockResolvedValueOnce('../gone/package.json\n');
+        execGitCommand.mockResolvedValueOnce('');
+        execGitCommand.mockRejectedValueOnce(new Error('git show failed'));
+      },
+    ],
+  ])('does not report a missing file when %s', async (_, mockGit) => {
+    mockGit();
+
+    await expect(
+      checkoutFile(ctx, 'abc123', 'packages/ui/package.json', '/tmp/anywhere')
+    ).rejects.toMatchObject({ name: 'BaselineCheckoutFailedError', fileMissing: false });
   });
 
   it('wraps a failing `git show` in BaselineCheckoutFailedError with cause', async () => {
