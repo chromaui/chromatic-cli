@@ -144,6 +144,108 @@ export function isInstalledPackagePath(filePath: string): boolean {
   return isNodeModulesPath(filePath) && !isGeneratedNodeModulesPath(filePath);
 }
 
+// A file inside a package in pnpm's virtual store: `node_modules/.pnpm/<dir>/node_modules/<pkg>/…`.
+// Captures the separator before `node_modules`, the `.pnpm/<dir>/node_modules/` hop, the store
+// directory and the package name (`@scope/name` for a scoped package). Either separator.
+const PNPM_STORE_FILE =
+  /(^|[\\/])node_modules[\\/](\.pnpm[\\/]([^\\/]+)[\\/]node_modules[\\/])((?:@[^\\/]+[\\/])?[^\\/]+)[\\/]/;
+// A file inside a package installed straight into `node_modules` (npm, Yarn classic, or pnpm's
+// hoisted links): the first `node_modules/<pkg>/` along the path whose package is not a dot directory.
+const PACKAGE_FILE = /(^|[\\/])node_modules[\\/]((?:@[^\\/]+[\\/])?[^\\/.][^\\/]*)[\\/]/;
+
+/**
+ * Where a file's package sits: the path the package rolls up under, which is its pnpm store path
+ * with the `.pnpm/<dir>/node_modules/` hop dropped, and the directory that holds this copy of it.
+ *
+ * @param filePath The canonical path of the file.
+ *
+ * @returns The package's roll-up path and copy directory, the length of the hop, and where the hop
+ * starts, or undefined when the file is in no package.
+ */
+function packageCopy(
+  filePath: FilePath
+): { packagePath: string; copy: string; hopStart: number; hopLength: number } | undefined {
+  const store = PNPM_STORE_FILE.exec(filePath);
+  if (store) {
+    const hopStart = store.index + store[1].length + 'node_modules/'.length;
+    return {
+      packagePath: filePath.slice(0, hopStart) + store[4],
+      copy: store[3],
+      hopStart,
+      hopLength: store[2].length,
+    };
+  }
+  const installed = PACKAGE_FILE.exec(filePath);
+  if (installed) {
+    const packageStart = installed.index + installed[1].length + 'node_modules/'.length;
+    return {
+      packagePath: filePath.slice(0, packageStart) + installed[2],
+      copy: '',
+      hopStart: 0,
+      hopLength: 0,
+    };
+  }
+  return undefined;
+}
+
+/**
+ * Builds the path a file takes inside a roll-up. A roll-up names each file by path and content
+ * hash (see `rollUpEntryHashes`); this drops pnpm's store directory from the path of a package that
+ * has exactly one copy in the build, so `node_modules/.pnpm/<dir>/node_modules/<pkg>/<subpath>`
+ * rolls up as `node_modules/<pkg>/<subpath>`. Every other path is returned unchanged.
+ *
+ * pnpm names the store directory after the package's version and its resolved peers, and shortens a
+ * long name to a hash. A peer changing renames the directory and so every file path under it, while
+ * the package's bytes stay identical. A rename of `storybook`'s directory after a bump of its
+ * `@types/react` peer would otherwise move every roll-up and recapture every story, though nothing
+ * that renders changed.
+ *
+ * What keeps ignoring the rename safe:
+ * - The content hash stays in every entry, so a new version of a package, or of a peer that is
+ *   bundled, still moves the roll-up through its own files.
+ * - A peer that is not bundled (types, test tooling) changes no output byte.
+ * - The directory is dropped only when the build holds a single copy of the package. A rename can
+ *   also split a package into two copies with identical bytes but separate module state, as when
+ *   a story's `@emotion/react` stops seeing the `ThemeProvider` preview renders from the other
+ *   copy. Those files keep their real paths, so a copy appearing or disappearing moves the
+ *   roll-ups, including when the copies land in different roll-ups. Copies are counted per
+ *   package, not per file, because a package split across copies breaks the same way. A copy
+ *   installed straight into `node_modules/<pkg>` counts too, so no rewritten path can collide with
+ *   a real one.
+ * - Bundlers inline no store path into what renders: Vite's output is byte-identical across the
+ *   rename. webpack inlines a bare `import.meta.url` as the absolute path, which only matters when
+ *   a story renders that string.
+ *
+ * Only roll-up identities use this. Manifest keys (`files`, `storyFiles`, `skippedFiles`) keep the
+ * real path, so a story file's identity still follows its location. Other layouts are out of scope:
+ * npm and Yarn classic paths never pass through `.pnpm`, and there a moved package is often a real
+ * second copy.
+ *
+ * @param filePaths Every on-disk file in the build, keyed by canonical path. Copies are counted
+ * across all of them, not per roll-up.
+ *
+ * @returns The path to roll a file up under.
+ */
+export function buildRollUpPath(filePaths: Iterable<FilePath>): (filePath: FilePath) => FilePath {
+  const copiesByPackage = new Map<string, Set<string>>();
+  for (const filePath of filePaths) {
+    const located = packageCopy(filePath);
+    if (!located) continue;
+    const copies = copiesByPackage.get(located.packagePath) ?? new Set();
+    copiesByPackage.set(located.packagePath, copies.add(located.copy));
+  }
+
+  return (filePath) => {
+    const located = packageCopy(filePath);
+    if (!located?.hopLength || copiesByPackage.get(located.packagePath)?.size !== 1) {
+      return filePath;
+    }
+    return (
+      filePath.slice(0, located.hopStart) + filePath.slice(located.hopStart + located.hopLength)
+    );
+  };
+}
+
 // A Rollup proxy id: a NUL byte before the id of a module a builder created to stand for a real
 // file (CommonJS interop, framework SFC blocks). Only a proxy for a relative path names a file.
 const NUL = '\0';

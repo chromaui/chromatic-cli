@@ -12,7 +12,7 @@ import {
 } from './graph';
 import { ManifestInput } from './manifestInput';
 import { hashOutOfGraphFiles, OutOfGraphFiles, rollUpOutOfGraphFiles } from './outOfGraphFiles';
-import { normalizeStatsPath } from './paths';
+import { buildRollUpPath, normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
 import { buildSkipRule, SkipReason } from './skippedFiles';
 import { readStatsGraph } from './statsGraph';
@@ -108,10 +108,12 @@ export async function buildManifest(
   input.log.debug(`Found ${storyFiles.size} story files from preview-stats.json`);
 
   const { h64ToString } = await xxHashWasm();
+  // Counted over every on-disk file once, so each roll-up sees the same copies; see buildRollUpPath.
+  const rollUpPath = buildRollUpPath(hashes.keys());
   const storyFileHashes = new Map<FilePath, FileHash>();
   for (const storyFile of storyFiles) {
     const subtree = collectTransitiveDependencies(files, storyFile);
-    storyFileHashes.set(storyFile, rollUpFileHashes(hashes, subtree, h64ToString));
+    storyFileHashes.set(storyFile, rollUpFileHashes(hashes, subtree, h64ToString, rollUpPath));
   }
 
   const { storybookConfigHashes, attribution } = collectStorybookFiles(
@@ -121,7 +123,8 @@ export async function buildManifest(
     normalizeStatsPath(input.configDir, input.projectRoot),
     globalRoots,
     untracedSubtrees,
-    h64ToString
+    h64ToString,
+    rollUpPath
   );
   input.log.debug(
     `Attributed ${attribution.previewSubtree.size} files to the preview config subtree`
