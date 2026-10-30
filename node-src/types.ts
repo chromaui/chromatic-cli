@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import { InitialContext } from '.';
 import GraphQLClient from './io/graphqlClient';
 import HTTPClient from './io/httpClient';

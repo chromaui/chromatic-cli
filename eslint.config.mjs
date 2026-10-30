@@ -55,6 +55,15 @@ export default [
     files: ['**/*.js', '**/*.ts', '**/*.jsx', '**/*.tsx'],
     rules: {
       '@eslint-community/eslint-comments/disable-enable-pair': ['error', { allowWholeFile: true }],
+      // Split a source file that hits max-lines instead of disabling the rule.
+      '@eslint-community/eslint-comments/no-restricted-disable': ['error', 'max-lines'],
+    },
+  },
+  // These files were already past 500 lines. They may not grow past 1000; split them before then.
+  {
+    files: ['node-src/git/git.ts', 'node-src/types.ts'],
+    rules: {
+      'max-lines': ['error', 1000],
     },
   },
   // lint typescript
@@ -257,6 +266,7 @@ export default [
     files: ['**/*.test.*'],
     rules: {
       'max-lines': 'warn',
+      '@eslint-community/eslint-comments/no-restricted-disable': 'off',
       'jsdoc/require-jsdoc': 'off',
       'unicorn/no-null': 'off', // GraphQL returns `null` when there is no value
     },
