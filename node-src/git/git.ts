@@ -736,12 +736,12 @@ export async function findFilesFromRepositoryRoot(
   return files?.split(NULL_BYTE).filter(Boolean);
 }
 
-// Only narrow a simple glob. In particular, even an apparent directory prefix can be escaped
-// by picomatch syntax elsewhere in the pattern (e.g. "src/a|b" also matches the root file "b").
+// Infer a scope only from simple paths, including dotted filenames such as "postcss.config.js".
+// Picomatch alternation can escape an apparent directory prefix: "src/a|b" also matches "b".
 function literalGlobPrefix(glob: string): string {
-  if (/[^\w./*?-]/u.test(glob)) return '';
+  if (!/[./]/u.test(glob) || /[^\w./*?-]/u.test(glob)) return '';
   const parts = glob.replace(/^\.\//u, '').split('/');
-  if (parts.length < 2 || parts.some((part) => !part || part === '.' || part === '..')) return '';
+  if (parts.some((part) => !part || part === '.' || part === '..')) return '';
   const wildcard = parts.findIndex((part) => /[*?]/u.test(part));
   return wildcard === -1 ? parts.join('/') : parts.slice(0, wildcard).join('/');
 }
@@ -761,7 +761,7 @@ export function trackedFiles(
   repoRoot: string,
   globs: string[] = []
 ): AsyncIterable<string> {
-  const prefixes = new Set(globs.map((glob) => literalGlobPrefix(glob)));
+  const prefixes = new Set(globs.filter(Boolean).map((glob) => literalGlobPrefix(glob)));
   const pathspecs = [...prefixes].join(' ');
   // Prefixes contain only literal path components without spaces. Keep the original listing if
   // any pattern needs the whole tree or the argument list would be too long on some platforms.

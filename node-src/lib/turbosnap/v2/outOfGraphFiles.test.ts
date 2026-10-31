@@ -298,15 +298,18 @@ describe('hashOutOfGraphFiles externals', () => {
     expect([...externals.keys()]).toEqual(['../../tailwind.config.js']);
   });
 
-  it('is empty when no externals are configured, without reading the git index', async () => {
-    const projectFiles = inMemoryProjectFiles(disk);
-    const trackedFiles = vi.spyOn(projectFiles, 'trackedFiles');
+  it.each([{ externals: [] }, { externals: [''] }])(
+    'skips the git index for empty external patterns ($externals)',
+    async (options) => {
+      const projectFiles = inMemoryProjectFiles(disk);
+      const trackedFiles = vi.spyOn(projectFiles, 'trackedFiles');
 
-    const { externals } = await sweep(makeInput(disk, { projectFiles }));
+      const { externals } = await sweep(makeInput(disk, { ...options, projectFiles }));
 
-    expect(externals.size).toBe(0);
-    expect(trackedFiles).not.toHaveBeenCalled();
-  });
+      expect(externals.size).toBe(0);
+      expect(trackedFiles).not.toHaveBeenCalled();
+    }
+  );
 
   it('skips an indexed path with no file on disk, such as a deleted file or a submodule root', async () => {
     const { externals } = await sweep(

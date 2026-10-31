@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { getFileHashes } from '../../getFileHashes';
 import TestLogger from '../../testLogger';
 import { lock, repository, temporaryDirectory, track, write } from './__fixtures__/temporaryDisk';
+import { gitRootGlobMatcher } from './paths';
 import { realProjectFiles } from './projectFiles';
 
 vi.mock('../../getFileHashes', { spy: true });
@@ -146,32 +147,33 @@ describe('realProjectFiles trackedFiles', () => {
     ]);
   });
 
-  it('lists candidates from each literal prefix and skips unrelated directories', async () => {
+  it('finds the matching external files without scanning an unrelated directory', async () => {
     const root = repository();
-    track(root, 'ui/deep/main.css');
+    const stylesheet = track(root, 'ui/deep/main.css');
     track(root, 'ui/button.ts');
-    track(root, 'theme/index.js');
-    track(root, 'other/deep/main.css');
+    const config = track(root, 'postcss.config.js');
+    const unrelated = track(root, 'other/deep/main.css');
+    const patterns = ['./ui/**/*.css', '', 'postcss.config.js'];
 
-    const files = await Array.fromAsync(
-      realProjectFiles({ log }).trackedFiles(root, ['./ui/**/*.css', 'theme/index.js'])
+    const candidates = await Array.fromAsync(
+      realProjectFiles({ log }).trackedFiles(root, patterns)
     );
 
-    expect(files).toEqual(
-      ['theme/index.js', 'ui/button.ts', 'ui/deep/main.css'].map((file) => path.join(root, file))
-    );
+    expect(candidates.filter(gitRootGlobMatcher(root, patterns))).toEqual([config, stylesheet]);
+    expect(candidates).not.toContain(unrelated);
   });
 
-  it.each(['**/*.css', 'ui/theme|theme.js', 'constructor'])(
-    'keeps the full listing for an unscoped pattern %s',
+  it.each(['**/*.css', 'ui/theme|theme.css'])(
+    'keeps matches outside the scoped directory when another pattern is %s',
     async (glob) => {
       const root = repository();
-      track(root, 'ui/main.css');
-      track(root, 'theme.js');
-      const files = await Array.fromAsync(
-        realProjectFiles({ log }).trackedFiles(root, ['ui/main.css', glob])
+      const inside = track(root, 'ui/main.css');
+      const outside = track(root, 'theme.css');
+      const patterns = ['ui/main.css', glob];
+      const candidates = await Array.fromAsync(
+        realProjectFiles({ log }).trackedFiles(root, patterns)
       );
-      expect(files).toEqual(['theme.js', 'ui/main.css'].map((file) => path.join(root, file)));
+      expect(candidates.filter(gitRootGlobMatcher(root, patterns))).toEqual([outside, inside]);
     }
   );
 

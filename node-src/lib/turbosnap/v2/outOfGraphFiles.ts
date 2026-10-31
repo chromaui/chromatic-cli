@@ -176,7 +176,7 @@ async function listExternalFiles(
   input: Pick<OutOfGraphInput, 'log' | 'gitRoot' | 'externals' | 'projectFiles'>
 ): Promise<AbsolutePath[]> {
   const { log, gitRoot, externals, projectFiles } = input;
-  if (externals.length === 0) {
+  if (!externals.some(Boolean)) {
     return [];
   }
 
