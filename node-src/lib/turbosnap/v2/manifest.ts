@@ -2,14 +2,7 @@ import path from 'path';
 import xxHashWasm from 'xxhash-wasm';
 
 import { Stats } from '../../../types';
-import {
-  collectTransitiveDependencies,
-  FileHash,
-  FilePath,
-  hashEntryIdentities,
-  rollUpFileHashes,
-  TurboSnapFile,
-} from './graph';
+import { FileHash, FilePath, hashEntryIdentities, TurboSnapFile } from './graph';
 import { ManifestInput } from './manifestInput';
 import { hashOutOfGraphFiles, OutOfGraphFiles, rollUpOutOfGraphFiles } from './outOfGraphFiles';
 import { normalizeStatsPath } from './paths';
@@ -19,6 +12,7 @@ import { readStatsGraph } from './statsGraph';
 import { STORYBOOK_VERSION_KEY, StorybookFileKey } from './storybookFileKeys';
 import { collectStorybookFiles, FileAttribution } from './storybookFiles';
 import { resolveStorybookVersion } from './storybookVersion';
+import { createStoryFileHasher } from './storyFileHasher';
 
 type StorybookVersion = string;
 
@@ -107,11 +101,12 @@ export async function buildManifest(
   } = await readStatsGraph(stats, input, skipRule);
   input.log.debug(`Found ${storyFiles.size} story files from preview-stats.json`);
 
-  const { h64ToString } = await xxHashWasm();
+  const xxhash = await xxHashWasm();
+  const { h64ToString } = xxhash;
   const storyFileHashes = new Map<FilePath, FileHash>();
+  const hashStoryFile = createStoryFileHasher(files, hashes, storyFiles, xxhash);
   for (const storyFile of storyFiles) {
-    const subtree = collectTransitiveDependencies(files, storyFile);
-    storyFileHashes.set(storyFile, rollUpFileHashes(hashes, subtree, h64ToString));
+    storyFileHashes.set(storyFile, hashStoryFile(storyFile));
   }
 
   const { storybookConfigHashes, attribution } = collectStorybookFiles(
