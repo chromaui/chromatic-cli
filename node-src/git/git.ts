@@ -736,17 +736,42 @@ export async function findFilesFromRepositoryRoot(
   return files?.split(NULL_BYTE).filter(Boolean);
 }
 
+// Infer a scope only from simple paths, including dotted filenames such as "postcss.config.js".
+// Picomatch alternation can escape an apparent directory prefix: "src/a|b" also matches "b".
+function literalGlobPrefix(glob: string): string {
+  if (!/[./]/u.test(glob) || /[^\w./*?-]/u.test(glob)) return '';
+  const parts = glob.replace(/^\.\//u, '').split('/');
+  if (parts.some((part) => !part || part === '.' || part === '..')) return '';
+  const wildcard = parts.findIndex((part) => /[*?]/u.test(part));
+  return wildcard === -1 ? parts.join('/') : parts.slice(0, wildcard).join('/');
+}
+
 /**
- * Every path in the git index, relative to the repository root, streamed rather than listed: a
+ * Paths in the git index, relative to the repository root, streamed rather than listed: a
  * monorepo's index can run to millions of entries, more than fits in one command result.
  *
  * @param deps Function dependencies.
  * @param repoRoot The root path of the repository (usually from `getRepositoryRoot()`).
+ * @param globs Optional patterns to narrow the listing. The caller must still match each result.
  *
- * @returns Every indexed path, relative to `repoRoot`, as git lists it. Includes paths whose file is
- * gone from the working tree and submodule roots, since the index still names them.
+ * @returns Candidate indexed paths relative to `repoRoot`, including missing files and submodule roots.
  */
-export function trackedFiles(deps: GitDeps, repoRoot: string): AsyncIterable<string> {
+export function trackedFiles(
+  deps: GitDeps,
+  repoRoot: string,
+  globs: string[] = []
+): AsyncIterable<string> {
+  const prefixes = new Set(globs.filter(Boolean).map((glob) => literalGlobPrefix(glob)));
+  const pathspecs = [...prefixes].join(' ');
+  // Prefixes contain only literal path components without spaces. Keep the original listing if
+  // any pattern needs the whole tree or the argument list would be too long on some platforms.
+  if (pathspecs && !prefixes.has('') && pathspecs.length <= 4096) {
+    return execGitCommandEntries(deps, `git ls-files --full-name -z -- ${pathspecs}`, {
+      cwd: repoRoot,
+      shell: false,
+    });
+  }
+
   // Run from the root because git lists only the current directory's subtree, and the CLI may run
   // from a subdirectory.
   return execGitCommandEntries(deps, 'git ls-files --full-name -z', { cwd: repoRoot });

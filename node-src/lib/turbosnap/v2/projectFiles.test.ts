@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { getFileHashes } from '../../getFileHashes';
 import TestLogger from '../../testLogger';
 import { lock, repository, temporaryDirectory, track, write } from './__fixtures__/temporaryDisk';
+import { gitRootGlobMatcher } from './paths';
 import { realProjectFiles } from './projectFiles';
 
 vi.mock('../../getFileHashes', { spy: true });
@@ -145,6 +146,36 @@ describe('realProjectFiles trackedFiles', () => {
       path.join(root, 'tailwind.config.js'),
     ]);
   });
+
+  it('finds the matching external files without scanning an unrelated directory', async () => {
+    const root = repository();
+    const stylesheet = track(root, 'ui/deep/main.css');
+    track(root, 'ui/button.ts');
+    const config = track(root, 'postcss.config.js');
+    const unrelated = track(root, 'other/deep/main.css');
+    const patterns = ['./ui/**/*.css', '', 'postcss.config.js'];
+
+    const candidates = await Array.fromAsync(
+      realProjectFiles({ log }).trackedFiles(root, patterns)
+    );
+
+    expect(candidates.filter(gitRootGlobMatcher(root, patterns))).toEqual([config, stylesheet]);
+    expect(candidates).not.toContain(unrelated);
+  });
+
+  it.each(['**/*.css', 'ui/theme|theme.css'])(
+    'keeps matches outside the scoped directory when another pattern is %s',
+    async (glob) => {
+      const root = repository();
+      const inside = track(root, 'ui/main.css');
+      const outside = track(root, 'theme.css');
+      const patterns = ['ui/main.css', glob];
+      const candidates = await Array.fromAsync(
+        realProjectFiles({ log }).trackedFiles(root, patterns)
+      );
+      expect(candidates.filter(gitRootGlobMatcher(root, patterns))).toEqual([outside, inside]);
+    }
+  );
 
   it('keeps an indexed file that was deleted from the working tree, for the caller to filter', async () => {
     const root = repository();

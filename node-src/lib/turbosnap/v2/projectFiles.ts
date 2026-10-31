@@ -48,11 +48,12 @@ export interface ProjectFiles {
    */
   listTree(absolutePath: AbsolutePath): AbsolutePath[];
   /**
-   * Every path in the git index under the repository root, absolute, streamed as git lists it so a
+   * Candidate paths in the git index, absolute. Globs may narrow the stream to literal prefixes,
+   * so the caller must still apply its matcher. Without globs this streams the full index so a
    * monorepo's index never has to be held whole. Includes paths whose file is gone from disk and
    * submodule roots, so a caller that hashes the result filters with `isFile`.
    */
-  trackedFiles(gitRoot: AbsolutePath): AsyncIterable<AbsolutePath>;
+  trackedFiles(gitRoot: AbsolutePath, globs?: string[]): AsyncIterable<AbsolutePath>;
   /** Writes the contents to the file, creating parent directories and overwriting it if present. */
   writeFile(absolutePath: AbsolutePath, contents: string): void;
   /**
@@ -94,7 +95,7 @@ export function realProjectFiles(deps: GitDeps): ProjectFiles {
       readPackageVersion(log, fromDirectory, packageName),
     hashAll: hashFileContents,
     listTree: (absolutePath: AbsolutePath) => listTree(log, absolutePath),
-    trackedFiles: (gitRoot: AbsolutePath) => trackedFiles(deps, gitRoot),
+    trackedFiles: (gitRoot, globs) => trackedFiles(deps, gitRoot, globs),
     writeFile: (absolutePath: AbsolutePath, contents: string) => {
       mkdirSync(path.dirname(absolutePath), { recursive: true });
       writeFileSync(absolutePath, contents);
@@ -218,11 +219,16 @@ function namePathThatFailed(error: any, absolutePaths: AbsolutePath[]): string {
  *
  * @param deps The logger, and the options the git command reads its timeout from.
  * @param gitRoot The absolute repository root.
+ * @param globs Optional patterns to narrow the candidate listing.
  *
- * @yields {AbsolutePath} The absolute path of each indexed entry.
+ * @yields {AbsolutePath} The absolute path of each candidate indexed entry.
  */
-async function* trackedFiles(deps: GitDeps, gitRoot: AbsolutePath): AsyncIterable<AbsolutePath> {
-  for await (const relativePath of trackedRelativePaths(deps, gitRoot)) {
+async function* trackedFiles(
+  deps: GitDeps,
+  gitRoot: AbsolutePath,
+  globs?: string[]
+): AsyncIterable<AbsolutePath> {
+  for await (const relativePath of trackedRelativePaths(deps, gitRoot, globs)) {
     yield path.join(gitRoot, relativePath);
   }
 }
