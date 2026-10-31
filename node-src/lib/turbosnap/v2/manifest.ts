@@ -7,7 +7,6 @@ import { ManifestInput } from './manifestInput';
 import { hashOutOfGraphFiles, OutOfGraphFiles, rollUpOutOfGraphFiles } from './outOfGraphFiles';
 import { normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
-import { tryRankedStoryHashes } from './rankedStoryHashes';
 import { buildSkipRule, SkipReason } from './skippedFiles';
 import { readStatsGraph } from './statsGraph';
 import { STORYBOOK_VERSION_KEY, StorybookFileKey } from './storybookFileKeys';
@@ -104,11 +103,10 @@ export async function buildManifest(
 
   const xxhash = await xxHashWasm();
   const { h64ToString } = xxhash;
-  let storyFileHashes = tryRankedStoryHashes(files, hashes, storyFiles, xxhash);
-  if (!storyFileHashes) {
-    storyFileHashes = new Map<FilePath, FileHash>();
-    const hashStoryFile = createStoryFileHasher(files, hashes, storyFiles, h64ToString);
-    for (const storyFile of storyFiles) storyFileHashes.set(storyFile, hashStoryFile(storyFile));
+  const storyFileHashes = new Map<FilePath, FileHash>();
+  const hashStoryFile = createStoryFileHasher(files, hashes, storyFiles, xxhash);
+  for (const storyFile of storyFiles) {
+    storyFileHashes.set(storyFile, hashStoryFile(storyFile));
   }
 
   const { storybookConfigHashes, attribution } = collectStorybookFiles(

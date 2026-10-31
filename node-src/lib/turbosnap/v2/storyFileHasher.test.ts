@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import xxHashWasm from 'xxhash-wasm';
 
 import {
   collectTransitiveDependencies,
@@ -8,10 +9,9 @@ import {
 } from './graph';
 import { createStoryFileHasher } from './storyFileHasher';
 
-// Compare the bytes passed to xxhash directly.
-const identity = (input: string) => input;
+const xxhash = await xxHashWasm();
 
-function expectOriginalHashInputs(
+function expectOriginalHashes(
   graph: Record<string, string[]>,
   stories: string[],
   hashOverrides: Record<string, string> = {}
@@ -24,33 +24,36 @@ function expectOriginalHashInputs(
     hashes.set(path, hash);
   }
 
-  const hashStory = createStoryFileHasher(files, hashes, new Set(stories), identity);
+  const hashStory = createStoryFileHasher(files, hashes, new Set(stories), xxhash);
   for (const story of stories) {
     const dependencies = collectTransitiveDependencies(files, story);
-    expect(hashStory(story), story).toBe(rollUpFileHashes(hashes, dependencies, identity));
+    expect(hashStory(story), story).toBe(
+      rollUpFileHashes(hashes, dependencies, xxhash.h64ToString)
+    );
   }
 }
 
 describe('createStoryFileHasher', () => {
   it('counts overlapping imports once and only includes the shared subtree when reachable', () => {
-    expectOriginalHashInputs(
+    expectOriginalHashes(
       {
         'A.stories.ts': ['shared.ts', 'leaf.ts'],
         'B.stories.ts': ['leaf.ts', 'shared.ts'],
         'Leaf.stories.ts': ['leaf.ts'],
+        'Cycle.stories.ts': ['cycle.ts'],
         'shared.ts': ['leaf.ts', 'cycle.ts', 'missing.ts'],
         'cycle.ts': ['shared.ts'],
         'leaf.ts': [],
       },
-      ['A.stories.ts', 'B.stories.ts', 'Leaf.stories.ts']
+      ['A.stories.ts', 'B.stories.ts', 'Leaf.stories.ts', 'Cycle.stories.ts']
     );
   });
 
   it('merges escaped and Unicode paths in encoded order', () => {
-    expectOriginalHashInputs(
+    expectOriginalHashes(
       {
         'A.stories.ts': ['shared.ts', 'a".ts', 'b.ts'],
-        'B.stories.ts': ['shared.ts', 'a\t.ts'],
+        'B.stories.ts': ['shared.ts', 'a\t.ts', 'a".ts', 'b.ts'],
         'shared.ts': ['a\n.ts', 'a😀.ts', 'z.ts'],
         'a\n.ts': [],
         'a😀.ts': [],
@@ -63,7 +66,7 @@ describe('createStoryFileHasher', () => {
   });
 
   it('omits an entirely skipped subtree while retaining private imports', () => {
-    expectOriginalHashInputs(
+    expectOriginalHashes(
       {
         'A.stories.ts': ['generated.ts', 'tracked.ts'],
         'B.stories.ts': ['generated.ts'],
@@ -77,7 +80,7 @@ describe('createStoryFileHasher', () => {
   });
 
   it('hashes disjoint stories with only their own dependencies', () => {
-    expectOriginalHashInputs(
+    expectOriginalHashes(
       {
         'A.stories.ts': ['button.ts'],
         'button.ts': ['icon.ts'],

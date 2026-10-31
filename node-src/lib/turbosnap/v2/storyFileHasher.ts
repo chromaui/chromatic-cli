@@ -1,3 +1,5 @@
+import type { XXHashAPI } from 'xxhash-wasm';
+
 import {
   collectTransitiveDependencies,
   FileHash,
@@ -84,43 +86,56 @@ function collectOutsideSharedClosure(
   shared: SharedClosure
 ): { reached: Set<FilePath>; includesShared: boolean } {
   const reached = new Set<FilePath>();
-  const pending = [filePath];
+  const pending: FilePath[] = [];
+  const deferred: FilePath[] = [];
   let includesShared = false;
-  while (pending.length > 0) {
-    const current = pending.pop();
-    if (
-      current === undefined ||
-      reached.has(current) ||
-      (includesShared && shared.dependencies.has(current))
-    ) {
-      continue;
-    }
-    if (current === shared.anchor) {
-      // Only the anchor proves this whole closure is reachable. A descendant alone does not.
+
+  function visit(path: FilePath) {
+    if (path === shared.anchor) {
       includesShared = true;
-    } else {
-      reached.add(current);
-      for (const dependency of files.get(current)?.dependencies ?? []) pending.push(dependency);
+      deferred.length = 0;
+      return;
     }
+    if (reached.has(path)) return;
+    // Try the story's other imports first. Finding the anchor lets us skip all deferred imports.
+    if (shared.dependencies.has(path)) {
+      if (includesShared) return;
+      deferred.push(path);
+    } else {
+      pending.push(path);
+    }
+    reached.add(path);
+  }
+
+  visit(filePath);
+  while (true) {
+    const current = pending.pop() ?? deferred.pop();
+    if (current === undefined) break;
+    for (const dependency of files.get(current)?.dependencies ?? []) visit(dependency);
   }
   return { reached, includesShared };
 }
 
-// A shared subtree usually has many more entries than the story adds. Keep it joined and
-// splice in each extra entry at its sorted position without copying every shared entry.
-function createSharedHashInput(entries: string[]): (extras: string[]) => string {
+// Encode the shared entries once. Feed their byte ranges and the story's own entries to xxhash
+// in the same order as sorting and joining every entry for the story.
+function createSharedHasher(
+  entries: string[],
+  xxhash: Pick<XXHashAPI, 'h64ToString' | 'create64'>
+) {
+  const shared = Buffer.from(entries.join(''));
   const offsets = [0];
   let offset = 0;
   for (const entry of entries) {
-    offset += entry.length;
+    offset += Buffer.byteLength(entry);
     offsets.push(offset);
   }
-  const joined = entries.join('');
 
-  return (extras) => {
-    if (extras.length === 0) return joined;
-
-    const parts: string[] = [];
+  return (extras: string[]) => {
+    // When most entries are private, joining the two sorted runs costs less than streaming each extra.
+    if (extras.length >= entries.length) {
+      return xxhash.h64ToString([...entries, ...extras].sort().join(''));
+    }
+    const hash = xxhash.create64();
     let sharedIndex = 0;
     for (const extra of extras) {
       let low = sharedIndex;
@@ -130,12 +145,12 @@ function createSharedHashInput(entries: string[]): (extras: string[]) => string 
         if (entries[middle] < extra) low = middle + 1;
         else high = middle;
       }
-      if (low > sharedIndex) parts.push(joined.slice(offsets[sharedIndex], offsets[low]));
-      parts.push(extra);
+      if (low > sharedIndex) hash.update(shared.subarray(offsets[sharedIndex], offsets[low]));
+      hash.update(extra);
       sharedIndex = low;
     }
-    parts.push(joined.slice(offsets[sharedIndex]));
-    return parts.join('');
+    hash.update(shared.subarray(offsets[sharedIndex]));
+    return hash.digest().toString(16).padStart(16, '0');
   };
 }
 
@@ -148,7 +163,7 @@ function createSharedHashInput(entries: string[]): (extras: string[]) => string 
  * @param files The manifest's immutable dependency graph.
  * @param hashes The manifest's immutable file hashes, including skipped-file sentinels.
  * @param storyFiles The manifest's story roots, excluded from anchor selection.
- * @param h64ToString The hash function.
+ * @param hash The one-shot and streaming xxhash functions.
  *
  * @returns A story hasher with the same input bytes as rolling up ordinary transitive dependencies.
  */
@@ -156,7 +171,7 @@ export function createStoryFileHasher(
   files: Map<FilePath, TurboSnapFile>,
   hashes: Map<FilePath, FileHash>,
   storyFiles: Set<FilePath>,
-  h64ToString: (input: string) => string
+  hash: Pick<XXHashAPI, 'h64ToString' | 'create64'>
 ): (filePath: FilePath) => FileHash {
   const identities = new Map<FilePath, string>();
   function sortedEntries(paths: Set<FilePath>, exclude?: Set<FilePath>): string[] {
@@ -177,14 +192,14 @@ export function createStoryFileHasher(
   const shared = chooseSharedClosure(files, storyFiles);
   if (!shared) {
     return (story) =>
-      h64ToString(sortedEntries(collectTransitiveDependencies(files, story)).join(''));
+      hash.h64ToString(sortedEntries(collectTransitiveDependencies(files, story)).join(''));
   }
 
-  const mergeShared = createSharedHashInput(sortedEntries(shared.dependencies));
+  const hashShared = createSharedHasher(sortedEntries(shared.dependencies), hash);
   return (story) => {
     const { reached, includesShared } = collectOutsideSharedClosure(files, story, shared);
-    // A second path may have reached a shared dependency before the walk hit the anchor.
+    // A deferred import may reach the anchor through a cycle. Keep shared entries exactly once.
     const extras = sortedEntries(reached, includesShared ? shared.dependencies : undefined);
-    return h64ToString(includesShared ? mergeShared(extras) : extras.join(''));
+    return includesShared ? hashShared(extras) : hash.h64ToString(extras.join(''));
   };
 }

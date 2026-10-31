@@ -91,8 +91,8 @@ async function originalStoryHashes({ files, hashes, storyFiles }: Workload) {
 }
 
 async function optimizedStoryHashes({ files, hashes, storyFiles }: Workload) {
-  const { h64ToString } = await xxHashWasm();
-  const hashStoryFile = createStoryFileHasher(files, hashes, storyFiles, h64ToString);
+  const xxhash = await xxHashWasm();
+  const hashStoryFile = createStoryFileHasher(files, hashes, storyFiles, xxhash);
   const storyFileHashes = new Map<FilePath, FileHash>();
   for (const storyFile of storyFiles) {
     storyFileHashes.set(storyFile, hashStoryFile(storyFile));
