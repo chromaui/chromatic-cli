@@ -2760,12 +2760,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/fs-extra@npm:^9.0.13":
-  version: 9.0.13
-  resolution: "@types/fs-extra@npm:9.0.13"
+"@types/fs-extra@npm:^11.0.4":
+  version: 11.0.4
+  resolution: "@types/fs-extra@npm:11.0.4"
   dependencies:
+    "@types/jsonfile": "npm:*"
     "@types/node": "npm:*"
-  checksum: 10c0/576d4e9d382393316ed815c593f7f5c157408ec5e184521d077fcb15d514b5a985245f153ef52142b9b976cb9bd8f801850d51238153ebd0dc9e96b7a7548588
+  checksum: 10c0/9e34f9b24ea464f3c0b18c3f8a82aefc36dc524cc720fc2b886e5465abc66486ff4e439ea3fb2c0acebf91f6d3f74e514f9983b1f02d4243706bdbb7511796ad
   languageName: node
   linkType: hard
 
@@ -2800,7 +2801,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/jsonfile@npm:^6.0.1":
+"@types/jsonfile@npm:*, @types/jsonfile@npm:^6.0.1":
   version: 6.1.4
   resolution: "@types/jsonfile@npm:6.1.4"
   dependencies:
@@ -4093,7 +4094,7 @@ __metadata:
     "@types/adm-zip": "npm:^0.5.8"
     "@types/async-retry": "npm:^1.4.3"
     "@types/cross-spawn": "npm:^6.0.2"
-    "@types/fs-extra": "npm:^9.0.13"
+    "@types/fs-extra": "npm:^11.0.4"
     "@types/jsonfile": "npm:^6.0.1"
     "@types/listr": "npm:^0.14.4"
     "@types/mime-types": "npm:^2.1.4"
@@ -4129,7 +4130,7 @@ __metadata:
     filesize: "npm:^11.0.29"
     find-up: "npm:^7.0.0"
     formdata-node: "npm:^6.0.3"
-    fs-extra: "npm:^10.0.0"
+    fs-extra: "npm:^11.4.1"
     globals: "npm:^15.3.0"
     https-proxy-agent: "npm:^9.1.0"
     jiti: "npm:^2.7.0"
@@ -5698,14 +5699,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fs-extra@npm:^10.0.0":
-  version: 10.1.0
-  resolution: "fs-extra@npm:10.1.0"
+"fs-extra@npm:^11.4.1":
+  version: 11.4.1
+  resolution: "fs-extra@npm:11.4.1"
   dependencies:
     graceful-fs: "npm:^4.2.0"
     jsonfile: "npm:^6.0.1"
     universalify: "npm:^2.0.0"
-  checksum: 10c0/5f579466e7109719d162a9249abbeffe7f426eb133ea486e020b89bc6d67a741134076bf439983f2eb79276ceaf6bd7b7c1e43c3fd67fe889863e69072fb0a5e
+  checksum: 10c0/15fafc34e0b6c1b59f0f92aae90b5fab44129ad7ebc1362cc593f2dec1d8a765b7b70b40e2bc779ee146f6ff13a736a065ddb991e5b597e294919ccb0c8ff834
   languageName: node
   linkType: hard
 
