@@ -1,3 +1,21 @@
+# v18.13.7 (Mon Nov 02 2026)
+
+#### 🐛 Bug Fix
+
+- Report TurboSnap 2.0 instead of 1.0 results when Chromatic applies it [#1606](https://github.com/chromaui/chromatic-cli/pull/1606) ([@codykaup](https://github.com/codykaup))
+- Drop guards for git output that can't be missing [#1618](https://github.com/chromaui/chromatic-cli/pull/1618) ([@justin-thurman](https://github.com/justin-thurman))
+- Say TurboSnap 1.0 and 2.0 instead of v1 and v2 in CLI output [#1605](https://github.com/chromaui/chromatic-cli/pull/1605) ([@codykaup](https://github.com/codykaup))
+- Find TurboSnap package metadata with one git ls-files call [#1598](https://github.com/chromaui/chromatic-cli/pull/1598) ([@codykaup](https://github.com/codykaup))
+- Fix Storybook build when stdin is redirected from a file [#1597](https://github.com/chromaui/chromatic-cli/pull/1597) ([@codykaup](https://github.com/codykaup))
+- Log the Index's TurboSnap v2 decision at debug level [#1603](https://github.com/chromaui/chromatic-cli/pull/1603) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v18.13.6 (Thu Oct 29 2026)
 
 #### 🐛 Bug Fix
