@@ -540,6 +540,8 @@ export interface Context {
     snapshotCount: number;
   };
   turboSnap?: TurboSnap;
+  /** Set when the Index applies TurboSnap 2.0 to this build instead of the CLI's 1.0 trace. */
+  hashBasedTurboSnap?: HashBasedTurboSnap;
   mergeBase?: string;
   onlyStoryFiles?: string[];
   untracedFiles?: UntracedFile[];
@@ -690,6 +692,17 @@ export interface TurboSnap {
   changedManifestFiles?: Set<string>;
   affectedModuleIds?: Set<string | number>;
   bailReason?: TurboSnapBailReason;
+}
+
+/**
+ * The Index's TurboSnap 2.0 decision for a build it handles by file hashes
+ * (`turboSnapMechanism: HASH_BASED`). The Index then ignores the CLI's 1.0 `onlyStoryFiles`.
+ */
+export interface HashBasedTurboSnap {
+  /** True when TurboSnap 2.0 bailed for the whole build, so every test is captured. */
+  bailed: boolean;
+  /** Why it bailed, such as `NO_ANCESTORS`. Only set when `bailed` is. */
+  bailReason?: string;
 }
 
 // Mirrors the TurboSnap status values defined by the backend.

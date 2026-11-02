@@ -2,6 +2,7 @@ import { fallbackFailureState } from '../../renderer/engine';
 import { captureTask } from '../../renderer/storybook/captureTask';
 import {
   bailed,
+  hashBased,
   hashing,
   invalid,
   invalidAndroidArtifact,
@@ -79,6 +80,21 @@ export const BailedSiblings = () =>
 export const Traced = () =>
   captureTask(
     traced({ options: {}, onlyStoryFiles: Array.from({ length: 5 }) } as any),
+    validating(ctx)
+  );
+
+export const HashBased = () =>
+  captureTask(
+    hashBased({ options: {}, hashBasedTurboSnap: { bailed: false } } as any),
+    validating(ctx)
+  );
+
+export const HashBasedBailed = () =>
+  captureTask(
+    hashBased({
+      options: {},
+      hashBasedTurboSnap: { bailed: true, bailReason: 'NO_ANCESTORS' },
+    } as any),
     validating(ctx)
   );
 

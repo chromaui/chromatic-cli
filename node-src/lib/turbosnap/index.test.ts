@@ -204,6 +204,30 @@ describe('traceChangedFiles', () => {
     );
   });
 
+  // The Index ignores the 1.0 result when it applies 2.0, so 1.0's output would contradict what
+  // gets captured. The result itself is still returned so it is sent with the build.
+  it('traces quietly with v1 and returns the v2 decision when the Index applies v2', async () => {
+    const ctx = makeContext();
+    const hashBased = { bailed: true, bailReason: 'NO_ANCESTORS' };
+    vi.mocked(traceChangedFilesV2).mockResolvedValue({ status: 'fallback', hashBased });
+    vi.mocked(traceChangedFilesV1).mockImplementation(async (v1Context) => {
+      v1Context.log.warn('TurboSnap disabled due to file change');
+      v1Context.log.info('Found affected story files');
+      return v1Result;
+    });
+    const onTraceWithV1 = vi.fn();
+
+    await expect(traceChangedFiles(ctx, { onTraceWithV1 })).resolves.toStrictEqual({
+      ...v1Result,
+      hashBased,
+    });
+
+    expect(onTraceWithV1).not.toHaveBeenCalled();
+    expect(ctx.log.warn).not.toHaveBeenCalled();
+    expect(ctx.log.info).not.toHaveBeenCalled();
+    expect(ctx.log.debug).toHaveBeenCalledWith('TurboSnap disabled due to file change');
+  });
+
   it('runs v2 before v1 and returns only the v1 result', async () => {
     const ctx = makeContext();
 

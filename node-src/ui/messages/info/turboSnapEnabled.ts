@@ -11,13 +11,20 @@ export default ({
   skip,
   skipSnapshots,
   ancestorBuild,
-}: Pick<Context, 'build' | 'options' | 'skip' | 'skipSnapshots' | 'ancestorBuild'>) => {
+  hashBasedTurboSnap,
+}: Pick<
+  Context,
+  'build' | 'options' | 'skip' | 'skipSnapshots' | 'ancestorBuild' | 'hashBasedTurboSnap'
+>) => {
+  // After a 2.0 bail, the Index can still bypass the build with the 1.0 list, so don't credit 2.0.
+  const turboSnap =
+    hashBasedTurboSnap && !hashBasedTurboSnap.bailed ? 'TurboSnap 2.0' : 'TurboSnap';
   if (skip) {
     const skipped = ancestorBuild
       ? pluralize('snapshot', ancestorBuild.snapshotCount, true)
       : 'snapshots';
     return dedent(chalk`
-      ${success} {bold TurboSnap enabled}
+      ${success} {bold ${turboSnap} enabled}
       Bypassed ${skipped} because no frontend files were changed.
     `);
   }
@@ -26,11 +33,11 @@ export default ({
   const turboSnaps = pluralize('snapshot', build.inheritedCaptureCount, true);
   return !options.interactive || skipSnapshots
     ? dedent(chalk`
-      ${success} {bold TurboSnap enabled}
+      ${success} {bold ${turboSnap} enabled}
       Capturing ${captures}; copying ${turboSnaps} with TurboSnap.
     `)
     : dedent(chalk`
-      ${success} {bold TurboSnap enabled}
+      ${success} {bold ${turboSnap} enabled}
       Captured ${captures}; copied ${turboSnaps} with TurboSnap.
     `);
 };

@@ -173,7 +173,10 @@ describe('traceChangedFiles', () => {
 
   it('reports tracing with the changed-file count when tracing will run', async () => {
     const d = deps();
-    traceChangedFilesTurbosnap.mockResolvedValue({ status: 'skipped' });
+    traceChangedFilesTurbosnap.mockImplementation(async (_ctx, hooks) => {
+      hooks?.onTraceWithV1?.();
+      return { status: 'skipped' };
+    });
 
     const result = await traceChangedFiles(d, { turboSnapContext: turboSnapContext() });
 
@@ -185,5 +188,50 @@ describe('traceChangedFiles', () => {
         ),
       })
     );
+  });
+
+  it('reports TurboSnap 2.0 instead of the 1.0 trace when the Index applies it', async () => {
+    const ctx = { ...turboSnapContext(), options: { interactive: false } };
+    const d = { ...deps(), options: { interactive: false } };
+    traceChangedFilesTurbosnap.mockResolvedValue({
+      status: 'traced',
+      onlyStoryFiles: { './a.stories.js': ['./a.stories.js'] },
+      turboSnap: {},
+      untracedFiles: [{ filepath: './skipped.js', glob: '*.js' }],
+      hashBased: { bailed: false },
+    });
+
+    const result = await traceChangedFiles(d, { turboSnapContext: ctx });
+
+    // The 1.0 story files are still sent with the build.
+    expect(result).toStrictEqual({ onlyStoryFiles: ['./a.stories.js'] });
+    expect(ctx.hashBasedTurboSnap).toEqual({ bailed: false });
+    expect(d.report).toHaveBeenCalledTimes(1);
+    expect(d.report).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Using TurboSnap 2.0' })
+    );
+    expect(d.log.info).not.toHaveBeenCalled();
+  });
+
+  it('warns why TurboSnap 2.0 bailed instead of reporting the 1.0 bail', async () => {
+    const ctx = turboSnapContext();
+    const d = deps();
+    traceChangedFilesTurbosnap.mockResolvedValue({
+      status: 'bailed',
+      turboSnap: { bailReason: { changedPackageFiles: ['./package.json'] } },
+      hashBased: { bailed: true, bailReason: 'NO_ANCESTORS' },
+    });
+
+    await traceChangedFiles(d, { turboSnapContext: ctx });
+
+    expect(d.report).toHaveBeenCalledTimes(1);
+    expect(d.report).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'TurboSnap 2.0 disabled',
+        output: 'A full build is required because this build has no ancestor builds',
+      })
+    );
+    expect(d.log.warn).toHaveBeenCalledTimes(1);
+    expect(d.log.warn).toHaveBeenCalledWith(expect.stringContaining('TurboSnap 2.0 disabled'));
   });
 });

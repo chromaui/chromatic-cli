@@ -45,10 +45,12 @@ export const stats = ({
 // TODO: refactor this function
 /* eslint-disable complexity */
 export const pending = (
-  ctx: Pick<Context, 'build' | 'options' | 'onlyStoryFiles'>,
+  ctx: Pick<Context, 'build' | 'options' | 'onlyStoryFiles' | 'hashBasedTurboSnap'>,
   { cursor = 0, label = '' } = {}
 ) => {
-  const { build, options, onlyStoryFiles } = ctx;
+  const { build, options, onlyStoryFiles, hashBasedTurboSnap } = ctx;
+  // TurboSnap 2.0 ignores the 1.0 story files, so only its own decision says whether it applied.
+  const turboSnapped = hashBasedTurboSnap ? !hashBasedTurboSnap.bailed : !!onlyStoryFiles;
   // `runTask` renders this pending state before the task body runs, so it must survive skip paths
   // that have no build yet — notably `--dry-run`, where `ctx.build` is undefined.
   if (!build) {
@@ -62,7 +64,7 @@ export const pending = (
     return {
       status: 'pending',
       title: 'Finalizing build',
-      output: onlyStoryFiles ? 'All tests skipped' : 'No tests run',
+      output: turboSnapped ? 'All tests skipped' : 'No tests run',
     };
   }
 
@@ -74,7 +76,7 @@ export const pending = (
   const matching = options.onlyStoryNames
     ? `${unit} matching ${options.onlyStoryNames.map((v) => `'${v}'`).join(', ')}`
     : '';
-  const affected = onlyStoryFiles ? ' affected by recent changes' : '';
+  const affected = turboSnapped ? ' affected by recent changes' : '';
   const skipping = build.testCount > build.actualTestCount ? ` (skipping ${skips})` : '';
   // The cursor is a 1-based "now capturing" index (`actualTestCount - inProgressCount + 1`), so it
   // reaches `actualTestCount + 1` once nothing is in progress. Clamp it so the label never exceeds 100%.
