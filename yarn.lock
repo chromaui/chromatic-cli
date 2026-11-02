@@ -4145,7 +4145,7 @@ __metadata:
     node-ask: "npm:^1.0.1"
     node-fetch: "npm:3.2.10"
     os-browserify: "npm:^0.3.0"
-    p-limit: "npm:3.1.0"
+    p-limit: "npm:7.3.3"
     path-browserify: "npm:^1.0.1"
     picocolors: "npm:^1.1.1"
     picomatch: "npm:2.2.2"
@@ -8006,12 +8006,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"p-limit@npm:3.1.0, p-limit@npm:^3.0.2":
-  version: 3.1.0
-  resolution: "p-limit@npm:3.1.0"
+"p-limit@npm:7.3.3":
+  version: 7.3.3
+  resolution: "p-limit@npm:7.3.3"
   dependencies:
-    yocto-queue: "npm:^0.1.0"
-  checksum: 10c0/9db675949dbdc9c3763c89e748d0ef8bdad0afbb24d49ceaf4c46c02c77d30db4e0652ed36d0a0a7a95154335fab810d95c86153105bb73b3a90448e2bb14e1a
+    yocto-queue: "npm:^1.2.1"
+  checksum: 10c0/47e0125583d81c2f5a32c96dd4a1c63cc3fc106ae8b94d00ec152caabd1f64fe22cfa58ba8b7eef47a89991fa64b3403d1549e1e41470dc787d6074f34015f34
   languageName: node
   linkType: hard
 
@@ -8030,6 +8030,15 @@ __metadata:
   dependencies:
     p-try: "npm:^2.0.0"
   checksum: 10c0/8da01ac53efe6a627080fafc127c873da40c18d87b3f5d5492d465bb85ec7207e153948df6b9cbaeb130be70152f874229b8242ee2be84c0794082510af97f12
+  languageName: node
+  linkType: hard
+
+"p-limit@npm:^3.0.2":
+  version: 3.1.0
+  resolution: "p-limit@npm:3.1.0"
+  dependencies:
+    yocto-queue: "npm:^0.1.0"
+  checksum: 10c0/9db675949dbdc9c3763c89e748d0ef8bdad0afbb24d49ceaf4c46c02c77d30db4e0652ed36d0a0a7a95154335fab810d95c86153105bb73b3a90448e2bb14e1a
   languageName: node
   linkType: hard
 
@@ -11017,7 +11026,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"yocto-queue@npm:^1.0.0":
+"yocto-queue@npm:^1.0.0, yocto-queue@npm:^1.2.1":
   version: 1.2.2
   resolution: "yocto-queue@npm:1.2.2"
   checksum: 10c0/36d4793e9cf7060f9da543baf67c55e354f4862c8d3d34de1a1b1d7c382d44171315cc54abf84d8900b8113d742b830108a1434f4898fb244f9b7e8426d4b8f5
