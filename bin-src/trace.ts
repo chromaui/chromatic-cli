@@ -4,6 +4,7 @@ import path from 'path';
 
 import { getRepositoryRoot } from '../node-src/git/git';
 import { createLogger } from '../node-src/lib/log';
+import { meowImportMeta } from '../node-src/lib/meowImportMeta';
 import { posix } from '../node-src/lib/posix';
 import { isPackageManifestFile } from '../node-src/lib/utilities';
 import { readStatsFile } from '../node-src/tasks/readStatsFile';
@@ -56,32 +57,33 @@ export async function main(argv: string[]) {
       --mode, -m <mode>                     Set to 'expanded' to reveal the underlying list of files for each bundle, or set to 'compact' to only show a flat list of affected story files.
     `,
     {
+      importMeta: meowImportMeta,
       argv,
       description: 'Trace utility for TurboSnap',
       flags: {
         statsFile: {
           type: 'string',
-          alias: 's',
+          shortFlag: 's',
           default: WEBPACK_STATS_FILE || 'storybook-static/preview-stats.json',
         },
         storybookBaseDir: {
           type: 'string',
-          alias: 'b',
+          shortFlag: 'b',
           default: STORYBOOK_BASE_DIR || '.',
         },
         storybookConfigDir: {
           type: 'string',
-          alias: 'c',
+          shortFlag: 'c',
           default: STORYBOOK_CONFIG_DIR || '.storybook',
         },
         untraced: {
           type: 'string',
-          alias: 'u',
+          shortFlag: 'u',
           isMultiple: true,
         },
         mode: {
           type: 'string',
-          alias: 'm',
+          shortFlag: 'm',
         },
       },
     }

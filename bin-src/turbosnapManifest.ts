@@ -7,6 +7,7 @@ import path from 'path';
 import { getRepositoryRoot } from '../node-src/git/git';
 import { getStorybookProjectRoot } from '../node-src/lib/getStorybookProjectRoot';
 import { createLogger } from '../node-src/lib/log';
+import { meowImportMeta } from '../node-src/lib/meowImportMeta';
 import { readStatsFile } from '../node-src/tasks/readStatsFile';
 
 /**
@@ -49,24 +50,25 @@ export async function main(argv: string[]) {
       --untraced, -u <glob>                 Glob of files to disregard, with their dependencies, when tracing dependent stories, relative to the repository root. Can be specified multiple times. (default: none)
     `,
     {
+      importMeta: meowImportMeta,
       argv,
       description: 'Build the TurboSnap 2.0 manifest from a stats file',
       flags: {
         statsFile: {
           type: 'string',
-          alias: 's',
+          shortFlag: 's',
           default: 'storybook-static/preview-stats.json',
         },
         storybookBaseDir: {
           type: 'string',
-          alias: 'b',
+          shortFlag: 'b',
           // meow rejects an undefined default, and there is no static one: an unset base directory
           // means the current directory, which is resolved in the handler.
           ...(STORYBOOK_BASE_DIR && { default: STORYBOOK_BASE_DIR }),
         },
         configDir: {
           type: 'string',
-          alias: 'c',
+          shortFlag: 'c',
           default: '.storybook',
         },
         staticDir: {
@@ -78,7 +80,7 @@ export async function main(argv: string[]) {
         },
         untraced: {
           type: 'string',
-          alias: 'u',
+          shortFlag: 'u',
           isMultiple: true,
         },
       },

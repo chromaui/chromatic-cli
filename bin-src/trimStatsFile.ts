@@ -1,6 +1,7 @@
 import { outputFile } from 'fs-extra';
 import meow from 'meow';
 
+import { meowImportMeta } from '../node-src/lib/meowImportMeta';
 import { readStatsFile } from '../node-src/tasks/readStatsFile';
 
 const dedupe = <T>(array: T[]) => [...new Set(array)];
@@ -70,6 +71,7 @@ export async function main(argv: string[]) {
     Writes <stats file> with a .trimmed.json extension next to the input.
     `,
     {
+      importMeta: meowImportMeta,
       argv,
       allowUnknownFlags: false,
       description: 'Trim a stats file down to user code, for debugging TurboSnap',

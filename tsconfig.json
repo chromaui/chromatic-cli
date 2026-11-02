@@ -13,6 +13,8 @@
     "noImplicitAny": false, // Let this be a warning from ESLint until it becomes required
     "useUnknownInCatchVariables": false, // Treat caught errors as 'any' for now
     "resolveJsonModule": true,
-    "lib": ["es5", "es6", "dom"]
+    // ES2024 is what our minimum Node version (22) supports. `esnext.array` adds `Array.fromAsync`,
+    // which Node 22 also has.
+    "lib": ["es2024", "esnext.array", "dom"]
   }
 }
