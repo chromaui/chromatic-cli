@@ -1,3 +1,21 @@
+# v18.13.9 (Mon Nov 02 2026)
+
+#### 🐛 Bug Fix
+
+- Write --zip archives with yazl instead of archiver [#1599](https://github.com/chromaui/chromatic-cli/pull/1599) ([@codykaup](https://github.com/codykaup))
+- Bump the npm_and_yarn group across 1 directory with 2 updates [#1623](https://github.com/chromaui/chromatic-cli/pull/1623) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@codykaup](https://github.com/codykaup))
+- Bump meow from 9.0.0 to 14.1.0 [#1617](https://github.com/chromaui/chromatic-cli/pull/1617) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@codykaup](https://github.com/codykaup))
+- Bump the npm_and_yarn group across 6 directories with 2 updates [#1622](https://github.com/chromaui/chromatic-cli/pull/1622) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump filesize from 10.1.6 to 11.0.29 [#1616](https://github.com/chromaui/chromatic-cli/pull/1616) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump @actions/github from 5.1.1 to 9.1.1 [#1615](https://github.com/chromaui/chromatic-cli/pull/1615) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+
+#### Authors: 2
+
+- [@dependabot[bot]](https://github.com/dependabot[bot])
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.13.8 (Mon Nov 02 2026)
 
 #### 🐛 Bug Fix
