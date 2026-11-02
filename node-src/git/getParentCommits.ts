@@ -110,19 +110,19 @@ async function nextCommits(
       ${firstCommittedAtSeconds ? `--since ${firstCommittedAtSeconds}` : ''} \
       -n ${limit + commitsWithoutBuilds.length} --not ${commitsForCLI(commitsWithBuilds)}`;
   const commitsString = await execGitCommand(deps, command);
-  const commits = commitsString?.split('\n').filter(Boolean);
+  const commits = commitsString.split('\n').filter(Boolean);
 
   // Later on we want to know which commits we visited on the way to finding the ancestor commits
   // The output of the above rev-list commit includes possibly commits with builds so filter them.
   // NOTE: this list can include irrelevant commits during earlier iterations of step() when we
   // don't yet have an accurate list of commitsWithBuilds, however we only use it in the final step.
   const commitsWithBuildsSet = new Set(commitsWithBuilds);
-  const visitedCommitsWithoutBuilds = commits?.filter((c) => !commitsWithBuildsSet.has(c));
+  const visitedCommitsWithoutBuilds = commits.filter((c) => !commitsWithBuildsSet.has(c));
 
   // No sense in checking commits we already know about
   const commitsWithoutBuildsSet = new Set(commitsWithoutBuilds);
   const candidateCommits = visitedCommitsWithoutBuilds
-    ?.filter((c) => !commitsWithoutBuildsSet.has(c))
+    .filter((c) => !commitsWithoutBuildsSet.has(c))
     .slice(0, limit);
 
   return { visitedCommitsWithoutBuilds, candidateCommits };
@@ -162,13 +162,13 @@ async function step(
     `step: candidateCommits: ${candidateCommits}, visitedCommitsWithoutBuilds: ${visitedCommitsWithoutBuilds}`
   );
 
-  const hitBoundaries = candidateCommits?.filter((c) => git.shallowBoundaryCommits?.includes(c));
-  if (hitBoundaries?.length) {
+  const hitBoundaries = candidateCommits.filter((c) => git.shallowBoundaryCommits?.includes(c));
+  if (hitBoundaries.length > 0) {
     log.debug({ hitBoundaries }, `step: reached shallow boundary commit(s) during walk`);
   }
 
   // No more commits uncovered commitsWithBuilds!
-  if (!candidateCommits?.length) {
+  if (candidateCommits.length === 0) {
     log.debug('step: no candidateCommits; we are done');
     return { commitsWithBuilds, visitedCommitsWithoutBuilds };
   }
@@ -181,14 +181,14 @@ async function step(
   });
   log.debug(`step: newCommitsWithBuilds: ${newCommitsWithBuilds}`);
 
-  const newCommitsWithoutBuilds = candidateCommits?.filter(
+  const newCommitsWithoutBuilds = candidateCommits.filter(
     (commit) => !newCommitsWithBuilds.includes(commit)
   );
 
   return step(deps, git, limit * 2, {
     firstCommittedAtSeconds,
     commitsWithBuilds: [...commitsWithBuilds, ...newCommitsWithBuilds],
-    commitsWithoutBuilds: [...commitsWithoutBuilds, ...(newCommitsWithoutBuilds || [])],
+    commitsWithoutBuilds: [...commitsWithoutBuilds, ...newCommitsWithoutBuilds],
   });
 }
 
@@ -205,7 +205,7 @@ async function maximallyDescendentCommits(deps: GitDeps, commits: string[]) {
   // This just filters any commits that are ancestors of other commits
   const command = `git rev-list ${commitsForCLI(commits)} --not ${commitsForCLI(parentCommits)}`;
   const maxCommitsString = await execGitCommand(deps, command);
-  const maxCommits = maxCommitsString?.split('\n').filter(Boolean);
+  const maxCommits = maxCommitsString.split('\n').filter(Boolean);
 
   return maxCommits;
 }
@@ -292,14 +292,14 @@ export async function getParentCommits(
     }
   );
 
-  const mergeInfoList = visitedCommitsWithoutBuilds?.map((commit) => {
+  const mergeInfoList = visitedCommitsWithoutBuilds.map((commit) => {
     return { commit, baseRefName: branch };
   });
   const {
     app: { mergedPullRequests },
   } = await client.runQuery<MergeCommitsQueryResult>(
     MergeCommitsQuery,
-    { mergeInfoList: mergeInfoList?.slice(0, 100) }, // Limit amount sent in API call
+    { mergeInfoList: mergeInfoList.slice(0, 100) }, // Limit amount sent in API call
     { retries: 5 } // This query requires a request to an upstream provider which may fail
   );
 
@@ -333,12 +333,10 @@ export async function getParentCommits(
   // For any pair A,B of builds, there is no point in using B if it is an ancestor of A.
   const descendentCommits = await maximallyDescendentCommits({ log }, commitsWithBuilds);
 
-  const ancestorCommits = [...extraParentCommits, ...(descendentCommits || [])];
+  const ancestorCommits = [...extraParentCommits, ...descendentCommits];
 
   // Build the visited commit list from everything the walk touched, on a best-effort basis.
-  const allVisitedShas = [
-    ...new Set([...(visitedCommitsWithoutBuilds ?? []), ...commitsWithBuilds]),
-  ];
+  const allVisitedShas = [...new Set([...visitedCommitsWithoutBuilds, ...commitsWithBuilds])];
   const commitsWithBuildsSet = new Set(commitsWithBuilds);
   const details = await getVisitedCommitDetails(deps, allVisitedShas);
   const visitedCommits: VisitedCommit[] = details.map(
