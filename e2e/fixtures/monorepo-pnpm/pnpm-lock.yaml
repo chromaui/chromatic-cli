@@ -184,16 +184,16 @@ importers:
     devDependencies:
       '@storybook/react-vite':
         specifier: 10.6.1
-        version: 10.6.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(storybook@10.6.1(react@19.2.8))(typescript@5.9.3)(vite@8.2.2(esbuild@0.28.2))
+        version: 10.6.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(storybook@10.6.2(react@19.2.8))(typescript@5.9.3)(vite@8.2.4(esbuild@0.28.2))
       storybook:
-        specifier: 10.6.1
-        version: 10.6.1(react@19.2.8)
+        specifier: 10.6.2
+        version: 10.6.2(react@19.2.8)
       typescript:
         specifier: 5.9.3
         version: 5.9.3
       vite:
-        specifier: 8.2.2
-        version: 8.2.2(esbuild@0.28.2)
+        specifier: 8.2.4
+        version: 8.2.4(esbuild@0.28.2)
 
 packages:
 
@@ -1362,8 +1362,8 @@ packages:
     resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
     engines: {node: '>=0.10.0'}
 
-  storybook@10.6.1:
-    resolution: {integrity: sha512-NeEmukMWPA5OqHizUkQtxCIhGt7MUZLPY4FFgpC0LNiipjrac/oKpH0TxI+9Zc+vI5+IoN+NiskOmBP7gtYfmA==}
+  storybook@10.6.2:
+    resolution: {integrity: sha512-qHDINMiapxFUxYb+xC3j8u7Y+85X3u+/PlytE/wmnyg+bU0agCW3jUmWP4vIh2MioO2jTK/2B3Lcw6IpRFzQBA==}
     hasBin: true
     peerDependencies:
       '@types/react': ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -1435,8 +1435,8 @@ packages:
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  vite@8.2.2:
-    resolution: {integrity: sha512-cFKLV/PRgAUlIRm5WjMjJ86jrftzpqcgH+Us+DS8mI3CDNiH30Whrz8uHL3+MOLPAgqbMBAqWdAHAphOAM+z/Q==}
+  vite@8.2.4:
+    resolution: {integrity: sha512-lfauXnrf2x0p+UoA+wXh0dgFWnUjCyG6Js95KBkgaCwUU9k0DAHI4W6Q0WCx+h+5g+Alce1y4Zi2QjjK0UvGBw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -1713,11 +1713,11 @@ snapshots:
   '@esbuild/win32-x64@0.28.2':
     optional: true
 
-  '@joshwooding/vite-plugin-react-docgen-typescript@0.7.0(typescript@5.9.3)(vite@8.2.2(esbuild@0.28.2))':
+  '@joshwooding/vite-plugin-react-docgen-typescript@0.7.0(typescript@5.9.3)(vite@8.2.4(esbuild@0.28.2))':
     dependencies:
       glob: 13.0.6
       react-docgen-typescript: 2.4.0(typescript@5.9.3)
-      vite: 8.2.2(esbuild@0.28.2)
+      vite: 8.2.4(esbuild@0.28.2)
     optionalDependencies:
       typescript: 5.9.3
 
@@ -1936,11 +1936,11 @@ snapshots:
       estree-walker: 2.0.2
       picomatch: 4.0.7
 
-  '@storybook/builder-vite@10.6.1(storybook@10.6.1(react@19.2.8))(vite@8.2.2(esbuild@0.28.2))':
+  '@storybook/builder-vite@10.6.1(storybook@10.6.2(react@19.2.8))(vite@8.2.4(esbuild@0.28.2))':
     dependencies:
-      storybook: 10.6.1(react@19.2.8)
+      storybook: 10.6.2(react@19.2.8)
       ts-dedent: 2.3.0
-      vite: 8.2.2(esbuild@0.28.2)
+      vite: 8.2.4(esbuild@0.28.2)
 
   '@storybook/global@5.0.0': {}
 
@@ -1948,27 +1948,27 @@ snapshots:
     dependencies:
       react: 19.2.8
 
-  '@storybook/react-dom-shim@10.6.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(storybook@10.6.1(react@19.2.8))':
+  '@storybook/react-dom-shim@10.6.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(storybook@10.6.2(react@19.2.8))':
     dependencies:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
-      storybook: 10.6.1(react@19.2.8)
+      storybook: 10.6.2(react@19.2.8)
 
-  '@storybook/react-vite@10.6.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(storybook@10.6.1(react@19.2.8))(typescript@5.9.3)(vite@8.2.2(esbuild@0.28.2))':
+  '@storybook/react-vite@10.6.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(storybook@10.6.2(react@19.2.8))(typescript@5.9.3)(vite@8.2.4(esbuild@0.28.2))':
     dependencies:
-      '@joshwooding/vite-plugin-react-docgen-typescript': 0.7.0(typescript@5.9.3)(vite@8.2.2(esbuild@0.28.2))
+      '@joshwooding/vite-plugin-react-docgen-typescript': 0.7.0(typescript@5.9.3)(vite@8.2.4(esbuild@0.28.2))
       '@rollup/pluginutils': 5.4.0
-      '@storybook/builder-vite': 10.6.1(storybook@10.6.1(react@19.2.8))(vite@8.2.2(esbuild@0.28.2))
-      '@storybook/react': 10.6.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(storybook@10.6.1(react@19.2.8))(typescript@5.9.3)
+      '@storybook/builder-vite': 10.6.1(storybook@10.6.2(react@19.2.8))(vite@8.2.4(esbuild@0.28.2))
+      '@storybook/react': 10.6.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(storybook@10.6.2(react@19.2.8))(typescript@5.9.3)
       empathic: 2.1.0
       magic-string: 1.4.3
       react: 19.2.8
       react-docgen: 8.0.4
       react-dom: 19.2.8(react@19.2.8)
       resolve: 1.22.13
-      storybook: 10.6.1(react@19.2.8)
+      storybook: 10.6.2(react@19.2.8)
       tsconfig-paths: 4.2.0
-      vite: 8.2.2(esbuild@0.28.2)
+      vite: 8.2.4(esbuild@0.28.2)
     optionalDependencies:
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -1977,15 +1977,15 @@ snapshots:
       - rollup
       - supports-color
 
-  '@storybook/react@10.6.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(storybook@10.6.1(react@19.2.8))(typescript@5.9.3)':
+  '@storybook/react@10.6.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(storybook@10.6.2(react@19.2.8))(typescript@5.9.3)':
     dependencies:
       '@storybook/global': 5.0.0
-      '@storybook/react-dom-shim': 10.6.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(storybook@10.6.1(react@19.2.8))
+      '@storybook/react-dom-shim': 10.6.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(storybook@10.6.2(react@19.2.8))
       react: 19.2.8
       react-docgen: 8.0.4
       react-docgen-typescript: 2.4.0(typescript@5.9.3)
       react-dom: 19.2.8(react@19.2.8)
-      storybook: 10.6.1(react@19.2.8)
+      storybook: 10.6.2(react@19.2.8)
     optionalDependencies:
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -2486,7 +2486,7 @@ snapshots:
 
   source-map@0.6.1: {}
 
-  storybook@10.6.1(react@19.2.8):
+  storybook@10.6.2(react@19.2.8):
     dependencies:
       '@storybook/global': 5.0.0
       '@storybook/icons': 2.2.0(react@19.2.8)
@@ -2553,7 +2553,7 @@ snapshots:
     dependencies:
       react: 19.2.8
 
-  vite@8.2.2(esbuild@0.28.2):
+  vite@8.2.4(esbuild@0.28.2):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
