@@ -1,25 +1,17 @@
 import path from 'path';
 
-import {
-  AbsolutePath,
-  Context,
-  Module,
-  Reason,
-  Stats,
-  TurboSnap,
-  UntracedFile,
-} from '../../../types';
+import { Context, Module, Reason, Stats, TurboSnap, UntracedFile } from '../../../types';
 import noCSFGlobs from '../../../ui/messages/errors/noCSFGlobs';
 import tracedAffectedFiles from '../../../ui/messages/info/tracedAffectedFiles';
 import bailFile from '../../../ui/messages/warnings/bailFile';
 import { relativeTo } from '../../getStorybookProjectRoot';
-import { posix } from '../../posix';
 import {
   isDocumentationFile,
   isPackageLockFile,
   isPackageManifestFile,
   matchesFile,
 } from '../../utilities';
+import { getPackageName, getStatsProjectRoot, normalizeStatsName } from '../statsPaths';
 import { TraceChangedFilesResult } from '../types';
 
 type FilePath = string;
@@ -36,44 +28,10 @@ const isUserModule = (module_: Module | Reason) =>
     re.test((module_ as Module).name || (module_ as Reason).moduleName || '')
   );
 
-// For any path in node_modules, return the package name, including scope prefix if any.
-const getPackageName = (modulePath: string) => {
-  const [, scopedName] = modulePath.match(/\/node_modules\/(@[\w-]+\/[\w-]+)\//) || [];
-  if (scopedName) return scopedName;
-  const [, unscopedName] = modulePath.match(/\/node_modules\/([\w-]+)\//) || [];
-  return unscopedName;
-};
-
 // Rank: plain `./` id (3) > plain bare id (2) > `./` facet (1) > anything else (0). A plain id has
 // no NUL virtual prefix, no `?query`, and no `+ N modules` suffix.
 const rank = (memberName: string) =>
   (/^\0|\?| \+ /.test(memberName) ? 0 : 2) + (memberName.startsWith('./') ? 1 : 0);
-
-/**
- * Converts a module path found in the webpack stats to be relative to the (git) root path. Module
- * paths can be relative (`./module.js`) or absolute (`/path/to/project/module.js`). The webpack
- * stats may have been generated in a subdirectory, so relative paths are anchored to the Storybook
- * project root. The result is a relative POSIX path compatible with `git diff --name-only`.
- * Virtual paths (e.g. Vite) are returned as-is.
- *
- * @param filePath The path to the file.
- * @param rootPath The absolute git repository root.
- * @param projectRoot The absolute Storybook project root.
- *
- * @returns A normalized path to the file.
- */
-export function normalizePath(
-  filePath: string,
-  rootPath: AbsolutePath,
-  projectRoot: AbsolutePath = rootPath
-) {
-  if (!filePath || filePath.startsWith('/virtual:')) return filePath;
-
-  const relativePath = path.isAbsolute(filePath)
-    ? path.relative(rootPath, filePath)
-    : path.join(path.relative(rootPath, projectRoot), filePath);
-  return posix(relativePath);
-}
 
 /**
  * The result of tracing story files: either `bailed` or `traced`. This never skips since it's
@@ -110,7 +68,7 @@ export async function getDependentStoryFiles(
     throw new Error('Failed to determine repository root');
   }
 
-  const { projectRoot = process.cwd() } = ctx.storybook || {};
+  const projectRoot = getStatsProjectRoot(ctx);
   const configDirectory = ctx.storybook?.configDir ?? path.resolve(projectRoot, '.storybook');
   const staticDirectoriesAbsolute = ctx.storybook?.staticDirs ?? [];
   const baseDirectory = relativeTo(rootPath, projectRoot);
@@ -118,20 +76,8 @@ export async function getDependentStoryFiles(
 
   // Convert a "webpack path" (relative to storybookBaseDir) to a "git path" (relative to repository root)
   // e.g. `./src/file.js` => `path/to/storybook/src/file.js`
-  const normalize = (posixPath: FilePath): NormalizedName => {
-    const CSF_REGEX = /\s+(sync|lazy)\s+/g;
-    const URL_PARAM_REGEX = /(\?.*)/g;
-    // Strip the NUL from proxies of a relative path first, so CommonJS proxy ids like
-    // `\0./node_modules/react/index.js?commonjs-es-import` normalize to the file they proxy.
-    // Opaque NUL ids (`\0commonjsHelpers.js`, `\0vite/preload-helper.js`) name no file, so they
-    // keep the NUL and can never match a changed file.
-    const name = /^\0\.\.?\//.test(posixPath) ? posixPath.slice(1) : posixPath;
-    const newPath = normalizePath(name, rootPath, projectRoot);
-    // Trim query params such as `?ngResource` which are sometimes present
-    return URL_PARAM_REGEX.test(newPath) && !CSF_REGEX.test(newPath)
-      ? newPath.replaceAll(URL_PARAM_REGEX, '')
-      : newPath;
-  };
+  const normalize = (posixPath: FilePath): NormalizedName =>
+    normalizeStatsName(posixPath, rootPath, projectRoot);
 
   const storybookDirectory = relativeTo(rootPath, configDirectory);
   const staticDirectories = staticDirectoriesAbsolute.map((directory) =>
