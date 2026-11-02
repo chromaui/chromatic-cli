@@ -120,10 +120,14 @@ function excludeStories(deps: GenerateManifestDeps, entries: StoryEntry[]): Stor
   deps.log.debug(`Excluded ${entries.length - keptEntries.length} stories with excludeStoryIds`);
 
   if (entries.length > 0 && keptEntries.length === 0) {
-    throw new TaskFailure(
-      'Every story was removed by reactNative.excludeStoryIds, so there is nothing to test. Remove some patterns from excludeStoryIds in your Chromatic config file.',
-      { exitCode: exitCodes.BUILD_NO_STORIES, userError: true }
+    // User errors skip the fatal error output, so log the explanation where every renderer shows it.
+    deps.log.error(
+      'Every story was removed by reactNative.excludeStoryIds, so there is nothing to test. Remove some patterns from excludeStoryIds in your Chromatic config file.'
     );
+    throw new TaskFailure('All stories were excluded by reactNative.excludeStoryIds', {
+      exitCode: exitCodes.BUILD_NO_STORIES,
+      userError: true,
+    });
   }
 
   return keptEntries;

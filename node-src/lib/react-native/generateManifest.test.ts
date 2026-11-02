@@ -290,10 +290,14 @@ describe('generateManifest', () => {
     });
 
     it('fails without writing a manifest when every story is excluded', async () => {
-      const failure = generateManifest(depsExcluding(['button--*', 'card--*']), input);
+      const deps = depsExcluding(['button--*', 'card--*']);
+      const failure = generateManifest(deps, input);
 
       await expect(failure).rejects.toThrow(/excludeStoryIds/);
       await expect(failure).rejects.toMatchObject({ exitCode: 4, userError: true });
+      expect(deps.log.error).toHaveBeenCalledWith(
+        expect.stringContaining('Remove some patterns from excludeStoryIds')
+      );
       expect(writeFileSync).not.toHaveBeenCalled();
     });
   });
