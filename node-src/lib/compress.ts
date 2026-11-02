@@ -1,6 +1,8 @@
-import archiver from 'archiver';
-import { createReadStream, createWriteStream } from 'fs';
+import { createWriteStream } from 'fs';
+import { rm } from 'fs/promises';
+import { Readable } from 'stream';
 import { file as temporaryFile } from 'tmp-promise';
+import { ZipFile } from 'yazl';
 
 import { Context, FileDesc } from '../types';
 
@@ -13,31 +15,42 @@ import { Context, FileDesc } from '../types';
  * @returns A promise that resolves with details of the created zip.
  */
 export default async function makeZipFile(ctx: Context, files: FileDesc[]) {
-  const archive = archiver('zip', { zlib: { level: 9 } });
+  const zipFile = new ZipFile();
   const temporary = await temporaryFile({ postfix: '.zip' });
   // Passing a fd will cause `createWriteStream` to ignore the path (first) argument
   const sink = createWriteStream('', { fd: temporary.fd });
 
   return new Promise<{ path: string; size: number }>((resolve, reject) => {
-    sink.on('close', () => {
-      resolve({ path: temporary.path, size: archive.pointer() });
-    });
-
-    // 'warning' messages contain non-blocking errors
-    archive.on('warning', (err) => {
-      ctx.log.debug({ err }, 'Received warning when creating zip file');
-    });
-    archive.on('error', (err) => {
+    // Reject first: destroying the sink emits 'close', which would otherwise resolve.
+    // The partial zip is deleted by path because `sink.destroy()` already closes its descriptor.
+    const fail = (err: Error) => {
       reject(err);
+      (zipFile.outputStream as Readable).destroy();
+      sink.destroy();
+      rm(temporary.path, { force: true }).catch(() => {});
+    };
+
+    sink.on('close', () => {
+      resolve({ path: temporary.path, size: sink.bytesWritten });
     });
-    archive.pipe(sink);
+    sink.on('error', fail);
+    zipFile.on('error', fail);
+    zipFile.outputStream.pipe(sink);
 
-    for (const { localPath, targetPath: name } of files) {
-      ctx.log.debug(`Adding to zip archive: ${name}`);
-      archive.append(createReadStream(localPath), { name });
+    try {
+      // yazl opens each file only when its entry is written, so this doesn't hold a descriptor per file.
+      for (const { localPath, targetPath } of files) {
+        ctx.log.debug(`Adding to zip archive: ${targetPath}`);
+        // `forceDosTimestamp` skips yazl's Unix timestamp field, which throws outside the zip's error
+        // handling for files modified before 1970.
+        zipFile.addFile(localPath, targetPath, { compressionLevel: 9, forceDosTimestamp: true });
+      }
+
+      ctx.log.debug('Finalizing zip archive');
+      zipFile.end();
+    } catch (err) {
+      // yazl validates entry names synchronously, e.g. absolute paths or `..` segments.
+      fail(err as Error);
     }
-
-    ctx.log.debug('Finalizing zip archive');
-    archive.finalize().catch((err) => reject(err));
   });
 }
