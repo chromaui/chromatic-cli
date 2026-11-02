@@ -114,6 +114,10 @@ describe('rollUpEntryHashes', () => {
   });
 });
 
+function relocated(filePath: FilePath): FilePath {
+  return filePath.replace('./', './lib/');
+}
+
 describe('rollUpFileHashes', () => {
   const hashes = new Map<FilePath, FileHash>([
     ['./a.ts', 'H1'],
@@ -121,14 +125,14 @@ describe('rollUpFileHashes', () => {
   ]);
 
   it('looks each file up by path and rolls the pairs together into a single hash', () => {
-    expect(rollUpFileHashes(hashes, ['./a.ts', './b.ts'], identity)).toBe(
+    expect(rollUpFileHashes(hashes, ['./a.ts', './b.ts'], identity, identity)).toBe(
       '["./a.ts","H1"]["./b.ts","H2"]'
     );
   });
 
   it('does not depend on the order the files are supplied in', () => {
-    expect(rollUpFileHashes(hashes, ['./b.ts', './a.ts'], identity)).toBe(
-      rollUpFileHashes(hashes, ['./a.ts', './b.ts'], identity)
+    expect(rollUpFileHashes(hashes, ['./b.ts', './a.ts'], identity, identity)).toBe(
+      rollUpFileHashes(hashes, ['./a.ts', './b.ts'], identity, identity)
     );
   });
 
@@ -136,29 +140,35 @@ describe('rollUpFileHashes', () => {
     // A generated file is often renamed every build, so even its path must not reach the roll-up.
     const withSkipped = new Map([...hashes, ['./generated/chunk.abc123.js', SKIPPED_HASH]]);
 
-    expect(rollUpFileHashes(withSkipped, ['./a.ts', './generated/chunk.abc123.js'], identity)).toBe(
-      rollUpFileHashes(withSkipped, ['./a.ts'], identity)
-    );
+    expect(
+      rollUpFileHashes(withSkipped, ['./a.ts', './generated/chunk.abc123.js'], identity, identity)
+    ).toBe(rollUpFileHashes(withSkipped, ['./a.ts'], identity, identity));
   });
 
   it('substitutes an empty content hash for a file with no entry in `hashes`', () => {
     // Synthetic nodes (globs, externals, virtual modules) are walked but never hashed. They still
     // contribute their path, so the roll-up records that they were part of the subtree.
-    expect(rollUpFileHashes(hashes, ['virtual:stories'], identity)).toBe('["virtual:stories",""]');
+    expect(rollUpFileHashes(hashes, ['virtual:stories'], identity, identity)).toBe(
+      '["virtual:stories",""]'
+    );
   });
 
   it('changes when a file moves, even though its content is identical', () => {
     // A file's path reaches the output, so the same bytes at a new path have to move the hash.
     const moved = new Map<FilePath, FileHash>([['./moved/a.ts', 'H1']]);
 
-    expect(rollUpFileHashes(moved, ['./moved/a.ts'], identity)).not.toBe(
-      rollUpFileHashes(hashes, ['./a.ts'], identity)
+    expect(rollUpFileHashes(moved, ['./moved/a.ts'], identity, identity)).not.toBe(
+      rollUpFileHashes(hashes, ['./a.ts'], identity, identity)
     );
   });
 
+  it('rolls each file up under the path rollUpPath gives it', () => {
+    expect(rollUpFileHashes(hashes, ['./a.ts'], identity, relocated)).toBe('["./lib/a.ts","H1"]');
+  });
+
   it('changes when a file is added to the subtree', () => {
-    expect(rollUpFileHashes(hashes, ['./a.ts'], identity)).not.toBe(
-      rollUpFileHashes(hashes, ['./a.ts', './b.ts'], identity)
+    expect(rollUpFileHashes(hashes, ['./a.ts'], identity, identity)).not.toBe(
+      rollUpFileHashes(hashes, ['./a.ts', './b.ts'], identity, identity)
     );
   });
 });

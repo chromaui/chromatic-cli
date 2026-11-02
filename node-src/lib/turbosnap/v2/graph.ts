@@ -39,17 +39,19 @@ export interface TurboSnapFile {
  * @param hashes The hash of every on-disk file, keyed by canonical path, or `SKIPPED_HASH` for a file v2 skipped.
  * @param filePaths The files to roll up.
  * @param h64ToString The hash function.
+ * @param rollUpPath The path each file is rolled up under; see `buildRollUpPath`.
  *
  * @returns The rolled-up hash.
  */
 export function rollUpFileHashes(
   hashes: Map<FilePath, FileHash>,
   filePaths: Iterable<FilePath>,
-  h64ToString: (input: string) => string
+  h64ToString: (input: string) => string,
+  rollUpPath: (filePath: FilePath) => FilePath
 ): FileHash {
   const entries = [...filePaths].flatMap((filePath): [FilePath, FileHash][] => {
     const hash = hashes.get(filePath) ?? '';
-    return hash === SKIPPED_HASH ? [] : [[filePath, hash]];
+    return hash === SKIPPED_HASH ? [] : [[rollUpPath(filePath), hash]];
   });
   return rollUpEntryHashes(entries, h64ToString);
 }

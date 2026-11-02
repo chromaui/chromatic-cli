@@ -51,6 +51,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -74,6 +75,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -92,6 +94,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -111,6 +114,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -133,6 +137,7 @@ describe('collectStorybookFiles', () => {
       './src',
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -161,6 +166,7 @@ describe('collectStorybookFiles', () => {
       './config',
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -186,6 +192,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -205,6 +212,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -225,6 +233,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -241,6 +250,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -264,6 +274,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -291,6 +302,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -315,6 +327,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -332,6 +345,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -354,6 +368,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -366,6 +381,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -398,6 +414,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -424,6 +441,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -449,6 +467,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -473,6 +492,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -497,6 +517,7 @@ describe('collectStorybookFiles', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       NO_UNTRACED,
+      identity,
       identity
     );
 
@@ -525,6 +546,7 @@ describe('collectStorybookFiles behind an untraced wall', () => {
       DEFAULT_CONFIG_DIR,
       NO_GLOBAL_ROOTS,
       new Set([barrel, button]),
+      identity,
       identity
     );
 
@@ -553,6 +575,7 @@ describe('collectStorybookFiles behind an untraced wall', () => {
       DEFAULT_CONFIG_DIR,
       new Set([configEntry]),
       new Set([barrel, button]),
+      identity,
       identity
     );
 
@@ -591,6 +614,7 @@ describe('collectStorybookFiles with a detected global composition root', () => 
       DEFAULT_CONFIG_DIR,
       new Set([configEntry]),
       NO_UNTRACED,
+      identity,
       identity
     );
   }
