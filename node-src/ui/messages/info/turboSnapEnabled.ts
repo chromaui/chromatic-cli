@@ -16,7 +16,9 @@ export default ({
   Context,
   'build' | 'options' | 'skip' | 'skipSnapshots' | 'ancestorBuild' | 'hashBasedTurboSnap'
 >) => {
-  const turboSnap = hashBasedTurboSnap ? 'TurboSnap 2.0' : 'TurboSnap';
+  // After a 2.0 bail, the Index can still bypass the build with the 1.0 list, so don't credit 2.0.
+  const turboSnap =
+    hashBasedTurboSnap && !hashBasedTurboSnap.bailed ? 'TurboSnap 2.0' : 'TurboSnap';
   if (skip) {
     const skipped = ancestorBuild
       ? pluralize('snapshot', ancestorBuild.snapshotCount, true)
@@ -32,10 +34,10 @@ export default ({
   return !options.interactive || skipSnapshots
     ? dedent(chalk`
       ${success} {bold ${turboSnap} enabled}
-      Capturing ${captures}; copying ${turboSnaps} with ${turboSnap}.
+      Capturing ${captures}; copying ${turboSnaps} with TurboSnap.
     `)
     : dedent(chalk`
       ${success} {bold ${turboSnap} enabled}
-      Captured ${captures}; copied ${turboSnaps} with ${turboSnap}.
+      Captured ${captures}; copied ${turboSnaps} with TurboSnap.
     `);
 };
