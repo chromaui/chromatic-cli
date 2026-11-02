@@ -50,7 +50,7 @@ export async function main(argv: string[]) {
     `,
     {
       argv,
-      description: 'Build the TurboSnap v2 manifest from a stats file',
+      description: 'Build the TurboSnap 2.0 manifest from a stats file',
       flags: {
         statsFile: {
           type: 'string',

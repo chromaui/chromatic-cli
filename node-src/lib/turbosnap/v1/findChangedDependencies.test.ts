@@ -13,6 +13,7 @@ import { Context } from '../../..';
 import * as git from '../../../git/git';
 import getEnvironment from '../../getEnvironment';
 import TestLogger from '../../testLogger';
+import { LockFileMissingError } from './errors';
 import { findChangedDependencies } from './findChangedDependencies';
 
 vi.mock('snyk-nodejs-lockfile-parser');
@@ -44,12 +45,26 @@ const pnpmWorkspaceProject = vi.mocked(parsePnpmWorkspaceProject);
 const inspect = vi.mocked(snyk.inspect);
 const createChangedPackagesGraph = vi.mocked(snykGraph.createChangedPackagesGraph);
 
+// Emulates `git ls-files` over the given tracked files: a `**/` pattern matches the name in any
+// subdirectory (but not the root), other patterns match exactly, and results come back sorted the
+// way the git index is.
+function mockTrackedFiles(files: string[]) {
+  findFilesFromRepositoryRoot.mockImplementation((_, __, ...patterns) =>
+    Promise.resolve(
+      files
+        .toSorted()
+        .filter((file) =>
+          patterns.some((pattern) =>
+            pattern.startsWith('**/') ? file.endsWith(pattern.slice(2)) : file === pattern
+          )
+        )
+    )
+  );
+}
+
 beforeEach(() => {
   getRepositoryRoot.mockResolvedValue('/root');
-  // always resolve files in the root, but not subdirs
-  findFilesFromRepositoryRoot.mockImplementation((_, __, file) =>
-    Promise.resolve(file.startsWith('**') ? [] : [file])
-  );
+  mockTrackedFiles(['package.json', 'yarn.lock']);
   checkoutFile.mockResolvedValue();
 });
 afterEach(() => {
@@ -229,9 +244,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('looks for manifest and lock files in subpackages', async () => {
-    findFilesFromRepositoryRoot.mockImplementation((_, __, file) =>
-      Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file])
-    );
+    mockTrackedFiles(['package.json', 'yarn.lock', 'subdir/package.json', 'subdir/yarn.lock']);
 
     mockInspect(
       // HEAD /
@@ -266,10 +279,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('uses root lockfile when subpackage lockfile is missing', async () => {
-    findFilesFromRepositoryRoot.mockImplementation((_, __, file) => {
-      if (file === 'subdir/yarn.lock') return Promise.resolve([]);
-      return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
-    });
+    mockTrackedFiles(['package.json', 'yarn.lock', 'subdir/package.json']);
 
     mockInspect(
       // HEAD /
@@ -299,10 +309,7 @@ describe('findChangedDependencies', () => {
   });
 
   it('ignores lockfile changes if metadata file is untraced', async () => {
-    findFilesFromRepositoryRoot.mockImplementation((_, __, file) => {
-      if (file === 'subdir/yarn.lock') return Promise.resolve([]);
-      return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
-    });
+    mockTrackedFiles(['package.json', 'yarn.lock', 'subdir/package.json']);
 
     const context = getContext({
       git: {
@@ -320,12 +327,75 @@ describe('findChangedDependencies', () => {
     expect(inspect).not.toHaveBeenCalled();
   });
 
-  it('uses package-lock.json if yarn.lock is missing', async () => {
-    findFilesFromRepositoryRoot.mockImplementation((_, __, file) => {
-      if (file.endsWith('yarn.lock'))
-        return Promise.resolve([file.replace('yarn.lock', 'package-lock.json')]);
-      return Promise.resolve(file.startsWith('**') ? [file.replace('**', 'subdir')] : [file]);
+  it('pairs each manifest with the lockfile in its own directory', async () => {
+    mockTrackedFiles([
+      'package.json',
+      'yarn.lock',
+      // Sorts before the root manifest in index order, without a lockfile of its own.
+      '.storybook/package.json',
+      // A lockfile in a deeper directory doesn't belong to this manifest.
+      'packages/a/package.json',
+      'packages/a/sub/yarn.lock',
+      // A directory whose name starts with another's must not borrow its lockfile.
+      'packages/ab/package.json',
+      'packages/ab/yarn.lock',
+      // With several lockfiles in one directory, the first in index order wins.
+      'packages/c/package.json',
+      'packages/c/yarn.lock',
+      'packages/c/package-lock.json',
+    ]);
+    inspect.mockResolvedValue({ scannedProjects: [{ depGraph: { getDepPkgs: () => [] } }] } as any);
+    mockChangedPackagesGraph([]);
+
+    // Each manifest changed in its own baseline commit, so the files checked out for a commit are
+    // that manifest and the lockfile it was paired with.
+    const context = getContext({
+      git: {
+        packageMetadataChanges: [
+          { changedFiles: ['package.json'], commit: 'root' },
+          { changedFiles: ['.storybook/package.json'], commit: 'storybook' },
+          { changedFiles: ['packages/a/package.json'], commit: 'a' },
+          { changedFiles: ['packages/ab/package.json'], commit: 'ab' },
+          { changedFiles: ['packages/c/package.json'], commit: 'c' },
+        ],
+      },
     });
+
+    await expect(findChangedDependencies(context)).resolves.toEqual([]);
+
+    const checkedOut: Record<string, string[]> = {};
+    for (const [, reference, file] of checkoutFile.mock.calls) {
+      (checkedOut[reference] ??= []).push(file);
+    }
+    expect(
+      Object.fromEntries(Object.entries(checkedOut).map(([k, v]) => [k, v.toSorted()]))
+    ).toEqual({
+      root: ['package.json', 'yarn.lock'],
+      storybook: ['.storybook/package.json', 'yarn.lock'],
+      a: ['packages/a/package.json', 'yarn.lock'],
+      ab: ['packages/ab/package.json', 'packages/ab/yarn.lock'],
+      c: ['packages/c/package-lock.json', 'packages/c/package.json'],
+    });
+  });
+
+  it('throws a named error when a changed manifest has no lockfile anywhere', async () => {
+    mockTrackedFiles(['package.json', 'subdir/package.json']);
+
+    const context = getContext({
+      git: { packageMetadataChanges: [{ changedFiles: ['subdir/package.json'], commit: 'A' }] },
+    });
+
+    await expect(findChangedDependencies(context)).rejects.toThrow(LockFileMissingError);
+    expect(checkoutFile).not.toHaveBeenCalled();
+  });
+
+  it('uses package-lock.json if yarn.lock is missing', async () => {
+    mockTrackedFiles([
+      'package.json',
+      'package-lock.json',
+      'subdir/package.json',
+      'subdir/package-lock.json',
+    ]);
 
     mockInspect(/* HEAD */ [], /* Baseline A */ []);
     mockChangedPackagesGraph([]);
@@ -348,22 +418,7 @@ describe('findChangedDependencies', () => {
     // Mock the repository root to be different from current working directory
     getRepositoryRoot.mockResolvedValue('/root/subdir');
 
-    // Mock findFilesFromRepositoryRoot to return relative paths
-    findFilesFromRepositoryRoot.mockImplementation((_, __, ...patterns) => {
-      const results: string[] = [];
-      for (const pattern of patterns) {
-        if (pattern === 'package.json') {
-          results.push('package.json');
-        } else if (
-          pattern === 'yarn.lock' ||
-          pattern === 'pnpm-lock.yaml' ||
-          pattern === 'package-lock.json'
-        ) {
-          results.push('package-lock.json');
-        }
-      }
-      return Promise.resolve(results);
-    });
+    mockTrackedFiles(['package.json', 'package-lock.json']);
 
     mockInspect(/* HEAD */ ['react@18.2.0'], /* Baseline A */ ['react@18.3.0']);
     mockChangedPackagesGraph(['react@18.3.0']);
@@ -387,12 +442,8 @@ describe('findChangedDependencies', () => {
   });
 
   it('resolves pnpm workspace manifests against their own lockfile importer', async () => {
-    findFilesFromRepositoryRoot.mockImplementation((_, __, ...patterns) => {
-      if (patterns[0] === 'package.json') return Promise.resolve(['package.json']);
-      if (patterns[0] === '**/package.json') return Promise.resolve(['packages/ui/package.json']);
-      // Only the root has a lockfile; nested lookups use full paths and find nothing.
-      return Promise.resolve(patterns.includes('pnpm-lock.yaml') ? ['pnpm-lock.yaml'] : []);
-    });
+    // Only the root has a lockfile.
+    mockTrackedFiles(['package.json', 'pnpm-lock.yaml', 'packages/ui/package.json']);
     pnpmLockfileParser.mockReturnValue({ importers: { '.': {}, 'packages/ui': {} } } as any);
     const importers: string[] = [];
     pnpmWorkspaceProject.mockImplementation(async (_manifest, _lockfile, _options, importer) => {

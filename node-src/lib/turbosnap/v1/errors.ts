@@ -14,6 +14,17 @@ export class LockFileSizeExceededError extends Error {
 }
 
 /**
+ * Error thrown when a changed manifest has no lockfile, neither in its own directory nor at the
+ * repository root.
+ */
+export class LockFileMissingError extends Error {
+  constructor(public manifestPath: string) {
+    super(`No lockfile found for ${manifestPath}`);
+    this.name = 'LockFileMissingError';
+  }
+}
+
+/**
  * Error thrown when the lockfile parser fails to produce a dependency graph.
  */
 export class LockFileParseFailedError extends Error {

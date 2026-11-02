@@ -71,18 +71,18 @@ export async function traceChangedFiles(
       input.log[input.failureLogLevel](missingStorybookConfig(error.configDirectory));
       return { status: 'fallback' };
     }
-    return failed(input, 'Failed to build manifest for TurboSnap v2', error);
+    return failed(input, 'Failed to build manifest for TurboSnap 2.0', error);
   }
-  input.log.debug('Generated manifest for TurboSnap v2');
+  input.log.debug('Generated manifest for TurboSnap 2.0');
 
   // The manifest is written to the Storybook build output so it can be uploaded with other
   // diagnostic files.
   try {
     writeManifest(manifest, input.manifestPath, input.projectFiles);
   } catch (error) {
-    return failed(input, 'Failed to write manifest for TurboSnap v2', error);
+    return failed(input, 'Failed to write manifest for TurboSnap 2.0', error);
   }
-  input.log.debug(`Wrote manifest for TurboSnap v2 to ${input.manifestPath}`);
+  input.log.debug(`Wrote manifest for TurboSnap 2.0 to ${input.manifestPath}`);
 
   let response: BuildUploadHashesResponse;
   try {
@@ -96,13 +96,13 @@ export async function traceChangedFiles(
       throw new Error(`The backend API rejected the hash upload: ${messages}`);
     }
   } catch (error) {
-    return failed(input, 'Failed to upload hashes for TurboSnap v2', error);
+    return failed(input, 'Failed to upload hashes for TurboSnap 2.0', error);
   }
 
   // Log what the Index decided for this build (its TurboSnap mechanism, status, and hash bail
   // reason), so a CI log can tell whether it ran hash-based TurboSnap and, if not, why.
   input.log.debug(
-    `Uploaded hashes for TurboSnap v2 to Chromatic: ${JSON.stringify(response.build)}`
+    `Uploaded hashes for TurboSnap 2.0 to Chromatic: ${JSON.stringify(response.build)}`
   );
 
   // V1 still runs and sends its result either way; this only tells the caller whether the Index

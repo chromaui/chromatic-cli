@@ -31,7 +31,7 @@ export const NULL_BYTE = '\0'; // Separator used when running `git ls-files` wit
  */
 export async function getVersion(deps: GitDeps) {
   const result = await execGitCommand(deps, `git --version`);
-  return result?.replace('git version ', '').replace(/\s*\(.*\)/, '');
+  return result.replace('git version ', '').replace(/\s*\(.*\)/, '');
 }
 
 /**
@@ -118,7 +118,7 @@ export async function getCommit(deps: GitDeps, revision = '') {
 
   // Ignore lines that don't match the expected format (e.g. gpg signature info)
   const format = new RegExp('^[a-f0-9]+ ## ');
-  const data = result?.split('\n').find((line: string) => format.test(line));
+  const data = result.split('\n').find((line: string) => format.test(line));
 
   const [commit, committedAtSeconds, committerEmail, committerName] = data?.split(' ## ') || [];
   const committedAt = Number(committedAtSeconds) * 1000;
@@ -143,12 +143,12 @@ export async function getBranch(deps: GitDeps) {
       // Git v1.8 and above
       // Throws when in detached HEAD state
       const reference = await execGitCommand(deps, 'git symbolic-ref HEAD');
-      return reference?.replace(/^refs\/heads\//, ''); // strip the "refs/heads/" prefix
+      return reference.replace(/^refs\/heads\//, ''); // strip the "refs/heads/" prefix
     } catch {
       // Git v1.7 and above
       // Yields 'HEAD' when in detached HEAD state
       const reference = await execGitCommand(deps, 'git rev-parse --abbrev-ref HEAD');
-      return reference?.replace(/^heads\//, ''); // strip the "heads/" prefix that's sometimes present
+      return reference.replace(/^heads\//, ''); // strip the "heads/" prefix that's sometimes present
     }
   }
 }
@@ -179,7 +179,7 @@ export async function getUncommittedHash(deps: GitDeps) {
   // Combine file listings into one path per line, stripping empty lines (including trailing
   // newlines from each output).
   const files = [stagedOutput, unstagedOutput, untrackedOutput]
-    .flatMap((output) => output?.split(newline) ?? [])
+    .flatMap((output) => output.split(newline))
     .filter(Boolean)
     .join('\n');
 
@@ -197,7 +197,7 @@ export async function getUncommittedHash(deps: GitDeps) {
   const uncommittedHashWithPadding = await execGitCommand(deps, 'git hash-object --stdin', {
     input: fileHashes,
   });
-  const uncommittedHash = uncommittedHashWithPadding?.trim();
+  const uncommittedHash = uncommittedHashWithPadding.trim();
 
   // In case there are no uncommited changes (empty list), we always get this same hash.
   const noChangesHash = 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391';
@@ -216,7 +216,7 @@ export async function hasPreviousCommit(deps: GitDeps) {
 
   // Ignore lines that don't match the expected format (e.g. gpg signature info)
   const allhex = new RegExp('^[a-f0-9]+$');
-  return result?.split('\n').some((line: string) => allhex.test(line));
+  return result.split('\n').some((line: string) => allhex.test(line));
 }
 
 /**
@@ -306,7 +306,7 @@ export async function getChangedFiles(deps: GitDeps, baseCommit: string, headCom
   const command = `git --no-pager diff --name-only --no-relative ${baseCommit} ${headCommit}`;
   try {
     const files = await execGitCommand(deps, command);
-    return files?.split(newline).filter(Boolean);
+    return files.split(newline).filter(Boolean);
   } catch (error) {
     if (/bad object/.test(error.message)) {
       throw new AncestorMissingError(baseCommit, { cause: error });
@@ -444,7 +444,7 @@ export async function isClean(deps: GitDeps) {
 export async function getUpdateMessage(deps: GitDeps) {
   const status = await execGitCommand(deps, 'git status');
   return status
-    ?.split(/(\r\n|\r|\n){2}/)[0] // drop the 'nothing to commit' part
+    .split(/(\r\n|\r|\n){2}/)[0] // drop the 'nothing to commit' part
     .split(newline)
     .filter((line) => !line.startsWith('On branch')) // drop the 'On branch x' part
     .join(EOL)
@@ -489,8 +489,7 @@ export async function findMergeBase(deps: GitDeps, headReference: string, baseRe
     deps,
     `git merge-base --all ${headReference} ${baseReference}`
   );
-  const mergeBases =
-    result?.split(newline).filter((line) => line && !line.startsWith('warning: ')) || [];
+  const mergeBases = result.split(newline).filter((line) => line && !line.startsWith('warning: '));
   if (mergeBases.length === 0) return undefined;
   if (mergeBases.length === 1) return mergeBases[0];
 
@@ -502,7 +501,7 @@ export async function findMergeBase(deps: GitDeps, headReference: string, baseRe
         deps,
         `git name-rev --name-only --no-relative --exclude="tags/*" ${sha}`
       );
-      return name?.replace(/~\d+$/, ''); // Drop the potential suffix
+      return name.replace(/~\d+$/, ''); // Drop the potential suffix
     })
   );
   const baseReferenceIndex = branchNames.indexOf(baseReference);
@@ -733,7 +732,7 @@ export async function findFilesFromRepositoryRoot(
   // not the directory in which this is executed from
   const gitCommand = `git ls-files --full-name -z ${patternsFromRoot.map((p) => `"${p}"`).join(' ')}`;
   const files = await execGitCommand(deps, gitCommand);
-  return files?.split(NULL_BYTE).filter(Boolean);
+  return files.split(NULL_BYTE).filter(Boolean);
 }
 
 /**
@@ -956,7 +955,7 @@ export async function getVisitedCommitDetails(
     deps.log.debug(`Failed to retrieve visited commit details, skipping: ${error}`);
     return [];
   }
-  if (!result?.trim()) return [];
+  if (!result.trim()) return [];
 
   // Output is a sequence of: <sha>\0<parents>\0<subject>\0 per commit
   const fields = result.split('\0');
