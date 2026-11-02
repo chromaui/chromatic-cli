@@ -1,9 +1,11 @@
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
+import picomatch from 'picomatch';
 import { pathToFileURL } from 'url';
 
 import { Deps } from '../../types';
+import { exitCodes, TaskFailure } from '../setExitCode';
 
 type GenerateManifestDeps = Pick<Deps, 'options' | 'log'>;
 
@@ -78,7 +80,8 @@ function parseStoryIndex(
 ): { stories: Story[]; entries: StoryEntry[] } {
   deps.log.debug('Building story manifest');
 
-  const entries = Object.values(index.entries).filter((entry) => entry.type === 'story');
+  const storyEntries = Object.values(index.entries).filter((entry) => entry.type === 'story');
+  const entries = excludeStories(deps, storyEntries);
   const stories = entries.map((entry) => ({
     storyId: entry.id,
     name: entry.name,
@@ -93,6 +96,37 @@ function parseStoryIndex(
 
   deps.log.debug(`Found ${stories.length} stories`);
   return { stories, entries };
+}
+
+function excludeStories(deps: GenerateManifestDeps, entries: StoryEntry[]): StoryEntry[] {
+  const excludeStoryIds = deps.options.reactNative?.excludeStoryIds ?? [];
+  if (excludeStoryIds.length === 0) return entries;
+
+  const matchers = excludeStoryIds.map((glob) => ({ glob, isMatch: picomatch(glob) }));
+  const matchedGlobs = new Set<string>();
+  const keptEntries = entries.filter((entry) => {
+    const matching = matchers.filter(({ isMatch }) => isMatch(entry.id));
+    for (const { glob } of matching) matchedGlobs.add(glob);
+    return matching.length === 0;
+  });
+
+  const unmatchedGlobs = excludeStoryIds.filter((glob) => !matchedGlobs.has(glob));
+  if (unmatchedGlobs.length > 0) {
+    deps.log.warn(
+      `reactNative.excludeStoryIds patterns matched no stories: ${unmatchedGlobs.join(', ')}`
+    );
+  }
+
+  deps.log.debug(`Excluded ${entries.length - keptEntries.length} stories with excludeStoryIds`);
+
+  if (entries.length > 0 && keptEntries.length === 0) {
+    throw new TaskFailure(
+      'Every story was removed by reactNative.excludeStoryIds, so there is nothing to test. Remove some patterns from excludeStoryIds in your Chromatic config file.',
+      { exitCode: exitCodes.BUILD_NO_STORIES, userError: true }
+    );
+  }
+
+  return keptEntries;
 }
 
 function writeManifest(deps: GenerateManifestDeps, sourceDirectory: string, storyData: string) {

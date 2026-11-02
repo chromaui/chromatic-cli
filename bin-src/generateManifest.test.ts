@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { getConfiguration } from '../node-src/lib/getConfiguration';
 import { generateManifest } from '../node-src/lib/react-native/generateManifest';
 import { validateStorybookReactNativeVersion } from '../node-src/lib/react-native/validateStorybookVersion';
 import TestLogger from '../node-src/lib/testLogger';
@@ -19,10 +20,16 @@ vi.mock('../node-src/lib/log', () => ({
   createLogger: vi.fn(() => testLogger),
 }));
 
+vi.mock('../node-src/lib/getConfiguration', () => ({
+  getConfiguration: vi.fn(),
+}));
+
 const mockValidateStorybookReactNativeVersion = vi.mocked(validateStorybookReactNativeVersion);
+const mockGetConfiguration = vi.mocked(getConfiguration);
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockGetConfiguration.mockResolvedValue({});
 });
 
 describe('generate-manifest', () => {
@@ -50,6 +57,32 @@ describe('generate-manifest', () => {
       }),
       { sourceDir: expect.stringContaining('.storybook-static') }
     );
+  });
+
+  it('passes reactNative settings from the config file to manifest generation', async () => {
+    mockGetConfiguration.mockResolvedValue({ reactNative: { excludeStoryIds: ['card--*'] } });
+
+    await main(['-o', './.storybook-static']);
+
+    expect(generateManifest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: expect.objectContaining({ reactNative: { excludeStoryIds: ['card--*'] } }),
+      }),
+      { sourceDir: expect.stringContaining('.storybook-static') }
+    );
+  });
+
+  it('exits without generating a manifest when the config file is invalid', async () => {
+    mockGetConfiguration.mockRejectedValue(new TypeError('Configuration file is invalid'));
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+    await main(['-o', './.storybook-static']);
+
+    expect(generateManifest).not.toHaveBeenCalled();
+    expect(testLogger.error).toHaveBeenCalledWith('Error: Configuration file is invalid');
+    expect(exitSpy).toHaveBeenCalledWith(1);
+
+    exitSpy.mockRestore();
   });
 
   it('shows error when output-dir is missing', async () => {

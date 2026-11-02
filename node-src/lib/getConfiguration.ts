@@ -52,6 +52,7 @@ const configurationSchema = z
         iosBuildCommand: z.string(),
         androidBuildCommand: z.string(),
         androidBuildArchitectures: z.array(z.string()),
+        excludeStoryIds: z.array(z.string()),
       })
       .partial(),
   })
