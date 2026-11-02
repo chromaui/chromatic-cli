@@ -10,6 +10,7 @@ import type { StorybookInfoDeps } from '../tasks/storybookInfo';
 import { AbsolutePath, Storybook } from '../types';
 import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
 import { builders } from './builders';
+import { meowImportMeta } from './meowImportMeta';
 import { viewLayers } from './viewLayers';
 
 // The timer is unref'd so a lookup that wins the race doesn't keep the process alive until it fires.
@@ -46,10 +47,11 @@ function findConfigFlags({
   let flags: { configDir?: string; staticDir?: string };
   try {
     ({ flags } = meow({
+      importMeta: meowImportMeta,
       argv: parseArgsStringToArgv(scripts[buildScriptName]),
       flags: {
-        configDir: { type: 'string', alias: 'c' },
-        staticDir: { type: 'string', alias: 's' },
+        configDir: { type: 'string', shortFlag: 'c' },
+        staticDir: { type: 'string', shortFlag: 's' },
       },
     }));
   } catch {

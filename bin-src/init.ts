@@ -7,6 +7,7 @@ import prompts from 'prompts';
 import type { NormalizedPackageJson } from 'read-package-up';
 import { readPackageUp } from 'read-package-up';
 
+import { meowImportMeta } from '../node-src/lib/meowImportMeta';
 import noPackageJson from '../node-src/ui/messages/errors/noPackageJson';
 
 export const TestFramework = {
@@ -134,12 +135,13 @@ export async function main(argv: string[]) {
           --framework, -f <framework     Test Framework that you are aiming to use with Chromatic. (default: 'storybook')
         `,
     {
+      importMeta: meowImportMeta,
       argv,
       description: 'Utility for setting up Chromatic',
       flags: {
         framework: {
           type: 'string',
-          alias: 'f',
+          shortFlag: 'f',
         },
       },
     }

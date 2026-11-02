@@ -2,6 +2,7 @@ import meow from 'meow';
 import path from 'path';
 
 import { createLogger } from '../node-src/lib/log';
+import { meowImportMeta } from '../node-src/lib/meowImportMeta';
 import { generateManifest } from '../node-src/lib/react-native/generateManifest';
 import { validateStorybookReactNativeVersion } from '../node-src/lib/react-native/validateStorybookVersion';
 import { Context } from '../node-src/types';
@@ -40,16 +41,17 @@ export async function main(argv: string[]) {
       $ chromatic generate-manifest -o ./.storybook-static -c ./custom-config
     `,
     {
+      importMeta: meowImportMeta,
       argv,
       description: 'Generate manifest.json for React Native Storybook',
       flags: {
         outputDir: {
           type: 'string',
-          alias: 'o',
+          shortFlag: 'o',
         },
         storybookConfigDir: {
           type: 'string',
-          alias: 'c',
+          shortFlag: 'c',
           default: '.rnstorybook',
         },
       },

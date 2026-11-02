@@ -6,6 +6,7 @@ import path from 'path';
 
 import { Configuration, getConfiguration } from '../node-src/lib/getConfiguration';
 import { openLogFileStream } from '../node-src/lib/logFile';
+import { meowImportMeta } from '../node-src/lib/meowImportMeta';
 import { buildAndroid, buildIos } from '../node-src/lib/react-native/build';
 import { ExpoConfig, readExpoConfig } from '../node-src/lib/react-native/expoConfig';
 
@@ -63,6 +64,7 @@ function parseFlags(argv: string[]) {
           --overwrite   Overwrite existing output directory if it exists.
         `,
     {
+      importMeta: meowImportMeta,
       argv,
       description: 'Build React Native Storybook for Chromatic',
       flags: {

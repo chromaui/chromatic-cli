@@ -13,6 +13,7 @@ export default defineConfig((options) => [
     sourcemap: true,
     clean: true,
     platform: 'node',
+    shims: true, // Make `import.meta.url` work in CJS output (meow uses it to find package.json)
     target: 'node20', // Lowest supported Node version
     env: {
       SENTRY_ENVIRONMENT: process.env.CI ? 'production' : 'development',
@@ -33,6 +34,7 @@ export default defineConfig((options) => [
     sourcemap: true,
     clean: true,
     platform: 'node',
+    shims: true, // Make `import.meta.url` work in CJS output (meow uses it to find package.json)
     target: 'node20', // Lowest supported Node version
     external: ['semver'],
     env: {

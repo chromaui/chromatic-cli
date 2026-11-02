@@ -2,6 +2,7 @@ import meow from 'meow';
 
 import pkg from '../../package.json';
 import { Flags } from '../types';
+import { meowImportMeta } from './meowImportMeta';
 
 /**
  * Parse arguments passed to the CLI.
@@ -69,6 +70,7 @@ export default function parseArguments(argv: string[]) {
       --preserve-missing            Treat missing stories as unchanged rather than deleted when comparing to the baseline.
     `,
     {
+      importMeta: meowImportMeta,
       argv,
       booleanDefault: undefined,
       description: false,
@@ -80,19 +82,19 @@ export default function parseArguments(argv: string[]) {
       version: pkg.version,
       flags: {
         // Required options
-        projectToken: { type: 'string', alias: 't', isMultiple: true },
+        projectToken: { type: 'string', shortFlag: 't', isMultiple: true },
 
         // Storybook options
-        buildScriptName: { type: 'string', alias: 'b' },
+        buildScriptName: { type: 'string', shortFlag: 'b' },
         buildCommand: { type: 'string' },
-        outputDir: { type: 'string', alias: 'o', isMultiple: true },
-        storybookBuildDir: { type: 'string', alias: 'd', isMultiple: true },
+        outputDir: { type: 'string', shortFlag: 'o', isMultiple: true },
+        storybookBuildDir: { type: 'string', shortFlag: 'd', isMultiple: true },
 
         // Chromatic options
         autoAcceptChanges: { type: 'string' },
         branchName: { type: 'string' },
         ci: { type: 'boolean' },
-        configFile: { type: 'string', alias: 'c' },
+        configFile: { type: 'string', shortFlag: 'c' },
         exitOnceUploaded: { type: 'string' },
         exitZeroOnChanges: { type: 'string' },
         externals: { type: 'string', isMultiple: true },
