@@ -4249,7 +4249,7 @@ __metadata:
     eslint-plugin-unicorn: "npm:^59.0.1"
     execa: "npm:^9.6.0"
     fake-tag: "npm:^2.0.0"
-    filesize: "npm:^10.1.0"
+    filesize: "npm:^11.0.29"
     find-up: "npm:^7.0.0"
     formdata-node: "npm:^6.0.3"
     fs-extra: "npm:^10.0.0"
@@ -5730,10 +5730,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"filesize@npm:^10.1.0":
-  version: 10.1.6
-  resolution: "filesize@npm:10.1.6"
-  checksum: 10c0/9a196d64da4e947b8c0d294be09a3dfa7a634434a1fc5fb3465f1c9acc1237ea0363f245ba6e24477ea612754d942bc964d86e0e500905a72e9e0e17ae1bbdbc
+"filesize@npm:^11.0.29":
+  version: 11.0.29
+  resolution: "filesize@npm:11.0.29"
+  checksum: 10c0/0519c30d0208350a87fc9ec3fa3d0974a9b3b71c70ac4002f44b7aeaa33814ee64d97c94517464635f908d4927e45d2383fd67b0a7a5653754d6c26ecb6162dc
   languageName: node
   linkType: hard
 
