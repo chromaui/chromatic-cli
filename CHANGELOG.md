@@ -1,3 +1,15 @@
+# v18.13.8 (Mon Nov 02 2026)
+
+#### 🐛 Bug Fix
+
+- Ignore pnpm peer-suffix renames in TurboSnap v2 roll-ups [#1607](https://github.com/chromaui/chromatic-cli/pull/1607) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.13.7 (Mon Nov 02 2026)
 
 #### 🐛 Bug Fix
