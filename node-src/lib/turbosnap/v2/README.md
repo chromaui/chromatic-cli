@@ -90,7 +90,7 @@ What moves and what it costs:
 | Which files land in a `storybookConfigHashes` entry | That entry, for projects with affected inputs | Full recapture |
 | Which files land in a story subtree, or what the skip rule skips | Affected story and/or config entries; a file can move between them | Full recapture if a config entry moves, otherwise the affected stories |
 | Adding, removing, or renaming a `storybookConfigHashes` key | The config map | Full recapture |
-| Anything only in the debug half (`files`, `attribution`, `skippedFiles`, and the per-file `storybookConfigFiles`, `staticFiles`, and `externals` sections) | Nothing | None |
+| How the debug detail is written to `turbosnap-manifest.json` (format, ordering, which entries it lists) | Nothing | None |
 
 When making one of these changes:
 
