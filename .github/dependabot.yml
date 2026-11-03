@@ -10,6 +10,12 @@ updates:
     exclude-paths:
       - "node-src/__mocks__/**"
       - "e2e/fixtures/**"
+    groups:
+      # Storybook packages must stay on one version; bumping one alone breaks the repo's Chromatic build.
+      storybook:
+        patterns:
+          - "storybook"
+          - "@storybook/*"
     ignore:
       # yazl is pinned to 3.3.1 through a Yarn patch (.yarn/patches/), which a version bump would
       # break. Bump it by hand and regenerate or drop the patch.
