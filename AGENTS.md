@@ -44,15 +44,28 @@ If you are unsure whether something is identifying, leave it out. If a ticket ti
    - `major`: a breaking change, such as a removed or renamed flag or config option, a changed exit code, changed output that users parse, or a dropped Node version.
    - `minor`: a new flag, option, subcommand, or feature.
    - `patch`: everything else, including bug fixes, performance work, refactors, and changes to docs, tests, CI, and agent files.
-2. **Release, one of `release`, `skip-release`.**
-   - `release`: a change users of the published package would notice, in `bin-src/`, `node-src/`, `action-src/`, or `action.yml`.
-   - `skip-release`: docs, tests, CI, tooling, and agent files (`.agents/`, `AGENTS.md`). Also use it for package changes with no significant user benefit or too small to justify a release on their own; they ship with the next release.
+2. **Release, one of `release`, `skip-release`.** Default to `skip-release`; changes without a release ship with the next one.
+   - `release`: a change in `bin-src/`, `node-src/`, `action-src/`, or `action.yml` that users need published on its own, such as a bug fix or new flag they are waiting on, or a field the index depends on.
+   - `skip-release`: everything else, including docs, tests, CI, tooling, agent files (`.agents/`, `AGENTS.md`), output wording, debug logging, and fixes another PR's release will ship.
 
 When the user names labels, use theirs. Never add `DO NOT MERGE` unless asked; `check-labels` fails while it is set.
 
 ## Verify changes in the real CLI
 
 Unit tests don't show that the CLI behaves correctly for users. Before you call a change to `bin-src/` or `node-src/` that affects behavior or output done, or open or update a PR for it, load the `verify-chromatic-cli` skill (`.agents/skills/verify-chromatic-cli/`) and drive the built CLI through its `control-chromatic` helper. That covers comparing `main` against your branch (`build-ref`), reproducing a bug in an e2e fixture project with another builder or package manager (`e2e-fixture`), and trying a published canary (`install-published`). A refactor or performance change that keeps output identical needs only tests and an explanation. When reviewing, re-run it only if the author's evidence doesn't cover the change. If the helper can't do what the change needs, extend it in the same PR instead of working around it. When you can't verify something, say what and why in the PR.
+
+## Rules and what enforces them
+
+When a mistake keeps coming back, enforce the rule with a check and record it here. Rules enforced by nothing are judgment calls.
+
+| Rule | Enforced by |
+|---|---|
+| Exactly one bump label and one release label on every PR | `check-labels` workflow |
+| Which release label to pick | Judgment ([Label every pull request](#label-every-pull-request)) |
+| Source files stay under 500 lines; `git.ts` and `types.ts` under 1000. Split a file instead of disabling `max-lines` | ESLint `max-lines` and `eslint-comments/no-restricted-disable` |
+| Tests call commands in-process, never through `yarn chromatic` or `dist/bin.cjs` | ESLint `no-restricted-syntax` on `*.test.*` |
+| Behavior and output changes are verified in the real CLI | Judgment ([Verify changes in the real CLI](#verify-changes-in-the-real-cli)) |
+| No private customer details in public places | Judgment ([This repository is public](#this-repository-is-public)) |
 
 ## Service map
 
