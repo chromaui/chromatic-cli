@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, Mock, vi } from 'vitest';
 
 import { Context } from '../../..';
 import * as git from '../../../git/git';
+import * as treeAtReference from '../../../git/treeAtReference';
 import getEnvironment from '../../getEnvironment';
 import TestLogger from '../../testLogger';
 import { BaselineCheckoutFailedError, LockFileMissingError } from './errors';
@@ -25,6 +26,7 @@ vi.mock('snyk-nodejs-plugin');
 vi.mock('@snyk/dep-graph');
 vi.mock('yarn-or-npm');
 vi.mock('../../../git/git');
+vi.mock('../../../git/treeAtReference');
 vi.mock('fs');
 
 const tmpdir = '/tmpdir';
@@ -46,7 +48,7 @@ readFileSync.mockReturnValue('');
 const getRepositoryRoot = vi.mocked(git.getRepositoryRoot);
 const checkoutFile = vi.mocked(git.checkoutFile);
 const findFilesFromRepositoryRoot = vi.mocked(git.findFilesFromRepositoryRoot);
-const pathExistsAtReference = vi.mocked(git.pathExistsAtReference);
+const pathExistsAtReference = vi.mocked(treeAtReference.pathExistsAtReference);
 const pnpmLockfileParser = vi.mocked(getPnpmLockfileParser);
 const pnpmWorkspaceProject = vi.mocked(parsePnpmWorkspaceProject);
 const inspect = vi.mocked(snyk.inspect);

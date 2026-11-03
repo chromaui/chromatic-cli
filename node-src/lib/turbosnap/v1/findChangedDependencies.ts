@@ -5,12 +5,8 @@ import pLimit from 'p-limit';
 import path from 'path';
 import semver from 'semver';
 
-import {
-  checkoutFile,
-  findFilesFromRepositoryRoot,
-  getRepositoryRoot,
-  pathExistsAtReference,
-} from '../../../git/git';
+import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../../../git/git';
+import { pathExistsAtReference } from '../../../git/treeAtReference';
 import { Context, Stats } from '../../../types';
 import { matchesFile, SUPPORTED_LOCK_FILES } from '../../utilities';
 import { getStatsProjectRoot } from '../statsPaths';
