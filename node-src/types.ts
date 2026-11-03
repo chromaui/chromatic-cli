@@ -406,6 +406,7 @@ export interface Context {
   skipSnapshots?: boolean;
   now?: number;
   startedAt?: number;
+  /** @deprecated Unused. Nothing sets this anymore. */
   activity?: { end: () => void };
   exitCode: number;
   exitCodeKey: string;
