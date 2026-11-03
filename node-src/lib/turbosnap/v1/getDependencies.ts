@@ -10,8 +10,9 @@ import { inspect } from 'snyk-nodejs-plugin';
 
 import { Context } from '../../../types';
 import { posix } from '../../posix';
-import { PNPM_LOCK_FILE } from '../../utilities';
+import { BUN_LOCK_FILE, PNPM_LOCK_FILE } from '../../utilities';
 import { LockFileParseFailedError, LockFileSizeExceededError } from './errors';
+import { parseBunLockfile } from './parseBunLockfile';
 
 export const MAX_LOCK_FILE_SIZE = 10_485_760; // 10 MB
 
@@ -56,9 +57,14 @@ export const getDependencies = async (
   ensureLockFileSize(ctx, absoluteLockfilePath);
 
   try {
-    return path.basename(absoluteLockfilePath) === PNPM_LOCK_FILE
-      ? await parsePnpmLockfile(absoluteManifestPath, absoluteLockfilePath)
-      : await inspectLockfile(absoluteManifestPath, absoluteLockfilePath);
+    const lockfileName = path.basename(absoluteLockfilePath);
+    if (lockfileName === PNPM_LOCK_FILE) {
+      return await parsePnpmLockfile(absoluteManifestPath, absoluteLockfilePath);
+    }
+    if (lockfileName === BUN_LOCK_FILE) {
+      return parseBunLockfile(absoluteManifestPath, absoluteLockfilePath);
+    }
+    return await inspectLockfile(absoluteManifestPath, absoluteLockfilePath);
   } catch (err) {
     ctx.log.debug({ rootPath, manifestPath, lockfilePath }, 'Failed to get dependencies');
     throw err;

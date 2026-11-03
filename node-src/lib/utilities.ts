@@ -86,7 +86,8 @@ export const isPackageManifestFile = (filePath: string) =>
   [/(^|\/)package\.json$/].some((re) => re.test(filePath));
 
 export const PNPM_LOCK_FILE = 'pnpm-lock.yaml';
-export const SUPPORTED_LOCK_FILES = ['yarn.lock', PNPM_LOCK_FILE, 'package-lock.json'];
+export const BUN_LOCK_FILE = 'bun.lock';
+export const SUPPORTED_LOCK_FILES = ['yarn.lock', PNPM_LOCK_FILE, 'package-lock.json', BUN_LOCK_FILE];
 
 export const isPackageLockFile = (filePath: string) =>
   SUPPORTED_LOCK_FILES.some(
