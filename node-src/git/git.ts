@@ -752,6 +752,22 @@ export function trackedFiles(deps: GitDeps, repoRoot: string): AsyncIterable<str
 }
 
 /**
+ * The timeout for git commands that only collect build metadata. The build doesn't need their
+ * results, and slow metadata commands used to fail builds, so the configured `gitTimeout` is capped
+ * at `DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS`.
+ *
+ * @param deps Function dependencies.
+ *
+ * @returns The timeout in milliseconds.
+ */
+function getMetadataGitTimeout(deps: GitDeps) {
+  return Math.min(
+    deps.options?.gitTimeout ?? DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS,
+    DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS
+  );
+}
+
+/**
  * Determine the date the repository was created
  *
  * @param deps Function dependencies.
@@ -767,10 +783,7 @@ export async function getRepositoryCreationDate(deps: GitDeps) {
       deps,
       `git log --reverse --format=%cd --date=iso`,
       {
-        timeout: Math.min(
-          deps?.options?.gitTimeout ?? DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS,
-          DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS
-        ),
+        timeout: getMetadataGitTimeout(deps),
       }
     );
 
@@ -801,10 +814,7 @@ export async function getStorybookCreationDate(
       deps,
       `git log --follow --reverse --format=%cd --date=iso -- ${configDirectory}`,
       {
-        timeout: Math.min(
-          deps?.options?.gitTimeout ?? DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS,
-          DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS
-        ),
+        timeout: getMetadataGitTimeout(deps),
       }
     );
     return new Date(dateString);
@@ -825,13 +835,8 @@ export async function getStorybookCreationDate(
  */
 export async function getNumberOfCommitters(deps: GitDeps) {
   try {
-    // Note that this timeout is explicitly less than the default because this command is not necessary and was
-    // previously causing builds to fail collecting metadata.
     return await execGitCommandCountLines(deps, `git shortlog -sn --all --since="6 months ago"`, {
-      timeout: Math.min(
-        deps?.options?.gitTimeout ?? DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS,
-        DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS
-      ),
+      timeout: getMetadataGitTimeout(deps),
     });
   } catch {
     return undefined;
@@ -864,13 +869,8 @@ export async function getCommittedFileCount(
     const globs = bothCasesNameMatches.flatMap((match) =>
       extensions.map((extension) => `"*${match}*.${extension}"`)
     );
-    // Note that this timeout is explicitly less than the default because this command is not necessary and was
-    // previously causing builds to fail collecting metadata.
     return await execGitCommandCountLines(deps, `git ls-files -- ${globs.join(' ')}`, {
-      timeout: Math.min(
-        deps?.options?.gitTimeout ?? DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS,
-        DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS
-      ),
+      timeout: getMetadataGitTimeout(deps),
     });
   } catch {
     return undefined;
