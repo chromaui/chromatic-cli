@@ -1,3 +1,28 @@
+# v18.14.0 (Tue Nov 03 2026)
+
+#### 🚀 Enhancement
+
+- Exclude React Native stories from manifest.json with reactNative.excludeStoryIds [#1628](https://github.com/chromaui/chromatic-cli/pull/1628) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### 🐛 Bug Fix
+
+- Treat a workspace added since the baseline as all new [#1590](https://github.com/chromaui/chromatic-cli/pull/1590) ([@codykaup](https://github.com/codykaup))
+- Bump @storybook/builder-vite from 10.3.5 to 10.6.5 [#1627](https://github.com/chromaui/chromatic-cli/pull/1627) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Keep the metadata git timeout cap in one place [#1629](https://github.com/chromaui/chromatic-cli/pull/1629) ([@justin-thurman](https://github.com/justin-thurman))
+- Enforce file size, in-process trace tests, and skip-release default [#1620](https://github.com/chromaui/chromatic-cli/pull/1620) ([@codykaup](https://github.com/codykaup))
+- Bump fs-extra and @types/fs-extra [#1625](https://github.com/chromaui/chromatic-cli/pull/1625) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump p-limit from 3.1.0 to 7.3.3 [#1626](https://github.com/chromaui/chromatic-cli/pull/1626) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Ignore dependency changes from workspaces the Storybook doesn't load [#1592](https://github.com/chromaui/chromatic-cli/pull/1592) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 4
+
+- [@dependabot[bot]](https://github.com/dependabot[bot])
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v18.13.9 (Mon Nov 02 2026)
 
 #### 🐛 Bug Fix
