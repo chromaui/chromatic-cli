@@ -316,13 +316,7 @@ export async function getChangedFiles(deps: GitDeps, baseCommit: string, headCom
 }
 
 /** The kind of change Git reported for a file in a `--name-status` diff. */
-export type ChangedFileStatus =
-  | 'added'
-  | 'deleted'
-  | 'modified'
-  | 'renamed'
-  | 'typeChanged'
-  | 'unknown';
+type ChangedFileStatus = 'added' | 'deleted' | 'modified' | 'renamed' | 'typeChanged' | 'unknown';
 
 /** A single row of a `--name-status` diff, parsed into a usable shape. */
 export interface ChangedFileWithStatus {

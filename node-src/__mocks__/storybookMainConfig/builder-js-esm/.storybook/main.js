@@ -1,1 +1,1 @@
-export default { framework: { name: '@storybook/react-vite' } };
+export default { framework: { name: '@storybook/html-vite' } };

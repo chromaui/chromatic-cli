@@ -6,12 +6,6 @@ import { Context } from '../types';
 export const lcfirst = (str: string) => `${str.charAt(0).toLowerCase()}${str.slice(1)}`;
 
 export const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-export const tick = async (times: number, interval: number, callback: (index: number) => any) => {
-  for (let index = 0; index < times; index += 1) {
-    await delay(interval);
-    callback(index);
-  }
-};
 
 export const throttle = (fn: (...args: any[]) => void, wait: number) => {
   let previous = 0;
@@ -22,20 +16,6 @@ export const throttle = (fn: (...args: any[]) => void, wait: number) => {
       fn(...args);
     }
   };
-};
-
-export const repeat = (n: number, char: string) =>
-  Array.from({ length: Math.round(n) }).map(() => char);
-export const progressBar = (percentage: number, size = 20) => {
-  const track = repeat(size, ' ');
-  const completed = repeat((percentage / 100) * size || 0, '=');
-  return `[${`${completed.join('')}${track.join('')}`.slice(0, 20)}]`;
-};
-export const activityBar = (n = 0, size = 20) => {
-  const track = repeat(size, ' ');
-  const index = n % ((size - 1) * 2);
-  track[index >= size ? (size - 1) * 2 - index : index] = '*';
-  return `[${track.join('')}]`;
 };
 
 export const rewriteErrorMessage = (err: Error, message: string) => {

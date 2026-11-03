@@ -3,8 +3,8 @@ import chalk from 'chalk';
 const isSupported =
   process.platform !== 'win32' || process.env.CI || process.env.TERM === 'xterm-256color';
 
-export const cross = isSupported ? '✖' : '×';
-export const check = isSupported ? '✔' : '√';
+const cross = isSupported ? '✖' : '×';
+const check = isSupported ? '✔' : '√';
 export const arrowDown = `↓`;
 export const arrowRight = `→`;
 export const chevronRight = `›`;

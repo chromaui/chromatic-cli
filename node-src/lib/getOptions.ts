@@ -15,7 +15,7 @@ import missingProjectToken from '../ui/messages/errors/missingProjectToken';
 import deprecatedOption from '../ui/messages/warnings/deprecatedOption';
 import { isE2EBuild } from './e2eUtils';
 
-export const DEFAULT_LOG_FILE = 'chromatic.log';
+const DEFAULT_LOG_FILE = 'chromatic.log';
 export const DEFAULT_DIAGNOSTICS_FILE = 'chromatic-diagnostics.json';
 const DEFAULT_REPORT_FILE = 'chromatic-build-{buildNumber}.xml';
 const DEFAULT_STORYBOOK_LOG_FILE = 'build-storybook.log';

@@ -138,14 +138,13 @@ export function createTask<TInput, TOutput, TPartial = never>(
   };
 }
 
-export const setTitle =
-  (title: ValueFunction, subtitle?: ValueFunction) => (ctx: Context, task: Task) => {
-    const ttl = typeof title === 'function' ? title(ctx, task) : title;
-    const sub = typeof subtitle === 'function' ? subtitle(ctx, task) : subtitle;
-    task.title = sub ? `${ttl}\n${chalk.dim(`    → ${sub}`)}` : ttl;
-  };
+const setTitle = (title: ValueFunction, subtitle?: ValueFunction) => (ctx: Context, task: Task) => {
+  const ttl = typeof title === 'function' ? title(ctx, task) : title;
+  const sub = typeof subtitle === 'function' ? subtitle(ctx, task) : subtitle;
+  task.title = sub ? `${ttl}\n${chalk.dim(`    → ${sub}`)}` : ttl;
+};
 
-export const setOutput = (output: ValueFunction) => (ctx: Context, task: Task) => {
+const setOutput = (output: ValueFunction) => (ctx: Context, task: Task) => {
   task.output = typeof output === 'function' ? output(ctx, task) : output;
 };
 

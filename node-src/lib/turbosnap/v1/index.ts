@@ -91,6 +91,4 @@ export async function traceChangedFiles(
   return { ...result, changedDependencyNames };
 }
 
-export { findChangedDependencies } from './findChangedDependencies';
-export { findChangedPackageFiles } from './findChangedPackageFiles';
 export { getDependentStoryFiles } from './getDependentStoryFiles';

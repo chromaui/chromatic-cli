@@ -16,7 +16,6 @@ on:
       - action.yml
       - isChromatic.*
       - package.json
-      - storybook-addon.*
       - yarn.lock
       - tsconfig.json
       - tsdown.config.ts
@@ -41,7 +40,6 @@ on:
       - action.yml
       - isChromatic.*
       - package.json
-      - storybook-addon.*
       - yarn.lock
 
 permissions:
