@@ -28,7 +28,7 @@ To check TurboSnap, run one build as a baseline, then commit a change and run it
 
 ## Fixtures
 
-All Storybooks are Storybook 10.6.1 with React 19 and TypeScript 5.9, except `react-rsbuild`, which needs Storybook 10.6.3 to match the `@storybook/react` that `storybook-react-rsbuild` pulls in.
+Every fixture is a React and TypeScript Storybook. Its `package.json` pins the exact versions. Keep each fixture's Storybook packages on the same version as its `storybook`. In `react-rsbuild`, that includes the `@storybook/react` that `storybook-react-rsbuild` pulls in.
 
 | Fixture                 | Package manager                           | Builder   | Storybook     |
 | ----------------------- | ----------------------------------------- | --------- | ------------- |
@@ -55,7 +55,7 @@ The `build-storybook` scripts leave out the stats flag, as most projects do, so 
 ## Changing a fixture
 
 - Keep fixtures minimal. Add something only when every scenario needs it.
-- Pin exact versions and commit the lockfile. That keeps installs reproducible and gives dependency-change scenarios a real lockfile diff. Dependabot ignores `e2e/fixtures/`.
+- Pin exact versions and commit the lockfile. That keeps installs reproducible and gives dependency-change scenarios a real lockfile diff. Dependabot's version updates skip `e2e/fixtures/`, but its security updates can still bump a single package there, such as `storybook`, without the packages that must match it.
 - To update a lockfile, prepare the fixture, change it and install in the copy, then copy the lockfile back. Installing in place is not recommended: Yarn would pick up this repository's `.yarnrc.yml`.
 - Use neutral names (`@myorg/*`, `Button`) and never commit project tokens. This repository is public.
 - `smoke-tests/` is separate for now. CI uses it to run one build per package manager, Node version and OS.
