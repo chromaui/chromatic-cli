@@ -1,6 +1,7 @@
 import meow from 'meow';
 import path from 'path';
 
+import { getConfiguration } from '../node-src/lib/getConfiguration';
 import { createLogger } from '../node-src/lib/log';
 import { meowImportMeta } from '../node-src/lib/meowImportMeta';
 import { generateManifest } from '../node-src/lib/react-native/generateManifest';
@@ -65,15 +66,17 @@ export async function main(argv: string[]) {
     return;
   }
 
-  const ctx: Context = {
-    log,
-    options: {
-      storybookConfigDir: flags.storybookConfigDir,
-    },
-    sourceDir: path.resolve(flags.outputDir),
-  } as any;
-
   try {
+    const configuration = await getConfiguration();
+    const ctx: Context = {
+      log,
+      options: {
+        storybookConfigDir: flags.storybookConfigDir,
+        reactNative: configuration.reactNative,
+      },
+      sourceDir: path.resolve(flags.outputDir),
+    } as any;
+
     await validateStorybookReactNativeVersion(ctx);
     await generateManifest(ctx, { sourceDir: ctx.sourceDir });
   } catch (err) {

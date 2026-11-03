@@ -50,6 +50,19 @@ function getDeps(overrides: Record<string, any> = {}) {
 
 const input = { sourceDir: sourceDirectory };
 
+const storyEntry = (id: string) => ({
+  type: 'story',
+  id,
+  name: id,
+  importPath: './Example.stories.tsx',
+  title: 'Example',
+});
+
+const readManifest = () => JSON.parse(writeFileSync.mock.calls[0][1] as string);
+
+const depsExcluding = (excludeStoryIds: string[]) =>
+  getDeps({ options: { reactNative: { excludeStoryIds } } });
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -232,6 +245,60 @@ describe('generateManifest', () => {
           type: 'story',
         },
       ],
+    });
+  });
+
+  describe('excludeStoryIds', () => {
+    beforeEach(() => {
+      mockBuildIndex.mockResolvedValue({
+        entries: Object.fromEntries(
+          ['button--primary', 'button--primary-large', 'card--default', 'card--loading'].map(
+            (id) => [id, storyEntry(id)]
+          )
+        ),
+      });
+    });
+
+    it('removes an exact story ID from stories and json without removing similar IDs', async () => {
+      await generateManifest(depsExcluding(['button--primary']), input);
+
+      const manifest = readManifest();
+      expect(manifest.stories.map((story) => story.storyId)).toEqual([
+        'button--primary-large',
+        'card--default',
+        'card--loading',
+      ]);
+      expect(manifest.json.map((entry) => entry.id)).toEqual([
+        'button--primary-large',
+        'card--default',
+        'card--loading',
+      ]);
+    });
+
+    it('removes every story ID matching a glob', async () => {
+      await generateManifest(depsExcluding(['card--*', '*--primary-large']), input);
+
+      expect(readManifest().stories.map((story) => story.storyId)).toEqual(['button--primary']);
+    });
+
+    it('warns about patterns that match no stories', async () => {
+      const deps = depsExcluding(['button--primary', 'buton--*']);
+      await generateManifest(deps, input);
+
+      expect(deps.log.warn).toHaveBeenCalledTimes(1);
+      expect(deps.log.warn).toHaveBeenCalledWith(expect.stringContaining('buton--*'));
+    });
+
+    it('fails without writing a manifest when every story is excluded', async () => {
+      const deps = depsExcluding(['button--*', 'card--*']);
+      const failure = generateManifest(deps, input);
+
+      await expect(failure).rejects.toThrow(/excludeStoryIds/);
+      await expect(failure).rejects.toMatchObject({ exitCode: 4, userError: true });
+      expect(deps.log.error).toHaveBeenCalledWith(
+        expect.stringContaining('Remove some patterns from excludeStoryIds')
+      );
+      expect(writeFileSync).not.toHaveBeenCalled();
     });
   });
 

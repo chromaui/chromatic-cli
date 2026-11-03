@@ -400,6 +400,16 @@ describe('reactNative config', () => {
     });
   });
 
+  it('accepts reactNative.excludeStoryIds', async () => {
+    mockedReadFile.mockReturnValue(
+      JSON.stringify({ reactNative: { excludeStoryIds: ['button--primary', 'card--*'] } })
+    );
+
+    expect(await getConfiguration()).toMatchObject({
+      reactNative: { excludeStoryIds: ['button--primary', 'card--*'] },
+    });
+  });
+
   it('accepts config without reactNative', async () => {
     mockedReadFile.mockReturnValue(JSON.stringify({ projectId: 'project-id' }));
 
