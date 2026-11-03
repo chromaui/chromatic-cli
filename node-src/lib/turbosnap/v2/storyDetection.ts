@@ -13,7 +13,7 @@ import {
  * Whether a canonical path has a real file on disk. You can use things that adhere to this
  * interface such as `Map` or `Set`.
  */
-export interface OnDiskFiles {
+interface OnDiskFiles {
   has(filePath: FilePath): boolean;
 }
 

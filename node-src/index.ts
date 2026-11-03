@@ -51,7 +51,6 @@ import { renderVerify } from './renderer/verify';
 import getTasks from './tasks';
 import { runRestoreWorkspace } from './tasks/restoreWorkspace';
 import { CloneDepth, CloneFilter, Context, Flags, Options } from './types';
-import { endActivity } from './ui/components/activity';
 import buildCanceled from './ui/messages/errors/buildCanceled';
 import fatalError from './ui/messages/errors/fatalError';
 import fetchError from './ui/messages/errors/fetchError';
@@ -338,7 +337,6 @@ async function runBuild(ctx: Context) {
       ctx.log.debug('Tasks completed');
     } catch (err) {
       Sentry.captureException(err);
-      endActivity(ctx);
       if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
         setExitCode(ctx, exitCodes.FETCH_ERROR);
         throw rewriteErrorMessage(err, fetchError(ctx, err));

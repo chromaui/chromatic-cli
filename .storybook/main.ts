@@ -19,7 +19,7 @@ const config: StorybookConfig = {
       alias: {
         ...config.resolve?.alias,
         os: fileURLToPath(import.meta.resolve('os-browserify/browser')),
-        path: "path-browserify",
+        path: fileURLToPath(import.meta.resolve('path-browserify')),
       },
     };
     config.plugins = [...(config.plugins ?? []), clackCapture()];

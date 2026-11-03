@@ -30,7 +30,7 @@ export async function classifyTagsFromError(
  *
  * These exist for Sentry ONLY and are not sent to the backend.
  */
-export type BaselineCheckoutFailureKind =
+type BaselineCheckoutFailureKind =
   | 'baselineManifestMoved'
   | 'baselineManifestAdded'
   | 'baselineCommitMissing'

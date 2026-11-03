@@ -5,7 +5,7 @@ import { Deps, Git, VisitedCommit } from '../types';
 import { execGitCommand, GitDeps } from './execGit';
 import { commitExists, commitsExist, getVisitedCommitDetails } from './git';
 
-export const FETCH_N_INITIAL_BUILD_COMMITS = 20;
+const FETCH_N_INITIAL_BUILD_COMMITS = 20;
 
 const FirstCommittedAtQuery = gql`
   query FirstCommittedAtQuery($branch: String!, $localBuilds: LocalBuildsSpecifierInput!) {

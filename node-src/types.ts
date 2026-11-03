@@ -267,7 +267,7 @@ export interface BaselineBuild {
 /** A fully resolved path to a location on the local filesystem. */
 export type AbsolutePath = string;
 
-export interface StorybookPaths {
+interface StorybookPaths {
   /** The absolute directory Storybook runs from. */
   projectRoot: AbsolutePath;
   /** The absolute directory containing Storybook's configuration. */
@@ -341,7 +341,7 @@ export type TaskName =
  * Each field is seeded from its Options counterpart at init time, then may be
  * overridden later by tasks that need to change effective behavior.
  */
-export type Runtime = Pick<Options, 'forceRebuild'>;
+type Runtime = Pick<Options, 'forceRebuild'>;
 
 /**
  * Cross-cutting dependencies passed to every task. Individual tasks will
@@ -406,6 +406,7 @@ export interface Context {
   skipSnapshots?: boolean;
   now?: number;
   startedAt?: number;
+  /** @deprecated Unused. Nothing sets this anymore. */
   activity?: { end: () => void };
   exitCode: number;
   exitCodeKey: string;
@@ -558,7 +559,7 @@ export interface Task {
   progress?: TaskProgress;
 }
 
-export interface TaskProgress {
+interface TaskProgress {
   progress: number;
   total: number;
   unit: string;
@@ -570,7 +571,7 @@ export interface TaskProgress {
  * "skipping build", or numeric progress like upload bytes / snapshot counts) — as opposed to the
  * `start`/`succeed`/`fail` brackets the engine drives on its own.
  */
-export interface TaskUpdate {
+interface TaskUpdate {
   title?: string;
   output?: string;
   progress?: TaskProgress;
@@ -625,22 +626,18 @@ interface TurboSnapBailReasonBase {
   rebuild?: true;
 }
 
-export type TurboSnapChangedPackageFilesSubreason =
+type TurboSnapChangedPackageFilesSubreason =
   | 'baselineCheckoutFailed'
   | 'lockfileParseFailed'
   | 'lockfileSizeExceeded'
   | 'nodeModulesMissingInStats';
 
-export type TurboSnapInvalidChangedFilesSubreason =
+type TurboSnapInvalidChangedFilesSubreason =
   | 'ancestorMissing'
   | 'baselineDirty'
   | 'replacementFailed'
   | 'networkError'
   | 'gitCommandFailed';
-
-export type TurboSnapBailSubreason =
-  | TurboSnapChangedPackageFilesSubreason
-  | TurboSnapInvalidChangedFilesSubreason;
 
 // All additional fields allowed for the `changedPackageFiles` bail reason
 export type ChangedPackageFilesBailReason = TurboSnapBailReasonBase & {
@@ -660,7 +657,7 @@ export type InvalidChangedFilesBailReason = TurboSnapBailReasonBase & {
   sentryEventId?: string;
 };
 
-export type TurboSnapBailReason =
+type TurboSnapBailReason =
   | ChangedPackageFilesBailReason
   | InvalidChangedFilesBailReason
   // All remaining bail reasons

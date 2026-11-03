@@ -10,7 +10,7 @@ import { viewLayers } from './viewLayers';
   particular setup.
 */
 
-export interface SBProjectJson {
+interface SBProjectJson {
   addons: Record<string, { version: string; options: any }>;
   builder?: string | { name: string };
   framework: {

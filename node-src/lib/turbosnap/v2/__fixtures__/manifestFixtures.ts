@@ -9,7 +9,7 @@ export const projectRoot = '/repo/packages/ui';
 
 // The version the manifest reads off the installed Storybook package. Fixed here, so a Storybook
 // release cannot move a manifest these suites assert on.
-export const storybookVersion = '9.1.20';
+const storybookVersion = '9.1.20';
 
 /** A fresh disk and the input that reads it, so each test owns its own state and nothing leaks. */
 export interface ManifestFixture {

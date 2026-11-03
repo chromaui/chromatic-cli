@@ -1,7 +1,7 @@
 import { execa, parseCommandString } from 'execa';
 import { writeFile } from 'jsonfile';
 import type { NormalizedPackageJson } from 'read-package-up';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   addChromaticScriptToPackageJson,
@@ -69,14 +69,6 @@ describe('createChromaticConfigFile', () => {
 });
 
 describe('installArchiveDependencies', () => {
-  beforeEach(() => {
-    vi.doMock('find-up', async () => {
-      return {
-        findUp: vi.fn(() => Promise.resolve(undefined)),
-      };
-    });
-  });
-
   it('successfully installs list of dependencies for Playwright if SB package is not found and Essentials is not found', async () => {
     await installArchiveDependencies({} as NormalizedPackageJson, 'playwright');
 

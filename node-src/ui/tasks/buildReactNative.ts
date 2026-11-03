@@ -1,11 +1,6 @@
 import { getDuration } from '../../lib/tasks';
 import { Context } from '../../types';
 
-export const initial = () => ({
-  status: 'initial',
-  title: 'Build React Native Storybook',
-});
-
 export const pending = () => ({
   status: 'pending',
   title: 'Building your React Native Storybook',
@@ -54,10 +49,4 @@ export const failedNoValidPlatforms = () => ({
   status: 'error',
   title: 'Building your React Native Storybook',
   output: 'Unable to build for React Native, your project does not include any supported platforms',
-});
-
-export const failed = (ctx: Context) => ({
-  status: 'error',
-  title: 'Building your React Native Storybook',
-  output: `Build failed, see logs at ${ctx.reactNativeBuildLogFile}`,
 });

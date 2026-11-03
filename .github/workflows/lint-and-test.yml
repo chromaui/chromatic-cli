@@ -21,6 +21,10 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup
 
+      # Runs before the build so it can't depend on generated output.
+      - name: Dead code and dependency audit
+        run: yarn knip
+
       # check types and linting issues
       - run: yarn typescript:check
       - run: yarn lint

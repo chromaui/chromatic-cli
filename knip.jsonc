@@ -1,0 +1,32 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+  // Knip infers entry files from package.json, tsdown, vitest, Storybook, and the GitHub workflows,
+  // so this only lists what it can't infer. The published API needs no config: tsdown's entries
+  // (bin-src/register.js, node-src/index.ts for `chromatic/node`, action-src/register.js) and the
+  // isChromatic files in package.json `exports` are entry files, and knip never reports exports of
+  // entry files or anything they re-export.
+  "entry": [
+    // .storybook/clackCapture.ts loads these through jiti and renders every export as a story.
+    "node-src/**/*.frames.ts",
+  ],
+  "ignore": [
+    // Standalone projects with their own package.json that e2e/prepare.mjs and the smoke-test
+    // workflow copy out and install. They are not part of this package.
+    "e2e/fixtures/**",
+    "smoke-tests/**",
+  ],
+  "ignoreDependencies": [
+    // An `auto` plugin, loaded by name from the `auto.plugins` list in package.json.
+    "@auto-it/slack",
+    // Required at runtime by `any-observable/register/zen`, which node-src/index.ts imports.
+    "zen-observable",
+    // Resolved from the user's project at runtime, not from this package.
+    "@storybook/react-native",
+    // A test fixture that imports a package that must not exist.
+    "chromatic-fixture-missing-package",
+  ],
+  "ignoreBinaries": [
+    // A deliberately invalid command in a test, not a binary we run.
+    "some",
+  ],
+}

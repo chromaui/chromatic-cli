@@ -15,7 +15,6 @@ import { renderBuild } from './renderer/build';
 import { renderPrepare } from './renderer/prepare';
 import { runShare } from './tasks';
 import { Context, Options } from './types';
-import { endActivity } from './ui/components/activity';
 
 export interface ShareOptions {
   userToken: string;
@@ -175,7 +174,6 @@ async function runShareTasks(ctx: Context): Promise<void> {
     ).run(ctx);
     ctx.log.debug('Tasks completed');
   } finally {
-    endActivity(ctx);
     ctx.log.flush();
   }
 }

@@ -403,6 +403,6 @@ describe('getStorybookMetadata fields visible on ctx.storybook', () => {
       projectRootOf('builder-js-esm')
     );
 
-    expect(metadata.builder?.name).toBe('@storybook/react-vite');
+    expect(metadata.builder?.name).toBe('@storybook/html-vite');
   });
 });

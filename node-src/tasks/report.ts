@@ -158,7 +158,7 @@ const queryBuildForReport = async (ctx: Context) => {
  * @param suite The {@link TestSuite} we're currently processing.
  * @param test The {@link VisualTest} we're currently processing, contained in `suite`.
  */
-export const generateReportTestCase = (suite: TestSuite, test: VisualTest) => {
+const generateReportTestCase = (suite: TestSuite, test: VisualTest) => {
   const { status, result, spec, parameters, mode } = test;
   const testSuffixName = mode.name || `[${parameters.viewport}px]`;
   const suffix = parameters.viewportIsDefault ? '' : testSuffixName;
