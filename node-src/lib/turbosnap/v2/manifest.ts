@@ -2,14 +2,7 @@ import path from 'path';
 import xxHashWasm from 'xxhash-wasm';
 
 import { Stats } from '../../../types';
-import {
-  collectTransitiveDependencies,
-  FileHash,
-  FilePath,
-  hashEntryIdentities,
-  rollUpFileHashes,
-  TurboSnapFile,
-} from './graph';
+import { FileHash, FilePath, hashEntryIdentities, TurboSnapFile } from './graph';
 import { ManifestInput } from './manifestInput';
 import { hashOutOfGraphFiles, OutOfGraphFiles, rollUpOutOfGraphFiles } from './outOfGraphFiles';
 import { buildRollUpPath, normalizeStatsPath } from './paths';
@@ -19,6 +12,7 @@ import { readStatsGraph } from './statsGraph';
 import { STORYBOOK_VERSION_KEY, StorybookFileKey } from './storybookFileKeys';
 import { collectStorybookFiles, FileAttribution } from './storybookFiles';
 import { resolveStorybookVersion } from './storybookVersion';
+import { hashStorySubtrees } from './storyHashes';
 
 type StorybookVersion = string;
 
@@ -107,14 +101,11 @@ export async function buildManifest(
   } = await readStatsGraph(stats, input, skipRule);
   input.log.debug(`Found ${storyFiles.size} story files from preview-stats.json`);
 
-  const { h64ToString } = await xxHashWasm();
+  const hasher = await xxHashWasm();
+  const { h64ToString } = hasher;
   // Counted over every on-disk file once, so each roll-up sees the same copies; see buildRollUpPath.
   const rollUpPath = buildRollUpPath(hashes.keys());
-  const storyFileHashes = new Map<FilePath, FileHash>();
-  for (const storyFile of storyFiles) {
-    const subtree = collectTransitiveDependencies(files, storyFile);
-    storyFileHashes.set(storyFile, rollUpFileHashes(hashes, subtree, h64ToString, rollUpPath));
-  }
+  const storyFileHashes = hashStorySubtrees(files, hashes, storyFiles, rollUpPath, hasher);
 
   const { storybookConfigHashes, attribution } = collectStorybookFiles(
     files,
