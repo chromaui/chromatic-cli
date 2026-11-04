@@ -86,8 +86,14 @@ function readPins(directory) {
 
   return manifests.flatMap((manifest) => {
     const json = JSON.parse(readFileSync(path.join(directory, manifest), 'utf8'));
-    const pins = { ...json.peerDependencies, ...json.devDependencies, ...json.dependencies };
-    return Object.entries(pins).map(([name, version]) => ({ name, version, source: manifest }));
+    const sections = ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'];
+    return sections.flatMap((section) =>
+      Object.entries(json[section] ?? {}).map(([name, version]) => ({
+        name,
+        version,
+        source: manifest,
+      }))
+    );
   });
 }
 
