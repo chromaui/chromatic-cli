@@ -142,7 +142,7 @@
     "@types/semver": "^7.3.9",
     "@types/ws": "^8",
     "@types/yazl": "^3.3.0",
-    "@vitest/coverage-v8": "^4.1.2",
+    "@vitest/coverage-v8": "^5.0.5",
     "adm-zip": "^0.5.17",
     "ansi-html": "0.0.9",
     "any-observable": "^0.5.1",
