@@ -1,3 +1,38 @@
+# v18.14.1 (Wed Nov 04 2026)
+
+### Release Notes
+
+#### Add knip dead code audit and restore dotenv 16 ([#1630](https://github.com/chromaui/chromatic-cli/pull/1630))
+
+The CLI reads `.env` files with dotenv 16 again, as it did before 18.10.0. Releases 18.10.0 through 18.13.9 accidentally bundled dotenv 8, which kept inline comments in values: `KEY=value # comment` became `value # comment`. With dotenv 16, an unquoted `#` starts a comment. If you added a value with a literal `#` while on those releases, quote it, for example `CHROMATIC_BRANCH="fix#123"`.
+
+---
+
+#### 🐛 Bug Fix
+
+- Narrow the Git index scan for scoped TurboSnap externals [#1609](https://github.com/chromaui/chromatic-cli/pull/1609) ([@tayloroai](https://github.com/tayloroai))
+- Document how TurboSnap 2.0 manifest hashes decide recaptures [#1632](https://github.com/chromaui/chromatic-cli/pull/1632) ([@codykaup](https://github.com/codykaup))
+- Fail CI when an e2e fixture mixes Storybook versions [#1640](https://github.com/chromaui/chromatic-cli/pull/1640) ([@codykaup](https://github.com/codykaup))
+- Bump dotenv from 16.6.1 to 17.4.2 [#1367](https://github.com/chromaui/chromatic-cli/pull/1367) ([@codykaup](https://github.com/codykaup) [@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump @vitest/coverage-v8 from 4.1.5 to 5.0.5 [#1634](https://github.com/chromaui/chromatic-cli/pull/1634) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@codykaup](https://github.com/codykaup))
+- Bump vite from 8.0.10 to 8.3.5 [#1639](https://github.com/chromaui/chromatic-cli/pull/1639) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump vite-tsconfig-paths from 5.1.4 to 6.1.1 [#1635](https://github.com/chromaui/chromatic-cli/pull/1635) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump read-package-up from 11.0.0 to 12.0.0 [#1633](https://github.com/chromaui/chromatic-cli/pull/1633) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump brace-expansion from 1.1.14 to 1.1.21 [#1638](https://github.com/chromaui/chromatic-cli/pull/1638) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump source-map-js from 1.2.1 to 1.2.2 [#1636](https://github.com/chromaui/chromatic-cli/pull/1636) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Align e2e fixture Storybook framework packages with storybook [#1624](https://github.com/chromaui/chromatic-cli/pull/1624) ([@codykaup](https://github.com/codykaup))
+- Add knip dead code audit and restore dotenv 16 [#1630](https://github.com/chromaui/chromatic-cli/pull/1630) ([@justin-thurman](https://github.com/justin-thurman))
+- Align all Storybook packages on 10.6.5 [#1631](https://github.com/chromaui/chromatic-cli/pull/1631) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 4
+
+- [@dependabot[bot]](https://github.com/dependabot[bot])
+- [@tayloroai](https://github.com/tayloroai)
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+
+---
+
 # v18.14.0 (Tue Nov 03 2026)
 
 #### 🚀 Enhancement
