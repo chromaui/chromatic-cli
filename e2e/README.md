@@ -28,7 +28,7 @@ To check TurboSnap, run one build as a baseline, then commit a change and run it
 
 ## Fixtures
 
-Every fixture is a React and TypeScript Storybook. Its `package.json` pins the exact versions. Keep each fixture's Storybook packages on the same version as its `storybook`. In `react-rsbuild`, that includes the `@storybook/react` that `storybook-react-rsbuild` pulls in.
+Every fixture is a React and TypeScript Storybook. Its `package.json` pins the exact versions. Keep each fixture's Storybook packages on the same version as its `storybook`. In `react-rsbuild`, that includes the `@storybook/react` that `storybook-react-rsbuild` pulls in. CI checks this in every `package.json` and lockfile with `node e2e/check-storybook-versions.mjs`. `@storybook/*` packages with their own version numbers, such as `@storybook/icons`, are exempt.
 
 | Fixture                 | Package manager                           | Builder   | Storybook     |
 | ----------------------- | ----------------------------------------- | --------- | ------------- |

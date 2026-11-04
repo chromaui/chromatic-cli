@@ -64,6 +64,7 @@ When a mistake keeps coming back, enforce the rule with a check and record it he
 | Which release label to pick | Judgment ([Label every pull request](#label-every-pull-request)) |
 | Source files stay under 500 lines; `git.ts` and `types.ts` under 1000. Split a file instead of disabling `max-lines` | ESLint `max-lines` and `eslint-comments/no-restricted-disable` |
 | Tests call commands in-process, never through `yarn chromatic` or `dist/bin.cjs` | ESLint `no-restricted-syntax` on `*.test.*` |
+| Each e2e fixture's Storybook packages match its `storybook` version, in `package.json` and the lockfile | `e2e/check-storybook-versions.mjs` in the lint-and-test workflow |
 | Behavior and output changes are verified in the real CLI | Judgment ([Verify changes in the real CLI](#verify-changes-in-the-real-cli)) |
 | No private customer details in public places | Judgment ([This repository is public](#this-repository-is-public)) |
 
