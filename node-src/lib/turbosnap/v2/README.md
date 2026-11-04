@@ -79,7 +79,7 @@ Exceptions:
 
 ## Story-file keys are a cross-repo contract
 
-The keys in `storyFiles` must match how the index names story files: relative to the Storybook project root and prefixed with `./`, like Storybook's own import paths. Changing how those keys are spelled is the riskiest change in this directory. A mismatch doesn't necessarily cause a recapture: stories can look unchanged instead, and silently stop being recaptured. Coordinate any such change with the index before shipping it.
+The keys in `storyFiles` must match how the index names story files: relative to the Storybook project root and prefixed with `./`, or `../` for files outside the project root, like Storybook's own import paths. Changing how those keys are spelled is the riskiest change in this directory. A mismatch doesn't necessarily cause a recapture: stories can look unchanged instead, and silently stop being recaptured. Coordinate any such change with the index before shipping it.
 
 ## Changes that reset hashes
 
