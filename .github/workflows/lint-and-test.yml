@@ -21,6 +21,9 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup
 
+      - name: E2E fixture Storybook versions
+        run: node e2e/check-storybook-versions.mjs
+
       # Runs before the build so it can't depend on generated output.
       - name: Dead code and dependency audit
         run: yarn knip
