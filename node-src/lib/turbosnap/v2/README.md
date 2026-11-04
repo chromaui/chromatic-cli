@@ -11,9 +11,9 @@ When stats are available and hash collection is enabled, the CLI attempts to bui
 | Half | Fields | Where it goes | Drives recaptures? |
 |---|---|---|---|
 | Roll-ups | `storybookHash`, `storybookConfigHashes`, `storyFiles` (sent as `storyFileHashes`) | Sent to the index | Yes, these are the hash inputs the index compares; build eligibility and baselines also matter |
-| Debug detail | `files`, `storybookConfigFiles`, `staticFiles`, `externals`, `attribution`, `skippedFiles` | Written to `<storybook-build>/.chromatic/turbosnap-manifest.json` and uploaded with the build's metadata to S3 | No, they exist to explain a decision after the fact |
+| Debug detail | `files`, `storybookConfigFiles`, `staticFiles`, `externals`, `attribution`, `skippedFiles` | Always written to `<storybook-build>/.chromatic/turbosnap-manifest.json`. Uploaded to S3 only when the build's metadata is uploaded: by default only with `--only-changed`, and never with `--no-upload-metadata` | No, they exist to explain a decision after the fact |
 
-The whole serialized manifest, including the roll-ups, is written to that metadata file. The roll-ups use the per-file hashes recorded in the debug detail, along with path identities and the Storybook version. When a roll-up moves, compare those inputs across the two manifests. `chromatic turbosnap-manifest` prints the same serialized structure locally.
+The whole serialized manifest, including the roll-ups, is written to that file. Without `--only-changed`, the roll-ups still reach the index, but the manifest does not reach S3. The roll-ups use the per-file hashes recorded in the debug detail, along with path identities and the Storybook version. When a roll-up moves, compare those inputs across the two manifests. `chromatic turbosnap-manifest` prints the same serialized structure locally.
 
 Adding or changing a debug-only field never changes what gets captured. Adding or changing anything that feeds a roll-up always might.
 
@@ -49,11 +49,11 @@ A few things the tree doesn't show:
 
 ## What the index does with the roll-ups
 
-The index works from the top of the tree down. Each level only matters when the level above it moved.
+This section describes another service, so it can drift from what is written here. Treat it as the model to design against, not a specification.
 
-1. **`storybookHash` matches the ancestor.** Nothing changed, and the build may be bypassed, capturing nothing at all.
-2. **A `storybookConfigHashes` entry changed.** Something that can affect every story changed: preview, a global, Storybook config, static files, an external, or the Storybook version. Every story is recaptured.
-3. **Only `storyFiles` changed.** Only stories whose roll-up hash changed are recaptured.
+Each story is judged on its own, against the build its baseline came from. It is recaptured when any `storybookConfigHashes` entry or its own `storyFiles` hash differs from that build. Baselines can come from different builds, so two stories in the same build can be compared against different ancestors. A story whose hash matches the parent build can still recapture because its baseline came from an older one.
+
+`storybookHash` is a shortcut, not a step in that decision: when it matches the ancestors, nothing hashed changed and the build may be bypassed, capturing nothing at all.
 
 The index stores uploaded hashes for later builds, but only evaluates them when `--only-changed` is requested. It decides whether hash-based TurboSnap is applied and tells the CLI. The CLI still runs git-based tracing when eligible and sends that result too, so a failure to build, write, or upload the manifest never fails the build.
 
@@ -66,7 +66,7 @@ Some on-disk files are deliberately not content-hashed. There are two reasons, r
 | `untracked` | Git reports it as untracked within the repository, ignored or not. Usually generated output, which can change on every build. | Feed no roll-up | Keep their edges, so a tracked file imported through a generated barrel still rolls up into the story |
 | `untraced` | Matches an `--untraced` glob. The user asked that changes here not recapture stories. | Feed no roll-up | Edges are cut, and files reached only through it are excluded from graph roll-ups, including the globals fallback; off-disk sweeps still apply independently |
 
-A skipped file contributes neither its own content hash nor its path to a subtree roll-up. Its path is excluded because generated files are often renamed on every build, so even their path would move the roll-up each time. The file stays in the graph so the edges through an untracked file still connect a story to the tracked files behind it. A skipped story file still has an entry in `storyFiles`: its tracked dependencies can move its hash, and adding, removing, or renaming that story-file key still moves `storybookHash`.
+A skipped file contributes neither its own content hash nor its path to a subtree roll-up. Its path is excluded because generated files are often renamed on every build, so even their path would move the roll-up each time. The file stays in the graph so the edges through an untracked file still connect a story to the tracked files behind it. A skipped story file still has an entry in `storyFiles`, and adding, removing, or renaming that key still moves `storybookHash`. For an untracked story file, its tracked dependencies can move its hash. An untraced story file has its edges cut, so its hash never moves.
 
 The globs for `--untraced` and `--externals` are relative to the git root. Skip rules follow symlinks to the real file, so a linked workspace package's generated output is still untracked. An external glob on that untracked output does not help: use its tracked source to detect changes Storybook-wide. Files outside the repository are not classified as untracked by this repository's git listing.
 
@@ -77,6 +77,10 @@ Exceptions:
 - Externals ignore the skip rule. A file that is both untraced and external still moves the `externals` entry.
 - Uncommitted edits do not make a tracked file untracked; it is still hashed unless explicitly untraced.
 
+## Story-file keys are a cross-repo contract
+
+The keys in `storyFiles` must match how the index names story files: relative to the Storybook project root and prefixed with `./`, like Storybook's own import paths. Changing how those keys are spelled is the riskiest change in this directory. A mismatch doesn't necessarily cause a recapture: stories can look unchanged instead, and silently stop being recaptured. Coordinate any such change with the index before shipping it.
+
 ## Changes that reset hashes
 
 Changing how a roll-up is computed can move it even when no user file changed. A change to the hash format can affect every project; a change to which files contribute affects only projects with those inputs. Their first builds on the new CLI can then recapture against ancestors built with the old one. Because users pin CLI versions and upgrade on their own schedule, this happens project by project. It can also repeat when branches of the same project run different CLI versions.
@@ -86,7 +90,7 @@ What moves and what it costs:
 | Change | Moves | Effect on the first build after upgrading |
 |---|---|---|
 | The shared content-hash or roll-up format | All entries using that format | Full recapture if a config entry moves, otherwise the affected stories |
-| How file paths are named in the manifest or in a roll-up | Any roll-up containing an affected path | Full recapture if any config entry moves, otherwise the affected stories |
+| How file paths are named in a roll-up | Any roll-up containing an affected path | Full recapture if any config entry moves, otherwise the affected stories. For `storyFiles` keys, see [the contract above](#story-file-keys-are-a-cross-repo-contract) |
 | Which files land in a `storybookConfigHashes` entry | That entry, for projects with affected inputs | Full recapture |
 | Which files land in a story subtree, or what the skip rule skips | Affected story and/or config entries; a file can move between them | Full recapture if a config entry moves, otherwise the affected stories |
 | Adding, removing, or renaming a `storybookConfigHashes` key | The config map | Full recapture |
@@ -95,6 +99,5 @@ What moves and what it costs:
 When making one of these changes:
 
 - Say so in the PR description, so users know why one build recaptured.
-- Ship it on its own with the `release` label rather than bundled into an unrelated release, so the reset is traceable to one version.
-- Prefer one release with all pending roll-up changes over several releases that each reset.
+- Batch roll-up changes into one release, and keep unrelated changes out of it, so each reset is traceable to one version.
 - Expect the golden hash test to fail when the change affects its fixture. It pins that project's roll-ups, not every possible input. Update its values only when the move is intended.
