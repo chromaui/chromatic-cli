@@ -95,7 +95,8 @@ export function listConfigAndStaticFiles(input: OutOfGraphInput) {
  *
  * @param input Where to look and what to read it with; see {@link OutOfGraphInput}.
  * @param skipRule Which config and static files to leave unhashed; see {@link buildSkipRule}.
- * @param inventory The config and static paths already gathered for the Git query.
+ * @param inventory The config and static files, from {@link listConfigAndStaticFiles}; the same
+ * inventory the skip rule was built from.
  *
  * @returns The content hash of every config file, static file and external file, keyed by canonical
  * manifest path, beside the swept config and static files that were skipped instead, keyed the same
@@ -107,7 +108,7 @@ export function listConfigAndStaticFiles(input: OutOfGraphInput) {
 export async function hashOutOfGraphFiles(
   input: OutOfGraphInput,
   skipRule: SkipRule,
-  inventory = listConfigAndStaticFiles(input)
+  inventory: ReturnType<typeof listConfigAndStaticFiles>
 ): Promise<OutOfGraphSweep> {
   const { configTree, staticTree } = inventory;
 

@@ -12,11 +12,8 @@ import { createRequire } from 'module';
 import path from 'path';
 
 import { GitDeps } from '../../../git/execGit';
-import {
-  getUntrackedPaths,
-  trackedFiles as trackedRelativePaths,
-  UntrackedPaths,
-} from '../../../git/git';
+import { trackedFiles as trackedRelativePaths } from '../../../git/git';
+import { getUntrackedPaths, UntrackedPaths } from '../../../git/untrackedPaths';
 import { AbsolutePath } from '../../../types';
 import { getFileHashes } from '../../getFileHashes';
 import { Logger } from '../../log';

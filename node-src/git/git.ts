@@ -18,7 +18,6 @@ import {
   GitDeps,
 } from './execGit';
 import { resolveSymlinkAtReference } from './treeAtReference';
-import { getUntrackedScopes, untrackedScope } from './untrackedPathspecs';
 
 const newline = /\r\n|\r|\n/; // Git may return \n even on Windows, so we can't use EOL
 export const NULL_BYTE = '\0'; // Separator used when running `git ls-files` with `-z`
@@ -586,101 +585,6 @@ export async function discardChanges(deps: GitDeps) {
  */
 export async function getRepositoryRoot(deps: GitDeps) {
   return execGitCommand(deps, `git rev-parse --show-toplevel`);
-}
-
-/**
- * The paths git does not track, answered by absolute path; see {@link getUntrackedPaths}. The match
- * is exact, as git names paths, so a caller resolves symlinks before asking.
- */
-export interface UntrackedPaths {
-  has(absolutePath: string): boolean;
-}
-
-/**
- * Lists what git does not track: every path in the repository's working tree that is not in the
- * index, whether or not `.gitignore` or another exclude source matches it. A tracked file is never
- * untracked, even with uncommitted edits, and nor is any path outside the repository or inside a
- * submodule, whose files the superproject never lists.
- *
- * The listing is bounded by the repository's tracked shape rather than by what the untracked
- * directories hold: a directory with nothing tracked beneath it comes back as one entry, so
- * `node_modules` is one line, not a hundred thousand, which beats one git call per path.
- *
- * @param deps Function dependencies.
- * @param realPaths When given, list only the areas holding these real files; the listing's `has`
- * then throws for any other path inside the repository.
- *
- * @returns The listing, queried by absolute path.
- *
- * @throws {Error} When git lists no tracked files, as when the index is missing.
- */
-export async function getUntrackedPaths(
-  deps: GitDeps,
-  realPaths?: Iterable<string>
-): Promise<UntrackedPaths> {
-  const repositoryRoot = await getRepositoryRoot(deps);
-
-  // `--others` means "not in the index", so with no index (a Docker build that copied `.git`
-  // without it, say) git lists the whole repository as untracked and still exits 0. Skipping every
-  // file would hide every change, so treat that like a git error. One tracked path proves the index
-  // is there: the loop stops at the first, which kills git before it lists the rest.
-  let hasTrackedFile = false;
-  for await (const _ of trackedFiles(deps, repositoryRoot)) {
-    hasTrackedFile = true;
-    break;
-  }
-  if (!hasTrackedFile) {
-    throw new Error(
-      'git lists no tracked files, so it cannot tell which files are untracked; is the git index missing?'
-    );
-  }
-
-  const scopes = realPaths && (await getUntrackedScopes(deps, repositoryRoot, realPaths));
-  const untracked = new Set<string>();
-  if (scopes?.size !== 0) {
-    // A trailing slash marks a wholly untracked directory. path.join preserves the separator.
-    const pathspecs = scopes ? [...scopes].map((scope) => `:(top,literal)${scope}`) : [':/'];
-    // Git can start inside a common pathspec prefix and echo its spelling. Include the reserved
-    // root entry so Git reads directory names from disk, as it does for a whole-repository scan.
-    if (scopes) pathspecs.push(':(top,literal).git');
-    for await (const entry of execGitCommandEntries(deps, [
-      'git',
-      'ls-files',
-      '--others',
-      '--directory',
-      '-z',
-      '--full-name',
-      '--',
-      ...pathspecs,
-    ])) {
-      untracked.add(path.join(repositoryRoot, entry));
-    }
-  }
-
-  return {
-    has: (absolutePath) => {
-      if (scopes) {
-        const parts = untrackedScope(repositoryRoot, absolutePath);
-        if (parts.length > 0 && !scopes.has(parts[0]) && !scopes.has(parts.join('/'))) {
-          throw new Error(`Untracked file check outside the requested paths: ${absolutePath}`);
-        }
-      }
-      if (untracked.has(absolutePath)) {
-        return true;
-      }
-
-      // Only a directory inside the repository can be in the listing, so the walk up stops there.
-      let directory = path.dirname(absolutePath);
-      while (directory.startsWith(repositoryRoot + path.sep)) {
-        if (untracked.has(directory + path.sep)) {
-          return true;
-        }
-        directory = path.dirname(directory);
-      }
-
-      return false;
-    },
-  };
 }
 
 /**

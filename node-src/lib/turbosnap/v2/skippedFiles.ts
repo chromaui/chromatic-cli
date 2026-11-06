@@ -72,6 +72,8 @@ export function partitionSkipped(
  * Generated directories such as `.federation` still need Git's answer. A workspace package reached
  * through a node_modules symlink follows its real path, so untracked build output there is skipped
  * just as it is in v1. An external glob on tracked workspace sources can still capture those changes.
+ * Why v2 follows Git here, and what that costs, is in this directory's README under "Why untracked
+ * files are skipped".
  *
  * @param context Where the repository is, what is untraced, and how to ask git and the disk.
  * @param paths All disk paths the graph and sweeps will check.

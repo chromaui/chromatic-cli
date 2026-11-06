@@ -88,7 +88,8 @@ const VITE_COMPOSITION_ROOTS = new Set([
  * @param context The context the stats file was built in, which is needed to resolve module paths to
  * absolute files; see {@link StatsContext}.
  * @param skipRule Which on-disk files to leave unhashed; see {@link buildSkipRule}.
- * @param onDiskFiles The graph file inventory, when already gathered to scope the git query.
+ * @param onDiskFiles The graph's files on disk, from {@link locateOnDiskFiles}; the same inventory
+ * the skip rule was built from.
  *
  * @returns The unpruned graph; see {@link StatsGraph}.
  */
@@ -96,7 +97,7 @@ export async function readStatsGraph(
   stats: Stats,
   context: StatsContext,
   skipRule: SkipRule,
-  onDiskFiles = locateOnDiskFiles(stats, context)
+  onDiskFiles: Map<FilePath, AbsolutePath>
 ): Promise<StatsGraph> {
   const { projectRoot, statsRoot = projectRoot, projectFiles } = context;
   const roots = { projectRoot, statsRoot };
