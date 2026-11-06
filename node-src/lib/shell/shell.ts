@@ -15,10 +15,17 @@ import { treeKill } from './treeKill';
  *
  * @returns An execa `ResultPromise` with .kill() and timeout overwritten.
  */
-export function runCommand(command: string, options: Options = {}): ResultPromise {
+export function runCommand(
+  command: string | [string, ...string[]],
+  options: Options = {}
+): ResultPromise {
   const { timeout, ...optionsWithoutTimeout } = options;
-  const [cmd, ...args] = parseCommandString(command);
-  const subprocess = execa(cmd, args, optionsWithoutTimeout);
+  const [cmd, ...args] = typeof command === 'string' ? parseCommandString(command) : command;
+  const subprocess = execa(
+    cmd,
+    args,
+    typeof command === 'string' ? optionsWithoutTimeout : { ...optionsWithoutTimeout, shell: false }
+  );
 
   subprocess.kill = () => {
     if (!subprocess.pid) {

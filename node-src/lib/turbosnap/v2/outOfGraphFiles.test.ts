@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import TestLogger from '../../testLogger';
 import {
   hashOutOfGraphFiles,
+  listConfigAndStaticFiles,
   MissingStorybookConfigError,
   OutOfGraphInput,
   rollUpOutOfGraphFiles,
@@ -36,8 +37,14 @@ function makeInput(disk: InMemoryDisk, overrides?: Partial<OutOfGraphInput>): Ou
 // says otherwise.
 const skipNothing: SkipRule = () => undefined;
 
+// buildManifest shares one inventory between the skip rule and the sweep; here the sweep gets its
+// own. Async, so a missing main config rejects as it does in buildManifest.
+async function hashSweep(input: OutOfGraphInput, skipRule: SkipRule) {
+  return hashOutOfGraphFiles(input, skipRule, listConfigAndStaticFiles(input));
+}
+
 async function sweep(input: OutOfGraphInput) {
-  const { files } = await hashOutOfGraphFiles(input, skipNothing);
+  const { files } = await hashSweep(input, skipNothing);
   return files;
 }
 
@@ -136,7 +143,7 @@ describe('hashOutOfGraphFiles', () => {
   ])('refuses to sweep when the config dir %s', async (_, directories) => {
     // Storybook requires main.*, so a directory without one is not a config directory. Refusing here
     // is what guarantees the config section is never empty.
-    await expect(hashOutOfGraphFiles(makeInput({ directories }), skipNothing)).rejects.toThrow(
+    await expect(hashSweep(makeInput({ directories }), skipNothing)).rejects.toThrow(
       MissingStorybookConfigError
     );
   });
@@ -206,7 +213,7 @@ describe('hashOutOfGraphFiles skipped files', () => {
       },
     };
 
-    const { files, skippedFiles } = await hashOutOfGraphFiles(
+    const { files, skippedFiles } = await hashSweep(
       makeInput(disk, { staticDirs: [`${projectRoot}/public`] }),
       (candidate) => (candidate.endsWith('bundle.css') ? 'untracked' : undefined)
     );
@@ -223,7 +230,7 @@ describe('hashOutOfGraphFiles skipped files', () => {
       },
     };
 
-    const { files, skippedFiles } = await hashOutOfGraphFiles(makeInput(disk), (candidate) =>
+    const { files, skippedFiles } = await hashSweep(makeInput(disk), (candidate) =>
       candidate.includes('/decorators/') ? 'untraced' : undefined
     );
 
@@ -242,7 +249,7 @@ describe('hashOutOfGraphFiles skipped files', () => {
       },
     };
 
-    const { files, skippedFiles } = await hashOutOfGraphFiles(makeInput(disk), (candidate) =>
+    const { files, skippedFiles } = await hashSweep(makeInput(disk), (candidate) =>
       candidate.endsWith('bundle.css') ? 'untraced' : undefined
     );
 
@@ -260,10 +267,7 @@ describe('hashOutOfGraphFiles skipped files', () => {
       directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] },
     };
 
-    const { files, skippedFiles } = await hashOutOfGraphFiles(
-      makeInput(disk, { log }),
-      () => 'untraced'
-    );
+    const { files, skippedFiles } = await hashSweep(makeInput(disk, { log }), () => 'untraced');
 
     expect([...files.storybookConfigFiles.keys()]).toEqual(['./.storybook/main.ts']);
     expect([...skippedFiles]).toEqual([['./.storybook/preview.ts', 'untraced']]);
@@ -323,7 +327,7 @@ describe('hashOutOfGraphFiles externals', () => {
   });
 
   it('hashes an external file the rule skips, since v1 checks externals before it applies --untraced', async () => {
-    const { files, skippedFiles } = await hashOutOfGraphFiles(
+    const { files, skippedFiles } = await hashSweep(
       makeInput(disk, { externals: ['packages/ui/tailwind.config.js'] }),
       (candidate) => (candidate.endsWith('tailwind.config.js') ? 'untraced' : undefined)
     );
