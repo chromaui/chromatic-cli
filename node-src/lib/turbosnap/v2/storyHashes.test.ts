@@ -141,6 +141,32 @@ describe('hashStorySubtrees', () => {
     );
   });
 
+  it('matches when one story outgrows the scratch buffers', async () => {
+    // Over 1,024 reachable files grows the walk's stack and found buffers, and long paths push the
+    // story's hash input past the 64 KiB output buffer. The big story reaches every other file in
+    // sorted order, so each reached rank is its own run and the runs buffer grows too. A small
+    // story hashed after it reuses the grown buffers.
+    const directory = `./src/${'deeply-nested-folder/'.repeat(6)}`;
+    const files = Array.from(
+      { length: 2250 },
+      (_, index) => `${directory}module-${`${index}`.padStart(4, '0')}.ts`
+    );
+    const reached = files.filter((_, index) => index % 2 === 1);
+    const edges: Record<FilePath, FilePath[]> = {
+      './src/Big.stories.tsx': reached,
+      './src/Small.stories.tsx': [files[0], files[2]],
+    };
+    const hashes: Record<FilePath, FileHash> = {
+      './src/Big.stories.tsx': '1111111111111111',
+      './src/Small.stories.tsx': '2222222222222222',
+    };
+    for (const [index, filePath] of files.entries()) {
+      edges[filePath] = [];
+      hashes[filePath] = `${index}`.padStart(16, '0');
+    }
+    await expectParity(graph(edges, hashes));
+  });
+
   it('matches the recipe on random graphs, including subtrees large enough for the bitset scan', async () => {
     let seed = 7;
     const random = () => {
