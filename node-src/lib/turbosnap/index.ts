@@ -20,7 +20,7 @@ import { realProjectFiles } from './v2/projectFiles';
  *
  * When the Index applies v2 to the build, v1 still traces and its result is still sent, but its
  * warnings and info logs drop to debug: the Index ignores that result, so they would contradict
- * what gets captured.
+ * what gets captured. Setting CHROMATIC_TURBOSNAP_DISABLE_V1 skips v1 entirely in that case.
  *
  * @param ctx The context set when executing the CLI.
  * @param hooks Callbacks into the caller's progress reporting.
@@ -65,16 +65,30 @@ export async function traceChangedFiles(
 }
 
 // The Index ignores v1's result when it applies v2, so v1 then traces without reporting progress
-// and with its warnings and info logs dropped to debug.
+// and with its warnings and info logs dropped to debug, or not at all when the user opted out of it
+// with CHROMATIC_TURBOSNAP_DISABLE_V1, because tracing can be slow on large projects.
 async function runTurboSnapV1(
   ctx: Context,
   stats: Stats,
   statsPath: string,
   { hashBased, onTraceWithV1 }: { hashBased?: HashBasedTurboSnap; onTraceWithV1?: () => void }
 ): Promise<TurboSnapResult> {
+  const v1Disabled = ctx.env.CHROMATIC_TURBOSNAP_DISABLE_V1;
   if (!hashBased) {
+    if (v1Disabled) {
+      ctx.log.debug(
+        'CHROMATIC_TURBOSNAP_DISABLE_V1 is set, but Chromatic did not apply TurboSnap 2.0 to this build; tracing with TurboSnap 1.0'
+      );
+    }
     onTraceWithV1?.();
     return traceChangedFilesV1(ctx, stats, statsPath);
+  }
+
+  if (v1Disabled) {
+    ctx.log.debug(
+      'CHROMATIC_TURBOSNAP_DISABLE_V1 is set and Chromatic applied TurboSnap 2.0 to this build; skipping TurboSnap 1.0'
+    );
+    return { status: 'skipped', hashBased };
   }
 
   const log = { ...ctx.log, info: ctx.log.debug, warn: ctx.log.debug };

@@ -228,6 +228,28 @@ describe('traceChangedFiles', () => {
     expect(ctx.log.debug).toHaveBeenCalledWith('TurboSnap disabled due to file change');
   });
 
+  it('skips v1 when the user disabled it and the Index applies v2', async () => {
+    const ctx = { ...makeContext(), env: { CHROMATIC_TURBOSNAP_DISABLE_V1: true } };
+    const hashBased = { bailed: false };
+    vi.mocked(traceChangedFilesV2).mockResolvedValue({ status: 'fallback', hashBased });
+
+    await expect(traceChangedFiles(ctx)).resolves.toStrictEqual({ status: 'skipped', hashBased });
+
+    expect(traceChangedFilesV1).not.toHaveBeenCalled();
+    expect(ctx.log.debug).toHaveBeenCalledWith(expect.stringContaining('skipping TurboSnap 1.0'));
+  });
+
+  // Without v2 the Index decides the build with v1's result, so the off switch must not apply.
+  it('still traces with v1 when the user disabled it but the Index does not apply v2', async () => {
+    const ctx = { ...makeContext(), env: { CHROMATIC_TURBOSNAP_DISABLE_V1: true } };
+
+    await expect(traceChangedFiles(ctx)).resolves.toBe(v1Result);
+
+    expect(ctx.log.debug).toHaveBeenCalledWith(
+      expect.stringContaining('did not apply TurboSnap 2.0')
+    );
+  });
+
   it('runs v2 before v1 and returns only the v1 result', async () => {
     const ctx = makeContext();
 
