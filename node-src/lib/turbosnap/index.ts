@@ -20,7 +20,7 @@ import { realProjectFiles } from './v2/projectFiles';
  *
  * When the Index applies v2 to the build, v1 still traces and its result is still sent, but its
  * warnings and info logs drop to debug: the Index ignores that result, so they would contradict
- * what gets captured.
+ * what gets captured. Setting CHROMATIC_TURBOSNAP_DISABLE_V1 skips v1 entirely in that case.
  *
  * @param ctx The context set when executing the CLI.
  * @param hooks Callbacks into the caller's progress reporting.
@@ -60,18 +60,22 @@ export async function traceChangedFiles(
     return { status: 'skipped', ...(hashBased && { hashBased }) };
   }
 
-  ctx.log.debug('Tracing changed files with TurboSnap 1.0');
   return runTurboSnapV1(ctx, stats, statsPath, { hashBased, onTraceWithV1 });
 }
 
 // The Index ignores v1's result when it applies v2, so v1 then traces without reporting progress
-// and with its warnings and info logs dropped to debug.
+// and with its warnings and info logs dropped to debug, or not at all when the user opted out.
 async function runTurboSnapV1(
   ctx: Context,
   stats: Stats,
   statsPath: string,
   { hashBased, onTraceWithV1 }: { hashBased?: HashBasedTurboSnap; onTraceWithV1?: () => void }
 ): Promise<TurboSnapResult> {
+  if (shouldSkipV1(ctx, hashBased)) {
+    return { status: 'skipped', hashBased };
+  }
+
+  ctx.log.debug('Tracing changed files with TurboSnap 1.0');
   if (!hashBased) {
     onTraceWithV1?.();
     return traceChangedFilesV1(ctx, stats, statsPath);
@@ -80,6 +84,22 @@ async function runTurboSnapV1(
   const log = { ...ctx.log, info: ctx.log.debug, warn: ctx.log.debug };
   const result = await traceChangedFilesV1({ ...ctx, log }, stats, statsPath);
   return { ...result, hashBased };
+}
+
+// Users can skip v1 with CHROMATIC_TURBOSNAP_DISABLE_V1 because tracing can be slow on large
+// projects. It applies only when the Index applies v2, since otherwise the Index decides the build
+// with v1's result.
+function shouldSkipV1(ctx: Context, hashBased: HashBasedTurboSnap | undefined) {
+  if (!ctx.env.CHROMATIC_TURBOSNAP_DISABLE_V1) {
+    return false;
+  }
+
+  ctx.log.debug(
+    hashBased
+      ? 'CHROMATIC_TURBOSNAP_DISABLE_V1 is set and Chromatic applied TurboSnap 2.0 to this build; skipping TurboSnap 1.0'
+      : 'CHROMATIC_TURBOSNAP_DISABLE_V1 is set, but Chromatic did not apply TurboSnap 2.0 to this build; tracing with TurboSnap 1.0'
+  );
+  return !!hashBased;
 }
 
 function missingStatsFileError(ctx: Context) {
