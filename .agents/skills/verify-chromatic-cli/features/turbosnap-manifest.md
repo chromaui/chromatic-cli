@@ -32,7 +32,7 @@ Preconditions:
 
 ## Gotchas
 
-- `-s` resolves against the project root (`-b`, else cwd), but `trace -s` resolves against cwd. Running from a monorepo root without `-b` fails with exit `1`. In `monorepo-pnpm` the error is `Error: Could not resolve a Storybook version from <root>/.storybook: …`.
+- `-s` resolves against the project root (`-b`, else cwd), but `trace -s` resolves against cwd. Running from a monorepo root without `-b` fails with exit `1`. In `monorepo-pnpm` the error is `Error: No Storybook main config file found in <root>/.storybook`, the same message a wrong `-c` gives.
 - The manifest is large. `$S run` prints only the first 40 lines, so always inspect `stdout.txt` with `jq`.
 - `--externals 'static/*.css'` matches nothing here because the CSS lives in `static/css/`. An empty `{}` usually means a glob that is too narrow, not a bug.
 - `-u/--untraced` with a story-local glob did not change `storyFiles` or `skippedFiles` counts in this repo. Do not cite that as proof of untraced behavior without a case that changes the output.
