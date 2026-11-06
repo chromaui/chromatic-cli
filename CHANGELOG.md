@@ -1,3 +1,18 @@
+# v18.14.2 (Fri Nov 06 2026)
+
+#### 🐛 Bug Fix
+
+- Let users skip TurboSnap 1.0 when the Index applies 2.0 [#1645](https://github.com/chromaui/chromatic-cli/pull/1645) ([@codykaup](https://github.com/codykaup))
+- Align smoke-tests Storybook packages with storybook 10.6.5 [#1643](https://github.com/chromaui/chromatic-cli/pull/1643) ([@ObviousApp](https://github.com/ObviousApp) [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot]))
+
+#### Authors: 3
+
+- [@obvious-autobuild[bot]](https://github.com/obvious-autobuild[bot])
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Obvious ([@ObviousApp](https://github.com/ObviousApp))
+
+---
+
 # v18.14.1 (Wed Nov 04 2026)
 
 ### Release Notes
