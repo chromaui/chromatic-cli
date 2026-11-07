@@ -23,6 +23,29 @@ jobs:
       - uses: ./.github/actions/setup
       - name: build
         run: yarn build
+      - name: Compare bundled dependencies
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          node scripts/bundledDependencies.mjs inventory . > "$RUNNER_TEMP/bundle-head.json"
+          # Install separately: sharing node_modules would conceal version changes.
+          git worktree add --detach "$RUNNER_TEMP/bundle-base" "$BASE_SHA"
+          (
+            cd "$RUNNER_TEMP/bundle-base"
+            yarn install --immutable
+            yarn build
+          )
+          node scripts/bundledDependencies.mjs inventory "$RUNNER_TEMP/bundle-base" > "$RUNNER_TEMP/bundle-base.json"
+          node scripts/bundledDependencies.mjs compare "$RUNNER_TEMP/bundle-base.json" "$RUNNER_TEMP/bundle-head.json" > "$RUNNER_TEMP/bundled-dependencies.md"
+          cat "$RUNNER_TEMP/bundled-dependencies.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload bundled dependency inventories
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundled-dependencies
+          path: |
+            ${{ runner.temp }}/bundle-head.json
+            ${{ runner.temp }}/bundle-base.json
+            ${{ runner.temp }}/bundled-dependencies.md
       - name: Remove Sourcemaps
         run: |
           yarn clean:sourcemaps
@@ -47,8 +70,12 @@ jobs:
           echo "main_head_sha=$MAIN_HEAD_SHA" >> "$GITHUB_OUTPUT"
           echo "main_head_size=$MAIN_HEAD_SIZE" >> "$GITHUB_OUTPUT"
       - uses: actions/github-script@v7
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         with:
           script: |
+            const fs = require('node:fs');
+            const path = require('node:path');
             // 1. Retrieve existing bot comments for the PR
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
@@ -69,6 +96,9 @@ jobs:
               const diffSymbol = diff > 0 ? '+' : '';
               output.push(`${diffEmoji} Compared to main: ${diffSymbol}${diff} KB ${{ steps.previous.outputs.main_head_sha }} (${main_head_json.result} KB)`);
             }
+
+            output.push('', `Bundled dependencies compared with PR base ${process.env.BASE_SHA}.`,
+              fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'bundled-dependencies.md'), 'utf8'));
 
             if (botComment) {
               github.rest.issues.updateComment({
