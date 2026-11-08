@@ -165,7 +165,7 @@
     "eslint-plugin-sort-class-members": "^1.21.0",
     "eslint-plugin-unicorn": "^59.0.1",
     "execa": "^9.6.0",
-    "fake-tag": "^2.0.0",
+    "fake-tag": "^5.0.0",
     "filesize": "^11.0.29",
     "formdata-node": "^6.0.3",
     "fs-extra": "^11.4.1",
