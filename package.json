@@ -129,7 +129,6 @@
     "@storybook/builder-vite": "^10.6.5",
     "@storybook/html-vite": "^10.6.5",
     "@tsconfig/node16": "^16.1.1",
-    "@types/adm-zip": "^0.5.8",
     "@types/async-retry": "^1.4.3",
     "@types/cross-spawn": "^6.0.2",
     "@types/fs-extra": "^11.0.4",
