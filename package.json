@@ -202,7 +202,7 @@
     "tmp-promise": "3.0.2",
     "ts-dedent": "^1.0.0",
     "tsdown": "^0.21.8",
-    "typescript": "^5.2.2",
+    "typescript": "^7.0.2",
     "typescript-eslint": "^8.5.8",
     "uuid": "^14.0.3",
     "vite": "^8.0.3",
