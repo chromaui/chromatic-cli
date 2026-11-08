@@ -4544,7 +4544,7 @@ __metadata:
     eslint: "npm:^9.39.4"
     eslint-plugin-jsdoc: "npm:^62.4.1"
     eslint-plugin-prettier: "npm:^5.5.5"
-    eslint-plugin-security: "npm:^3.0.1"
+    eslint-plugin-security: "npm:^4.2.1"
     eslint-plugin-simple-import-sort: "npm:^12.1.1"
     eslint-plugin-sort-class-members: "npm:^1.21.0"
     eslint-plugin-unicorn: "npm:^59.0.1"
@@ -5468,12 +5468,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-plugin-security@npm:^3.0.1":
-  version: 3.0.1
-  resolution: "eslint-plugin-security@npm:3.0.1"
+"eslint-plugin-security@npm:^4.2.1":
+  version: 4.2.1
+  resolution: "eslint-plugin-security@npm:4.2.1"
   dependencies:
     safe-regex: "npm:^2.1.1"
-  checksum: 10c0/6b85feabe389b73e0a5961abfeac79214d61699249c990c9a66628a5e45870b49f1ab0be63223dfd75c4046ff9632f42a963790616f66e2c6d59b6c24643c5e0
+  checksum: 10c0/f3e217e7a7ca4c64d0899dc0c99c765b9650fcb0fbcb7f0e4e40f92af42a7dfae5bc953eb99bdd4c9c0f9a03b1369b0366d73756c530486cbeec51be466ae45f
   languageName: node
   linkType: hard
 
