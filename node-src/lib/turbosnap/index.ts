@@ -1,11 +1,16 @@
 import * as Sentry from '@sentry/node';
+import { readdir } from 'fs/promises';
 import semver from 'semver';
 
 import { readStatsFile } from '../../tasks/readStatsFile';
-import { Context, HashBasedTurboSnap, Stats } from '../../types';
+import { Context, HashBasedTurboSnap, Stats, UntracedFile } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
+import untracedStorybookConfig from '../../ui/messages/warnings/untracedStorybookConfig';
+import { relativeTo } from '../getStorybookProjectRoot';
+import { matchesFile } from '../utilities';
 import { isHashCollectionDisabled } from './isHashCollectionDisabled';
 import { isTurboSnapV1Enabled, shouldTraceWithV1 } from './shouldTraceWithV1';
+import { storybookConfigFileKind } from './storybookConfigFiles';
 import { TurboSnapResult } from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
@@ -50,6 +55,8 @@ export async function traceChangedFiles(
   if (!collectHashes && !traceWithV1) {
     return { status: 'skipped' };
   }
+
+  await logUntracedStorybookConfig(ctx);
 
   const statsPath = ctx.fileInfo.statsPath;
   const stats = await readStatsFile(statsPath);
@@ -106,6 +113,31 @@ function shouldSkipV1(ctx: Context, hashBased: HashBasedTurboSnap | undefined) {
       : 'CHROMATIC_TURBOSNAP_DISABLE_V1 is set, but Chromatic did not apply TurboSnap 2.0 to this build; tracing with TurboSnap 1.0'
   );
   return !!hashBased;
+}
+
+// `--untraced` doesn't apply to the allowlisted Storybook config files in either TurboSnap version.
+// When a glob matches one on disk, say so once per build, whether or not it changed. It's shown with
+// `--only-changed`, and only logged at debug level when TurboSnap 2.0 runs silently without it.
+async function logUntracedStorybookConfig(ctx: Context) {
+  const untraced = (ctx.options.untraced ?? []).filter(Boolean);
+  const { rootPath } = ctx.git;
+  if (untraced.length === 0 || !rootPath) {
+    return;
+  }
+
+  const configDirectory = ctx.storybook.configDir;
+  const storybookDirectory = relativeTo(rootPath, configDirectory);
+  const fileNames = await readdir(configDirectory).catch((): string[] => []);
+  const matches = fileNames.flatMap((fileName): UntracedFile[] => {
+    const filepath = `${storybookDirectory}/${fileName}`;
+    if (!storybookConfigFileKind(filepath, storybookDirectory)) return [];
+    const glob = untraced.find((pattern) => matchesFile(pattern, filepath));
+    return glob ? [{ filepath, glob }] : [];
+  });
+
+  if (matches.length > 0) {
+    ctx.log[ctx.turboSnap ? 'info' : 'debug'](untracedStorybookConfig({ matches }));
+  }
 }
 
 function missingStatsFileError(ctx: Context) {
