@@ -91,7 +91,7 @@ export function classifyInvalidChangedFilesDetail(
  * @param options.isAnnotationFile Whether a builder's preview-annotations module imports `bailFile`.
  * @param options.storybookDirectory The repository-relative Storybook config directory.
  *
- * @returns The subreason to merge into the bail reason.
+ * @returns The subreason to merge into the bail reason, or an empty object for any other file.
  */
 export function classifyChangedStorybookFilesDetail(
   bailFile: string,
@@ -105,5 +105,6 @@ export function classifyChangedStorybookFilesDetail(
   if (kind === 'previewConfig' && traced) return { bailSubreason: 'importsOfPreviewConfig' };
   if (kind) return { bailSubreason: kind };
   if (isAnnotationFile) return { bailSubreason: 'importsOfPreviewConfig' };
-  return { bailSubreason: 'otherStorybookFiles' };
+  // Any other config-directory file bails without a subreason.
+  return {};
 }
