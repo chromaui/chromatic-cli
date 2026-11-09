@@ -77,6 +77,12 @@ Exceptions:
 - Externals ignore the skip rule. A file that is both untraced and external still moves the `externals` entry.
 - Uncommitted edits do not make a tracked file untracked; it is still hashed unless explicitly untraced.
 
+### Why untracked files are skipped
+
+Generated files are often left out of git, ignored or merely uncommitted, and they can change on every build: a build stamp, or a manifest a CI step writes before the Storybook build. Recapturing on those changes would be more "correct" but a much worse experience, so v2 matches TurboSnap 1.0, which takes its changed files from `git diff` and never sees an untracked file, ignored or not. A tracked file with uncommitted edits is still hashed, since 1.0 sees it through the working-tree diff. An untracked story file is still a story, but its own edits go unseen until it is tracked, as in 1.0.
+
+Git's answer applies across the whole repository, as 1.0 sees it, so untracked files in any workspace package are skipped, not just the Storybook package's own. Git only scans the directories holding files the manifest reads, but every answer matches a scan of the whole repository. The accepted cost: a workspace package the graph reaches only through its gitignored `dist` (the bundler resolves the `node_modules` link to it, so its source never appears) is not hashed, as in 1.0. `--externals` cannot rescue that `dist`, because externals come from the git index, which never holds an untracked file, so a glob like `packages/icons/dist/**` matches nothing. That is the same reason 1.0's `git diff` never sees it. The workaround is an external glob on the package's tracked source: any change there recaptures Storybook-wide, which covers changes to its built `dist` too.
+
 ## Story-file keys are a cross-repo contract
 
 The keys in `storyFiles` must match how the index names story files: relative to the Storybook project root and prefixed with `./`, or `../` for files outside the project root, like Storybook's own import paths. Changing how those keys are spelled is the riskiest change in this directory. A mismatch doesn't necessarily cause a recapture: stories can look unchanged instead, and silently stop being recaptured. Coordinate any such change with the index before shipping it.

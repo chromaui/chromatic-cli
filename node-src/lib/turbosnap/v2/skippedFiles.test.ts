@@ -19,7 +19,7 @@ function context(disk: InMemoryDisk, untraced: string[] = []): SkipContext {
 }
 
 async function skipped(absolutePaths: string[], skipContext: SkipContext) {
-  const skipRule = await buildSkipRule(skipContext);
+  const skipRule = await buildSkipRule(skipContext, absolutePaths);
   return absolutePaths.flatMap((absolutePath) => {
     const reason = skipRule(absolutePath);
     return reason ? [[absolutePath, reason]] : [];
@@ -92,57 +92,30 @@ describe('buildSkipRule', () => {
     expect(result).toEqual([[linked, 'untracked']]);
   });
 
-  it('judges every rule by where a file really lives, since a bundler may name a file through a symlink', async () => {
-    const linkedRoot = '/repo/apps/web';
+  it('asks Git once for the resolved paths whose tracking status matters', async () => {
+    const linked = '/repo/node_modules/theme/generated.ts';
+    const disk = inMemoryProjectFiles({ isUntracked: (file) => file === generated });
+    const requests: Set<string>[] = [];
     const projectFiles = {
-      ...inMemoryProjectFiles({
-        isUntracked: (candidate) => candidate === generated,
-      }),
-      realPath: (absolutePath: string) => absolutePath.replace(linkedRoot, projectRoot),
-    };
-    const linkedGenerated = generated.replace(projectRoot, linkedRoot);
-
-    const result = await skipped([linkedGenerated, source], {
-      ...context({}),
-      projectFiles,
-    });
-
-    expect(result).toEqual([[linkedGenerated, 'untracked']]);
-  });
-
-  it('asks git by real path and answers by the path it was given', async () => {
-    const asked: string[] = [];
-    const projectFiles = {
-      ...inMemoryProjectFiles({}),
-      realPath: (absolutePath: string) => absolutePath.replace('/repo/apps/web', projectRoot),
-      untrackedPaths: async () => ({
-        has: (absolutePath: string) => {
-          asked.push(absolutePath);
-          return true;
-        },
-      }),
-    };
-    const linked = generated.replace(projectRoot, '/repo/apps/web');
-
-    const result = await skipped([linked], { ...context({}), projectFiles });
-
-    expect(asked).toEqual([generated]);
-    expect(result).toEqual([[linked, 'untracked']]);
-  });
-
-  it('asks git once, however many files are judged', async () => {
-    let listings = 0;
-    const projectFiles = {
-      ...inMemoryProjectFiles({}),
-      untrackedPaths: async () => {
-        listings += 1;
-        return { has: () => false };
+      ...disk,
+      realPath: (file: string) => (file === linked ? generated : file),
+      untrackedPaths: (paths: Iterable<string> = []) => {
+        const candidates = new Set(paths);
+        requests.push(candidates);
+        return disk.untrackedPaths(candidates);
       },
     };
 
-    await skipped([generated, source, installed], { ...context({}), projectFiles });
+    const result = await skipped([linked, installed, preview, source], {
+      ...context({}, ['**/.storybook/preview.ts']),
+      projectFiles,
+    });
 
-    expect(listings).toBe(1);
+    expect(requests).toEqual([new Set([generated, source])]);
+    expect(result).toEqual([
+      [linked, 'untracked'],
+      [preview, 'untraced'],
+    ]);
   });
 
   it('skips the files an --untraced glob matches, by their repository-root-relative path as v1 matches them', async () => {
