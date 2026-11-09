@@ -227,9 +227,7 @@ export interface UploadBuildResult {
  * @param ctx The context set when executing the CLI.
  * @param files The list of files to upload.
  * @param options A collection of callbacks for each stage of the upload.
- * @param options.onStart A callback for when the build upload starts.
  * @param options.onProgress A callback to track progress of the upload.
- * @param options.onComplete A callback for when the build upload completes.
  * @param options.onError A callback for when the build upload errors.
  *
  * @returns The upload tallies.
@@ -240,9 +238,7 @@ export async function uploadBuild(
   ctx: Context,
   files: FileDesc[],
   options: {
-    onStart?: () => void;
     onProgress?: (progress: number, total: number) => void;
-    onComplete?: (uploadedBytes: number, uploadedFiles: number, sentinelUrls: string[]) => void;
     onError?: (error: Error, path?: string) => void;
   } = {}
 ): Promise<UploadBuildResult> {
