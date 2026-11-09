@@ -85,26 +85,20 @@ export function classifyInvalidChangedFilesDetail(
  * check is the shared one, so a subreason names an allowlisted file exactly when TurboSnap 2.0
  * treats that file as config.
  *
- * @param bailFile The repository-relative name of the module the trace bailed on.
+ * @param bailFile The repository-relative name of the module the trace bailed on: an allowlisted
+ * config file, a concatenated module holding one, or a preview annotation file.
  * @param options Where the bail happened.
  * @param options.traced Whether the trace reached `bailFile` from a different changed file.
- * @param options.isAnnotationFile Whether a builder's preview-annotations module imports `bailFile`.
  * @param options.storybookDirectory The repository-relative Storybook config directory.
  *
- * @returns The subreason to merge into the bail reason, or an empty object for any other file.
+ * @returns The subreason to merge into the bail reason.
  */
 export function classifyChangedStorybookFilesDetail(
   bailFile: string,
-  {
-    traced,
-    isAnnotationFile,
-    storybookDirectory,
-  }: { traced: boolean; isAnnotationFile: boolean; storybookDirectory: string }
+  { traced, storybookDirectory }: { traced: boolean; storybookDirectory: string }
 ): Pick<ChangedStorybookFilesBailReason, 'bailSubreason'> {
+  // Only modules holding an allowlisted config file and preview annotation files bail.
   const kind = storybookConfigFileKind(stripConcatenatedModuleSuffix(bailFile), storybookDirectory);
-  if (kind === 'previewConfig' && traced) return { bailSubreason: 'importsOfPreviewConfig' };
-  if (kind) return { bailSubreason: kind };
-  if (isAnnotationFile) return { bailSubreason: 'importsOfPreviewConfig' };
-  // Any other config-directory file bails without a subreason.
-  return {};
+  if (kind && !(kind === 'previewConfig' && traced)) return { bailSubreason: kind };
+  return { bailSubreason: 'importsOfPreviewConfig' };
 }
