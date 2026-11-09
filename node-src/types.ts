@@ -650,9 +650,7 @@ type TurboSnapChangedStorybookFilesSubreason =
   | StorybookConfigFileKind
   // A changed file reached `preview.*` or another preview annotation file by tracing, or a changed
   // file was itself a preview annotation file outside the allowlist.
-  | 'importsOfPreviewConfig'
-  // A changed config-directory file outside the allowlist.
-  | 'otherStorybookFiles';
+  | 'importsOfPreviewConfig';
 
 // All additional fields allowed for the `changedStorybookFiles` bail reason
 export type ChangedStorybookFilesBailReason = TurboSnapBailReasonBase & {

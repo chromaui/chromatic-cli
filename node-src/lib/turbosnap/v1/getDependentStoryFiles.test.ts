@@ -598,7 +598,6 @@ describe('getDependentStoryFiles', () => {
     expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/file.js'],
-      bailSubreason: 'otherStorybookFiles',
     });
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(
@@ -690,7 +689,6 @@ describe('getDependentStoryFiles', () => {
     expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['packages/ui/.storybook-ci/file.js'],
-      bailSubreason: 'otherStorybookFiles',
     });
   });
 
@@ -766,7 +764,6 @@ describe('getDependentStoryFiles', () => {
     expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/file.js'],
-      bailSubreason: 'otherStorybookFiles',
     });
     expect(result.turboSnap.bailPath).toEqual([
       'src/styles.js',
@@ -888,7 +885,6 @@ describe('getDependentStoryFiles', () => {
     expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/file.js', 'src/styles.js'],
-      bailSubreason: 'otherStorybookFiles',
     });
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(
@@ -969,7 +965,6 @@ describe('getDependentStoryFiles', () => {
     expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['.storybook/static/foo.js'],
-      bailSubreason: 'otherStorybookFiles',
     });
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(
