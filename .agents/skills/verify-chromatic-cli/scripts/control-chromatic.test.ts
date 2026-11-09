@@ -13,8 +13,8 @@ function git(...args: string[]) {
   return result.stdout;
 }
 
-function buildRef() {
-  return spawnSync('bash', [helper, 'build-ref', 'baseline', 'HEAD'], {
+function buildRef(ref = 'HEAD') {
+  return spawnSync('bash', [helper, 'build-ref', 'baseline', ref], {
     cwd: root,
     encoding: 'utf8',
     env: {
@@ -32,7 +32,7 @@ beforeEach(() => {
   mkdirSync(scripts, { recursive: true });
   helper = join(scripts, 'control-chromatic');
   copyFileSync(new URL('./control-chromatic', import.meta.url), helper);
-  writeFileSync(join(root, 'package.json'), '{"private":true}\n');
+  writeFileSync(join(root, 'package.json'), '{"private":true,"version":"1.0.0"}\n');
   writeFileSync(join(root, 'yarn.lock'), '# baseline\n');
   git('init', '-q');
   git('add', 'package.json', 'yarn.lock');
@@ -78,6 +78,32 @@ it.each([
   expect(result.stderr).toContain('install-published');
   expect(existsSync(join(root, 'runs/test/work/cli-baseline'))).toBe(false);
   expect(git('worktree', 'list', '--porcelain').match(/^worktree /gm)).toHaveLength(1);
+});
+
+it.each([
+  { private: true, version: '1.0.1' },
+  { private: true, version: '1.0.0', dependencies: { example: '2.0.0' } },
+])('compares the requested ref, not HEAD (%j)', (manifest) => {
+  writeFileSync(join(root, 'package.json'), `${JSON.stringify(manifest)}\n`);
+  git('add', 'package.json');
+  git(
+    '-c',
+    'user.name=Test',
+    '-c',
+    'user.email=test@example.invalid',
+    '-c',
+    'commit.gpgsign=false',
+    '-c',
+    'core.hooksPath=/dev/null',
+    'commit',
+    '-qm',
+    'Change manifest'
+  );
+  expect(git('status', '--porcelain', '--untracked-files=no')).toBe('');
+  const result = buildRef('HEAD~1');
+  expect(result.status).toBe(2);
+  expect(result.stdout).toBe('');
+  expect(existsSync(join(root, 'runs/test/work/cli-baseline'))).toBe(false);
 });
 
 it('prints only a usable bundle path when manifests match', () => {

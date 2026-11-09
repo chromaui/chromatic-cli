@@ -192,7 +192,7 @@ cmd_checkout() {
   echo "$CHECKOUT"
 }
 
-# build-ref <name> <git-ref>: build the CLI at another ref (usually origin/main) in a detached worktree at
+# build-ref <name> <git-ref>: build the CLI at another ref (usually the merge base with main) in a detached worktree at
 # $WORK/cli-<name>, sharing the repo's node_modules, so a change can be compared against it. Prints the
 # bundle path to pass as `run --cli`. Running a dist/ copied out of the repo fails with "Cannot find
 # module 'semver'", because the bundle resolves its externals from node_modules next to it.
@@ -208,7 +208,7 @@ cmd_build_ref() {
   local manifest
   for manifest in package.json yarn.lock; do
     git -C "$REPO" show "$ref:$manifest" | cmp -s - "$REPO/$manifest" \
-      || die "package.json or yarn.lock differ between $ref and this checkout. build-ref shares this checkout's node_modules, so it cannot verify dependency changes. Compare against a published release or canary (install-published) instead."
+      || die "package.json or yarn.lock differ between $ref and this checkout. build-ref shares this checkout's node_modules and requires matching manifests. For a branch-only comparison, try the merge base with main (git merge-base HEAD origin/main). If those manifests also differ, compare against a published release or canary (install-published) instead."
   done
   mkdir -p "$WORK"
   git -C "$REPO" worktree add -q --detach "$dir" "$ref"
