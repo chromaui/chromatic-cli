@@ -156,18 +156,86 @@ describe('buildManifest storybookFiles', () => {
     expect(after.storybookHash).toBe(before.storybookHash);
   });
 
-  it('omits the preview entry when the untraced preview has nothing hashed beneath it', async () => {
-    // An untraced file is a wall, so its subtree is just itself and there is nothing to roll up.
-    const { input } = createFixture({ fileHashes: { ...baseHashes } });
+  it('keeps an untraced preview in the preview roll-up, since --untraced never applies to it', async () => {
+    const { disk, input } = createFixture({ fileHashes: { ...baseHashes } });
+    const untracedInput = { ...input, untraced: ['**/.storybook/preview.ts'] };
 
-    const manifest = await buildManifest(makeStats(), {
-      ...input,
-      untraced: ['**/.storybook/preview.ts'],
+    const traced = await buildManifest(makeStats(), input);
+    const before = await buildManifest(makeStats(), untracedInput);
+    disk.fileHashes = { ...baseHashes, [previewHelper]: 'PT2' };
+    const after = await buildManifest(makeStats(), untracedInput);
+
+    expect([...before.skippedFiles]).toEqual([]);
+    expect(before.storybookConfigHashes.get(previewKey)).toBe(
+      traced.storybookConfigHashes.get(previewKey)
+    );
+    expect(after.storybookConfigHashes.get(previewKey)).not.toBe(
+      before.storybookConfigHashes.get(previewKey)
+    );
+  });
+
+  describe('a config dir file off the allowlist', () => {
+    const fixture = '/repo/packages/ui/.storybook/fixture.ts';
+    const mocks = '/repo/packages/ui/.storybook/mocks.json';
+    const directories = {
+      '/repo/packages/ui/.storybook': [
+        'main.ts',
+        'preview.ts',
+        'theme.ts',
+        'fixture.ts',
+        'mocks.json',
+      ],
+    };
+    const stats = (): Stats => ({
+      modules: [
+        ...makeStats().modules,
+        { id: 8, name: fixture, reasons: [{ moduleName: buttonStory }] },
+      ],
     });
 
-    expect([...manifest.skippedFiles]).toEqual([['./.storybook/preview.ts', 'untraced']]);
-    expect(manifest.storybookConfigHashes.has(previewKey)).toBe(false);
-    expect(manifest.attribution.previewSubtree.size).toBe(0);
+    async function change(file: string) {
+      const { disk, input } = createFixture({
+        directories,
+        fileHashes: { ...baseHashes, [fixture]: 'F1', [mocks]: 'J1' },
+      });
+      const before = await buildManifest(stats(), input);
+      disk.fileHashes = { ...disk.fileHashes, [file]: 'changed' };
+      const after = await buildManifest(stats(), input);
+      return { before, after };
+    }
+
+    it('rolls up into the story that imports it, and not the config section', async () => {
+      const { before, after } = await change(fixture);
+
+      expect(after.outOfGraphFiles.storybookConfigFiles.has('./.storybook/fixture.ts')).toBe(false);
+      expect(after.storyFileHashes.get('./src/Button.stories.tsx')).not.toBe(
+        before.storyFileHashes.get('./src/Button.stories.tsx')
+      );
+      expect(after.storyFileHashes.get('./src/Header.stories.tsx')).toBe(
+        before.storyFileHashes.get('./src/Header.stories.tsx')
+      );
+      expect(Object.fromEntries(after.storybookConfigHashes)).toEqual(
+        Object.fromEntries(before.storybookConfigHashes)
+      );
+    });
+
+    it('rolls up into the preview when the preview imports it', async () => {
+      const { before, after } = await change(previewHelper);
+
+      expect(after.storybookConfigHashes.get(previewKey)).not.toBe(
+        before.storybookConfigHashes.get(previewKey)
+      );
+      expect(after.storybookConfigHashes.get('storybookConfigFiles')).toBe(
+        before.storybookConfigHashes.get('storybookConfigFiles')
+      );
+    });
+
+    it('moves no hash when nothing imports it', async () => {
+      const { before, after } = await change(mocks);
+
+      expect(after.storybookHash).toBe(before.storybookHash);
+      expect(after.skippedFiles.has('./.storybook/mocks.json')).toBe(false);
+    });
   });
 
   it('keeps a preview-subtree file out of globals although the config entry reaches it', async () => {
@@ -464,11 +532,8 @@ describe('buildManifest out-of-graph inputs', () => {
     const { input } = fixtureWithAssets();
     const serialized = serializeManifest(await buildManifest(stats, input));
 
-    // The static dir is nested in the config dir, so the asset is in both detail sections.
-    expect(serialized.storybookConfigFiles).toEqual({
-      './.storybook/main.ts': 'M',
-      './.storybook/static/mockServiceWorker.js': 'A',
-    });
+    // The static dir is nested in the config dir, but the asset isn't a config file.
+    expect(serialized.storybookConfigFiles).toEqual({ './.storybook/main.ts': 'M' });
     expect(serialized.staticFiles).toEqual({
       './.storybook/static/mockServiceWorker.js': 'A',
     });
