@@ -5,6 +5,10 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: check-labels-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   check-labels:
     runs-on: ubuntu-latest
