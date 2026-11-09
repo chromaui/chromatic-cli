@@ -5,7 +5,7 @@ import semver from 'semver';
 import { readStatsFile } from '../../tasks/readStatsFile';
 import { Context, HashBasedTurboSnap, Stats, UntracedFile } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
-import untracedStorybookConfig from '../../ui/messages/warnings/untracedStorybookConfig';
+import untracedStorybookConfig from '../../ui/messages/info/untracedStorybookConfig';
 import { relativeTo } from '../getStorybookProjectRoot';
 import { matchesFile } from '../utilities';
 import { isHashCollectionDisabled } from './isHashCollectionDisabled';
