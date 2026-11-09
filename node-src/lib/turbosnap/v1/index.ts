@@ -8,6 +8,7 @@ import { classifyTagsFromError } from './classifyBailRootCause';
 import { findChangedDependencies } from './findChangedDependencies';
 import { findChangedPackageFiles } from './findChangedPackageFiles';
 import { getDependentStoryFiles } from './getDependentStoryFiles';
+import { isPreviewConfigInStats } from './previewConfigInStats';
 
 /**
  * Determines which story files are affected by the changed git files, bailing out of TurboSnap
@@ -26,6 +27,9 @@ export async function traceChangedFiles(
   statsPath: string
 ): Promise<TraceChangedFilesResult> {
   const { changedFiles = [], packageMetadataChanges } = ctx.git;
+  // Reported on every run, bailed or not, so the index can tell how often a stats file misses the
+  // preview config.
+  const previewConfigInStats = await isPreviewConfigInStats(ctx, stats);
 
   // Only set when lockfile analysis ran and succeeded; an empty array means "no changes found".
   let changedDependencyNames: string[] | undefined;
@@ -67,6 +71,7 @@ export async function traceChangedFiles(
         const turboSnap: TurboSnap = {
           ...ctx.turboSnap,
           bailReason: { changedPackageFiles, ...pendingPatch },
+          previewConfigInStats,
         };
         ctx.log.warn(bailFile({ turboSnap }));
         return { status: 'bailed', turboSnap };
@@ -84,11 +89,12 @@ export async function traceChangedFiles(
     changedDependencyNames || []
   );
 
+  const turboSnap = { ...result.turboSnap, previewConfigInStats };
   if (result.status === 'bailed') {
-    return result;
+    return { ...result, turboSnap };
   }
 
-  return { ...result, changedDependencyNames };
+  return { ...result, turboSnap, changedDependencyNames };
 }
 
 export { getDependentStoryFiles } from './getDependentStoryFiles';
