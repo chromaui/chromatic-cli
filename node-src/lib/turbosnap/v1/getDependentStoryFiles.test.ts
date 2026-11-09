@@ -830,6 +830,36 @@ describe('getDependentStoryFiles', () => {
     );
   });
 
+  // The changed file reaches a story too, so tracing must not stop at recapturing that story.
+  it.each([
+    [['./src/decorators.js', './src/Button.stories.js']],
+    [['./src/Button.stories.js', './src/decorators.js']],
+  ])(
+    'bails on a file imported by both preview.js and a story (importers %j)',
+    async (importers) => {
+      const changedFiles = ['src/theme.js'];
+      const modules = [
+        buildModule('./src/theme.js', ...importers),
+        buildModule('./src/decorators.js', './.storybook/preview.js'),
+        buildModule('./.storybook/preview.js', './.storybook/generated-stories-entry.js'),
+        buildModule('./src/Button.stories.js', CSF_GLOB),
+        buildModule(CSF_GLOB, './.storybook/generated-stories-entry.js'),
+      ];
+      const ctx = getContext({ configDir: '.storybook' });
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+      expect(result.status).toBe('bailed');
+      expect(result.turboSnap.bailReason).toEqual({
+        changedStorybookFiles: ['.storybook/preview.js'],
+        bailSubreason: 'importsOfPreviewConfig',
+      });
+      expect(result.turboSnap.bailPath).toEqual([
+        'src/theme.js',
+        'src/decorators.js',
+        '.storybook/preview.js',
+      ]);
+    }
+  );
+
   it.each([
     ['main.mts', 'mainConfig'],
     ['preview.ts', 'previewConfig'],
