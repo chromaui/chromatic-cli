@@ -34,7 +34,10 @@ export function inventory(buildRoot) {
         Object.fromEntries(
           [...packages]
             .sort(([a], [b]) => a.localeCompare(b))
-            .map(([name, versions]) => [name, [...versions].sort()])
+            .map(([name, versions]) => [
+              name,
+              [...versions].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
+            ])
         ),
       ];
     })

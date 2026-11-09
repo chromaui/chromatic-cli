@@ -45,7 +45,7 @@ function fixture() {
 it('reports only emitted packages, retaining nested versions and separating build targets', () => {
   const { root } = fixture();
   expect(inventory(root)).toEqual({
-    dist: { '@scope/pkg': ['2.0.0'], dotenv: ['16.6.1', '8.6.0'] },
+    dist: { '@scope/pkg': ['2.0.0'], dotenv: ['8.6.0', '16.6.1'] },
     action: { '@scope/pkg': ['2.0.0'] },
   });
 });
