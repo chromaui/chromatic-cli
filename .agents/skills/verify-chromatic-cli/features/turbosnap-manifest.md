@@ -32,7 +32,7 @@ Preconditions:
 
 ## Gotchas
 
-- `-s` resolves against the project root (`-b`, else cwd), but `trace -s` resolves against cwd. Running from a monorepo root without `-b` fails with exit `1`. In `monorepo-pnpm`, with no `-s` the error is `No stats file at <root>/storybook-static/preview-stats.json` followed by the usage text. With `-s packages/ui/storybook-static/preview-stats.json` the error is `Error: No Storybook main config file found in <root>/.storybook`, the same message a wrong `-c` gives.
+- `-s` resolves against the project root (`-b`, else cwd), but `trace -s` resolves against cwd. Running from a monorepo root without `-b` fails with exit `1`, as long as `STORYBOOK_BASE_DIR` is unset; when it is set, it stands in for `-b` and moves where `-s` and the config dir resolve. In `monorepo-pnpm`, with no `-s` the error is `No stats file at <root>/storybook-static/preview-stats.json` followed by the usage text. With `-s packages/ui/storybook-static/preview-stats.json` the error is `Error: No Storybook main config file found in <root>/.storybook`, the same message a wrong `-c` gives.
 - The manifest is large. `$S run` prints only the first 40 lines, so always inspect `stdout.txt` with `jq`.
 - `--externals 'static/*.css'` matches nothing here because the CSS lives in `static/css/`. An empty `{}` usually means a glob that is too narrow, not a bug.
 - `-u/--untraced` with a story-local glob did not change `storyFiles` or `skippedFiles` counts in this repo. Do not cite that as proof of untraced behavior without a case that changes the output.
