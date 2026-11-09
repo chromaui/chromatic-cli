@@ -154,6 +154,20 @@ export async function getBranch(deps: GitDeps) {
 }
 
 /**
+ * Get the tag name when HEAD is exactly at a git tag. When multiple tags point at HEAD, only the
+ * first one is reported. Returns undefined when HEAD is not at a tag.
+ *
+ * @param deps Function dependencies.
+ *
+ * @returns The tag name HEAD points at, if any.
+ */
+export async function getTag(deps: GitDeps) {
+  const result = await execGitCommand(deps, `git tag --points-at HEAD`);
+  const [tag] = result.split(newline);
+  return tag || undefined;
+}
+
+/**
  * Retrieve the hash of all uncommitted files, which includes staged, unstaged, and untracked files,
  * excluding deleted files (which can't be hashed) and ignored files. There is no one single Git
  * command to reliably get this information, so we use a combination of commands grouped together.

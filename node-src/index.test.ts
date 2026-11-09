@@ -320,6 +320,7 @@ vi.mock('./git/git', () => ({
   getChangedFiles: () => Promise.resolve(['src/foo.stories.js']),
   getRepositoryRoot: () => Promise.resolve(process.cwd()),
   getUncommittedHash: () => Promise.resolve('abc123'),
+  getTag: () => Promise.resolve(undefined),
   getUserEmail: () => Promise.resolve('test@test.com'),
   getRepositoryCreationDate: () => Promise.resolve(new Date('2024-11-01')),
   getStorybookCreationDate: () => Promise.resolve(new Date('2025-11-01')),

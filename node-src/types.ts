@@ -224,6 +224,8 @@ export interface Git {
   ciService?: string;
   mergeCommit?: string;
   uncommittedHash?: string;
+  /** The raw tag name when HEAD is exactly at a git tag; absent otherwise. */
+  tag?: string;
   parentCommits?: string[];
   baselineCommits?: string[];
   changedFiles?: string[];

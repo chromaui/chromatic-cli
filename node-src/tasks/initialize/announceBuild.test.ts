@@ -112,6 +112,39 @@ describe('announceBuild', () => {
     expect(result).toEqual(build);
   });
 
+  it('includes the tag in the build payload when HEAD is exactly at a tag', async () => {
+    const build = {
+      number: 1,
+      status: 'ANNOUNCED',
+      id: 'announced-build-id',
+      app: { id: 'announced-build-app-id' },
+    };
+    client.runQuery.mockReturnValue({ announceBuild: build });
+
+    await announceBuild(deps, { ...input, git: { ...input.git, tag: 'v1.2.3' } });
+
+    expect(client.runQuery).toHaveBeenCalledWith(
+      expect.stringMatching(/AnnounceBuildMutation/),
+      { input: expect.objectContaining({ tag: 'v1.2.3' }) },
+      { retries: 3 }
+    );
+  });
+
+  it('omits the tag from the build payload when HEAD is not at a tag', async () => {
+    const build = {
+      number: 1,
+      status: 'ANNOUNCED',
+      id: 'announced-build-id',
+      app: { id: 'announced-build-app-id' },
+    };
+    client.runQuery.mockReturnValue({ announceBuild: build });
+
+    await announceBuild(deps, input);
+
+    const { input: gqlInput } = client.runQuery.mock.calls[0][1];
+    expect(gqlInput).not.toHaveProperty('tag');
+  });
+
   it('does not require baselines for TurboSnap bailed builds', async () => {
     const build = {
       number: 1,

@@ -14,6 +14,7 @@ import {
   getShallowBoundaryCommits,
   getSlug,
   getStorybookCreationDate,
+  getTag,
   getUncommittedHash,
   getUserEmail,
   getVersion,
@@ -170,6 +171,10 @@ export async function gatherGitInfo(
     }),
     uncommittedHash: await getUncommittedHash({ log, options }).catch((err) => {
       log.warn('Failed to retrieve uncommitted files hash', err);
+      return undefined;
+    }),
+    tag: await getTag({ log, options }).catch((err) => {
+      log.debug('Failed to retrieve Git tag', err);
       return undefined;
     }),
     rootPath: await getRepositoryRoot({ log, options }),
