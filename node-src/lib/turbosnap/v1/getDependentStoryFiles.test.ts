@@ -579,31 +579,62 @@ describe('getDependentStoryFiles', () => {
     });
   });
 
-  it('bails on changed Storybook config file', async () => {
-    const changedFiles = ['src/foo.stories.js', 'path/to/storybook-config/file.js'];
+  it.each(['mocks.json', 'manager.ts', 'manager-head.html', 'vitest.setup.ts', 'mocks/preview.ts'])(
+    'does not bail on changed config dir file %s, which is off the allowlist and unimported',
+    async (fileName) => {
+      const changedFiles = [`path/to/storybook-config/${fileName}`];
+      const modules = [
+        buildModule('./src/foo.stories.js', CSF_GLOB),
+        buildModule(CSF_GLOB, './path/to/storybook-config/generated-stories-entry.js'),
+      ];
+      const ctx = getContext({ configDir: 'path/to/storybook-config' });
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+      expect(result).toMatchObject({ status: 'traced', onlyStoryFiles: {} });
+      expect(result.turboSnap.bailReason).toBeUndefined();
+    }
+  );
+
+  it('recaptures only the story that imports a changed config dir file', async () => {
+    const changedFiles = ['path/to/storybook-config/fixture.ts'];
     const modules = [
-      {
-        id: './src/foo.stories.js',
-        name: './src/foo.stories.js',
-        reasons: [{ moduleName: CSF_GLOB }],
-      },
-      {
-        id: CSF_GLOB,
-        name: CSF_GLOB,
-        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
-      },
+      buildModule('./path/to/storybook-config/fixture.ts', './src/foo.stories.js'),
+      buildModule('./src/foo.stories.js', CSF_GLOB),
+      buildModule('./src/bar.stories.js', CSF_GLOB),
+      buildModule(CSF_GLOB, './path/to/storybook-config/generated-stories-entry.js'),
     ];
     const ctx = getContext({ configDir: 'path/to/storybook-config' });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
-    expect(result.status).toBe('bailed');
-    expect(result.turboSnap.bailReason).toEqual({
-      changedStorybookFiles: ['path/to/storybook-config/file.js'],
+    expect(result.turboSnap.bailReason).toBeUndefined();
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: { './src/foo.stories.js': ['src/foo.stories.js'] },
     });
-    expect(ctx.log.warn).toHaveBeenCalledWith(
-      expect.stringContaining(
-        chalk`Found a Storybook config change in {bold path/to/storybook-config/file.js}`
-      )
-    );
+    expect(Object.keys((result as any).onlyStoryFiles)).toEqual(['./src/foo.stories.js']);
+  });
+
+  it('never treats a config dir module as a CSF glob, while tracing stories kept there', async () => {
+    const configGlob = String.raw`./path/to/storybook-config sync ^\.\/.*\.stories\.js$`;
+    const modules = [
+      buildModule(
+        './path/to/storybook-config/register.js',
+        './path/to/storybook-config/generated-stories-entry.js'
+      ),
+      buildModule('./path/to/storybook-config/Intro.stories.js', configGlob),
+      buildModule(configGlob, './path/to/storybook-config/generated-stories-entry.js'),
+    ];
+    const ctx = getContext({ configDir: 'path/to/storybook-config' });
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, [
+      'path/to/storybook-config/Intro.stories.js',
+    ]);
+    expect(result.turboSnap.globs).toEqual([configGlob.replace(/^\.\//, '')]);
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: {
+        './path/to/storybook-config/Intro.stories.js': [
+          'path/to/storybook-config/Intro.stories.js',
+        ],
+      },
+    });
   });
 
   it.each([
@@ -665,7 +696,7 @@ describe('getDependentStoryFiles', () => {
   });
 
   it('bails using the resolved config dir, not the cwd-relative option', async () => {
-    const changedFiles = ['packages/ui/.storybook-ci/file.js'];
+    const changedFiles = ['packages/ui/.storybook-ci/preview.js'];
     const modules = [
       {
         id: './src/foo.stories.js',
@@ -688,7 +719,8 @@ describe('getDependentStoryFiles', () => {
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
-      changedStorybookFiles: ['packages/ui/.storybook-ci/file.js'],
+      changedStorybookFiles: ['packages/ui/.storybook-ci/preview.js'],
+      bailSubreason: 'previewConfig',
     });
   });
 
@@ -745,38 +777,33 @@ describe('getDependentStoryFiles', () => {
     );
   });
 
-  it('bails on changed dependency of config file', async () => {
-    const changedFiles = ['src/styles.js'];
+  it('bails on a changed config dir file that the preview config imports', async () => {
+    const changedFiles = ['path/to/storybook-config/decorator.js'];
     const modules = [
-      {
-        id: './src/styles.js',
-        name: './src/styles.js',
-        reasons: [{ moduleName: './path/to/storybook-config/file.js' }],
-      },
-      {
-        id: CSF_GLOB,
-        name: CSF_GLOB,
-        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
-      },
+      buildModule(
+        './path/to/storybook-config/decorator.js',
+        './path/to/storybook-config/preview.js'
+      ),
+      buildModule(
+        './path/to/storybook-config/preview.js',
+        './path/to/storybook-config/generated-stories-entry.js'
+      ),
+      buildModule(CSF_GLOB, './path/to/storybook-config/generated-stories-entry.js'),
     ];
     const ctx = getContext({ configDir: 'path/to/storybook-config' });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
-      changedStorybookFiles: ['path/to/storybook-config/file.js'],
+      changedStorybookFiles: ['path/to/storybook-config/preview.js'],
+      bailSubreason: 'importsOfPreviewConfig',
     });
     expect(result.turboSnap.bailPath).toEqual([
-      'src/styles.js',
-      'path/to/storybook-config/file.js',
+      'path/to/storybook-config/decorator.js',
+      'path/to/storybook-config/preview.js',
     ]);
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(
-        chalk`Found a Storybook config change in {bold path/to/storybook-config/file.js}`
-      )
-    );
-    expect(ctx.log.warn).toHaveBeenCalledWith(
-      expect.stringContaining(
-        chalk`This was triggered by a change to {bold src/styles.js}, which is imported by {bold path/to/storybook-config/file.js}`
+        chalk`This was triggered by a change to {bold path/to/storybook-config/decorator.js}, which is imported by {bold path/to/storybook-config/preview.js}`
       )
     );
   });
@@ -895,32 +922,30 @@ describe('getDependentStoryFiles', () => {
     expect(result.turboSnap.bailReason).toMatchObject({ bailSubreason: 'importsOfPreviewConfig' });
   });
 
-  it('bails on changed dependency of config file if it is in a single module chunk', async () => {
-    const changedFiles = ['src/styles.js'];
+  it('bails on a changed config dir file concatenated into the preview config', async () => {
+    const changedFiles = ['path/to/storybook-config/decorator.js'];
     const modules = [
       {
-        id: './path/to/storybook-config/file.js',
-        name: './path/to/storybook-config/file.js + 1 modules',
-        modules: [{ name: './path/to/storybook-config/file.js' }, { name: './src/styles.js' }],
+        id: './path/to/storybook-config/preview.js',
+        name: './path/to/storybook-config/preview.js + 1 modules',
+        modules: [
+          { name: './path/to/storybook-config/preview.js' },
+          { name: './path/to/storybook-config/decorator.js' },
+        ],
         reasons: [],
       },
-      {
-        id: CSF_GLOB,
-        name: CSF_GLOB,
-        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
-      },
+      buildModule(CSF_GLOB, './path/to/storybook-config/generated-stories-entry.js'),
     ];
     const ctx = getContext({ configDir: 'path/to/storybook-config' });
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
-      changedStorybookFiles: ['path/to/storybook-config/file.js', 'src/styles.js'],
+      changedStorybookFiles: [
+        'path/to/storybook-config/preview.js',
+        'path/to/storybook-config/decorator.js',
+      ],
+      bailSubreason: 'importsOfPreviewConfig',
     });
-    expect(ctx.log.warn).toHaveBeenCalledWith(
-      expect.stringContaining(
-        chalk`Found a Storybook config change in {bold path/to/storybook-config/file.js}`
-      )
-    );
   });
 
   it('bails on changed static file', async () => {
@@ -976,31 +1001,188 @@ describe('getDependentStoryFiles', () => {
     );
   });
 
-  it('falls back to Storybook config bail for files inside .storybook when no staticDirs configured', async () => {
-    const changedFiles = ['src/foo.stories.js', '.storybook/static/foo.js'];
+  it('bails on a changed config dir file webpack concatenated with the preview config into the config entry', async () => {
+    const changedFiles = ['.storybook/decorator.ts'];
     const modules = [
       {
-        id: './src/foo.stories.js',
-        name: './src/foo.stories.js',
-        reasons: [{ moduleName: CSF_GLOB }],
+        id: './storybook-config-entry.js',
+        name: './storybook-config-entry.js + 2 modules',
+        modules: [
+          { name: './storybook-config-entry.js' },
+          { name: './.storybook/preview.ts' },
+          { name: './.storybook/decorator.ts' },
+        ],
+        reasons: [],
       },
-      {
-        id: CSF_GLOB,
-        name: CSF_GLOB,
-        reasons: [{ moduleName: './.storybook/generated-stories-entry.js' }],
-      },
+      buildModule('./src/foo.stories.js', CSF_GLOB),
+      buildModule(CSF_GLOB, './storybook-stories.js'),
     ];
     const ctx = getContext();
     const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
     expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
-      changedStorybookFiles: ['.storybook/static/foo.js'],
+      changedStorybookFiles: [
+        'storybook-config-entry.js',
+        '.storybook/preview.ts',
+        '.storybook/decorator.ts',
+      ],
+      bailSubreason: 'importsOfPreviewConfig',
     });
-    expect(ctx.log.warn).toHaveBeenCalledWith(
-      expect.stringContaining(
-        chalk`Found a Storybook config change in {bold .storybook/static/foo.js}`
-      )
-    );
+  });
+
+  it('bails on a changed config dir file the config entry loads directly, like a preview annotation', async () => {
+    const changedFiles = ['.storybook/annotations.ts'];
+    const modules = [
+      buildModule('./.storybook/preview.ts', './storybook-config-entry.js'),
+      buildModule('./.storybook/annotations.ts', './storybook-config-entry.js'),
+      buildModule('./src/foo.stories.js', CSF_GLOB),
+      buildModule(CSF_GLOB, './storybook-stories.js'),
+    ];
+    const result = await getDependentStoryFiles(getContext(), { modules }, statsPath, changedFiles);
+    expect(result.turboSnap.bailReason).toEqual({
+      changedStorybookFiles: ['.storybook/annotations.ts'],
+      bailSubreason: 'importsOfPreviewConfig',
+    });
+  });
+
+  it('bails on a changed config dir file a preview entry loads, like Storybook 6 config entries', async () => {
+    const changedFiles = ['.storybook/decorators.js'];
+    const modules = [
+      buildModule(
+        './.storybook/decorators.js',
+        './.storybook/decorators.js-generated-config-entry.js'
+      ),
+      buildModule('./.storybook/decorators.js-generated-config-entry.js'),
+      buildModule('./src/foo.stories.js', CSF_GLOB),
+      buildModule(CSF_GLOB, './.storybook/generated-stories-entry.js'),
+    ];
+    const result = await getDependentStoryFiles(getContext(), { modules }, statsPath, changedFiles);
+    expect(result.turboSnap.bailReason).toEqual({
+      changedStorybookFiles: ['.storybook/decorators.js-generated-config-entry.js'],
+      bailSubreason: 'importsOfPreviewConfig',
+    });
+  });
+
+  it('bails on a changed preview annotation webpack concatenated into the config entry without the preview config', async () => {
+    const changedFiles = ['.storybook/annotations.ts'];
+    const modules = [
+      {
+        id: './storybook-config-entry.js',
+        name: './storybook-config-entry.js + 2 modules',
+        modules: [
+          { name: './storybook-config-entry.js' },
+          { name: './.storybook/annotations.ts' },
+          { name: './storybook-stories.js' },
+        ],
+        reasons: [],
+      },
+      // A story imports the preview config, so webpack keeps it out of the config entry.
+      buildModule(
+        './.storybook/preview.ts',
+        './src/foo.stories.js',
+        './storybook-config-entry.js + 2 modules'
+      ),
+      buildModule('./src/foo.stories.js', CSF_GLOB),
+      buildModule(CSF_GLOB, './storybook-stories.js'),
+    ];
+    const result = await getDependentStoryFiles(getContext(), { modules }, statsPath, changedFiles);
+    expect(result.status).toBe('bailed');
+    expect(result.turboSnap.bailReason).toMatchObject({ bailSubreason: 'importsOfPreviewConfig' });
+  });
+
+  it('does not bail on an unimported file inside .storybook when no staticDirs are configured', async () => {
+    const changedFiles = ['src/foo.stories.js', '.storybook/static/foo.js'];
+    const modules = [
+      buildModule('./src/foo.stories.js', CSF_GLOB),
+      buildModule(CSF_GLOB, './.storybook/generated-stories-entry.js'),
+    ];
+    const ctx = getContext();
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result.turboSnap.bailReason).toBeUndefined();
+    expect(result).toMatchObject({
+      status: 'traced',
+      onlyStoryFiles: { './src/foo.stories.js': ['src/foo.stories.js'] },
+    });
+  });
+
+  describe('with the config dir untraced', () => {
+    const modules = [
+      buildModule('./src/theme.js', './path/to/storybook-config/preview.js'),
+      buildModule(
+        './path/to/storybook-config/preview.js',
+        './path/to/storybook-config/generated-stories-entry.js'
+      ),
+      buildModule('./src/foo.stories.js', CSF_GLOB),
+      buildModule(CSF_GLOB, './path/to/storybook-config/generated-stories-entry.js'),
+    ];
+    const trace = (changedFiles: string[]) =>
+      getDependentStoryFiles(
+        getContext({
+          configDir: 'path/to/storybook-config',
+          untraced: ['path/to/storybook-config/**'],
+        }),
+        { modules },
+        statsPath,
+        changedFiles
+      );
+
+    it('still bails on a changed preview config', async () => {
+      const result = await trace(['path/to/storybook-config/preview.js']);
+      expect(result.turboSnap.bailReason).toEqual({
+        changedStorybookFiles: ['path/to/storybook-config/preview.js'],
+        bailSubreason: 'previewConfig',
+      });
+      expect(result.turboSnap.tracedFiles).toEqual(['path/to/storybook-config/preview.js']);
+    });
+
+    it('still bails on a changed file the preview config imports', async () => {
+      const result = await trace(['src/theme.js']);
+      expect(result.turboSnap.bailReason).toMatchObject({
+        bailSubreason: 'importsOfPreviewConfig',
+      });
+    });
+
+    it('reports other config dir files as untraced', async () => {
+      const result = await trace(['path/to/storybook-config/mocks.json']);
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: {},
+        untracedFiles: [
+          { filepath: 'path/to/storybook-config/mocks.json', glob: 'path/to/storybook-config/**' },
+        ],
+      });
+    });
+
+    it('still bails on a changed file a concatenated module holding the preview config imports', async () => {
+      const entry = './path/to/storybook-config/preview.js-generated-config-entry.js + 1 modules';
+      const result = await getDependentStoryFiles(
+        getContext({
+          configDir: 'path/to/storybook-config',
+          untraced: ['path/to/storybook-config/**'],
+        }),
+        {
+          modules: [
+            buildModule('./src/theme.js', entry),
+            {
+              id: './path/to/storybook-config/preview.js-generated-config-entry.js',
+              name: entry,
+              modules: [
+                { name: './path/to/storybook-config/preview.js-generated-config-entry.js' },
+                { name: './path/to/storybook-config/preview.js' },
+              ],
+              reasons: [],
+            },
+            buildModule('./src/foo.stories.js', CSF_GLOB),
+            buildModule(CSF_GLOB, './path/to/storybook-config/generated-stories-entry.js'),
+          ],
+        },
+        statsPath,
+        ['src/theme.js']
+      );
+      expect(result.turboSnap.bailReason).toMatchObject({
+        bailSubreason: 'importsOfPreviewConfig',
+      });
+    });
   });
 
   it('ignores untraced files and dependencies with a glob pattern match', async () => {
