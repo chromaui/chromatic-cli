@@ -5,6 +5,7 @@ import type { AnalyticsClient } from './lib/analytics';
 import type { Configuration } from './lib/getConfiguration';
 import { Environment } from './lib/getEnvironment';
 import { Logger } from './lib/log';
+import type { StorybookConfigFileKind } from './lib/turbosnap/storybookConfigFiles';
 
 type FilePath = string;
 
@@ -644,6 +645,23 @@ type TurboSnapInvalidChangedFilesSubreason =
   | 'networkError'
   | 'gitCommandFailed';
 
+type TurboSnapChangedStorybookFilesSubreason =
+  // The allowlisted config file that changed.
+  | StorybookConfigFileKind
+  // A changed file reached `preview.*` or another preview annotation file by tracing, or a changed
+  // file was itself a preview annotation file outside the allowlist.
+  | 'importsOfPreviewConfig'
+  // A changed config-directory file outside the allowlist.
+  | 'otherStorybookFiles';
+
+// All additional fields allowed for the `changedStorybookFiles` bail reason
+export type ChangedStorybookFilesBailReason = TurboSnapBailReasonBase & {
+  changedStorybookFiles: string[];
+  changedPackageFiles?: never;
+  invalidChangedFiles?: never;
+  bailSubreason?: TurboSnapChangedStorybookFilesSubreason;
+};
+
 // All additional fields allowed for the `changedPackageFiles` bail reason
 export type ChangedPackageFilesBailReason = TurboSnapBailReasonBase & {
   changedPackageFiles: string[];
@@ -663,6 +681,7 @@ export type InvalidChangedFilesBailReason = TurboSnapBailReasonBase & {
 };
 
 type TurboSnapBailReason =
+  | ChangedStorybookFilesBailReason
   | ChangedPackageFilesBailReason
   | InvalidChangedFilesBailReason
   // All remaining bail reasons
@@ -693,6 +712,10 @@ export interface TurboSnap {
   changedManifestFiles?: Set<string>;
   affectedModuleIds?: Set<string | number>;
   bailReason?: TurboSnapBailReason;
+  // Whether `preview-stats.json` has the config directory's `preview.*`, as a module or as the
+  // importer of one. Set on every TurboSnap 1.0 run when the config directory has a `preview.*`
+  // file, bailed or not, and sent to the index as `turboSnapPreviewConfigInStats`.
+  previewConfigInStats?: boolean;
 }
 
 /**

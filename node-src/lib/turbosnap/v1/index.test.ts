@@ -1,7 +1,11 @@
 import * as Sentry from '@sentry/node';
 import { access } from 'fs';
+import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
+import { tmpdir } from 'os';
+import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { Module } from '../../../types';
 import { exitCodes } from '../../setExitCode';
 import TestLogger from '../../testLogger';
 import { traceChangedFiles as traceChangedFilesV1 } from '.';
@@ -85,7 +89,7 @@ describe('traceChangedFiles', () => {
     expect(result).toStrictEqual({
       status: 'traced',
       onlyStoryFiles: deps,
-      turboSnap: {},
+      turboSnap: { previewConfigInStats: undefined },
       changedDependencyNames: undefined,
       untracedFiles: [],
     });
@@ -341,5 +345,87 @@ describe('traceChangedFiles', () => {
     expect(result.status).toBe('bailed');
     expect(ctx.turboSnap.bailReason).toBeUndefined();
     expect(ctx.git.changedDependencyNames).toBeUndefined();
+  });
+
+  describe('previewConfigInStats', () => {
+    let projectRoot: string;
+    beforeEach(async () => {
+      projectRoot = await mkdtemp(path.join(tmpdir(), 'chromatic-preview-config-'));
+      await mkdir(path.join(projectRoot, 'config/sb'), { recursive: true });
+      await writeFile(path.join(projectRoot, 'config/sb/main.ts'), '');
+      getDependentStoryFiles.mockResolvedValue({
+        status: 'traced',
+        onlyStoryFiles: {},
+        turboSnap: {},
+        untracedFiles: [],
+      });
+    });
+    afterEach(async () => {
+      await rm(projectRoot, { recursive: true, force: true });
+    });
+
+    const trace = (modules: Module[], git = {}) =>
+      traceChangedFilesV1(
+        {
+          env: environment,
+          log,
+          http,
+          options: {},
+          storybook: { projectRoot, configDir: path.join(projectRoot, 'config/sb') },
+          git: { rootPath: projectRoot, changedFiles: ['src/Button.tsx'], ...git },
+          turboSnap: {},
+        } as any,
+        { modules },
+        statsPath
+      );
+
+    it('is true when the stats file has the preview config, even concatenated', async () => {
+      await writeFile(path.join(projectRoot, 'config/sb/preview.tsx'), '');
+      const result = await trace([
+        { id: '1', name: './config/sb/preview.tsx + 2 modules' },
+        { id: '2', name: './src/Button.tsx' },
+      ]);
+      expect(result).toMatchObject({ turboSnap: { previewConfigInStats: true } });
+    });
+
+    it('is true when the stats file names the preview config only as an importer, as Vite does', async () => {
+      await writeFile(path.join(projectRoot, 'config/sb/preview.tsx'), '');
+      const result = await trace([
+        {
+          id: '1',
+          name: './config/sb/decorator.ts',
+          reasons: [{ moduleName: './config/sb/preview.tsx' }],
+        },
+      ]);
+      expect(result).toMatchObject({ turboSnap: { previewConfigInStats: true } });
+    });
+
+    it('is false when the config dir has a preview config the stats file lacks', async () => {
+      await writeFile(path.join(projectRoot, 'config/sb/preview.tsx'), '');
+      const result = await trace([
+        // A preview outside the config dir doesn't count.
+        { id: '1', name: './node_modules/@storybook/react/dist/preview.js' },
+        { id: '2', name: './config/sb/mocks/preview.ts' },
+      ]);
+      expect(result).toMatchObject({ turboSnap: { previewConfigInStats: false } });
+    });
+
+    it('is not set when the config dir has no preview config', async () => {
+      const result = await trace([{ id: '1', name: './config/sb/preview.tsx' }]);
+      expect(result).toMatchObject({ turboSnap: { previewConfigInStats: undefined } });
+    });
+
+    it('is set when TurboSnap bails on changed package files', async () => {
+      await writeFile(path.join(projectRoot, 'config/sb/preview.tsx'), '');
+      findChangedDependencies.mockRejectedValue(new Error('no lockfile'));
+      findChangedPackageFiles.mockResolvedValue(['./package.json']);
+      const result = await trace([{ id: '1', name: './src/Button.tsx' }], {
+        packageMetadataChanges: [{ changedFiles: ['./package.json'], commit: 'abcdef' }],
+      });
+      expect(result).toMatchObject({
+        status: 'bailed',
+        turboSnap: { previewConfigInStats: false },
+      });
+    });
   });
 });

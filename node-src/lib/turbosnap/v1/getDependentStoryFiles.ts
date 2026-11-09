@@ -11,8 +11,14 @@ import {
   isPackageManifestFile,
   matchesFile,
 } from '../../utilities';
-import { getPackageName, getStatsProjectRoot, normalizeStatsName } from '../statsPaths';
+import {
+  getPackageName,
+  getStatsProjectRoot,
+  normalizeStatsName,
+  stripConcatenatedModuleSuffix,
+} from '../statsPaths';
 import { TraceChangedFilesResult } from '../types';
+import { classifyChangedStorybookFilesDetail } from './classifyBailDetail';
 
 type FilePath = string;
 type NormalizedName = string;
@@ -301,7 +307,9 @@ export async function getDependentStoryFiles(
     return [...tracedNames, moduleName];
   }
 
-  function shouldBail(moduleName: string, tracePath: string[] = []) {
+  // `traced` says whether the trace reached `moduleName` from a different changed file, which the
+  // trace path alone misses when a changed file is concatenated into the module it bails on.
+  function shouldBail(moduleName: string, tracePath: string[] = [], traced = tracePath.length > 0) {
     // Check staticDirs before the Storybook config dir so static assets
     // nested under `.storybook/` (e.g. an MSW-generated mockServiceWorker.js
     // inside a configured staticDir) aren't mis-categorized as config changes.
@@ -311,8 +319,16 @@ export async function getDependentStoryFiles(
       return true;
     }
 
-    if (isStorybookFile(moduleName) || annotationFilesByName.has(moduleName)) {
-      turboSnap.bailReason = { changedStorybookFiles: files(moduleName) };
+    const isAnnotationFile = annotationFilesByName.has(moduleName);
+    if (isStorybookFile(moduleName) || isAnnotationFile) {
+      turboSnap.bailReason = {
+        changedStorybookFiles: files(moduleName),
+        ...classifyChangedStorybookFilesDetail(moduleName, {
+          traced,
+          isAnnotationFile,
+          storybookDirectory,
+        }),
+      };
       turboSnap.bailPath = buildBailPath(moduleName, tracePath);
       return true;
     }
@@ -328,7 +344,11 @@ export async function getDependentStoryFiles(
     // eslint-disable-next-line unicorn/no-null
     const normalizedName = namesById.get(id || null);
     if (!normalizedName) return;
-    if (shouldBail(normalizedName, tracePath)) return;
+    const reachedFromInnerModule =
+      stripConcatenatedModuleSuffix(normalizedName) !== stripConcatenatedModuleSuffix(name);
+    if (shouldBail(normalizedName, tracePath, tracePath.length > 0 || reachedFromInnerModule)) {
+      return;
+    }
 
     if (!id || !reasonsById.get(id) || checkedIds[id]) return;
     // Queue this id for tracing
