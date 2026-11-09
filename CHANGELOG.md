@@ -1,3 +1,23 @@
+# v18.14.3 (Mon Nov 09 2026)
+
+#### 🐛 Bug Fix
+
+- Hash TurboSnap v2 story subtrees from a shared index [#1641](https://github.com/chromaui/chromatic-cli/pull/1641) ([@codykaup](https://github.com/codykaup))
+- Limit untracked-file discovery to TurboSnap manifest inputs [#1644](https://github.com/chromaui/chromatic-cli/pull/1644) ([@tayloroai](https://github.com/tayloroai) [@codykaup](https://github.com/codykaup))
+- Bump adm-zip from 0.5.17 to 0.6.1 [#1649](https://github.com/chromaui/chromatic-cli/pull/1649) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@codykaup](https://github.com/codykaup))
+- Bump the npm_and_yarn group across 2 directories with 1 update [#1655](https://github.com/chromaui/chromatic-cli/pull/1655) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump @sentry/cli from 2.58.5 to 3.8.2 [#1653](https://github.com/chromaui/chromatic-cli/pull/1653) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump fake-tag from 2.0.0 to 5.0.0 [#1652](https://github.com/chromaui/chromatic-cli/pull/1652) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump eslint-plugin-security from 3.0.1 to 4.2.1 [#1650](https://github.com/chromaui/chromatic-cli/pull/1650) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+
+#### Authors: 3
+
+- [@dependabot[bot]](https://github.com/dependabot[bot])
+- [@tayloroai](https://github.com/tayloroai)
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.14.2 (Fri Nov 06 2026)
 
 #### 🐛 Bug Fix
