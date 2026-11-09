@@ -1,7 +1,7 @@
 import untracedStorybookConfig from './untracedStorybookConfig';
 
 export default {
-  title: 'CLI/Messages/Warnings',
+  title: 'CLI/Messages/Info',
 };
 
 export const UntracedStorybookConfig = () =>
