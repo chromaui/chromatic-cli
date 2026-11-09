@@ -25,6 +25,7 @@ import {
   getShallowBoundaryCommits,
   getSlug,
   getStorybookCreationDate,
+  getTag,
   getUncommittedHash,
   getUntrackedPaths,
   getUserEmail,
@@ -116,6 +117,23 @@ describe('getBranch', () => {
     execGitCommand.mockRejectedValueOnce(new Error(`git: 'symbolic-ref' is not a git command`));
     execGitCommand.mockResolvedValue('heads/main');
     expect(await getBranch(ctx)).toEqual('main');
+  });
+});
+
+describe('getTag', () => {
+  it('returns the tag HEAD points at', async () => {
+    execGitCommand.mockResolvedValue('v1.2.3');
+    expect(await getTag(ctx)).toEqual('v1.2.3');
+  });
+
+  it('returns undefined when HEAD is not at a tag', async () => {
+    execGitCommand.mockResolvedValue('');
+    expect(await getTag(ctx)).toBeUndefined();
+  });
+
+  it('returns the first tag when multiple tags point at HEAD', async () => {
+    execGitCommand.mockResolvedValue('v1.2.3\nv1.2.3-rc1');
+    expect(await getTag(ctx)).toEqual('v1.2.3');
   });
 });
 

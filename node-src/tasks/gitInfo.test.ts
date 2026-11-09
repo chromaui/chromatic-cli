@@ -64,6 +64,7 @@ const getStorybookCreationDate = vi.mocked(git.getStorybookCreationDate);
 const getNumberOfCommitters = vi.mocked(git.getNumberOfCommitters);
 const getCommittedFileCount = vi.mocked(git.getCommittedFileCount);
 const getUncommittedHash = vi.mocked(git.getUncommittedHash);
+const getTag = vi.mocked(git.getTag);
 const getCloneDepth = vi.mocked(git.getCloneDepth);
 const getCloneFilter = vi.mocked(git.getCloneFilter);
 const getShallowBoundaryCommits = vi.mocked(git.getShallowBoundaryCommits);
@@ -109,6 +110,7 @@ const buildInput = (overrides: Partial<GitInfoInput> = {}): GitInfoInput => ({
 beforeEach(() => {
   getCommitAndBranch.mockResolvedValue(commitInfo);
   getUncommittedHash.mockResolvedValue('abc123');
+  getTag.mockResolvedValue(undefined);
   getParentCommits.mockResolvedValue({ ancestorCommits: ['asd2344'], visitedCommits: [] });
   getBaselineBuilds.mockResolvedValue([]);
   getChangedFilesWithReplacement.mockResolvedValue({ changedFiles: [] });
@@ -146,6 +148,19 @@ describe('gatherGitInfo', () => {
     const result = await gatherGitInfo(buildDeps(), buildInput({ isLocalBuild: true }));
     expectKind(result, 'continue');
     expect(result.output.git).toMatchObject({ gitUserEmail: 'user@email.com' });
+  });
+
+  it('captures the tag when HEAD is exactly at a tag (including detached HEAD)', async () => {
+    getTag.mockResolvedValue('v1.2.3');
+    const result = await gatherGitInfo(buildDeps(), buildInput());
+    expectKind(result, 'continue');
+    expect(result.output.git.tag).toEqual('v1.2.3');
+  });
+
+  it('omits the tag when HEAD is not at a tag', async () => {
+    const result = await gatherGitInfo(buildDeps(), buildInput());
+    expectKind(result, 'continue');
+    expect(result.output.git.tag).toBeUndefined();
   });
 
   it('supports overriding the owner name in the slug', async () => {

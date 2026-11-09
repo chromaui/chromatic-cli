@@ -69,6 +69,7 @@ const parseAnnounceBuildMutationInput = (deps: AnnounceBuildDeps, input: Announc
     cloneFilter,
     cloneDepth,
     shallowBoundaryCommits,
+    tag,
     ...commitInfo
   } = input.git; // omit some fields;
   const { rebuildForBuildId, turboSnap } = input;
@@ -80,6 +81,7 @@ const parseAnnounceBuildMutationInput = (deps: AnnounceBuildDeps, input: Announc
     patchHeadRef,
     preserveMissingSpecs,
     ...(gitUserEmail && { gitUserEmailHash: emailHash(gitUserEmail) }),
+    ...(tag && { tag }),
     ...commitInfo,
     committedAt: new Date(committedAt),
     ciVariables: input.environment,
