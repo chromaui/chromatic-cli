@@ -192,12 +192,12 @@ cmd_checkout() {
   echo "$CHECKOUT"
 }
 
-# build-ref <name> <git-ref>: build the CLI at another ref (usually origin/main) in a detached worktree at
+# build-ref <name> <git-ref>: build the CLI at another ref (usually the merge base with main) in a detached worktree at
 # $WORK/cli-<name>, sharing the repo's node_modules, so a change can be compared against it. Prints the
 # bundle path to pass as `run --cli`. Running a dist/ copied out of the repo fails with "Cannot find
 # module 'semver'", because the bundle resolves its externals from node_modules next to it.
 # Sharing node_modules means <ref> is built and run against this checkout's dependencies, so when the
-# manifests differ the comparison is not a true picture of <ref>; it warns on stderr in that case.
+# manifests differ, refuse the comparison before creating a worktree or printing a bundle path.
 cmd_build_ref() {
   local name="${1:-}" ref="${2:-}"
   [[ -n "$name" && -n "$ref" ]] || die "usage: build-ref <name> <git-ref>"
@@ -205,12 +205,15 @@ cmd_build_ref() {
   local dir="$WORK/cli-$name"
   [[ -e "$dir" ]] && die "$dir already exists; run cleanup first"
   git -C "$REPO" rev-parse --verify --quiet "$ref^{commit}" > /dev/null || die "unknown git ref $ref"
-  git -C "$REPO" diff --quiet "$ref" -- package.json yarn.lock \
-    || echo "control-chromatic: WARNING: package.json or yarn.lock differ between $ref and this checkout; $ref will be built and run with this checkout's node_modules, so dependency-related differences won't show. Compare against a published release or canary (install-published) instead." >&2
+  local manifest
+  for manifest in package.json yarn.lock; do
+    git -C "$REPO" show "$ref:$manifest" | cmp -s - "$REPO/$manifest" \
+      || die "package.json or yarn.lock differ between $ref and this checkout. build-ref shares this checkout's node_modules and requires matching manifests. For a branch-only comparison, try the merge base with main (git merge-base HEAD origin/main). If those manifests also differ, compare against a published release or canary (install-published) instead."
+  done
   mkdir -p "$WORK"
   git -C "$REPO" worktree add -q --detach "$dir" "$ref"
   ln -s "$REPO/node_modules" "$dir/node_modules"
-  echo "==> yarn build ($ref in $dir)"
+  echo "==> yarn build ($ref in $dir)" >&2
   (cd "$dir" && yarn build > "$WORK/build-$name.log" 2>&1) \
     || { tail -30 "$WORK/build-$name.log"; die "build of $ref failed (log: $WORK/build-$name.log)"; }
   echo "$dir/dist/bin.cjs"
