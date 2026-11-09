@@ -130,7 +130,7 @@ describe('buildManifest with an untraced global decorator', () => {
     expect(after.storybookHash).not.toBe(before.storybookHash);
   });
 
-  it('honors the glob in a config dir reached through a symlink, since the glob names the real path as v1 would', async () => {
+  it('honors the glob in a config dir reached through a symlink, since the glob names the real path as v1 would, and still never untraces the preview', async () => {
     const linkedConfigDirectory = '/repo/apps/storybook/.storybook';
     const linkedDecorator = `${linkedConfigDirectory}/decorators/withTheme.ts`;
     const { disk, input: fixtureInput } = createFixture({
@@ -143,7 +143,7 @@ describe('buildManifest with an untraced global decorator', () => {
     const input = {
       ...fixtureInput,
       configDir: linkedConfigDirectory,
-      untraced: ['packages/ui/.storybook/decorators/*.ts'],
+      untraced: ['packages/ui/.storybook/**'],
       projectFiles: {
         ...fixtureInput.projectFiles,
         realPath: (absolutePath: string) =>
@@ -157,6 +157,7 @@ describe('buildManifest with an untraced global decorator', () => {
     const after = await buildManifest(stats, input);
 
     expect(after.storybookHash).toBe(before.storybookHash);
+    expect([...after.skippedFiles]).toEqual([['./.storybook/decorators/withTheme.ts', 'untraced']]);
   });
 
   it('still moves the storybook hash when the main config changes under a glob that untraces the whole config dir', async () => {

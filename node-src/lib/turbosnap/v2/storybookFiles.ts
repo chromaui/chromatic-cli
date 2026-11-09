@@ -96,7 +96,7 @@ export function collectStorybookFiles(
   // A skipped preview still roots the subtree: an untracked preview keeps its edges, so the tracked
   // files it imports roll up here rather than falling through to globals. The roll-up leaves the
   // skipped file itself out (see `rollUpFileHashes`), and like the globals entry it is omitted when
-  // nothing hashed is left, as when the preview is untraced and so has no edges to follow.
+  // nothing hashed is left, as when the untracked preview imports only untracked files.
   // The preview is found by path because the config-entry import edge is spelled three incompatible
   // ways across builders (vite has no such edge at all, leaving preview a detached root).
   const previewSubtree = new Set<FilePath>();
