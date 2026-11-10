@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/node';
 import chalk from 'chalk';
 import { execa, ExecaError } from 'execa';
 import { tmpdir } from 'os';
+import path from 'path';
 import { describe, expect, it } from 'vitest';
 
 import { filterBreadcrumb, filterErrorEvent } from './errorMonitoring';
@@ -65,9 +66,15 @@ describe('filterErrorEvent', () => {
   });
 
   it('groups a failed git command by subcommand and exit code, not its arguments', async () => {
-    const failed = await execa('git', ['--no-pager', 'merge-base', '--all', 'feature-a', 'main'], {
-      cwd: tmpdir(),
-    }).catch((error) => error);
+    // A git directory that doesn't exist fails the same way wherever the test runs.
+    const gitDirectory = path.join(tmpdir(), `missing-repository-${process.pid}-${Date.now()}`);
+    const failed = await execa('git', [
+      `--git-dir=${gitDirectory}`,
+      'merge-base',
+      '--all',
+      'feature-a',
+      'main',
+    ]).catch((error) => error);
 
     expect(failed.exitCode).toBe(128);
     expect(fingerprintOf(failed)).toEqual(
