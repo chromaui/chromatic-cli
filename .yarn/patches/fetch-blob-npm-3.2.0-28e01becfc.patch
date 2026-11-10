@@ -1,0 +1,9 @@
+diff --git a/index.d.ts b/index.d.ts
+index 7a6895778a983ff6dafd1a1c16e5661e36caf316..1b09fca2fa720187cb460097c175fa5f72bd987a 100644
+--- a/index.d.ts
++++ b/index.d.ts
+@@ -1,3 +1,4 @@
+ /** @type {typeof globalThis.Blob} */
+ export const Blob: typeof globalThis.Blob;
++export type Blob = globalThis.Blob;
+ export default Blob;

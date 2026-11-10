@@ -89,6 +89,7 @@
     "storybook": "cross-env FORCE_COLOR=3 TERM=xterm-256color storybook dev -p 9009",
     "test": "vitest run --coverage",
     "typescript:check": "tsc --project ./tsconfig.json --noEmit",
+    "typescript:check-declarations": "tsc --project ./tsconfig.declarations.json",
     "prepare": "yarn run build",
     "dev": "tsdown --watch",
     "fixture": "node e2e/prepare.mjs",
@@ -98,7 +99,8 @@
     "any-observable": "^0.5.1",
     "es-toolkit": "1.46.0",
     "lodash": "4.18.1",
-    "@types/minimatch": "5.1.2"
+    "@types/minimatch": "5.1.2",
+    "fetch-blob": "patch:fetch-blob@npm%3A3.2.0#~/.yarn/patches/fetch-blob-npm-3.2.0-28e01becfc.patch"
   },
   "dependenciesMeta": {
     "@sentry/cli": {
