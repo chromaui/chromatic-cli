@@ -35,6 +35,9 @@ jobs:
       # test if dist is correctly generated from src
       - run: yarn build && git status --porcelain
 
+      # Consumers that typecheck node_modules (skipLibCheck: false) must be able to load chromatic/node's types.
+      - run: yarn typescript:check-declarations
+
       # unit test
       - run: yarn test
 

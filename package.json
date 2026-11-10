@@ -89,6 +89,7 @@
     "storybook": "cross-env FORCE_COLOR=3 TERM=xterm-256color storybook dev -p 9009",
     "test": "vitest run --coverage",
     "typescript:check": "tsc --project ./tsconfig.json --noEmit",
+    "typescript:check-declarations": "tsc --noEmit --skipLibCheck false --strict --module nodenext --target es2022 --types node dist/node.d.cts",
     "prepare": "yarn run build",
     "dev": "tsdown --watch",
     "fixture": "node e2e/prepare.mjs",
