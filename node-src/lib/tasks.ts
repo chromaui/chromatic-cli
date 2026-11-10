@@ -6,7 +6,7 @@ import { Context, Deps, Task, TaskFunction, TaskName, TaskResult } from '../type
 
 type ValueFunction = string | ((ctx: Context, task: Task) => string);
 
-type ListrTaskExtras = Pick<Listr.ListrTask<Context>, 'skip' | 'enabled'>;
+type ListrTaskExtras = Pick<Listr.ListrTask<Context>, 'skip'>;
 
 type LegacyTaskConfig = ListrTaskExtras & {
   name: TaskName;
@@ -118,11 +118,10 @@ export function createTask(config: LegacyTaskConfig): Listr.ListrTask<Context>;
 export function createTask<TInput, TOutput, TPartial = never>(
   config: LegacyTaskConfig | AdaptedTaskConfig<TInput, TOutput, TPartial>
 ): Listr.ListrTask<Context> {
-  const { name, title, skip, enabled } = config;
+  const { name, title, skip } = config;
   return {
     title,
     skip,
-    enabled,
     task: async (ctx: Context, listrTask: Listr.ListrTaskWrapper<Context>) => {
       ctx.task = name;
       ctx.title = title;
