@@ -8,6 +8,7 @@
 - `trim-default-path` trims `./storybook-static/preview-stats.json` in cwd when no argument is given.
 - `trim-missing` prints an ENOENT error for a missing input and exits `1`.
 - `trim-help` prints usage text for `--help` and exits `0`.
+- `trim-unknown-flag` rejects an unknown flag and exits `2`.
 - `trim-wp` drops webpack runtime and `node_modules/` modules from webpack stats.
 
 ## How to get to it (user POV)
@@ -28,11 +29,12 @@ Preconditions:
 - **Default path.** Run from the run's work dir, whose `storybook-static/` is `$SB_DIR`. Run `$S run trim-default-path --cwd "$WORK" -- trim-stats-file`. Exit code `0`. stdout is `Wrote ./storybook-static/preview-stats.trimmed.json`.
 - **Missing input.** Run `$S run trim-missing -- trim-stats-file "$WORK/nope.json"`. Exit code `1`. stdout is empty, and stderr contains `ENOENT: no such file or directory, open '<path>/nope.json'`. No `Wrote` line appears, and no `nope.trimmed.json` exists.
 - **Help.** Run `$S run trim-help -- trim-stats-file --help`. Exit code `0`. stdout contains the usage text `$ chromatic trim-stats-file [<stats file>]`, and no file is written.
+- **Unknown flag.** The earlier journeys leave a trimmed file behind, so remove it first with `rm -f "$SB_DIR/preview-stats.trimmed.json"`. Run `$S run trim-unknown-flag -- trim-stats-file --nope "$SB_STATS"`. Exit code `2`. stdout is empty, stderr is `Unknown flag` followed by `--nope`, and `ls "$SB_DIR/preview-stats.trimmed.json"` fails because no file was written.
 - **Webpack filters.** Only webpack stats have `(webpack)…` and `node_modules/` top-level modules to drop. Reuse the `react-webpack5` copy and Storybook from `trace-wp` (`F=$WORK/e2e-react-webpack5`), or prepare and build one as described there (see `trace`). Run `$S run trim-wp --cwd "$F" -- trim-stats-file`. Exit code `0`. stdout is `Wrote ./storybook-static/preview-stats.trimmed.json`. `jq '[.modules[].name|select(startswith("(webpack)") or contains("node_modules/"))]|length'` is greater than `0` on `preview-stats.json` and `0` on `preview-stats.trimmed.json`.
 
 ## Gotchas
 
-- Pair the exit code with the `Wrote …` line and the file. Failures exit `1`.
+- Pair the exit code with the `Wrote …` line and the file. Read and parse failures exit `1`, and an unknown flag exits `2`.
 - Only top-level module names are filtered. Nested `.modules[].modules[].name` entries of a webpack concatenated module can still name `node_modules/` files.
 - Output lands next to the input, never in cwd. Never point it at the repo's `storybook-static/` during verification. Use `$SB_STATS`.
 - The output name replaces only a trailing `.json`, or appends `.trimmed.json` if there is none. A directory name that contains `.json` is left alone.
