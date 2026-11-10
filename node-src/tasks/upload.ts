@@ -163,4 +163,5 @@ export const applyUploadPartial = (ctx: Context, output: UploadOutput) => {
   // A bypassed build halts the pipeline here, so verify never runs to populate a full build object.
   // Apply the fields we queried from the skipped build so the index.ts outputs block reads them.
   ctx.build = { ...ctx.build, ...output.skippedBuild } as Context['build'];
+  ctx.ancestorBuild = output.ancestorBuild;
 };
