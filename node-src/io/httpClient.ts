@@ -108,7 +108,8 @@ export default class HTTPClient {
     );
   }
 
-  async fetchBuffer(url, options) {
+  // Declared so the published types print `Buffer`; the inferred `Buffer<ArrayBufferLike>` fails on TypeScript < 5.7.
+  async fetchBuffer(url: string, options?: RequestInit): Promise<Buffer> {
     const result = await this.fetch(url, options);
     return result.buffer();
   }
