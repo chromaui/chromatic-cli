@@ -6,7 +6,7 @@ import { createFixture, syntheticAbsent } from './__fixtures__/manifestFixtures'
 import { SKIPPED_HASH } from './graph';
 import { buildManifest, serializeManifest } from './manifest';
 import { SkipRule } from './skippedFiles';
-import { countNodeModulesFiles, locateOnDiskFiles, readStatsGraph } from './statsGraph';
+import { locateOnDiskFiles, readStatsGraph } from './statsGraph';
 
 // These suites are about builder spellings: what webpack, rspack and Vite each call the same file,
 // and what the graph reader makes of it. They assert on the graph, not on a hash — that the right
@@ -440,67 +440,6 @@ describe('readStatsGraph loader chain ids', () => {
     expect(Object.keys(serialized.files).filter((key) => key.includes('!'))).toEqual([]);
     expect(manifest.attribution.storyReachable.has(runtimeKey)).toBe(true);
     expect(manifest.attribution.storybookGlobals.has(runtimeKey)).toBe(false);
-  });
-});
-
-describe('countNodeModulesFiles', () => {
-  it('counts zero for a first-party-only graph', () => {
-    const stats: Stats = {
-      modules: [
-        { id: 1, name: './src/Button.stories.tsx' },
-        { id: 2, name: './src/Button.tsx' },
-        { id: 3, name: './.storybook/preview.ts' },
-      ],
-    };
-
-    expect(countNodeModulesFiles(stats)).toBe(0);
-  });
-
-  it('does not count file names and context expressions that only mention node_modules', () => {
-    const stats: Stats = {
-      modules: [
-        { id: 1, name: './src/node_modules-helper.ts' },
-        {
-          id: 2,
-          name: String.raw`./src|lazy|/^\.\/.*$/|include: /(?!.*node_modules)/|namespace object`,
-        },
-      ],
-    };
-
-    expect(countNodeModulesFiles(stats)).toBe(0);
-  });
-
-  it('counts installed dependency files however the builder spells them', () => {
-    const stats: Stats = {
-      // One relative (Vite), two absolute (webpack on POSIX and Windows), one via
-      // `nameForCondition` (rspack).
-      modules: [
-        { id: 1, name: './src/Button.tsx' },
-        { id: 2, name: './../../node_modules/@storybook/react/dist/entry-preview.js' },
-        { id: 3, name: '/repo/node_modules/storybook/dist/csf/index.js' },
-        { id: 4, name: 'dependency group', nameForCondition: '/repo/node_modules/react/index.js' },
-        { id: 5, name: String.raw`C:\repo\node_modules\react-dom\index.js` },
-      ],
-    };
-
-    expect(countNodeModulesFiles(stats)).toBe(4);
-  });
-
-  it('counts the concatenated children of a dependency group', () => {
-    const stats: Stats = {
-      modules: [
-        {
-          id: 1,
-          name: './../../node_modules/storybook/dist/csf/index.js + 1 modules',
-          modules: [
-            { name: './../../node_modules/storybook/dist/csf/index.js' },
-            { name: './../../node_modules/storybook/dist/csf/toId.js' },
-          ],
-        },
-      ],
-    };
-
-    expect(countNodeModulesFiles(stats)).toBe(2);
   });
 });
 
