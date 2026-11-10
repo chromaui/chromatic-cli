@@ -48,7 +48,8 @@ export async function getUserEmail(deps: GitDeps) {
 /**
  * The slug consists of the last two parts of the URL, at least for GitHub, GitLab and Bitbucket,
  * and is typically followed by `.git`. The regex matches the last two parts between slashes, and
- * ignores the `.git` suffix if it exists, so it matches something like `ownername/reponame`.
+ * ignores the `.git` suffix and any trailing slashes, so it matches something like
+ * `ownername/reponame`.
  * Azure DevOps HTTPS remotes (`.../<project>/_git/<repo>`) produce `<project>/<repo>` just like
  * Azure DevOps SSH remotes do. Short-form HTTPS remotes (`.../_git/<repo>`) omit the project when
  * it shares the repo's name, so they produce `<repo>/<repo>`. Azure DevOps project and repo names
@@ -60,7 +61,7 @@ export async function getUserEmail(deps: GitDeps) {
  */
 export async function getSlug(deps: GitDeps) {
   const result = await execGitCommand(deps, `git config --get remote.origin.url`);
-  const downcasedResult = result?.toLowerCase() || '';
+  const downcasedResult = result?.toLowerCase().replace(/\/+$/, '') || '';
   const [, genericSlug] = downcasedResult.match(/([^/:]+\/[^/]+?)(\.git)?$/) || [];
   if (!/(dev\.azure\.com|visualstudio\.com)/.test(downcasedResult)) return genericSlug;
 

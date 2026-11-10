@@ -207,6 +207,17 @@ describe('getSlug', () => {
     );
     expect(await getSlug(ctx)).toBe('project/repo');
   });
+
+  it('ignores trailing slashes in the remote url', async () => {
+    execGitCommand.mockResolvedValue('https://github.com/chromaui/chromatic-cli/');
+    expect(await getSlug(ctx)).toBe('chromaui/chromatic-cli');
+
+    execGitCommand.mockResolvedValue('https://gitlab.com/foo/bar.baz.git/');
+    expect(await getSlug(ctx)).toBe('foo/bar.baz');
+
+    execGitCommand.mockResolvedValue('ssh://git@github.com/chromaui/chromatic-cli.git//');
+    expect(await getSlug(ctx)).toBe('chromaui/chromatic-cli');
+  });
 });
 
 describe('hasPreviousCommit', () => {
