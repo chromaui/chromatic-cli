@@ -45,7 +45,6 @@ export async function traceChangedFiles(
     return { status: 'skipped' };
   }
 
-  // Runs unless the user explicitly opts out of TurboSnap.
   const collectHashes = !isHashCollectionDisabled(ctx);
   const traceWithV1 = shouldTraceWithV1(ctx);
   if (!collectHashes && !traceWithV1) {
