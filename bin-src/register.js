@@ -20,6 +20,6 @@ const commands = {
 // headers, and other details that must not end up in CI logs.
 // eslint-disable-next-line unicorn/prefer-top-level-await
 (commands[process.argv[2]] || commands.main)().catch((err) => {
-  console.error(err instanceof Error ? `Error: ${err.message}` : String(err));
+  console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
   process.exitCode = 1;
 });
