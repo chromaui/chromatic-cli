@@ -45,7 +45,7 @@ export async function traceChangedFiles(
     return { status: 'skipped' };
   }
 
-  const collectHashes = shouldCollectHashes(ctx);
+  const collectHashes = !isHashCollectionDisabled(ctx);
   const traceWithV1 = shouldTraceWithV1(ctx);
   if (!collectHashes && !traceWithV1) {
     return { status: 'skipped' };
@@ -108,11 +108,6 @@ function missingStatsFileError(ctx: Context) {
     ctx.storybook.version && semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '8.0.0');
 
   return new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
-}
-
-// Runs unless the user explicitly opts out of TurboSnap.
-function shouldCollectHashes(ctx: Context) {
-  return !isHashCollectionDisabled(ctx) && !!ctx.fileInfo?.statsPath;
 }
 
 async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<HashBasedTurboSnap | undefined> {

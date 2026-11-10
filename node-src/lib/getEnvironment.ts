@@ -19,7 +19,6 @@ export interface Environment {
   HTTP_PROXY?: string;
   HTTPS_PROXY?: string;
   STORYBOOK_BUILD_TIMEOUT: number;
-  STORYBOOK_CLI_FLAGS_BY_VERSION: typeof STORYBOOK_CLI_FLAGS_BY_VERSION;
   STORYBOOK_VERIFY_TIMEOUT: number;
   STORYBOOK_NODE_ENV: string;
 }
@@ -49,11 +48,6 @@ const {
 } = process.env;
 
 const ENVIRONMENT_WHITELIST = [/^GERRIT/, /^TRAVIS/];
-
-const STORYBOOK_CLI_FLAGS_BY_VERSION = {
-  '--ci': '4.0.0',
-  '--loglevel': '5.1.0',
-};
 
 /**
  * Parse variables from the process environment.
@@ -90,7 +84,6 @@ export default function getEnvironment(): Environment {
     HTTP_PROXY,
     HTTPS_PROXY,
     STORYBOOK_BUILD_TIMEOUT: Number.parseInt(STORYBOOK_BUILD_TIMEOUT, 10),
-    STORYBOOK_CLI_FLAGS_BY_VERSION,
     STORYBOOK_VERIFY_TIMEOUT: Number.parseInt(STORYBOOK_VERIFY_TIMEOUT, 10),
     STORYBOOK_NODE_ENV,
   };

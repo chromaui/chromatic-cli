@@ -294,17 +294,16 @@ export async function commitsExist(deps: GitDeps, commits: string[]): Promise<Se
 }
 
 /**
- * Get the changed files of a single commit or between two.
+ * Get the files changed between a commit and the working tree, including uncommitted (staged or
+ * unstaged) changes to tracked files. Untracked files are not listed.
  *
  * @param deps Function dependencies.
  * @param baseCommit The base commit to check.
- * @param headCommit The head commit to check.
  *
- * @returns The list of changed files of a single commit or between two commits.
+ * @returns The list of files changed since the base commit.
  */
-export async function getChangedFiles(deps: GitDeps, baseCommit: string, headCommit = '') {
-  // Note that an empty headCommit will include uncommitted (staged or unstaged) changes.
-  const command = `git --no-pager diff --name-only --no-relative ${baseCommit} ${headCommit}`;
+export async function getChangedFiles(deps: GitDeps, baseCommit: string) {
+  const command = `git --no-pager diff --name-only --no-relative ${baseCommit}`;
   try {
     const files = await execGitCommand(deps, command);
     return files.split(newline).filter(Boolean);
