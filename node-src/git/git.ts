@@ -294,7 +294,7 @@ export async function commitsExist(deps: GitDeps, commits: string[]): Promise<Se
 
 /**
  * Get the files changed between a commit and the working tree, including uncommitted (staged or
- * unstaged) changes.
+ * unstaged) changes to tracked files. Untracked files are not listed.
  *
  * @param deps Function dependencies.
  * @param baseCommit The base commit to check.
