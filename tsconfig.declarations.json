@@ -1,0 +1,14 @@
+{
+  // Typechecks the published dist/node.d.cts the way a consumer with skipLibCheck: false loads it.
+  // A config file instead of CLI flags, because TypeScript 6+ won't check files named on the
+  // command line while tsconfig.json exists (TS5112).
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": false,
+    "strict": true,
+    "module": "nodenext",
+    "target": "es2022",
+    "types": ["node"]
+  },
+  "files": ["dist/node.d.cts"]
+}
