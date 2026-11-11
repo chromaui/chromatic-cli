@@ -298,7 +298,7 @@ cmd_run() {
   # stdin is an empty pipe (non-TTY, never /dev/null) so the CLI takes its non-interactive path.
   # NODE_PATH lets the bundle require the project's packages, such as @chromatic-com/vitest, as a
   # project-local `chromatic` install would; this checkout's own node_modules still resolve first.
-  (cd "$cwd" && : | NODE_PATH="$cwd/node_modules" node "$CLI" "$@" > "$out/stdout.txt" 2> "$out/stderr.txt")
+  (cd "$cwd" && : | NODE_PATH="$PWD/node_modules" node "$CLI" "$@" > "$out/stdout.txt" 2> "$out/stderr.txt")
   local code=$?
   set -e
   echo "$code" > "$out/exit_code"
@@ -340,7 +340,7 @@ cmd_tty() {
   local t=(tmux -L "$session")
   kill_tmux "$session"
   "${t[@]}" new-session -d -s "$session" -x 120 -y 50 -c "$cwd" \
-    "NODE_PATH='$cwd/node_modules' node '$CLI'$argstr; echo __VERIFY_EXIT=\$?; sleep 3600"
+    "NODE_PATH=\"\$PWD/node_modules\" node '$CLI'$argstr; echo __VERIFY_EXIT=\$?; sleep 3600"
   local waited=0
   until "${t[@]}" capture-pane -p -t "$session" -S - | grep -q '__VERIFY_EXIT='; do
     sleep 1; waited=$((waited + 1))
