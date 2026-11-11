@@ -29,7 +29,8 @@ function isStorybookPackage(name) {
 function main() {
   const fixtures = readdirSync(fixturesDirectory, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name);
+    .map((entry) => entry.name)
+    .filter((fixture) => !isE2EFixture(path.join(fixturesDirectory, fixture)));
 
   const failures = fixtures.flatMap((fixture) => {
     const problem = checkFixture(path.join(fixturesDirectory, fixture));
@@ -53,6 +54,23 @@ function main() {
     ].join('\n')
   );
   process.exitCode = 1;
+}
+
+// The packages behind `chromatic --vitest`, `--playwright` and `--cypress`. Each pins its own Storybook.
+const e2ePackages = new Set([
+  '@chromatic-com/vitest',
+  '@chromatic-com/playwright',
+  '@chromatic-com/cypress',
+]);
+
+// An E2E fixture gets its Storybook from an E2E package, so it has no Storybook of its own to keep in
+// step. One that also pins a Storybook package has its own after all, and is checked like any other.
+function isE2EFixture(directory) {
+  const pins = readPins(directory);
+  return (
+    pins.some(({ name }) => e2ePackages.has(name)) &&
+    !pins.some(({ name }) => isStorybookPackage(name))
+  );
 }
 
 // Returns a description of the fixture's mismatched packages, or nothing when they all match.

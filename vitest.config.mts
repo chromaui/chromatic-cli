@@ -4,7 +4,8 @@ import { defaultExclude, defineConfig, Plugin } from 'vitest/config';
 export default defineConfig({
   test: {
     clearMocks: true, // Clear all mocks between each test
-    exclude: ['**/.claude/worktrees/**', ...defaultExclude],
+    // The fixtures are standalone projects, and react-vitest's tests run in its own Vitest.
+    exclude: ['**/.claude/worktrees/**', 'e2e/fixtures/**', ...defaultExclude],
     coverage: {
       include: ['{bin,node}-src/**/*.{ts,tsx}', 'isChromatic.{mjs,js}'],
       exclude: [
