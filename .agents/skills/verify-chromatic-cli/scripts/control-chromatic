@@ -159,6 +159,12 @@ cmd_e2e_fixture() {
     || { tail -30 "$WORK/e2e-$id.log"; die "yarn fixture $name failed (log: $WORK/e2e-$id.log)"; }
   local branch="vcc-$RUN_ID-$id-$(git -C "$dir" rev-parse --short HEAD)"
   git -C "$dir" checkout -q -b "$branch"
+  # An E2E fixture's archives come from its tests, which run in Playwright's Chromium.
+  if [[ -f "$dir/vitest.config.ts" ]]; then
+    (cd "$dir" && npx playwright install chromium && npm test) >> "$WORK/e2e-$id.log" 2>&1 \
+      || { tail -30 "$WORK/e2e-$id.log"; die "npm test failed in $dir (log: $WORK/e2e-$id.log)"; }
+    echo "==> ran the tests in $dir; run them again after every commit"
+  fi
   echo "==> $dir is on branch $branch"
   echo "$dir"
 }
@@ -290,7 +296,9 @@ cmd_run() {
   record_command "$out" "$cwd" "" "$@"
   set +e
   # stdin is an empty pipe (non-TTY, never /dev/null) so the CLI takes its non-interactive path.
-  (cd "$cwd" && : | node "$CLI" "$@" > "$out/stdout.txt" 2> "$out/stderr.txt")
+  # NODE_PATH lets the bundle require the project's packages, such as @chromatic-com/vitest, as a
+  # project-local `chromatic` install would; this checkout's own node_modules still resolve first.
+  (cd "$cwd" && : | NODE_PATH="$cwd/node_modules" node "$CLI" "$@" > "$out/stdout.txt" 2> "$out/stderr.txt")
   local code=$?
   set -e
   echo "$code" > "$out/exit_code"
@@ -332,7 +340,7 @@ cmd_tty() {
   local t=(tmux -L "$session")
   kill_tmux "$session"
   "${t[@]}" new-session -d -s "$session" -x 120 -y 50 -c "$cwd" \
-    "node '$CLI'$argstr; echo __VERIFY_EXIT=\$?; sleep 3600"
+    "NODE_PATH='$cwd/node_modules' node '$CLI'$argstr; echo __VERIFY_EXIT=\$?; sleep 3600"
   local waited=0
   until "${t[@]}" capture-pane -p -t "$session" -S - | grep -q '__VERIFY_EXIT='; do
     sleep 1; waited=$((waited + 1))
