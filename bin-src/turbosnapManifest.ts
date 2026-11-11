@@ -14,7 +14,7 @@ import { readStatsFile } from '../node-src/tasks/readStatsFile';
  * Utility to build the TurboSnap v2 manifest from a preview-stats.json and print it to stdout.
  *
  * Command:
- *   chromatic turbosnap-manifest [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir] [--static-dir] [--externals] [-u|--untraced]
+ *   chromatic turbosnap-manifest [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir] [--static-dir] [--externals] [-u|--untraced] [--vitest]
  *
  * Usage example:
  *   npx chromatic turbosnap-manifest -b packages/ui > turbosnap-manifest.json
@@ -39,7 +39,7 @@ export async function main(argv: string[]) {
   const cli = meow(
     `
     Usage
-      $ chromatic turbosnap-manifest [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir] [--static-dir] [--externals] [-u|--untraced]
+      $ chromatic turbosnap-manifest [-s|--stats-file] [-b|--storybook-base-dir] [-c|--config-dir] [--static-dir] [--externals] [-u|--untraced] [--vitest]
 
     Options
       --stats-file, -s <filepath>           Path to preview-stats.json, relative to the Storybook project root. (default: 'storybook-static/preview-stats.json')
@@ -48,6 +48,7 @@ export async function main(argv: string[]) {
       --static-dir <dirnames>               Comma-separated static directories, relative to the Storybook project root. (default: none)
       --externals <glob>                    Glob of files that disable TurboSnap when changed, relative to the repository root. Can be specified multiple times. (default: none)
       --untraced, -u <glob>                 Glob of files to disregard, with their dependencies, when tracing dependent stories, relative to the repository root. Can be specified multiple times. (default: none)
+      --vitest                              Build the manifest of a 'chromatic --vitest' build, whose Storybook ships inside @chromatic-com/vitest. Ignores --config-dir. Run 'build-archive-storybook --stats-json=storybook-static' first: the stats Vitest writes to .vitest/chromatic have no story files. (default: false)
     `,
     {
       importMeta: meowImportMeta,
@@ -83,6 +84,10 @@ export async function main(argv: string[]) {
           shortFlag: 'u',
           isMultiple: true,
         },
+        vitest: {
+          type: 'boolean',
+          default: false,
+        },
       },
     }
   );
@@ -114,6 +119,7 @@ export async function main(argv: string[]) {
       gitRoot,
       untraced: cli.flags.untraced ?? [],
       configDir: path.resolve(projectRoot, cli.flags.configDir),
+      ...(cli.flags.vitest && { e2ePackage: '@chromatic-com/vitest' }),
       staticDirs: (cli.flags.staticDir?.split(',') ?? []).map((directory) =>
         path.resolve(projectRoot, directory)
       ),
