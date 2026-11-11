@@ -63,6 +63,7 @@ export async function main(argv: string[]) {
 
   if (!flags.outputDir) {
     log.error('Error: --output-dir is required');
+    process.exitCode = 1;
     return;
   }
 

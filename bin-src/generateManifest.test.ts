@@ -90,6 +90,8 @@ describe('generate-manifest', () => {
 
     expect(testLogger.error).toHaveBeenCalledWith('Error: --output-dir is required');
     expect(generateManifest).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+    process.exitCode = undefined;
   });
 
   it('validates Storybook React Native version before generating manifest', async () => {
