@@ -160,38 +160,34 @@ export async function main(argv: string[]) {
     )
   );
 
-  try {
-    const pkgInfo = await readPackageUp({ cwd: process.cwd() });
-    if (!pkgInfo) {
-      console.error(noPackageJson());
-      process.exit(253);
-    }
-
-    const { path: packagePath, packageJson } = pkgInfo;
-    const { testFramework } = await prompts([
-      {
-        type: flags.framework ? undefined : 'select',
-        name: 'testFramework',
-        message: 'What testing framework are you using?',
-        choices: [
-          { title: 'Storybook', value: TestFramework.STORYBOOK },
-          { title: 'Playwright', value: TestFramework.PLAYWRIGHT },
-          { title: 'Cypress', value: TestFramework.CYPRESS },
-          { title: 'Vitest', value: TestFramework.VITEST },
-        ],
-        initial: 0,
-      },
-    ]);
-
-    packageJson.readme = '';
-    packageJson._id = '';
-
-    await intializeChromatic({
-      testFramework: testFramework || flags.framework,
-      packageJson,
-      packagePath,
-    });
-  } catch (err) {
-    console.error(err);
+  const pkgInfo = await readPackageUp({ cwd: process.cwd() });
+  if (!pkgInfo) {
+    console.error(noPackageJson());
+    process.exit(253);
   }
+
+  const { path: packagePath, packageJson } = pkgInfo;
+  const { testFramework } = await prompts([
+    {
+      type: flags.framework ? undefined : 'select',
+      name: 'testFramework',
+      message: 'What testing framework are you using?',
+      choices: [
+        { title: 'Storybook', value: TestFramework.STORYBOOK },
+        { title: 'Playwright', value: TestFramework.PLAYWRIGHT },
+        { title: 'Cypress', value: TestFramework.CYPRESS },
+        { title: 'Vitest', value: TestFramework.VITEST },
+      ],
+      initial: 0,
+    },
+  ]);
+
+  packageJson.readme = '';
+  packageJson._id = '';
+
+  await intializeChromatic({
+    testFramework: testFramework || flags.framework,
+    packageJson,
+    packagePath,
+  });
 }
