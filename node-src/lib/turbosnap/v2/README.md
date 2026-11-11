@@ -45,6 +45,7 @@ A few things the tree doesn't show:
 - **The off-disk entries exist because some inputs never appear in the module graph.** `main.ts` is Node-side config and static assets are referenced by URL, so no module hash can see them change. `preview.*` is covered twice on purpose: by its imports in `preview` and by its bytes in `storybookConfigFiles`.
 - **The Storybook version is tracked as a string** because on some builders the preview runtime is served outside the module graph, so no file hash would see an upgrade. If no version can be resolved, building the manifest fails rather than silently under-capturing.
 - **`package.json` and lockfiles have no special roll-up.** Dependency changes are normally detected through the installed files in the graph, avoiding recaptures on lockfile churn alone. A package manifest or lockfile is still hashed if it appears in the graph or an off-disk sweep, including `--externals`.
+- **A manifest needs at least one story file.** The index compares each story under its key in both builds, so a manifest with none would make every story look unchanged. Stats that resolve to no story files, usually because the project root is not where Storybook was built, fail the manifest and TurboSnap 1.0 decides the build.
 - **Categories with no files are left out** of `storybookConfigHashes`. `storybookConfigFiles` and `storybookVersion` are always present, because the index requires them.
 
 ## What the index does with the roll-ups

@@ -73,6 +73,22 @@ describe('serializeManifest', () => {
     expect(serialized.staticFiles).toEqual({});
   });
 
+  // The Index would read a manifest without story files as "no story changed" for every story.
+  it('refuses to build from stats whose paths resolve to no story files', async () => {
+    const { input } = createFixture({ isAbsent: (candidate) => candidate.includes('elsewhere') });
+    const stats: Stats = {
+      modules: [
+        {
+          id: 1,
+          name: './elsewhere/src/Button.stories.tsx',
+          reasons: [{ moduleName: './storybook-stories.js' }],
+        },
+      ],
+    };
+
+    await expect(buildManifest(stats, input)).rejects.toThrow('Found no story files');
+  });
+
   it('skips a gitignored file in a static dir inside the config dir from both sections, recorded once', async () => {
     const { input } = createFixture({
       directories: {
@@ -81,8 +97,17 @@ describe('serializeManifest', () => {
       },
       isUntracked: (candidate) => candidate.endsWith('bundle.css'),
     });
+    const stats: Stats = {
+      modules: [
+        {
+          id: 1,
+          name: '/repo/packages/ui/src/Button.stories.tsx',
+          reasons: [{ moduleName: './storybook-stories.js' }],
+        },
+      ],
+    };
 
-    const serialized = serializeManifest(await buildManifest({ modules: [] }, input));
+    const serialized = serializeManifest(await buildManifest(stats, input));
 
     expect(Object.keys(serialized.storybookConfigFiles)).toEqual(['./.storybook/main.ts']);
     expect(serialized.staticFiles).toEqual({});
