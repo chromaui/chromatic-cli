@@ -194,6 +194,28 @@ describe('traceChangedFiles', () => {
     expect(traceChangedFilesV1).toHaveBeenCalledWith(ctx, stats, ctx.fileInfo.statsPath);
   });
 
+  it('gives v2 the E2E package of a Vitest build, whose Storybook ships inside it', async () => {
+    const ctx = { ...makeContext(), options: { vitest: true } };
+
+    await traceChangedFiles(ctx);
+
+    expect(traceChangedFilesV2).toHaveBeenCalledWith(
+      expect.objectContaining({ e2ePackage: '@chromatic-com/vitest' })
+    );
+  });
+
+  it.each(['playwright', 'cypress'])(
+    'does not collect hashes for a %s build, which reports no module graph',
+    async (flag) => {
+      const ctx = { ...makeContext(), options: { [flag]: true } };
+
+      await traceChangedFiles(ctx);
+
+      expect(traceChangedFilesV2).not.toHaveBeenCalled();
+      expect(traceChangedFilesV1).toHaveBeenCalledOnce();
+    }
+  );
+
   it('gives v2 the --externals globs so it can hash the files they name', async () => {
     const ctx = { ...makeContext(), options: { externals: ['tailwind.config.js'] } };
 

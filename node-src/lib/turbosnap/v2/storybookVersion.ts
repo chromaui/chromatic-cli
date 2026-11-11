@@ -60,3 +60,29 @@ export function resolveStorybookVersion(
     `Could not resolve a Storybook version from ${input.configDir}: none of ${STORYBOOK_CORE_PACKAGES.join(', ')} could be resolved with a version. TurboSnap hashes installed dependencies, so they must be installed before running Chromatic, even for a prebuilt Storybook.`
   );
 }
+
+/**
+ * Stands in for `resolveStorybookVersion` in an E2E build, which has no Storybook of its own: it
+ * uploads the Storybook its E2E package ships and pins. The package's name and version stand in, so a
+ * package upgrade recaptures like a Storybook upgrade does. The Index only compares the value for
+ * equality.
+ *
+ * @param e2ePackage The E2E package, such as `@chromatic-com/vitest`.
+ * @param input Where the package is installed and what to read the disk with.
+ * @param input.projectRoot The absolute project root to resolve the package from.
+ * @param input.projectFiles How to read the disk.
+ *
+ * @returns The package and its installed version (e.g. `@chromatic-com/vitest@1.0.2`).
+ */
+export function resolveE2EPackageVersion(
+  e2ePackage: string,
+  input: Pick<ManifestInput, 'projectRoot' | 'projectFiles'>
+): string {
+  const version = input.projectFiles.packageVersion(input.projectRoot, e2ePackage);
+  if (!version) {
+    throw new Error(
+      `Could not resolve a version of ${e2ePackage} from ${input.projectRoot}. TurboSnap hashes installed dependencies, so they must be installed before running Chromatic.`
+    );
+  }
+  return `${e2ePackage}@${version}`;
+}

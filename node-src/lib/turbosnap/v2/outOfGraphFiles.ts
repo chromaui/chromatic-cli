@@ -18,7 +18,14 @@ import {
 /** The part of `ManifestInput` the out-of-graph sweep reads: where to look, and what with. */
 export type OutOfGraphInput = Pick<
   ManifestInput,
-  'log' | 'projectRoot' | 'gitRoot' | 'configDir' | 'staticDirs' | 'externals' | 'projectFiles'
+  | 'log'
+  | 'projectRoot'
+  | 'gitRoot'
+  | 'configDir'
+  | 'e2ePackage'
+  | 'staticDirs'
+  | 'externals'
+  | 'projectFiles'
 >;
 
 /** What the sweep found: the hashed files, and the config and static files it left unhashed instead. */
@@ -56,16 +63,24 @@ export class MissingStorybookConfigError extends Error {
  * @param input The config and static locations and disk for this build.
  *
  * @returns The paths in each sweep.
+ *
+ * @throws {MissingStorybookConfigError} When `configDir` holds no `main.*` file, unless the build is
+ * an E2E build.
  */
 export function listConfigAndStaticFiles(input: OutOfGraphInput) {
+  return {
+    // An E2E build's Storybook config ships inside its package, so the project has none to sweep.
+    configTree: input.e2ePackage ? [] : listConfigTree(input),
+    staticTree: input.staticDirs.flatMap((directory) => input.projectFiles.listTree(directory)),
+  };
+}
+
+function listConfigTree(input: Pick<OutOfGraphInput, 'configDir' | 'projectFiles'>) {
   const configTree = input.projectFiles.listTree(input.configDir);
   if (!configTree.some((filePath) => isMainConfigFile(filePath, input.configDir))) {
     throw new MissingStorybookConfigError(input.configDir);
   }
-  return {
-    configTree,
-    staticTree: input.staticDirs.flatMap((directory) => input.projectFiles.listTree(directory)),
-  };
+  return configTree;
 }
 
 /**
@@ -100,8 +115,8 @@ export function listConfigAndStaticFiles(input: OutOfGraphInput) {
  *
  * @returns The content hash of every config file, static file and external file, keyed by canonical
  * manifest path, beside the swept config and static files that were skipped instead, keyed the same
- * way with the reason. `storybookConfigFiles` is never empty: it always holds at least the main
- * config.
+ * way with the reason. `storybookConfigFiles` always holds at least the main config, except for an
+ * E2E build, where it is empty.
  *
  * @throws {MissingStorybookConfigError} When `configDir` holds no `main.*` file.
  */
@@ -223,10 +238,11 @@ async function listExternalFiles(
  * also in the graph is covered twice: once in whichever subtree imports it, and once here.
  *
  * The static and externals sections contribute no entry when they have no files, matching how the
- * `storybookGlobals` roll-up is omitted when empty. The config section always contributes one, because
- * `hashOutOfGraphFiles` refuses to build it without the main config and never drops the main
- * config into another section, which is what keeps the Index's required `storybookConfigFiles`
- * satisfied.
+ * `storybookGlobals` roll-up is omitted when empty. The config section contributes one for every
+ * Storybook project, because `listConfigAndStaticFiles` refuses to sweep it without the main
+ * config and `hashOutOfGraphFiles` never drops the main config into another section, which is
+ * what keeps the Index's required `storybookConfigFiles` satisfied. An E2E build has no config
+ * section, so `buildManifest` fills that entry from the E2E package's version instead.
  *
  * The roll-ups are path-sensitive, as the graph-rolled entries now are too: a static asset is served
  * at its path and a config file is loaded by name, so a byte-preserving rename changes what Storybook

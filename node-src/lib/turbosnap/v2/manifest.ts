@@ -14,9 +14,9 @@ import { buildRollUpPath, normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
 import { buildSkipRule, SkipReason } from './skippedFiles';
 import { locateOnDiskFiles, readStatsGraph } from './statsGraph';
-import { STORYBOOK_VERSION_KEY, StorybookFileKey } from './storybookFileKeys';
+import { STORYBOOK_CONFIG_KEY, STORYBOOK_VERSION_KEY, StorybookFileKey } from './storybookFileKeys';
 import { collectStorybookFiles, FileAttribution } from './storybookFiles';
-import { resolveStorybookVersion } from './storybookVersion';
+import { resolveE2EPackageVersion, resolveStorybookVersion } from './storybookVersion';
 import { hashStorySubtrees } from './storyHashes';
 
 type StorybookVersion = string;
@@ -154,13 +154,22 @@ export async function buildManifest(
   );
 
   // The preview core runtime may not exist in the module graph, so no file hash can see a Storybook
-  // upgrade there. Track the version instead; it is a plain string, not a hash. This resolves from
-  // the config directory, so it runs after the sweep above has confirmed that directory holds a main
-  // config: a wrong config directory is then reported as such instead of as missing dependencies.
-  storybookConfigHashes.set(STORYBOOK_VERSION_KEY, resolveStorybookVersion(input));
+  // upgrade there. Track the version instead; it is a plain string, not a hash. A Storybook project
+  // resolves it from the config directory, so it runs after the sweep above has confirmed that
+  // directory holds a main config: a wrong config directory is then reported as such instead of as
+  // missing dependencies. An E2E build resolves its package from the project root instead.
+  const storybookVersion = input.e2ePackage
+    ? resolveE2EPackageVersion(input.e2ePackage, input)
+    : resolveStorybookVersion(input);
+  storybookConfigHashes.set(STORYBOOK_VERSION_KEY, storybookVersion);
 
   for (const [key, hash] of rollUpOutOfGraphFiles(outOfGraphFiles, h64ToString)) {
     storybookConfigHashes.set(key, hash);
+  }
+  // An E2E build's Storybook config ships inside its package, so the package version that stands in
+  // for the Storybook version stands in for the config too. The Index requires this entry.
+  if (input.e2ePackage) {
+    storybookConfigHashes.set(STORYBOOK_CONFIG_KEY, h64ToString(storybookVersion));
   }
   input.log.debug(
     `Hashed ${outOfGraphFiles.staticFiles.size} static files in ${input.staticDirs.join(', ')}`
