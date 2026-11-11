@@ -60,23 +60,6 @@ jobs:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/lint-and-test.yml
-    secrets:
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-  # codecov/patch is a required status that Codecov only posts after an upload. When the tests
-  # are skipped, tell Codecov there is no coverage to report so it passes the status.
-  codecov-skip:
-    needs: changes
-    if: needs.changes.outputs.code == 'false'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: codecov/codecov-action@v7
-        with:
-          run_command: empty-upload
-          force: true
-          fail_ci_if_error: true
-          token: ${{ secrets.CODECOV_TOKEN }}
 
   chromatic:
     needs: changes
@@ -105,7 +88,7 @@ jobs:
   # instead of a skipped (and therefore passing) required check.
   ci-required:
     if: always()
-    needs: [changes, lint-and-test, codecov-skip, smoke-test-action, smoke-test]
+    needs: [changes, lint-and-test, smoke-test-action, smoke-test]
     runs-on: ubuntu-latest
     steps:
       - name: Check required jobs
