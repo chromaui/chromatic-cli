@@ -90,7 +90,7 @@ export async function main(argv: string[]) {
   );
 
   const log = createLogger({}, { logPrefix: '', logLevel: 'info' });
-  const gitRoot = await getRepositoryRoot({ log });
+  const gitRoot = await getRepositoryRoot({ log, options: {} });
   const projectRoot = path.resolve(gitRoot, flags.storybookBaseDir);
   const ctx: Context = {
     log,

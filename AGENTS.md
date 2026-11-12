@@ -66,6 +66,8 @@ When a mistake keeps coming back, enforce the rule with a check and record it he
 | Source files stay under 500 lines; `git.ts` and `types.ts` under 1000. Split a file instead of disabling `max-lines` | ESLint `max-lines` and `eslint-comments/no-restricted-disable` |
 | Tests call commands in-process, never through `yarn chromatic` or `dist/bin.cjs` | ESLint `no-restricted-syntax` on `*.test.*` |
 | Each e2e fixture's Storybook packages match its `storybook` version, in `package.json` and the lockfile | `e2e/check-storybook-versions.mjs` in the lint-and-test workflow |
+| Every git call passes git options, so none silently falls back to the default timeout. Pass `ctx` or `{ log, options }`, or `options: {}` where there are no options | `GitDeps.options` is required (`node-src/git/execGit.ts`), so `{ log }` fails `yarn typescript:check` |
+| Forward the user's actual options rather than `{}` when they're in scope; `Options.gitTimeout` is milliseconds, the config file's is seconds | Judgment |
 | The bundled `dist/node.d.cts` typechecks for consumers with `skipLibCheck: false` | `yarn typescript:check-declarations` in the lint-and-test workflow |
 | Shipped code exports nothing that only tests, stories, or frames use. Delete it, un-export it, or test it through its caller; a deliberate seam carries `@internal` with the reason. Test-only helpers go in `knip.jsonc`'s `!…!` project patterns | `yarn knip --production` in the lint-and-test workflow |
 | Prettier skips Markdown, so it keeps its compact formatting; JS/TS must match Prettier | `.prettierignore` (`*.md`); ESLint `prettier/prettier` for JS/TS |

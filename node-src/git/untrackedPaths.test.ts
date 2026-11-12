@@ -9,7 +9,7 @@ vi.mock('./execGit');
 const execGitCommand = vi.mocked(execGit.execGitCommand);
 const execGitCommandEntries = vi.mocked(execGit.execGitCommandEntries);
 
-const ctx = { log: new TestLogger() };
+const ctx = { log: new TestLogger(), options: {} };
 
 afterEach(() => {
   vi.clearAllMocks();

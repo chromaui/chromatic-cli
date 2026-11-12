@@ -8,7 +8,9 @@ import { repository, temporaryDirectory, track, write } from './__fixtures__/tem
 import { realProjectFiles } from './projectFiles';
 
 async function untrackedAmong(absolutePaths: string[]): Promise<string[]> {
-  const untracked = await realProjectFiles({ log: new TestLogger() }).untrackedPaths(absolutePaths);
+  const untracked = await realProjectFiles({ log: new TestLogger(), options: {} }).untrackedPaths(
+    absolutePaths
+  );
   return absolutePaths.filter((absolutePath) => untracked.has(absolutePath));
 }
 
@@ -104,7 +106,7 @@ describe('realProjectFiles untrackedPaths', () => {
     // Tracked, so the link's own directory is not untracked and covering the path.
     execFileSync('git', ['add', 'apps/storybook'], { cwd: root });
     const linked = path.join(root, 'apps/storybook/generated/schema.ts');
-    const projectFiles = realProjectFiles({ log: new TestLogger() });
+    const projectFiles = realProjectFiles({ log: new TestLogger(), options: {} });
     const untracked = await projectFiles.untrackedPaths([linked, projectFiles.realPath(linked)]);
 
     expect(untracked.has(linked)).toBe(false);
@@ -120,7 +122,7 @@ describe('realProjectFiles untrackedPaths', () => {
     const replaced = track(root, 'replaced');
     rmSync(replaced);
     const underReplaced = write(root, 'replaced/sub/file');
-    const adapter = realProjectFiles({ log: new TestLogger() });
+    const adapter = realProjectFiles({ log: new TestLogger(), options: {} });
 
     const broad = await adapter.untrackedPaths();
     const scoped = await adapter.untrackedPaths([nested, underReplaced]);
@@ -135,7 +137,7 @@ describe('realProjectFiles untrackedPaths', () => {
     rmSync(track(root, 'packages/anchor/src/index.ts'));
     const asset = write(root, 'packages/a [b] $(echo test)/new.log');
     const sibling = write(root, 'packages/another/new.log');
-    const adapter = realProjectFiles({ log: new TestLogger() });
+    const adapter = realProjectFiles({ log: new TestLogger(), options: {} });
     const scoped = await adapter.untrackedPaths([asset]);
 
     expect(scoped.has(asset)).toBe(true);
@@ -147,7 +149,9 @@ describe('realProjectFiles untrackedPaths', () => {
     track(root, 'public/robots.txt');
     const assets = Array.from({ length: 129 }, (_, index) => write(root, `public/${index}.png`));
     const outside = write(root, 'other/new.log');
-    const scoped = await realProjectFiles({ log: new TestLogger() }).untrackedPaths(assets);
+    const scoped = await realProjectFiles({ log: new TestLogger(), options: {} }).untrackedPaths(
+      assets
+    );
 
     expect(assets.every((asset) => scoped.has(asset))).toBe(true);
     expect(() => scoped.has(outside)).toThrow(/outside the requested paths/);
@@ -162,7 +166,7 @@ describe('realProjectFiles untrackedPaths', () => {
     const alias = path.join(root, 'Packages/ui/build-info.json');
     skip(!existsSync(alias), 'requires a case-insensitive filesystem');
 
-    const adapter = realProjectFiles({ log: new TestLogger() });
+    const adapter = realProjectFiles({ log: new TestLogger(), options: {} });
     const candidate = adapter.realPath(alias);
     const broad = await adapter.untrackedPaths();
     const scoped = await adapter.untrackedPaths([candidate]);
@@ -175,7 +179,9 @@ describe('realProjectFiles untrackedPaths', () => {
     vi.stubEnv('GIT_GLOB_PATHSPECS', '1');
     const first = write(root, 'first/file');
     const other = write(root, 'other/file');
-    const listing = await realProjectFiles({ log: new TestLogger() }).untrackedPaths([first]);
+    const listing = await realProjectFiles({ log: new TestLogger(), options: {} }).untrackedPaths([
+      first,
+    ]);
 
     expect(listing.has(first)).toBe(true);
     expect(listing.has(other)).toBe(true);

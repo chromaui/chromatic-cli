@@ -9,7 +9,11 @@ import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
 import gitNotInstalled from '../ui/messages/errors/gitNotInstalled';
 import { DEFAULT_GIT_TIMEOUT_SECONDS } from './constants';
 
-export type GitDeps = Pick<Deps, 'log'> & { options?: { gitTimeout?: number } };
+/**
+ * What every git call needs. `options` is required so a caller can't drop the user's configured
+ * `gitTimeout` (milliseconds) by passing only `{ log }`; pass `options: {}` where there is none.
+ */
+export type GitDeps = Pick<Deps, 'log'> & { options: { gitTimeout?: number } };
 
 /**
  * Execa options plus `logResult`, which is on by default. Turn it off for a command whose output is
@@ -33,7 +37,7 @@ const NULL_BYTE = '\0';
  @returns the git timeout in milliseconds, defaulting to `DEFAULT_GIT_TIMEOUT_SECONDS` if not set.
  */
 function getGitTimeout(depOptions: GitDeps['options']): number {
-  return depOptions?.gitTimeout ?? DEFAULT_GIT_TIMEOUT_SECONDS * 1000;
+  return depOptions.gitTimeout ?? DEFAULT_GIT_TIMEOUT_SECONDS * 1000;
 }
 
 /**

@@ -64,8 +64,13 @@ export interface Flags {
   preserveMissing?: boolean;
 }
 
-export interface Options extends Configuration {
+export interface Options extends Omit<Configuration, 'gitTimeout'> {
   projectToken: string;
+  /**
+   * Timeout for each git command, in milliseconds. The configuration file's `gitTimeout` is in
+   * seconds; `getOptions` converts it.
+   */
+  gitTimeout?: number;
   userToken?: string;
 
   configFile?: Flags['configFile'];

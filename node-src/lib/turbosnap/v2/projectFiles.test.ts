@@ -29,7 +29,7 @@ describe('realProjectFiles listTree', () => {
     write(root, 'static/logo.svg');
     write(root, 'static/nested/deep/font.woff2');
 
-    const files = realProjectFiles({ log }).listTree(path.join(root, 'static'));
+    const files = realProjectFiles({ log, options: {} }).listTree(path.join(root, 'static'));
 
     expect(files.sort()).toEqual([
       path.join(root, 'static/logo.svg'),
@@ -43,7 +43,7 @@ describe('realProjectFiles listTree', () => {
     mkdirSync(path.join(root, 'static'));
     symlinkSync(target, path.join(root, 'static/logo.svg'));
 
-    const files = realProjectFiles({ log }).listTree(path.join(root, 'static'));
+    const files = realProjectFiles({ log, options: {} }).listTree(path.join(root, 'static'));
 
     expect(files).toEqual([path.join(root, 'static/logo.svg')]);
   });
@@ -55,7 +55,7 @@ describe('realProjectFiles listTree', () => {
     mkdirSync(path.join(root, 'static'));
     symlinkSync(path.join(root, 'node_modules/pkg/dist'), path.join(root, 'static/vendor'));
 
-    const files = realProjectFiles({ log }).listTree(path.join(root, 'static'));
+    const files = realProjectFiles({ log, options: {} }).listTree(path.join(root, 'static'));
 
     expect(files.sort()).toEqual([
       path.join(root, 'static/vendor/a.png'),
@@ -70,9 +70,9 @@ describe('realProjectFiles listTree', () => {
     symlinkSync(path.join(root, 'vendor/assets'), path.join(root, 'static/brand'));
     symlinkSync(path.join(root, 'vendor/assets'), path.join(root, 'static/legacy'));
 
-    const before = realProjectFiles({ log }).listTree(path.join(root, 'static'));
+    const before = realProjectFiles({ log, options: {} }).listTree(path.join(root, 'static'));
     rmSync(path.join(root, 'static/legacy'));
-    const after = realProjectFiles({ log }).listTree(path.join(root, 'static'));
+    const after = realProjectFiles({ log, options: {} }).listTree(path.join(root, 'static'));
 
     expect(before.sort()).toEqual([
       path.join(root, 'static/brand/logo.svg'),
@@ -86,7 +86,7 @@ describe('realProjectFiles listTree', () => {
     write(root, 'static/keep.svg');
     symlinkSync(path.join(root, 'gone.svg'), path.join(root, 'static/logo.svg'));
 
-    const files = realProjectFiles({ log }).listTree(path.join(root, 'static'));
+    const files = realProjectFiles({ log, options: {} }).listTree(path.join(root, 'static'));
 
     expect(files).toEqual([path.join(root, 'static/keep.svg')]);
   });
@@ -96,7 +96,7 @@ describe('realProjectFiles listTree', () => {
     write(root, 'static/logo.svg');
     symlinkSync(path.join(root, 'static'), path.join(root, 'static/loop'));
 
-    const files = realProjectFiles({ log }).listTree(path.join(root, 'static'));
+    const files = realProjectFiles({ log, options: {} }).listTree(path.join(root, 'static'));
 
     expect(files).toEqual([path.join(root, 'static/logo.svg')]);
   });
@@ -105,7 +105,7 @@ describe('realProjectFiles listTree', () => {
     const root = temporaryDirectory();
     const filePath = write(root, 'favicon.ico');
 
-    const files = realProjectFiles({ log }).listTree(filePath);
+    const files = realProjectFiles({ log, options: {} }).listTree(filePath);
 
     expect(files).toEqual([filePath]);
   });
@@ -113,7 +113,7 @@ describe('realProjectFiles listTree', () => {
   it('is empty for a directory that does not exist, since a missing staticDir is not an error', async () => {
     const root = temporaryDirectory();
 
-    const files = realProjectFiles({ log }).listTree(path.join(root, 'absent'));
+    const files = realProjectFiles({ log, options: {} }).listTree(path.join(root, 'absent'));
 
     expect(files).toEqual([]);
   });
@@ -125,7 +125,7 @@ describe('realProjectFiles listTree', () => {
     // different point than a missing directory.
     lock(path.join(root, 'locked'));
 
-    const files = realProjectFiles({ log }).listTree(path.join(root, 'locked'));
+    const files = realProjectFiles({ log, options: {} }).listTree(path.join(root, 'locked'));
 
     expect(files).toEqual([]);
   });
@@ -139,7 +139,7 @@ describe('realProjectFiles trackedFiles', () => {
     write(root, 'packages/ui/node_modules/left-pad/index.js');
     write(root, 'untracked.scss');
 
-    const files = await Array.fromAsync(realProjectFiles({ log }).trackedFiles(root));
+    const files = await Array.fromAsync(realProjectFiles({ log, options: {} }).trackedFiles(root));
 
     expect(files.sort()).toEqual([
       path.join(root, 'packages/ui/src/styles/main.scss'),
@@ -156,7 +156,7 @@ describe('realProjectFiles trackedFiles', () => {
     const patterns = ['./ui/**/*.css', '', 'postcss.config.js'];
 
     const candidates = await Array.fromAsync(
-      realProjectFiles({ log }).trackedFiles(root, patterns)
+      realProjectFiles({ log, options: {} }).trackedFiles(root, patterns)
     );
 
     expect(candidates.filter(gitRootGlobMatcher(root, patterns))).toEqual([config, stylesheet]);
@@ -171,7 +171,7 @@ describe('realProjectFiles trackedFiles', () => {
       const outside = track(root, 'theme.css');
       const patterns = ['ui/main.css', glob];
       const candidates = await Array.fromAsync(
-        realProjectFiles({ log }).trackedFiles(root, patterns)
+        realProjectFiles({ log, options: {} }).trackedFiles(root, patterns)
       );
       expect(candidates.filter(gitRootGlobMatcher(root, patterns))).toEqual([outside, inside]);
     }
@@ -182,10 +182,10 @@ describe('realProjectFiles trackedFiles', () => {
     track(root, 'tailwind.config.js');
     rmSync(path.join(root, 'tailwind.config.js'));
 
-    const files = await Array.fromAsync(realProjectFiles({ log }).trackedFiles(root));
+    const files = await Array.fromAsync(realProjectFiles({ log, options: {} }).trackedFiles(root));
 
     expect(files).toEqual([path.join(root, 'tailwind.config.js')]);
-    expect(realProjectFiles({ log }).isFile(files[0])).toBe(false);
+    expect(realProjectFiles({ log, options: {} }).isFile(files[0])).toBe(false);
   });
 });
 
@@ -194,8 +194,8 @@ describe('realProjectFiles isFile and isDirectory', () => {
     const root = temporaryDirectory();
     const filePath = write(root, 'src/Button.tsx');
 
-    expect(realProjectFiles({ log }).isFile(filePath)).toBe(true);
-    expect(realProjectFiles({ log }).isDirectory(filePath)).toBe(false);
+    expect(realProjectFiles({ log, options: {} }).isFile(filePath)).toBe(true);
+    expect(realProjectFiles({ log, options: {} }).isDirectory(filePath)).toBe(false);
   });
 
   it('reads a directory as a directory and not a file, which is what keeps EISDIR out of hashing', () => {
@@ -205,16 +205,16 @@ describe('realProjectFiles isFile and isDirectory', () => {
     write(root, 'node_modules/@storybook/react/dist/entry-preview.js');
     const directoryNamedAsAModule = path.join(root, 'node_modules/@storybook/react/dist');
 
-    expect(realProjectFiles({ log }).isFile(directoryNamedAsAModule)).toBe(false);
-    expect(realProjectFiles({ log }).isDirectory(directoryNamedAsAModule)).toBe(true);
+    expect(realProjectFiles({ log, options: {} }).isFile(directoryNamedAsAModule)).toBe(false);
+    expect(realProjectFiles({ log, options: {} }).isDirectory(directoryNamedAsAModule)).toBe(true);
   });
 
   it('reads an absent path as false for both', () => {
     const root = temporaryDirectory();
     const absent = path.join(root, 'src/gone.tsx');
 
-    expect(realProjectFiles({ log }).isFile(absent)).toBe(false);
-    expect(realProjectFiles({ log }).isDirectory(absent)).toBe(false);
+    expect(realProjectFiles({ log, options: {} }).isFile(absent)).toBe(false);
+    expect(realProjectFiles({ log, options: {} }).isDirectory(absent)).toBe(false);
   });
 
   it('ignores a name too long for the file system', () => {
@@ -224,8 +224,8 @@ describe('realProjectFiles isFile and isDirectory', () => {
     const root = temporaryDirectory();
     const tooLongToName = path.join(root, `styles.module.css?source=${'A'.repeat(26_000)}`);
 
-    expect(realProjectFiles({ log }).isFile(tooLongToName)).toBe(false);
-    expect(realProjectFiles({ log }).isDirectory(tooLongToName)).toBe(false);
+    expect(realProjectFiles({ log, options: {} }).isFile(tooLongToName)).toBe(false);
+    expect(realProjectFiles({ log, options: {} }).isDirectory(tooLongToName)).toBe(false);
   });
 
   it("throws for a failure that isn't the name being too long, because a file we cannot read is a real error", () => {
@@ -235,10 +235,10 @@ describe('realProjectFiles isFile and isDirectory', () => {
     // file still stats fine while an unsearchable directory fails with EACCES.
     lock(path.join(root, 'locked'));
 
-    expect(() => realProjectFiles({ log }).isFile(unreadable)).toThrow(
+    expect(() => realProjectFiles({ log, options: {} }).isFile(unreadable)).toThrow(
       expect.objectContaining({ code: 'EACCES' })
     );
-    expect(() => realProjectFiles({ log }).isDirectory(unreadable)).toThrow(
+    expect(() => realProjectFiles({ log, options: {} }).isDirectory(unreadable)).toThrow(
       expect.objectContaining({ code: 'EACCES' })
     );
   });
@@ -249,7 +249,9 @@ describe('realProjectFiles isFile and isDirectory', () => {
     mkdirSync(path.join(root, 'static'));
     symlinkSync(target, path.join(root, 'static/logo.svg'));
 
-    expect(realProjectFiles({ log }).isFile(path.join(root, 'static/logo.svg'))).toBe(true);
+    expect(realProjectFiles({ log, options: {} }).isFile(path.join(root, 'static/logo.svg'))).toBe(
+      true
+    );
   });
 });
 
@@ -259,7 +261,7 @@ describe('realProjectFiles hashAll', () => {
     const button = write(root, 'src/Button.tsx');
     const header = write(root, 'src/Header.tsx');
 
-    const hashes = await realProjectFiles({ log }).hashAll([button, header]);
+    const hashes = await realProjectFiles({ log, options: {} }).hashAll([button, header]);
 
     expect(Object.keys(hashes).sort()).toEqual([button, header].sort());
     expect(hashes[button]).not.toBe(hashes[header]);
@@ -270,13 +272,13 @@ describe('realProjectFiles hashAll', () => {
     const original = write(root, 'src/Button.tsx', 'export const Button = () => null;');
     const copy = write(root, 'src/copy/Button.tsx', 'export const Button = () => null;');
 
-    const hashes = await realProjectFiles({ log }).hashAll([original, copy]);
+    const hashes = await realProjectFiles({ log, options: {} }).hashAll([original, copy]);
 
     expect(hashes[original]).toBe(hashes[copy]);
   });
 
   it('hashes nothing for no paths', async () => {
-    expect(await realProjectFiles({ log }).hashAll([])).toEqual({});
+    expect(await realProjectFiles({ log, options: {} }).hashAll([])).toEqual({});
   });
 
   it('read errors throw with the file that it failed to read', async () => {
@@ -287,7 +289,7 @@ describe('realProjectFiles hashAll', () => {
 
     let err: Error | undefined;
     try {
-      await realProjectFiles({ log }).hashAll([readable, unreadable]);
+      await realProjectFiles({ log, options: {} }).hashAll([readable, unreadable]);
     } catch (error) {
       err = error as Error;
     }
@@ -299,7 +301,7 @@ describe('realProjectFiles hashAll', () => {
     const button = write(temporaryDirectory(), 'src/Button.tsx');
     vi.mocked(getFileHashes).mockResolvedValueOnce({});
 
-    await expect(realProjectFiles({ log }).hashAll([button])).rejects.toThrow(
+    await expect(realProjectFiles({ log, options: {} }).hashAll([button])).rejects.toThrow(
       `No hash was produced for ${button}`
     );
   });
@@ -310,7 +312,7 @@ describe('realProjectFiles writeFile', () => {
     const root = temporaryDirectory();
     const filePath = path.join(root, 'storybook-static/.chromatic/turbosnap-manifest.json');
 
-    realProjectFiles({ log }).writeFile(filePath, '{"storybookHash":"abc"}');
+    realProjectFiles({ log, options: {} }).writeFile(filePath, '{"storybookHash":"abc"}');
 
     expect(readFileSync(filePath, 'utf8')).toBe('{"storybookHash":"abc"}');
   });
@@ -319,7 +321,7 @@ describe('realProjectFiles writeFile', () => {
     const root = temporaryDirectory();
     const filePath = path.join(root, 'turbosnap-manifest.json');
 
-    realProjectFiles({ log }).writeFile(filePath, '{"storybookHash":"abc"}');
+    realProjectFiles({ log, options: {} }).writeFile(filePath, '{"storybookHash":"abc"}');
 
     expect(readFileSync(filePath, 'utf8')).toBe('{"storybookHash":"abc"}');
   });
@@ -328,7 +330,7 @@ describe('realProjectFiles writeFile', () => {
     const root = temporaryDirectory();
     const filePath = write(root, 'turbosnap-manifest.json', 'stale');
 
-    realProjectFiles({ log }).writeFile(filePath, 'fresh');
+    realProjectFiles({ log, options: {} }).writeFile(filePath, 'fresh');
 
     expect(readFileSync(filePath, 'utf8')).toBe('fresh');
   });
@@ -339,7 +341,7 @@ describe('realProjectFiles packageVersion', () => {
     const root = temporaryDirectory();
     install(root, 'storybook', { name: 'storybook', version: '9.1.20' });
 
-    expect(realProjectFiles({ log }).packageVersion(root, 'storybook')).toBe('9.1.20');
+    expect(realProjectFiles({ log, options: {} }).packageVersion(root, 'storybook')).toBe('9.1.20');
   });
 
   it('walks up from the directory, so a workspace-hoisted install is found', () => {
@@ -348,7 +350,9 @@ describe('realProjectFiles packageVersion', () => {
     mkdirSync(projectRoot, { recursive: true });
     install(repositoryRoot, 'storybook', { name: 'storybook', version: '9.1.20' });
 
-    expect(realProjectFiles({ log }).packageVersion(projectRoot, 'storybook')).toBe('9.1.20');
+    expect(realProjectFiles({ log, options: {} }).packageVersion(projectRoot, 'storybook')).toBe(
+      '9.1.20'
+    );
   });
 
   it('reports no version for a package that does not export its own manifest', () => {
@@ -361,21 +365,23 @@ describe('realProjectFiles packageVersion', () => {
       exports: { '.': './index.js' },
     });
 
-    expect(realProjectFiles({ log }).packageVersion(root, 'sealed')).toBeUndefined();
+    expect(realProjectFiles({ log, options: {} }).packageVersion(root, 'sealed')).toBeUndefined();
   });
 
   it('reports no version for a package whose manifest has none', () => {
     const root = temporaryDirectory();
     install(root, 'storybook', { name: 'storybook' });
 
-    expect(realProjectFiles({ log }).packageVersion(root, 'storybook')).toBeUndefined();
+    expect(
+      realProjectFiles({ log, options: {} }).packageVersion(root, 'storybook')
+    ).toBeUndefined();
   });
 
   it('reports no version for a package that is not installed, logging the cause at debug', () => {
     const root = temporaryDirectory();
 
     expect(
-      realProjectFiles({ log }).packageVersion(root, '@storybook/builder-vite')
+      realProjectFiles({ log, options: {} }).packageVersion(root, '@storybook/builder-vite')
     ).toBeUndefined();
     expect(log.debug).toHaveBeenCalledWith(
       `Could not resolve @storybook/builder-vite from ${root}`,
@@ -395,20 +401,20 @@ describe('realProjectFiles realPath', () => {
     mkdirSync(path.join(root, 'apps'));
     symlinkSync(path.join(root, 'packages/ui'), path.join(root, 'apps/storybook'));
 
-    expect(realProjectFiles({ log }).realPath(path.join(root, 'apps/storybook/Button.tsx'))).toBe(
-      button
-    );
+    expect(
+      realProjectFiles({ log, options: {} }).realPath(path.join(root, 'apps/storybook/Button.tsx'))
+    ).toBe(button);
   });
 
   it('returns a real path unchanged', () => {
     const button = write(realpathSync(temporaryDirectory()), 'Button.tsx');
 
-    expect(realProjectFiles({ log }).realPath(button)).toBe(button);
+    expect(realProjectFiles({ log, options: {} }).realPath(button)).toBe(button);
   });
 
   it('returns a path to nothing as given, since there is nothing to resolve', () => {
     const absent = path.join(realpathSync(temporaryDirectory()), 'missing.tsx');
 
-    expect(realProjectFiles({ log }).realPath(absent)).toBe(absent);
+    expect(realProjectFiles({ log, options: {} }).realPath(absent)).toBe(absent);
   });
 });

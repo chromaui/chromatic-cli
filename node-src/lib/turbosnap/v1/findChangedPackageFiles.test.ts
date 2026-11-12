@@ -6,7 +6,7 @@ import { findChangedPackageFiles } from './findChangedPackageFiles';
 
 vi.mock('../../../git/execGit');
 
-const ctx = { log: new TestLogger() };
+const ctx = { log: new TestLogger(), options: {} };
 const execGitCommand = vi.mocked(execGit.execGitCommand);
 
 const mockFileContents = (packagesCommitsByFile) => {

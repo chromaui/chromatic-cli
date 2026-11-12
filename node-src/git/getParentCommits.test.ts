@@ -67,7 +67,7 @@ async function checkoutCommit(name, branch, { dirname, runGit, commitMap }) {
 }
 
 const log = { debug: vi.fn() };
-const ctx = { log } as any;
+const ctx = { log, options: {} } as any;
 const options = {};
 
 // This is built in from TypeScript 4.5
