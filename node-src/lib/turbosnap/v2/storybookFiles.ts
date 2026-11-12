@@ -47,7 +47,7 @@ export interface FileAttribution {
   /**
    * Files that can affect every story: what the builder's global composition roots reach, plus
    * everything in no story or preview subtree and what those files import. Hashed into the shared
-   * {@link STORYBOOK_GLOBALS_KEY} `storybookConfigHashes` entry.
+   * `STORYBOOK_GLOBALS_KEY` `storybookConfigHashes` entry.
    */
   storybookGlobals: Set<FilePath>;
   /** Files in a `.storybook/preview.*` subtree, hashed into the shared `preview` `storybookConfigHashes` entry. */
@@ -59,8 +59,8 @@ export interface FileAttribution {
 /**
  * Builds the file-hash entries of the `storybookConfigHashes` section: one rolled-up hash for the
  * preview config subtree and one for the Storybook globals. Every hashable file lands in at least one
- * hashing home — a story's own subtree, the shared {@link STORYBOOK_PREVIEW_KEY} entry, or the
- * {@link STORYBOOK_GLOBALS_KEY} roll-up — so nothing goes unhashed and the backend can still
+ * hashing home — a story's own subtree, the shared `STORYBOOK_PREVIEW_KEY` entry, or the
+ * `STORYBOOK_GLOBALS_KEY` roll-up — so nothing goes unhashed and the backend can still
  * attribute a change to the preview config or to a Storybook/framework global.
  *
  * The globals roll-up starts from two kinds of roots:
@@ -94,7 +94,7 @@ export interface FileAttribution {
  * @param h64ToString The hash function.
  * @param rollUpPath The path each file is rolled up under; see `buildRollUpPath`.
  *
- * @returns The rolled-up hash per Storybook config file, and the {@link FileAttribution} recording
+ * @returns The rolled-up hash per Storybook config file, and the `FileAttribution` recording
  * which of the three hashing homes each real file landed in.
  */
 export function collectStorybookFiles(
@@ -171,7 +171,7 @@ export function collectStorybookFiles(
 }
 
 /**
- * Narrows a walked set to the files that feed a hash; see {@link hasContentHash}.
+ * Narrows a walked set to the files that feed a hash; see `hasContentHash`.
  *
  * @param hashes The hash of every on-disk file, keyed by canonical path.
  * @param filePaths The paths a walk reached, synthetic nodes and skipped files included.

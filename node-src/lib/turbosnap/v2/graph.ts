@@ -34,7 +34,7 @@ export interface TurboSnapFile {
 
 /**
  * Rolls a set of files up into a single hash, looking each file's content hash up by path. A file v2
- * skipped is left out entirely; see {@link SKIPPED_HASH}.
+ * skipped is left out entirely; see `SKIPPED_HASH`.
  *
  * @param hashes The hash of every on-disk file, keyed by canonical path, or `SKIPPED_HASH` for a file v2 skipped.
  * @param filePaths The files to roll up.

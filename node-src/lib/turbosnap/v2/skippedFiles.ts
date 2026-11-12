@@ -3,7 +3,7 @@ import { ManifestInput } from './manifestInput';
 import { gitRootGlobMatcher, isInstalledPackagePath } from './paths';
 
 /**
- * The part of {@link ManifestInput} the skip rule reads: where the repository is, what the user
+ * The part of `ManifestInput` the skip rule reads: where the repository is, what the user
  * untraced, and how to ask git and the disk.
  */
 export type SkipContext = Pick<ManifestInput, 'gitRoot' | 'untraced' | 'projectFiles'>;
@@ -19,7 +19,7 @@ export type SkipReason = 'untracked' | 'untraced';
 
 /**
  * Why TurboSnap v2 skips hashing the file at a path, or undefined when it hashes the file; see
- * {@link buildSkipRule}.
+ * `buildSkipRule`.
  */
 export type SkipRule = (absolutePath: AbsolutePath) => SkipReason | undefined;
 
@@ -28,7 +28,7 @@ export type SkipRule = (absolutePath: AbsolutePath) => SkipReason | undefined;
  * the rule is applied to a listing, so the graph and the static sweep partition alike.
  *
  * @param absolutePaths The paths to split.
- * @param rule The rule to split them by; see {@link buildSkipRule}.
+ * @param rule The rule to split them by; see `buildSkipRule`.
  *
  * @returns The paths to hash, in the order given, and the skipped paths with their reasons.
  */
@@ -58,7 +58,7 @@ export function partitionSkipped(
  * honored wherever the file is: inside a dependency, since v1 lets a user untrace files inside a
  * package, and inside the Storybook config directory, since the documented recipe untraces the
  * global decorators kept there. The glob is matched as v1 matches it (see
- * {@link gitRootGlobMatcher}), so the one flag means the same thing in both. A file both untraced
+ * `gitRootGlobMatcher`), so the one flag means the same thing in both. A file both untraced
  * and untracked is recorded as untraced, since that is the user's own say. Two files are out of the
  * rule's reach: an external, which v1 checks before it applies `--untraced`, and the main Storybook
  * config, which the config sweep hashes regardless; see `hashOutOfGraphFiles`.

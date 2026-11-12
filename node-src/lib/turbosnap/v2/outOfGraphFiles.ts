@@ -15,7 +15,7 @@ import {
   StorybookFileKey,
 } from './storybookFileKeys';
 
-/** The part of {@link ManifestInput} the out-of-graph sweep reads: where to look, and what with. */
+/** The part of `ManifestInput` the out-of-graph sweep reads: where to look, and what with. */
 export type OutOfGraphInput = Pick<
   ManifestInput,
   'log' | 'projectRoot' | 'gitRoot' | 'configDir' | 'staticDirs' | 'externals' | 'projectFiles'
@@ -29,8 +29,8 @@ export interface OutOfGraphSweep {
 
 /**
  * The content hash of every out-of-graph file, keyed by canonical manifest path. These are the S3-only
- * debug detail sections behind the {@link STORYBOOK_CONFIG_KEY}, {@link STATIC_FILES_KEY} and
- * {@link EXTERNALS_KEY} roll-ups: the Index does one equality check per roll-up, and the debug view
+ * debug detail sections behind the `STORYBOOK_CONFIG_KEY`, `STATIC_FILES_KEY` and
+ * `EXTERNALS_KEY` roll-ups: the Index does one equality check per roll-up, and the debug view
  * diffs these to name the file that actually moved.
  */
 export interface OutOfGraphFiles {
@@ -90,12 +90,12 @@ export function listConfigAndStaticFiles(input: OutOfGraphInput) {
  *
  * Static files are hashed unbounded, with no size or count cap: a cap is a silent gap, which is the
  * failure mode this mechanism exists to remove. The files v2 skips are the one exception, in the
- * config directory as in a static directory; see {@link buildSkipRule} for which those are. The main
- * config is hashed whatever the rule says; see {@link hashMainConfigRegardless}.
+ * config directory as in a static directory; see `buildSkipRule` for which those are. The main
+ * config is hashed whatever the rule says; see `hashMainConfigRegardless`.
  *
- * @param input Where to look and what to read it with; see {@link OutOfGraphInput}.
- * @param skipRule Which config and static files to leave unhashed; see {@link buildSkipRule}.
- * @param inventory The config and static files, from {@link listConfigAndStaticFiles}; the same
+ * @param input Where to look and what to read it with; see `OutOfGraphInput`.
+ * @param skipRule Which config and static files to leave unhashed; see `buildSkipRule`.
+ * @param inventory The config and static files, from `listConfigAndStaticFiles`; the same
  * inventory the skip rule was built from.
  *
  * @returns The content hash of every config file, static file and external file, keyed by canonical
@@ -154,7 +154,7 @@ export async function hashOutOfGraphFiles(
  * `--untraced` glob wide enough to catch it, or a main config not yet added to git, is more likely an
  * accident than a request. The case is logged so we can see whether anyone hits it.
  *
- * @param skipRule The rule for every other file; see {@link buildSkipRule}.
+ * @param skipRule The rule for every other file; see `buildSkipRule`.
  * @param input Where the config directory is, and where to log.
  *
  * @returns The rule for the config sweep.
@@ -177,13 +177,13 @@ function hashMainConfigRegardless(
 
 /**
  * Lists the git-tracked files matching the user's `--externals` globs; see
- * {@link gitRootGlobMatcher} for how a glob is read. The skip rule does not reach here: a file both
+ * `gitRootGlobMatcher` for how a glob is read. The skip rule does not reach here: a file both
  * untraced and external still moves the externals roll-up, as in v1, where an external changed file
  * bails before the trace applies `--untraced`. The index is matched as it streams in, so only the
  * matches are ever held: a monorepo's index can run to millions of entries, and a glob names a
  * handful.
  *
- * @param input Where the repository is and which globs to match; see {@link OutOfGraphInput}.
+ * @param input Where the repository is and which globs to match; see `OutOfGraphInput`.
  *
  * @returns The absolute path of every matching file that exists on disk.
  */
@@ -224,7 +224,7 @@ async function listExternalFiles(
  *
  * The static and externals sections contribute no entry when they have no files, matching how the
  * `storybookGlobals` roll-up is omitted when empty. The config section always contributes one, because
- * {@link hashOutOfGraphFiles} refuses to build it without the main config and never drops the main
+ * `hashOutOfGraphFiles` refuses to build it without the main config and never drops the main
  * config into another section, which is what keeps the Index's required `storybookConfigFiles`
  * satisfied.
  *
@@ -238,8 +238,8 @@ async function listExternalFiles(
  * @param outOfGraphFiles The per-file hashes to roll up.
  * @param h64ToString The hash function.
  *
- * @returns The synthetic `storybookConfigHashes` entries, keyed by {@link STORYBOOK_CONFIG_KEY},
- * {@link STATIC_FILES_KEY} and {@link EXTERNALS_KEY}.
+ * @returns The synthetic `storybookConfigHashes` entries, keyed by `STORYBOOK_CONFIG_KEY`,
+ * `STATIC_FILES_KEY` and `EXTERNALS_KEY`.
  */
 export function rollUpOutOfGraphFiles(
   outOfGraphFiles: OutOfGraphFiles,

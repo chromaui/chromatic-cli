@@ -16,9 +16,9 @@ import { BuildUploadHashesResponse, uploadHashes } from './uploadHashes';
 type FailureLogLevel = 'error' | 'debug';
 
 /**
- * The input to build the manifest (see {@link ManifestInput}), plus what this entry point adds on
+ * The input to build the manifest (see `ManifestInput`), plus what this entry point adds on
  * top: the stats to build it from, where to write it, how to upload it and how loudly to report a
- * failure. `gitRoot` is optional here because that is its type on `ctx.git`; {@link traceChangedFiles}
+ * failure. `gitRoot` is optional here because that is its type on `ctx.git`; `traceChangedFiles`
  * checks it is set, so callers don't have to.
  */
 interface TraceChangedFilesInput extends Omit<ManifestInput, 'gitRoot'> {
@@ -44,7 +44,7 @@ export type TraceChangedFilesV2Result =
  * Determines which story files are affected by the changed source file hashes, bailing out of
  * TurboSnap when necessary.
  *
- * @param input The input to run TurboSnap 2.0; see {@link ManifestInput} for the manifest's share.
+ * @param input The input to run TurboSnap 2.0; see `ManifestInput` for the manifest's share.
  * @param input.stats The preview stats file, read by the caller because v1 traces the same one.
  * @param input.manifestPath The path to write the manifest file to.
  * @param input.gitRoot The absolute git repository root, as it arrives on `ctx.git`. The gitInfo task

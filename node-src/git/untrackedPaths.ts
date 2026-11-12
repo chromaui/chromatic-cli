@@ -123,7 +123,7 @@ async function getUntrackedScopes(
 }
 
 /**
- * The paths git does not track, answered by absolute path; see {@link getUntrackedPaths}. The match
+ * The paths git does not track, answered by absolute path; see `getUntrackedPaths`. The match
  * is exact, as git names paths, so a caller resolves symlinks before asking.
  */
 export interface UntrackedPaths {

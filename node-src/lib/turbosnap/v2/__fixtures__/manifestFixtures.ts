@@ -49,7 +49,7 @@ export function createFixture(overrides: InMemoryDisk = {}): ManifestFixture {
 }
 
 /**
- * An `isAbsent` predicate for {@link createFixture}: the require-context glob is not a file on disk;
+ * An `isAbsent` predicate for `createFixture`: the require-context glob is not a file on disk;
  * everything else is.
  *
  * @param candidate The absolute path to test.
@@ -61,7 +61,7 @@ export function globAbsent(candidate: string): boolean {
 }
 
 /**
- * An `isAbsent` predicate for {@link createFixture}: the builder's generated entries and
+ * An `isAbsent` predicate for `createFixture`: the builder's generated entries and
  * require-context globs, which is where a real project has no file on disk either.
  *
  * @param candidate The absolute path to test.
