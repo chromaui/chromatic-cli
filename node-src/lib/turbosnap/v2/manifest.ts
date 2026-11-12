@@ -118,7 +118,7 @@ export async function buildManifest(
   // resolve from the project root, or when a builder names its stories entry in a way we don't know.
   if (storyFiles.size === 0) {
     throw new Error(
-      `Found no story files in the stats file for the project at ${input.projectRoot}. If Storybook was built in another directory, pass --storybook-base-dir <dir> pointing at it.`
+      `Found no story files in the stats file for the project at ${input.projectRoot}. Either Storybook was built in another directory (pass --storybook-base-dir <dir> pointing at it), or its builder names its stories entry in a way TurboSnap doesn't recognize.`
     );
   }
 
