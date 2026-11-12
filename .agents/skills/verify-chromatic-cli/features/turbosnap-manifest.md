@@ -9,6 +9,7 @@
 - `tsm-static` records hashes for files under `--static-dir` directories.
 - `tsm-missing-stats` fails with a clear message and exit `1` when the stats file is missing.
 - `tsm-mono` builds a manifest for a monorepo package with `-b`, including externals outside it.
+- `tsm-no-stories` fails with exit `1` when the stats resolve to no story files from the project root, instead of printing a manifest with an empty `storyFiles`.
 
 ## How to get to it (user POV)
 
@@ -28,6 +29,7 @@ Preconditions:
 - **Static dir.** Run `$S run tsm-static -- turbosnap-manifest -s "$SB_STATS" --static-dir static`. Exit code `0`. `jq -c '.staticFiles|keys' "$EVIDENCE/tsm-static/stdout.txt"` includes `./static/css/global.css`.
 - **Missing stats.** Run `$S run tsm-missing-stats -- turbosnap-manifest -s "$WORK/nope.json"`. Exit code `1`. stdout is empty, and stderr starts with `No stats file at <path>/nope.json`, followed by the usage text.
 - **Monorepo project root.** Reuse the `monorepo-pnpm` copy and Storybook from `trace-mono` (`F=$WORK/e2e-monorepo-pnpm`), or prepare and build one as described there (see `trace`). Run `$S run tsm-mono --cwd "$F" -- turbosnap-manifest -b packages/ui -s storybook-static/preview-stats.json --externals 'packages/backend/**'`. Exit code `0`. `-s` is resolved against `packages/ui`. `jq -c '.storyFiles|keys'` is `["./src/Badge.stories.tsx","./src/Button.stories.tsx"]`, and `jq -c '.externals|keys'` is `["../backend/package.json","../backend/src/index.ts"]`: keys are relative to the project root, with `../` for files outside it.
+- **No story files.** In the same `monorepo-pnpm` copy, point the project root at the repository root, where the stats paths don't resolve: `$S run tsm-no-stories --cwd "$F" -- turbosnap-manifest -b . -s packages/ui/storybook-static/preview-stats.json -c packages/ui/.storybook`. Exit code `1`. stdout is empty, and stderr is `Error: Found no story files in the stats file for the project at <F>. Either Storybook was built in another directory (pass --storybook-base-dir <dir> pointing at it), or its builder names its stories entry in a way TurboSnap doesn't recognize.` On a real `--only-changed` build with the same mistake, debug logs show `Failed to build manifest for TurboSnap 2.0 Found no story files …` and no `Uploaded hashes` line, and TurboSnap 1.0 fails the build with exit `254` and `✖ TurboSnap disabled until base directory is set correctly`.
 - **Proof.** The `$EVIDENCE/tsm-*` dirs hold the JSON on stdout. Keep the `jq` outputs above with them: `jq -c 'keys' … > "$EVIDENCE/tsm-default/keys.txt"`.
 
 ## Gotchas

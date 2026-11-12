@@ -89,6 +89,8 @@ interface ManifestFile {
  *
  * @returns The manifest containing the file hashes, story file hashes, Storybook config file hashes,
  * and Storybook hash.
+ *
+ * @throws {Error} When the stats resolve to no story files; see the check below.
  */
 export async function buildManifest(
   stats: Stats,
@@ -111,6 +113,14 @@ export async function buildManifest(
     untracedSubtrees,
   } = await readStatsGraph(stats, input, skipRule, graphFiles);
   input.log.debug(`Found ${storyFiles.size} story files from preview-stats.json`);
+  // The Index compares each story by its key in both builds, so a manifest without story files would
+  // look unchanged for every story and recapture nothing. This happens when the stats paths don't
+  // resolve from the project root, or when a builder names its stories entry in a way we don't know.
+  if (storyFiles.size === 0) {
+    throw new Error(
+      `Found no story files in the stats file for the project at ${input.projectRoot}. Either Storybook was built in another directory (pass --storybook-base-dir <dir> pointing at it), or its builder names its stories entry in a way TurboSnap doesn't recognize.`
+    );
+  }
 
   const hasher = await xxHashWasm();
   const { h64ToString } = hasher;
