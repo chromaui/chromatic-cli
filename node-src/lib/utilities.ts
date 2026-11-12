@@ -3,6 +3,9 @@ import picomatch, { Matcher } from 'picomatch';
 
 import { Context } from '../types';
 
+// The NUL character: git's `-z` entry separator, and the marker bundlers put in generated module ids.
+export const NULL_BYTE = '\0';
+
 export const lcfirst = (str: string) => `${str.charAt(0).toLowerCase()}${str.slice(1)}`;
 
 export const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));

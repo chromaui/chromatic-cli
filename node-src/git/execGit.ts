@@ -3,6 +3,7 @@ import { createInterface } from 'node:readline';
 import type { Options } from 'execa';
 
 import { runCommand } from '../lib/shell/shell';
+import { NULL_BYTE } from '../lib/utilities';
 import { Deps } from '../types';
 import gitNoCommits from '../ui/messages/errors/gitNoCommits';
 import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
@@ -26,8 +27,6 @@ const defaultOptions: Options = {
   all: true, // interleave stdout and stderr
   shell: true, // we'll deal with escaping ourselves (for now)
 };
-
-const NULL_BYTE = '\0';
 
 /**
  * Retrieve the git timeout in milliseconds.

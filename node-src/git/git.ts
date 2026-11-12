@@ -8,6 +8,7 @@ import {
   BaselineCheckoutFailedError,
   GitCommandError,
 } from '../lib/turbosnap/v1/errors';
+import { NULL_BYTE } from '../lib/utilities';
 import { CloneDepth, CloneFilter, VisitedCommit } from '../types';
 import { DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS } from './constants';
 import {
@@ -20,7 +21,6 @@ import {
 import { resolveSymlinkAtReference } from './treeAtReference';
 
 const newline = /\r\n|\r|\n/; // Git may return \n even on Windows, so we can't use EOL
-const NULL_BYTE = '\0'; // Separator used when running `git ls-files` with `-z`
 
 /**
  * Get the version of Git from the host.
@@ -863,7 +863,7 @@ export async function getVisitedCommitDetails(
   if (!result.trim()) return [];
 
   // Output is a sequence of: <sha>\0<parents>\0<subject>\0 per commit
-  const fields = result.split('\0');
+  const fields = result.split(NULL_BYTE);
   const details: Pick<VisitedCommit, 'commit' | 'parentCommits' | 'isProbableSquashMerge'>[] = [];
   for (let index = 0; index + 2 < fields.length; index += 3) {
     const commit = fields[index].trim();

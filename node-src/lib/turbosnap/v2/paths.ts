@@ -2,7 +2,7 @@ import path from 'path';
 
 import { AbsolutePath, Module } from '../../../types';
 import { relativeTo } from '../../getStorybookProjectRoot';
-import { matchesFile } from '../../utilities';
+import { matchesFile, NULL_BYTE } from '../../utilities';
 import { isNodeModulesPath, moduleFileNames, stripConcatenatedModuleSuffix } from '../statsPaths';
 import { FilePath } from './graph';
 
@@ -207,8 +207,7 @@ export function buildRollUpPath(filePaths: Iterable<FilePath>): (filePath: FileP
 
 // A Rollup proxy id: a NUL byte before the id of a module a builder created to stand for a real
 // file (CommonJS interop, framework SFC blocks). Only a proxy for a relative path names a file.
-const NUL = '\0';
-const FOLDABLE_NUL_PREFIXES = [`${NUL}./`, `${NUL}../`];
+const FOLDABLE_NUL_PREFIXES = [`${NULL_BYTE}./`, `${NULL_BYTE}../`];
 
 // Webpack names a require.context by its mode and the include glob, e.g. `./icons/ lazy ^\\.\\/.*\\.svg`.
 // Webpack writes the mode after a space (`./src/ sync`, `./src/lib/ lazy`) and appends
@@ -248,7 +247,9 @@ export function isSyntheticFile(path: FilePath): boolean {
   // A NUL proxy for a relative path folds onto that file (see {@link foldStatsId}); any other
   // leading NUL — a bare runtime helper like `\0commonjsHelpers.js` or an opaque rooted id like
   // `\0/@data-uri/...` — names nothing on disk. Asked on the raw id: stripping would remove the NUL.
-  return path.startsWith(NUL) && !FOLDABLE_NUL_PREFIXES.some((prefix) => path.startsWith(prefix));
+  return (
+    path.startsWith(NULL_BYTE) && !FOLDABLE_NUL_PREFIXES.some((prefix) => path.startsWith(prefix))
+  );
 }
 
 /**
@@ -330,7 +331,7 @@ export function foldStatsId(statsPath: FilePath): FilePath {
   }
 
   // A NUL proxy for a relative path stands for that path, without the NUL or the query.
-  const unproxied = resource.startsWith(NUL) ? resource.slice(NUL.length) : resource;
+  const unproxied = resource.startsWith(NULL_BYTE) ? resource.slice(NULL_BYTE.length) : resource;
   return stripQuery(unproxied);
 }
 
@@ -390,7 +391,7 @@ export function resolveStatsPath(statsPath: FilePath, statsRoot: AbsolutePath): 
  * @returns The name with the escape markers removed.
  */
 function stripNullBytes(statsPath: FilePath): FilePath {
-  return statsPath.replaceAll('\0', '');
+  return statsPath.replaceAll(NULL_BYTE, '');
 }
 
 /**
