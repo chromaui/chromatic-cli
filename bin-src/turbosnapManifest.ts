@@ -92,7 +92,7 @@ export async function main(argv: string[]) {
   const log = createLogger({}, { logPrefix: '', logLevel: 'error' });
 
   try {
-    const gitRoot = await getRepositoryRoot({ log });
+    const gitRoot = await getRepositoryRoot({ log, options: {} });
     const projectRoot = getStorybookProjectRoot({
       storybookBaseDir: cli.flags.storybookBaseDir,
       gitRootPath: gitRoot,
@@ -118,7 +118,7 @@ export async function main(argv: string[]) {
         path.resolve(projectRoot, directory)
       ),
       externals: cli.flags.externals ?? [],
-      projectFiles: realProjectFiles({ log }),
+      projectFiles: realProjectFiles({ log, options: {} }),
     });
 
     process.stdout.write(JSON.stringify(serializeManifest(manifest), undefined, 2));

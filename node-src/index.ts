@@ -289,11 +289,14 @@ async function shouldSkipWithoutProjectToken(
 
 async function getBranchForSkip(ctx: InitialContext, partialOptions: Partial<Options>) {
   try {
-    const { branch } = await getCommitAndBranch(ctx, {
-      branchName: partialOptions.branchName,
-      patchBaseRef: partialOptions.patchBaseRef,
-      ci: partialOptions.fromCI,
-    });
+    const { branch } = await getCommitAndBranch(
+      { log: ctx.log, options: partialOptions },
+      {
+        branchName: partialOptions.branchName,
+        patchBaseRef: partialOptions.patchBaseRef,
+        ci: partialOptions.fromCI,
+      }
+    );
 
     return branch;
   } catch (err) {
@@ -431,11 +434,16 @@ export interface GitInfo {
  * Although this function may not be used directly in this project, it can be used externally (such
  * as https://github.com/chromaui/addon-visual-tests).
  *
- * @param ctx The context set when executing the CLI.
+ * @param deps The context set when executing the CLI. Its `options.gitTimeout` (milliseconds), when
+ * set, applies to every git command.
  *
  * @returns Any git information we were able to gather.
  */
-export async function getGitInfo(ctx: Pick<Context, 'log'>): Promise<GitInfo> {
+export async function getGitInfo(
+  deps: Pick<Context, 'log'> & { options?: { gitTimeout?: number } }
+): Promise<GitInfo> {
+  // Callers of this public API may pass only a logger; git then runs with the default timeout.
+  const ctx = { log: deps.log, options: { ...deps.options } };
   let slug: string;
   try {
     slug = await getSlug(ctx);

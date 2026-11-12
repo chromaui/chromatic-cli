@@ -15,7 +15,7 @@ vi.mock('./git', () => ({
 
 const commitExists = vi.mocked(gitModule.commitExists);
 
-const ctx = { log: new TestLogger() };
+const ctx = { log: new TestLogger(), options: {} };
 
 type Build = AncestorBuildsQueryResult['app']['build']['ancestorBuilds'][0];
 const makeBuild = (build: Partial<Build> = {}): Build => ({

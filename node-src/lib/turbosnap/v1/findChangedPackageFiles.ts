@@ -1,5 +1,4 @@
-import { execGitCommand } from '../../../git/execGit';
-import { Context } from '../../../types';
+import { execGitCommand, GitDeps } from '../../../git/execGit';
 import { isPackageMetadataFile } from '../../utilities';
 
 // TODO: refactor this function
@@ -55,7 +54,7 @@ const arePackageDependenciesEqual = (
 type FileCache = Map<string, string>;
 
 const readGitFile = async (
-  ctx: Pick<Context, 'log'>,
+  ctx: GitDeps,
   fileCache: FileCache,
   fileName: string,
   commit = 'HEAD'
@@ -70,7 +69,7 @@ const readGitFile = async (
 // Filters a list of manifest files by whether they have dependency-related changes compared to
 // their counterpart from another (baseline) commit.
 const getManifestFilesWithChangedDependencies = async (
-  ctx: Pick<Context, 'log'>,
+  ctx: GitDeps,
   fileCache: FileCache,
   manifestFiles: string[],
   commit: string
@@ -97,7 +96,7 @@ const getManifestFilesWithChangedDependencies = async (
 
 // Yields a list of package.json files with dependency-related changes compared to the baseline.
 export const findChangedPackageFiles = async (
-  ctx: Pick<Context, 'log'>,
+  ctx: GitDeps,
   packageMetadataChanges: { changedFiles: string[]; commit: string }[]
 ) => {
   const fileCache: FileCache = new Map();

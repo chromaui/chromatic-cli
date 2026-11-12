@@ -8,7 +8,7 @@ vi.mock('./execGit');
 
 const execGitCommand = vi.mocked(execGit.execGitCommand);
 
-const ctx = { log: new TestLogger() };
+const ctx = { log: new TestLogger(), options: {} };
 
 describe('pathExistsAtReference', () => {
   it.each([

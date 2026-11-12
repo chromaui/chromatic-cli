@@ -16,7 +16,7 @@ const MAX_LOCK_FILE_SIZE = 10_485_760; // The 10 MB default
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const ctx = { log: new TestLogger() } as any;
+const ctx = { log: new TestLogger(), options: {} } as any;
 const statSync = unmockedStatSync as Mock;
 
 vi.mock('fs', async (original) => {

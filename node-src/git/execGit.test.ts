@@ -15,7 +15,7 @@ import {
   execGitCommandOneLine,
 } from './execGit';
 
-const ctx = { log: new TestLogger() };
+const ctx = { log: new TestLogger(), options: {} };
 const execa = vi.mocked(execaDefault);
 
 vi.mock('execa', async (importOriginal) => {

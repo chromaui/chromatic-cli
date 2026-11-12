@@ -43,7 +43,7 @@ const execGitCommandCountLines = vi.mocked(execGit.execGitCommandCountLines);
 
 const { mkdir, readFile } = vi.mocked(await import('fs/promises'));
 
-const ctx = { log: new TestLogger() };
+const ctx = { log: new TestLogger(), options: {} };
 
 afterEach(() => {
   vi.clearAllMocks();

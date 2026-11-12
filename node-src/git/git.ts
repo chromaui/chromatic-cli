@@ -667,7 +667,7 @@ export function trackedFiles(
  */
 function getMetadataGitTimeout(deps: GitDeps) {
   return Math.min(
-    deps.options?.gitTimeout ?? DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS,
+    deps.options.gitTimeout ?? DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS,
     DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS
   );
 }

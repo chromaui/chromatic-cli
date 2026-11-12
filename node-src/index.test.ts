@@ -1047,6 +1047,13 @@ describe('getGitInfo', () => {
     });
   });
 
+  it("runs git with the caller's gitTimeout", async () => {
+    await getGitInfo({ log: new TestLogger(), options: { gitTimeout: 50 } });
+    expect(getBranch).toHaveBeenCalledWith(
+      expect.objectContaining({ options: { gitTimeout: 50 } })
+    );
+  });
+
   it('should still return getInfo if no origin url', async () => {
     getSlug.mockRejectedValue(new Error('no origin set'));
     const result = await getGitInfo(getContext([]));
