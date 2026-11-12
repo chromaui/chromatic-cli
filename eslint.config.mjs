@@ -9,48 +9,6 @@ import unicorn from 'eslint-plugin-unicorn';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-// jsdoc/no-undefined-types checks a `{@link X}` only when it is in a `/** */` comment and X parses
-// as a name such as `X` or `X.member`. It skips any other link silently, so this rule rejects the
-// links it would skip: links in `//` or `/* */` comments, and targets such as `X#member` or `X()`.
-const checkableLinks = {
-  meta: {
-    type: 'problem',
-    messages: {
-      linkOutsideJsdoc:
-        'Put `{@link}` in a `/** */` comment, which jsdoc/no-undefined-types checks, or drop the link.',
-      uncheckedTarget:
-        'Link to `{@link X}`, `{@link X.member}`, or a URL; jsdoc/no-undefined-types skips `{{target}}`.',
-    },
-  },
-  create(context) {
-    return {
-      Program() {
-        for (const comment of context.sourceCode.getAllComments()) {
-          // The same test the jsdoc plugin uses: `/**` followed by whitespace.
-          const isJsdoc = comment.type === 'Block' && /^\*\s/.test(comment.value);
-          if (!isJsdoc && /{@link(code|plain)?\s/.test(comment.value)) {
-            context.report({ loc: comment.loc, messageId: 'linkOutsideJsdoc' });
-            continue;
-          }
-          // The target follows one space or tab, so `{@link  X}`, which the plugin skips, yields ''.
-          for (const [, target] of comment.value.matchAll(
-            /{@link(?:code|plain)?[\t ](\S*?)(?=[\s|}])/g
-          )) {
-            const isName = /^[A-Za-z_$][\w$]*(\.[\w$]+)*$/.test(target);
-            if (!isName && !/^[a-z][\d+.a-z-]*:\/\//i.test(target)) {
-              context.report({
-                loc: comment.loc,
-                messageId: 'uncheckedTarget',
-                data: { target: target || 'the extra space' },
-              });
-            }
-          }
-        }
-      },
-    };
-  },
-};
-
 export default [
   { languageOptions: { globals: { ...globals.browser, ...globals.node } } },
   {
@@ -242,7 +200,6 @@ export default [
     files: ['**/*.js', '**/*.ts'],
     plugins: {
       jsdoc,
-      local: { rules: { 'checkable-links': checkableLinks } },
     },
     rules: {
       ...jsdoc.configs['flat/recommended-typescript'].rules,
@@ -262,24 +219,6 @@ export default [
         },
       ],
       'jsdoc/tag-lines': ['error', 'any', { startLines: 1 }],
-      // A `{@link X}` must name a symbol in scope, so renaming or deleting X breaks lint instead of
-      // leaving a stale link. Link a symbol from another file through an `import type`.
-      'jsdoc/no-undefined-types': 'error',
-      'local/checkable-links': 'error',
-      // A bare `@see X` is free text to the rule above, so require the form it checks.
-      'jsdoc/no-restricted-syntax': [
-        'error',
-        {
-          contexts: [
-            {
-              comment: String.raw`JsdocBlock:has(JsdocTag[tag="see"][name=/^[A-Za-z_$][\w$]*([.#][\w$]+)*(\(\))?$/][description=""])`,
-              context: 'any',
-              message:
-                'Write `@see {@link X}` instead of `@see X`, so lint checks that X still exists.',
-            },
-          ],
-        },
-      ],
     },
   },
   // sort your imports

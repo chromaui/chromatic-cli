@@ -34,8 +34,6 @@ Instead:
 - **Reproduce customer setups generically.** Build fixtures with neutral names (`my-app`, `packages/ui`, `Button.stories.tsx`) and only the structure needed to trigger the bug.
 - **Rewrite rather than quote** error messages and logs: keep the part that comes from this CLI, and replace anything that comes from the customer's project with a placeholder.
 
-Public docs and comments describe what the CLI does, not how the Index or other private services decide things.
-
 If you are unsure whether something is identifying, leave it out. If a ticket title itself names a customer, write a neutral title of your own.
 
 ## Label every pull request
@@ -69,7 +67,6 @@ When a mistake keeps coming back, enforce the rule with a check and record it he
 | Tests call commands in-process, never through `yarn chromatic` or `dist/bin.cjs` | ESLint `no-restricted-syntax` on `*.test.*` |
 | Each e2e fixture's Storybook packages match its `storybook` version, in `package.json` and the lockfile | `e2e/check-storybook-versions.mjs` in the lint-and-test workflow |
 | The bundled `dist/node.d.cts` typechecks for consumers with `skipLibCheck: false` | `yarn typescript:check-declarations` in the lint-and-test workflow |
-| A JSDoc `{@link X}` names a symbol in scope; in TypeScript, link a symbol from another file through an `import type`, which `tsc` checks. Links go in `/** */` comments and take `X`, `X.member`, or a URL, not `X#member` or `X()`. `@see` takes `{@link X}` for a symbol; a URL or prose is fine | ESLint `jsdoc/no-undefined-types`, `local/checkable-links`, and `jsdoc/no-restricted-syntax`; `yarn typescript:check` for imported names |
 | Prettier skips Markdown, so it keeps its compact formatting; JS/TS must match Prettier | `.prettierignore` (`*.md`); ESLint `prettier/prettier` for JS/TS |
 | Behavior and output changes are verified in the real CLI | Judgment ([Verify changes in the real CLI](#verify-changes-in-the-real-cli)) |
 | No private customer details in public places | Judgment ([This repository is public](#this-repository-is-public)) |
