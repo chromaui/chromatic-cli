@@ -261,6 +261,31 @@ export default [
       '@typescript-eslint/no-var-requires': 'off',
     },
   },
+  // Subcommands throw, and bin-src/register.js is the only place their failures are handled.
+  // main.ts sets the main command's exit code from the build result.
+  {
+    files: ['bin-src/*.ts'],
+    ignores: ['bin-src/main.ts', 'bin-src/*.test.ts'],
+    rules: {
+      'no-restricted-properties': [
+        'error',
+        ...['exit', 'exitCode'].map((property) => ({
+          object: 'process',
+          property,
+          message:
+            'Throw an Error instead: bin-src/register.js prints only its message and exits 1. Throw a SubcommandFailure for another exit code.',
+        })),
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.object.name='console'][callee.property.name='error']",
+          message:
+            'Throw an Error instead: bin-src/register.js prints only its message, so error objects (env vars, headers) never reach CI logs.',
+        },
+      ],
+    },
+  },
   // exceptions for test files and support
   {
     files: ['**/*.test.*'],
