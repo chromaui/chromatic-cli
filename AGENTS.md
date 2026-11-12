@@ -26,8 +26,6 @@ Work often starts from a Linear ticket or bug report that contains private detai
 - The URL itself is public even though the page is not. Obvious builds URLs from the ticket title (e.g. `cap-1234-short-summary`), so the slug must meet the same bar as a branch name. If the title names a customer or anything else on the list above, use a neutral project name or leave the link out.
 - Never quote or summarize the thread's content in the PR, since that content was written under the assumption that it stays private.
 
-**Exception: `control-chromatic matrix` evidence.** PR bodies may include the evidence block `matrix` prints, with the project ID and build links of the internal test project behind `CHROMATIC_PROJECT_TOKEN`. Those builds are private to Chromatic. This covers that block in PR bodies only, never a customer's project, and never the token.
-
 Instead:
 
 - **Reference tickets by identifier only**, e.g. `CAP-1234`. Linear's GitHub integration links it automatically.
