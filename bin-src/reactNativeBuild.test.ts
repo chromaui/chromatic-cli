@@ -56,10 +56,6 @@ const mockedOpenLogFileStream = vi.mocked(openLogFileStream);
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, 'log').mockImplementation(() => {});
-  vi.spyOn(console, 'error').mockImplementation(() => {});
-  vi.spyOn(process, 'exit').mockImplementation(() => {
-    throw new Error('process.exit');
-  });
 
   mockedGetConfiguration.mockResolvedValue({});
   mockedMkdtempSync.mockReturnValue('/tmp/chromatic-rn-build-test' as any);
@@ -132,10 +128,7 @@ describe('react-native-build', () => {
   it('exits with error when expo config fails', async () => {
     mockedExeca.mockRejectedValue(new Error('expo not found'));
 
-    await expect(main([])).rejects.toThrow('process.exit');
-    expect(console.error).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to read Expo config')
-    );
+    await expect(main([])).rejects.toThrow('Failed to read Expo config');
   });
 
   it('exits with error when no supported platforms found', async () => {
@@ -146,10 +139,7 @@ describe('react-native-build', () => {
       return Promise.resolve({}) as any;
     });
 
-    await expect(main([])).rejects.toThrow('process.exit');
-    expect(console.error).toHaveBeenCalledWith(
-      expect.stringContaining('No supported platforms found')
-    );
+    await expect(main([])).rejects.toThrow('No supported platforms found');
   });
 
   it('skips ios on non-darwin platforms', async () => {
@@ -163,10 +153,7 @@ describe('react-native-build', () => {
       return Promise.resolve({}) as any;
     });
 
-    await expect(main([])).rejects.toThrow('process.exit');
-    expect(console.error).toHaveBeenCalledWith(
-      expect.stringContaining('iOS builds are only supported on macOS')
-    );
+    await expect(main([])).rejects.toThrow('iOS builds are only supported on macOS');
 
     Object.defineProperty(process, 'platform', { value: originalPlatform });
   });
@@ -242,7 +229,7 @@ describe('react-native-build', () => {
       return Promise.resolve({}) as any;
     });
 
-    await expect(main([])).rejects.toThrow('process.exit');
+    await expect(main([])).rejects.toThrow('gradle failed');
     expect(mockedRmSync).toHaveBeenCalledWith('/tmp/chromatic-rn-build-test', {
       recursive: true,
       force: true,
@@ -264,7 +251,7 @@ describe('react-native-build', () => {
       return Promise.resolve({}) as any;
     });
 
-    await expect(main(['--output-dir', '/output'])).rejects.toThrow('process.exit');
+    await expect(main(['--output-dir', '/output'])).rejects.toThrow('gradle failed');
     expect(mockedRmSync).not.toHaveBeenCalled();
   });
 
@@ -321,8 +308,7 @@ describe('react-native-build', () => {
       return Promise.resolve({}) as any;
     });
 
-    await expect(main([])).rejects.toThrow('process.exit');
-    expect(console.error).toHaveBeenCalledWith(expect.stringContaining('gradle failed'));
+    await expect(main([])).rejects.toThrow('gradle failed');
   });
 
   it('exits with error when output artifact exists and --overwrite is not passed', async () => {
@@ -334,10 +320,7 @@ describe('react-native-build', () => {
     });
     mockedExistsSync.mockReturnValue(true);
 
-    await expect(main([])).rejects.toThrow('process.exit');
-    expect(console.error).toHaveBeenCalledWith(
-      expect.stringContaining('already exists. Use --overwrite')
-    );
+    await expect(main([])).rejects.toThrow('already exists. Use --overwrite');
   });
 
   it('proceeds with build when --overwrite is passed and artifact exists', async () => {

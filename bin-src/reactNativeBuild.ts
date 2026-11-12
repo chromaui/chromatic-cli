@@ -30,10 +30,6 @@ function callout(title: string, message?: string) {
   );
 }
 
-function error(message: string, title?: string) {
-  console.error(chalk.bold.red('✖ ') + chalk.bold(title || 'Error') + '\n  → ' + message);
-}
-
 function humanizeDuration(seconds: number) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -111,19 +107,17 @@ function resolvePlatforms(config: ExpoConfig, requestedPlatforms: string[] | und
   if (requestedPlatforms) {
     const invalid = requestedPlatforms.filter((p) => !SUPPORTED_PLATFORMS.includes(p));
     if (invalid.length > 0) {
-      error(`Invalid platform ${invalid.map((p) => `"${p}"`).join(', ')}.
+      throw new Error(`Invalid platform ${invalid.map((p) => `"${p}"`).join(', ')}.
 Supported platforms: ${SUPPORTED_PLATFORMS.join(', ')}`);
-      process.exit(1);
     }
   }
 
   const configPlatforms = (config.platforms || []).filter((p) => SUPPORTED_PLATFORMS.includes(p));
 
   if (configPlatforms.length === 0) {
-    error(
+    throw new Error(
       'No supported platforms found in Expo config. Expected "android" and/or "ios" in the platforms array.'
     );
-    process.exit(1);
   }
 
   const platforms = requestedPlatforms
@@ -131,9 +125,8 @@ Supported platforms: ${SUPPORTED_PLATFORMS.join(', ')}`);
     : configPlatforms;
 
   if (platforms.length === 0) {
-    error(`Requested platform ${(requestedPlatforms || []).map((p) => `"${p}"`).join(', ')} not found in Expo config.
+    throw new Error(`Requested platform ${(requestedPlatforms || []).map((p) => `"${p}"`).join(', ')} not found in Expo config.
 Available platforms: ${configPlatforms.join(', ')}`);
-    process.exit(1);
   }
 
   return platforms;
@@ -196,14 +189,8 @@ export async function main(argv: string[]) {
   const { requestedPlatforms, outputDir, overwrite } = parseFlags(argv);
   const { androidBuildArchitectures } = await readReactNativeConfig();
 
-  let config: ExpoConfig;
-  try {
-    info('Reading configuration from Expo', 'npx expo config --json');
-    config = await readExpoConfig();
-  } catch (err) {
-    error(err.message);
-    process.exit(1);
-  }
+  info('Reading configuration from Expo', 'npx expo config --json');
+  const config = await readExpoConfig();
 
   const platforms = resolvePlatforms(config, requestedPlatforms);
 
@@ -233,13 +220,12 @@ export async function main(argv: string[]) {
     await new Promise<void>((resolve) => logStream.end(resolve));
   } catch (err) {
     await new Promise<void>((resolve) => logStream.end(resolve));
-    error(err.message);
     if (isTemporary) {
       rmSync(artifactDirectory, { recursive: true, force: true });
     } else {
       info('Build failed, see log for details', logFilePath);
     }
-    process.exit(1);
+    throw err;
   }
 
   console.log(chalk.bold.green('✔ ') + chalk.bold('Build Complete'));

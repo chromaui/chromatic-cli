@@ -42,7 +42,6 @@ vi.mock('../node-src/lib/log', () => ({
 beforeEach(() => {
   vi.spyOn(process, 'cwd').mockReturnValue('/repo');
   vi.spyOn(process.stdout, 'write').mockReturnValue(true);
-  vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
 });
 
 afterEach(() => {
@@ -177,21 +176,18 @@ describe('turbosnap-manifest', () => {
   it('names the missing stats file and prints the help, without building anything', async () => {
     vi.mocked(existsSync).mockReturnValueOnce(false);
 
-    await main(['-s', 'dist/stats.json']);
+    const failure = main(['-s', 'dist/stats.json']);
 
-    expect(testLogger.errors[0]).toContain('No stats file at /repo/dist/stats.json');
-    expect(testLogger.errors[1]).toContain('--stats-file');
-    expect(process.exit).toHaveBeenCalledWith(1);
+    await expect(failure).rejects.toThrow('No stats file at /repo/dist/stats.json');
+    await expect(failure).rejects.toThrow('--stats-file');
     expect(buildManifest).not.toHaveBeenCalled();
   });
 
-  it('logs the message and exits when building the manifest fails', async () => {
+  it('fails without printing a manifest when building the manifest fails', async () => {
     vi.mocked(buildManifest).mockRejectedValueOnce(new Error('bad stats file'));
 
-    await main([]);
+    await expect(main([])).rejects.toThrow('bad stats file');
 
-    expect(testLogger.error).toHaveBeenCalledWith('Error: bad stats file');
-    expect(process.exit).toHaveBeenCalledWith(1);
     expect(process.stdout.write).not.toHaveBeenCalled();
   });
 });

@@ -40,7 +40,6 @@ beforeEach(() => {
 
 afterEach(() => {
   mockfs.restore();
-  process.exitCode = undefined;
   vi.restoreAllMocks();
 });
 
@@ -56,7 +55,6 @@ describe('Trim Stats File', () => {
     vi.spyOn(console, 'log').mockImplementation(() => undefined);
     await main(['./stats.json/preview-stats.json']);
     expect(existsSync('./stats.json/preview-stats.trimmed.json')).toBe(true);
-    expect(process.exitCode).toBeUndefined();
   });
 
   it('keeps only user code modules, with deduped user code reasons', async () => {
@@ -95,10 +93,8 @@ describe('Trim Stats File', () => {
     expect(existsSync('./storybook-static/preview-stats.trimmed.json')).toBe(false);
   });
 
-  it('sets a non-zero exit code when the input cannot be read', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    await main(['./nope.json']);
-    expect(process.exitCode).toBe(1);
+  it('fails when the input cannot be read', async () => {
+    await expect(main(['./nope.json'])).rejects.toThrow('ENOENT');
   });
 
   it('rejects unknown flags instead of treating the next argument as their value', async () => {

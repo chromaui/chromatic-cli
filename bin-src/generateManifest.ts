@@ -62,26 +62,19 @@ export async function main(argv: string[]) {
   const log = createLogger({}, { logPrefix: '', logLevel: 'debug' });
 
   if (!flags.outputDir) {
-    log.error('Error: --output-dir is required');
-    process.exitCode = 1;
-    return;
+    throw new Error('--output-dir is required');
   }
 
-  try {
-    const configuration = await getConfiguration();
-    const ctx: Context = {
-      log,
-      options: {
-        storybookConfigDir: flags.storybookConfigDir,
-        reactNative: configuration.reactNative,
-      },
-      sourceDir: path.resolve(flags.outputDir),
-    } as any;
+  const configuration = await getConfiguration();
+  const ctx: Context = {
+    log,
+    options: {
+      storybookConfigDir: flags.storybookConfigDir,
+      reactNative: configuration.reactNative,
+    },
+    sourceDir: path.resolve(flags.outputDir),
+  } as any;
 
-    await validateStorybookReactNativeVersion(ctx);
-    await generateManifest(ctx, { sourceDir: ctx.sourceDir });
-  } catch (err) {
-    log.error(`Error: ${err.message}`);
-    process.exit(1);
-  }
+  await validateStorybookReactNativeVersion(ctx);
+  await generateManifest(ctx, { sourceDir: ctx.sourceDir });
 }
