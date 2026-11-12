@@ -82,6 +82,8 @@ export default [
       '@typescript-eslint/no-explicit-any': 'off',
       //   '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-floating-promises': 'error',
+      // See the rules table in AGENTS.md. Existing hits are recorded in eslint-suppressions.json.
+      '@typescript-eslint/no-unnecessary-condition': 'error',
       '@typescript-eslint/no-unnecessary-type-assertion': 'error',
     },
   },

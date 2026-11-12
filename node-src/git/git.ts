@@ -711,10 +711,10 @@ export async function getRepositoryCreationDate(deps: GitDeps) {
  * @returns Date The date the storybook was added, or `undefined` if the command fails or times out.
  */
 export async function getStorybookCreationDate(
-  deps: GitDeps & { options?: { storybookConfigDir?: string } }
+  deps: GitDeps & { options: { storybookConfigDir?: string } }
 ) {
   try {
-    const configDirectory = deps.options?.storybookConfigDir ?? '.storybook';
+    const configDirectory = deps.options.storybookConfigDir ?? '.storybook';
     const dateString = await execGitCommandOneLine(
       deps,
       `git log --follow --reverse --format=%cd --date=iso -- ${configDirectory}`,
