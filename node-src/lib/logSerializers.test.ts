@@ -10,7 +10,7 @@ it('strips off envPairs', () => {
   } catch (execError) {
     err = execError;
   }
-  expect((errorSerializer(err) as any).envPairs).toBeUndefined();
+  expect(errorSerializer(err).envPairs).toBeUndefined();
 });
 
 it('does not add random things to the error', () => {

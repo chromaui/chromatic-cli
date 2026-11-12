@@ -62,7 +62,7 @@ beforeEach(() => {
   });
 
   mockedGetConfiguration.mockResolvedValue({});
-  mockedMkdtempSync.mockReturnValue('/tmp/chromatic-rn-build-test' as any);
+  mockedMkdtempSync.mockReturnValue('/tmp/chromatic-rn-build-test');
   mockedOpenLogFileStream.mockResolvedValue({
     write: vi.fn(),
     end: vi.fn((callback: () => void) => callback()),

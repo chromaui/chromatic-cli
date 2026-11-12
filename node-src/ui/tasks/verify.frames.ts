@@ -36,28 +36,23 @@ const update = (output: string) =>
 export const Pending = () => make(pending(ctx));
 
 export const RunOnlyChangedFiles = () =>
-  update(
-    runOnlyFiles({ ...ctx, onlyStoryFiles: Array.from({ length: 12 }), options: {} } as any).output
-  );
+  update(runOnlyFiles({ ...ctx, onlyStoryFiles: Array.from({ length: 12 }), options: {} }).output);
 
 export const RunOnlyFiles = () =>
-  update(
-    runOnlyFiles({ ...ctx, options: { onlyStoryFiles: ['./src/**/*.stories.js'] } } as any).output
-  );
+  update(runOnlyFiles({ ...ctx, options: { onlyStoryFiles: ['./src/**/*.stories.js'] } }).output);
 
 export const RunOnlyNames = () =>
-  update(runOnlyNames({ ...ctx, options: { onlyStoryNames: ['MyComponent/**'] } } as any).output);
+  update(runOnlyNames({ ...ctx, options: { onlyStoryNames: ['MyComponent/**'] } }).output);
 
 export const AwaitingUpgrades = () =>
   update(awaitingUpgrades(ctx, [{ completedAt: 123 }, { completedAt: null }]).output);
 
-export const Started = () => make(success({ ...ctx, build } as any), pending(ctx));
+export const Started = () => make(success({ ...ctx, build }), pending(ctx));
 
-export const Published = () =>
-  make(success({ ...ctx, isPublishOnly: true, build } as any), pending(ctx));
+export const Published = () => make(success({ ...ctx, isPublishOnly: true, build }), pending(ctx));
 
 export const ContinueSetup = () =>
-  make(success({ ...ctx, isOnboarding: true, build } as any), pending(ctx));
+  make(success({ ...ctx, isOnboarding: true, build }), pending(ctx));
 
 export const DryRun = () => make(dryRun(ctx), pending(ctx));
 

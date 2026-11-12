@@ -26,12 +26,12 @@ export const Building = () => make(pending());
 export const BuildingAndroid = () => make(pendingAndroid(), pending());
 
 export const BuildingAndroidWithCommand = () =>
-  make(pendingAndroid({ androidBuildCommand: 'my-android-build' } as any), pending());
+  make(pendingAndroid({ androidBuildCommand: 'my-android-build' }), pending());
 
 export const BuildingIOS = () => make(pendingIOS(), pending());
 
 export const BuildingIOSWithCommand = () =>
-  make(pendingIOS({ iosBuildCommand: 'my-ios-build' } as any), pending());
+  make(pendingIOS({ iosBuildCommand: 'my-ios-build' }), pending());
 
 export const GeneratingManifest = () => make(pendingManifest(), pending());
 

@@ -249,7 +249,7 @@ describe('gatherGitInfo', () => {
     client.runQuery.mockReturnValue({ app: { isOnboarding: false, lastBuild } });
 
     const result = await gatherGitInfo(
-      buildDeps({ runtime: { forceRebuild: true } as any }),
+      buildDeps({ runtime: { forceRebuild: true } }),
       buildInput()
     );
 

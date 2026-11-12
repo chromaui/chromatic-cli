@@ -347,7 +347,7 @@ describe('setBuildCommand', () => {
   );
 
   it('forwards E2E build arguments through npm exec when running in the action', async () => {
-    getCliCommand.mockImplementation(async (runner, args) => runner('npm', args as string[]));
+    getCliCommand.mockImplementation(async (runner, args) => runner('npm', args));
 
     const result = await setBuildCommand(
       { ...baseDeps, options: { playwright: true, inAction: true } },

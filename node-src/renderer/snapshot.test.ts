@@ -5,16 +5,15 @@ import { renderSnapshot } from './snapshot';
 
 // `actualTestCount: 0` keeps the `pending` transition off the stats path (it needs only the count),
 // so these fixtures stay minimal. The snapshot task self-skips before touching anything else.
-const createContext = (overrides: any) =>
-  ({
-    client: { runQuery: () => undefined },
-    env: {},
-    log: new TestLogger(),
-    git: { matchesBranch: () => false },
-    build: { actualTestCount: 0 },
-    options: {},
-    ...overrides,
-  }) as any;
+const createContext = (overrides: any) => ({
+  client: { runQuery: () => undefined },
+  env: {},
+  log: new TestLogger(),
+  git: { matchesBranch: () => false },
+  build: { actualTestCount: 0 },
+  options: {},
+  ...overrides,
+});
 
 describe('renderSnapshot skip frames', () => {
   it('renders the dry-run frame and does not set an exit code', async () => {

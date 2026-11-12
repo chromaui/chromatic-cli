@@ -18,7 +18,7 @@ const mockEntries = (entryNames: string[]) => {
   const entries = entryNames.map((entryName) => ({ entryName }));
   AdmZipMock.mockImplementation(function (this: { getEntries: () => typeof entries }) {
     this.getEntries = () => entries;
-  } as any);
+  });
 };
 
 describe('validateAndroidArtifact', () => {

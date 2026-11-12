@@ -21,7 +21,7 @@ const mockCreateRequire = vi.mocked(
   }
 );
 const mockReadJson = vi.mocked(readJson as (file: string) => Promise<{ version?: string }>);
-const mockPathExists = vi.mocked(pathExists as (path: string) => Promise<boolean>);
+const mockPathExists = vi.mocked<(path: string) => Promise<boolean>>(pathExists);
 const mockResolvePaths = vi.fn();
 
 const ctx = { log: new TestLogger() };

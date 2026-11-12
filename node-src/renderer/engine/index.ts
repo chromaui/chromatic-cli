@@ -73,7 +73,7 @@ export async function runTask<TInput, TOutput, TPartial = never>(
 
   ctx.task = config.name;
   ctx.title = config.title;
-  ctx.startedAt = Number.isInteger(ctx.now) ? (ctx.now as number) : Date.now();
+  ctx.startedAt = Number.isInteger(ctx.now) ? ctx.now : Date.now();
   ctx.options.experimental_abortSignal?.throwIfAborted();
   ctx.options.experimental_onTaskStart?.({ ...ctx });
 
