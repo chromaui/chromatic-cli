@@ -11,6 +11,10 @@ This directory is the maintained source for verifying the user-facing behavior o
 - Preflight journeys run in `$FIXTURE`, created by `$S fixture`. Subcommand journeys run from the repo root. Journeys that build a Storybook, commit, or need another builder, package manager or a monorepo run in an e2e fixture from `$S e2e-fixture <name>` (see SKILL.md).
 - `publish-build` additionally needs `doctor` to report the backend as reachable and `CHROMATIC_PROJECT_TOKEN` as set, with a disposable project's token.
 
+## Default check for a behavior change
+
+Verify any change to the main command's behavior or output with `$S matrix -- <args>` first (see SKILL.md). It publishes the invocation in every builder fixture and prints the evidence block for the PR. Add `--turbosnap` for anything TurboSnap touches, `--package-managers` for git, dependency or monorepo changes, and `--compare "$(git merge-base HEAD origin/main)"` to show the before and after. The feature recipes below cover what the matrix doesn't: offline subcommands, preflight errors, and multi-step journeys.
+
 ## Driving conventions
 
 - Drive only `dist/bin.cjs`, through `$S run` (non-TTY) or `$S tty` (TTY). Never call `node-src` functions.
@@ -28,7 +32,7 @@ This directory is the maintained source for verifying the user-facing behavior o
 - File-writing proof includes the written file copied into the evidence label dir and a read-only inspection of it with `jq`, `wc` or `ls`.
 - Record the feature ID and entry point with every artifact. The evidence label carries the ID.
 - Report an unreachable path with the attempted command and the unmet precondition. A blocked backend is a precondition failure, not a pass.
-- Do not report a skipped entry point as verified through a different path. A `--dry-run` result never stands in for a publish.
+- Do not report a skipped entry point as verified through a different path. A `--dry-run` result never stands in for a publish, and one fixture never stands in for the matrix.
 
 ## Feature entry contract
 

@@ -26,6 +26,8 @@ Work often starts from a Linear ticket or bug report that contains private detai
 - The URL itself is public even though the page is not. Obvious builds URLs from the ticket title (e.g. `cap-1234-short-summary`), so the slug must meet the same bar as a branch name. If the title names a customer or anything else on the list above, use a neutral project name or leave the link out.
 - Never quote or summarize the thread's content in the PR, since that content was written under the assumption that it stays private.
 
+**Exception: `control-chromatic matrix` evidence.** PR bodies may include the evidence block `matrix` prints, with the project ID and build links of the internal test project behind `CHROMATIC_PROJECT_TOKEN`. Those builds are private to Chromatic. This covers that block in PR bodies only, never a customer's project, and never the token.
+
 Instead:
 
 - **Reference tickets by identifier only**, e.g. `CAP-1234`. Linear's GitHub integration links it automatically.
@@ -52,7 +54,7 @@ When the user names labels, use theirs. Never add `DO NOT MERGE` unless asked; `
 
 ## Verify changes in the real CLI
 
-Unit tests don't show that the CLI behaves correctly for users. Before you call a change to `bin-src/` or `node-src/` that affects behavior or output done, or open or update a PR for it, load the `verify-chromatic-cli` skill (`.agents/skills/verify-chromatic-cli/`) and drive the built CLI through its `control-chromatic` helper. That covers comparing `main` against your branch (`build-ref`), reproducing a bug in an e2e fixture project with another builder or package manager (`e2e-fixture`), and trying a published canary (`install-published`). A refactor or performance change that keeps output identical needs only tests and an explanation. When reviewing, re-run it only if the author's evidence doesn't cover the change. If the helper can't do what the change needs, extend it in the same PR instead of working around it. When you can't verify something, say what and why in the PR.
+Unit tests don't show that the CLI behaves correctly for users. Before you call a change to `bin-src/` or `node-src/` that affects behavior or output done, or open or update a PR for it, load the `verify-chromatic-cli` skill (`.agents/skills/verify-chromatic-cli/`) and drive the built CLI through its `control-chromatic` helper. Start with `control-chromatic matrix`, which publishes your invocation in every builder fixture and prints the evidence block for the PR. The helper also covers comparing `main` against your branch (`build-ref`), reproducing a bug in an e2e fixture project with another builder or package manager (`e2e-fixture`), and trying a published canary (`install-published`). A refactor or performance change that keeps output identical needs only tests and an explanation. When reviewing, re-run it only if the author's evidence doesn't cover the change. If the helper can't do what the change needs, extend it in the same PR instead of working around it. When you can't verify something, say what and why in the PR.
 
 ## Rules and what enforces them
 
@@ -69,6 +71,7 @@ When a mistake keeps coming back, enforce the rule with a check and record it he
 | The bundled `dist/node.d.cts` typechecks for consumers with `skipLibCheck: false` | `yarn typescript:check-declarations` in the lint-and-test workflow |
 | Prettier skips Markdown, so it keeps its compact formatting; JS/TS must match Prettier | `.prettierignore` (`*.md`); ESLint `prettier/prettier` for JS/TS |
 | Behavior and output changes are verified in the real CLI | Judgment ([Verify changes in the real CLI](#verify-changes-in-the-real-cli)) |
+| That verification publishes for real in every builder fixture, never one fixture, `--dry-run`, or `-t` | `control-chromatic matrix`, which refuses `--dry-run` and `-t` and prints the PR evidence block; using it is judgment |
 | No private customer details in public places | Judgment ([This repository is public](#this-repository-is-public)) |
 
 ## Service map

@@ -51,6 +51,26 @@ This is read-only. Each line starts with `PASS`, `FAIL` or `INFO`, and the comma
 
 Run it first, and again whenever output looks wrong.
 
+## Verify a behavior change: `matrix`
+
+For any change to the main command's behavior or output, start with `matrix`. It is the evidence a PR needs, and the drivers below are for the journeys it doesn't cover. Run `setup` first; `matrix` refuses a stale `dist/`.
+
+```bash
+export CHROMATIC_PROJECT_TOKEN=…   # a disposable project's token; matrix refuses -t
+$S matrix [--turbosnap] [--package-managers] [--compare <ref>] [--cli BUNDLE] [--fixtures a,b] [--jobs N] -- <chromatic args...>
+```
+
+- **Default:** one real publish of the same invocation in a fresh copy of each builder fixture (`react-vite`, `react-webpack5`, `react-rsbuild`), three at a time. `--build-script-name build-storybook` is added unless the arguments name a build.
+- `--turbosnap` adds two cells per fixture. Each publishes a baseline, commits a change to `Button`, then runs the invocation with `--only-changed`: once with `CHROMATIC_TURBOSNAP_DISABLE_HASHES=true` (TurboSnap 1.0), once with `CHROMATIC_TURBOSNAP_DISABLE_V1=true` (2.0). A cell counts only when its diagnostics show that this invocation published its own build in the mode asked for (a TurboSnap skip also counts, and links its ancestor). Anything else is reported as not covered: a build that was announced but never published, a build skipped some other way such as `--skip`, TurboSnap running in an off cell, or a CLI that stopped before writing diagnostics.
+- `--package-managers` adds the `monorepo-*` fixtures (npm, Yarn 1, Yarn 4, pnpm).
+- `--compare <ref>` repeats every cell with the CLI built at `<ref>` by `build-ref` (usually `$(git merge-base HEAD origin/main)`) and lists the cells whose exit differs.
+- `--cli BUNDLE` drives another bundle, such as one from `install-published`, in place of `dist/bin.cjs`.
+- `--fixtures a,b` replaces the three builder fixtures; `--package-managers` still adds the monorepos to it.
+
+It prints one Markdown evidence block, also saved to `$EVIDENCE/matrix.md`: the CLI and commit, the project ID (never the token), the invocation, then one row per cell with the fixture, builder, package manager, TurboSnap mode, exit code and key, build link, and snapshot counts, and finally every skipped or uncovered cell with the reason. Paste it into the PR as it is. It warns when the CLI exited differently across cells, which is usually the builder-specific break a one-fixture run misses. `matrix` exits 1 when any cell was skipped or not covered, whatever the CLI exited; read the table for the CLI's results. Each cell's streams and `d.json` are under `$EVIDENCE/m-<cli>-<fixture>-<mode>/`.
+
+Never report a change as verified with a weaker substitute: only one fixture, `--dry-run` (which `matrix` refuses in every spelling, because it skips publish and tests), one TurboSnap mode for a TurboSnap change, a script that imports `node-src`, or someone's personal project token. When a cell can't run, the block says why; leave it in the PR rather than dropping the row.
+
 ## Drive
 
 Two drivers, both writing to `$EVIDENCE/<label>/`:
@@ -107,7 +127,7 @@ Driving through `$S run` or `$S tty` matters: they give the CLI a pipe or TTY on
 $S cleanup
 ```
 
-It stops only the tmux servers this `RUN_ID` started, as recorded in `$RUN_DIR/tmux-sessions`. It never kills by process name. It removes the `$CHECKOUT` worktree and deletes its `vcc-$RUN_ID` branch, removes `$WORK` (the Storybook builds, the fixture, trimmed stats), scrubs every JSON file in `$EVIDENCE`, and then lists the surviving `$EVIDENCE`. Run it after every failed iteration too. It does not touch the developer's branch, working tree, `node_modules/` or `dist/`. The next run reuses them.
+It stops only the tmux servers this `RUN_ID` started, as recorded in `$RUN_DIR/tmux-sessions`. It never kills by process name. It removes the `$CHECKOUT` worktree and deletes its `vcc-$RUN_ID` branch, removes `$WORK` (the Storybook builds, the fixture, trimmed stats), scrubs every JSON file in `$EVIDENCE`, and then lists the surviving `$EVIDENCE`. Run it after every failed iteration too. It refuses while a `matrix` for the same `RUN_ID` is still running; an interrupted `matrix` stops its own cells first. It does not touch the developer's branch, working tree, `node_modules/` or `dist/`. The next run reuses them.
 
 A real publish (`publish-build`) leaves a build on the Chromatic project. Cleanup cannot undo that. Use a disposable project token or staging.
 
@@ -128,6 +148,7 @@ A real publish (`publish-build`) leaves a build on the Chromatic project. Cleanu
 | `$S install-published <name> <version>` | Install a published release or canary under `$WORK`; prints its `bin.cjs` |
 | `$S run <label> [--cwd D] [--cli B] -- args` | Non-TTY drive with captured stdout/stderr/exit; `--cli` picks another bundle |
 | `$S tty <label> [--cwd D] [--cli B] [--timeout N] -- args` | TTY drive on its own tmux server; captured pane + exit |
+| `$S matrix [--turbosnap] [--package-managers] [--compare R] [--cli B] [--fixtures a,b] [--jobs N] -- args` | Publish one invocation in every builder fixture (optionally both TurboSnap modes, the monorepos, and a base CLI); prints the PR evidence block |
 | `$S cleanup` | Stop owned tmux servers, remove the checkout, ref builds, and `$WORK`, scrub and keep `$EVIDENCE` |
 
 Keep the feature map honest as the CLI changes. See `/maintain-verification-skill`.

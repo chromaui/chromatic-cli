@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # control-chromatic — drive the locally built Chromatic CLI (dist/bin.cjs) and capture proof.
-# Usage: control-chromatic <setup|rebuild|env|doctor|fixture|e2e-fixture|commit|checkout|checkout-storybook|build-ref|install-published|run|tty|cleanup> [...]
+# Usage: control-chromatic <setup|rebuild|env|doctor|fixture|e2e-fixture|commit|checkout|checkout-storybook|build-ref|install-published|run|tty|matrix|cleanup> [...]
 # Every run is scoped by RUN_ID (default: "default"); state lives in $VERIFY_ROOT/$RUN_ID.
 set -euo pipefail
 
@@ -28,6 +28,7 @@ CHECKOUT_SB_DIR="$WORK/checkout-storybook-static"
 CLI="$REPO/dist/bin.cjs"
 TMUX_PREFIX="vcc-$RUN_ID-"
 SESSIONS_FILE="$RUN_DIR/tmux-sessions"
+MATRIX_PID="$RUN_DIR/matrix.pid"
 
 # Yarn 4 comes from corepack; repo.yarnpkg.com can be blocked by egress policy, npm is not.
 export COREPACK_NPM_REGISTRY="${COREPACK_NPM_REGISTRY:-https://registry.npmjs.org}"
@@ -82,6 +83,11 @@ build_storybook() {
   echo "    stats: $out/preview-stats.json"
 }
 
+# Sources edited after dist/bin.cjs was built, so driving it would not exercise them.
+stale_sources() {
+  find "$REPO/bin-src" "$REPO/node-src" -type f -newer "$CLI" -not -name '*.test.ts' -not -name '*.stories.ts' 2>/dev/null | head -3
+}
+
 cmd_doctor() {
   local fail=0
   ok()   { echo "PASS  $*"; }
@@ -97,7 +103,7 @@ cmd_doctor() {
     got="$(node "$CLI" --version 2>/dev/null || true)"
     if [[ "$got" == "$want" ]]; then ok "dist/bin.cjs --version = $got"; else bad "dist/bin.cjs --version = '$got', package.json = '$want'"; fi
     local newer
-    newer="$(find "$REPO/bin-src" "$REPO/node-src" -type f -newer "$CLI" -not -name '*.test.ts' -not -name '*.stories.ts' 2>/dev/null | head -3)"
+    newer="$(stale_sources)"
     if [[ -z "$newer" ]]; then ok "dist is newer than bin-src/ and node-src/"; else bad "dist is stale (newer sources: $(echo $newer | tr '\n' ' ')) — run: control-chromatic rebuild"; fi
   else
     bad "$CLI missing — run: control-chromatic setup"
@@ -299,6 +305,13 @@ cmd_run() {
   echo "-- stderr ($(wc -l < "$out/stderr.txt") lines, first 20):"; head -20 "$out/stderr.txt"
 }
 
+# kill_tree <pid>: stop a process and everything it started.
+kill_tree() {
+  local kids a; kids="$(pgrep -P "$1" || true)"
+  kill "$1" 2> /dev/null || true
+  for a in $kids; do kill_tree "$a"; done
+}
+
 # kill_tmux <session>: stop the drive's own tmux server and remove the socket it leaves behind.
 kill_tmux() {
   tmux -L "$1" kill-server 2>/dev/null || true
@@ -345,6 +358,275 @@ cmd_tty() {
   grep -v '^$' "$out/pane.txt" | head -40
 }
 
+# args_have "<flags>" <args...>: whether any arg is one of the space-separated flags, alone or as --flag=value.
+args_have() {
+  local wants="$1" a want; shift
+  for a in "$@"; do
+    for want in $wants; do [[ "$a" == "$want" || "$a" == "$want="* ]] && return 0; done
+  done
+  return 1
+}
+
+# The Storybook builder and package manager a fixture uses, read from its manifests, so the evidence
+# can't drift from the fixtures.
+fixture_builder() {
+  local pkg="$1/package.json"
+  [[ -f "$1/packages/ui/package.json" ]] && pkg="$1/packages/ui/package.json"
+  case " $(jq -r '[.dependencies, .devDependencies] | add | keys | join(" ")' "$pkg") " in
+    *' @storybook/react-vite '*) echo Vite ;;
+    *' @storybook/react-webpack5 '*) echo 'webpack 5' ;;
+    *' storybook-react-rsbuild '*) echo rsbuild ;;
+    *) echo unknown ;;
+  esac
+}
+fixture_package_manager() { jq -r '.packageManager // "npm" | sub("@(?<v>[0-9]+).*"; " \(.v)")' "$1/package.json"; }
+
+# matrix_row <file> <cli> <fixture> <mode> <status> <exit> <exitCodeKey> <build> <snapshots> <note> <project ID>:
+# one tab-separated cell result. Status is ran, skipped, or uncovered (it ran, but not in the TurboSnap mode
+# asked for). Empty fields are "-", because read collapses consecutive tabs.
+matrix_row() { local file="$1"; shift; local IFS=$'\t'; printf '%s\n' "$*" > "$file"; }
+
+# matrix_cell <cell dir> <id> <cli name> <bundle> <fixture> <mode> <chromatic args...>: one cell, run as a
+# background job.
+matrix_cell() {
+  local cells="$1" id="$2" which="$3" cli="$4" name="$5" mode="$6"; shift 6
+  row() { matrix_row "$cells/$id.cell" "$which" "$name" "$mode" "$@"; }
+  skip() { row skipped - - - - "$1" -; }
+
+  # A fresh copy per cell puts every cell on its own branch, so no cell is another's baseline. Copies of
+  # one fixture install one at a time: Yarn 1's shared cache corrupts under concurrent installs.
+  local copy="m-$which-$mode" dir cwd lock="$cells/$name.lock"
+  until mkdir "$lock" 2> /dev/null; do sleep 1; done
+  dir="$(cmd_e2e_fixture "$name" "$copy" 2>&1 | tail -1)" || true
+  rmdir "$lock"
+  if [[ ! -d "$dir" ]]; then
+    cp "$WORK/e2e-$name.$copy.log" "$cells/$id.fixture.log" 2> /dev/null || true
+    skip "fixture setup failed (log: matrix/$id.fixture.log in the evidence dir)"; return
+  fi
+  cwd="$dir"; [[ -d "$dir/packages/ui" ]] && cwd="$dir/packages/ui"
+  # A fresh copy has one commit, which is fatal under CI. This job is a subshell, so this unset stays here.
+  unset CI CHROMATIC_TURBOSNAP_DISABLE_HASHES CHROMATIC_TURBOSNAP_DISABLE_V1
+
+  local label="m-$id" args=("$@")
+  args_have "-b --build-script-name --build-command -d --storybook-build-dir" "$@" \
+    || args=(--build-script-name build-storybook "$@")
+  if [[ "$mode" != off ]]; then
+    if [[ "$mode" == v1 ]]; then export CHROMATIC_TURBOSNAP_DISABLE_HASHES=true; else export CHROMATIC_TURBOSNAP_DISABLE_V1=true; fi
+    mkdir -p "$EVIDENCE/$label-baseline"
+    cmd_run "$label-baseline" --cwd "$cwd" --cli "$cli" -- --build-script-name build-storybook --only-changed \
+      --exit-zero-on-changes --skip-update-check --diagnostics-file "$EVIDENCE/$label-baseline/d.json" > /dev/null
+    local base_code; base_code="$(cat "$EVIDENCE/$label-baseline/exit_code")"
+    [[ "$base_code" == 0 ]] || { skip "TurboSnap baseline build exited $base_code (evidence: $label-baseline)"; return; }
+    sed -i.bak 's/New/Fresh/' "$cwd/src/Button.tsx" && rm -f "$cwd/src/Button.tsx.bak"
+    cmd_commit "$dir" "Change Button" > /dev/null
+    args_have --only-changed "${args[@]}" || args+=(--only-changed)
+  fi
+  mkdir -p "$EVIDENCE/$label"
+  cmd_run "$label" --cwd "$cwd" --cli "$cli" -- "${args[@]}" --diagnostics-file "$EVIDENCE/$label/d.json" > /dev/null
+
+  # A cell counts only on affirmative evidence in its diagnostics: this invocation's own build (.build holds the
+  # TurboSnap baseline until the current build is published), made in the TurboSnap mode asked for.
+  local code d="$EVIDENCE/$label/d.json" key=- build=- snaps=- app=- ran=off bail=- pub=none note="" status=ran
+  code="$(cat "$EVIDENCE/$label/exit_code")"
+  if [[ -s "$d" ]]; then
+    IFS=$'\t' read -r key build snaps app ran bail pub < <(jq -r '
+      (.announcedBuild.number != null and .build.number == .announcedBuild.number
+        and .announcedBuild.status == "PUBLISHED") as $published | [
+      .exitCodeKey // "-",
+      (if .skip == true then .build.number else .announcedBuild.number end // "-" | tostring),
+      (if $published then .build.actualCaptureCount as $c | .build.inheritedCaptureCount as $i
+        | if $c == null then "-" elif ($i // 0) > 0 then "\($c) captured, \($i) inherited" else "\($c) captured" end
+        else "-" end),
+      (.announcedBuild.app.id // ((.build.webUrl // "") | capture("appId=(?<a>[^&]+)").a) // "-"),
+      (if .hashBasedTurboSnap != null then "v2" elif .turboSnap != null then "v1" else "off" end),
+      (if .hashBasedTurboSnap.bailed == true then "TurboSnap 2.0 bailed: \(.hashBasedTurboSnap.bailReason // "?")."
+        elif (.turboSnap.bailReason | type) == "object" then "TurboSnap bailed: \(.turboSnap.bailReason | keys | join(", "))."
+        else "-" end),
+      (if .options.dryRun == true then "dry"
+        elif .skip == true then (if .turboSnap != null and .build.number != null then "skipped" else "nothing" end)
+        elif $published then "published"
+        else "unpublished" end)] | @tsv' "$d")
+  fi
+  [[ "$bail" == - ]] && bail=""
+  case "$pub" in
+    none) status=uncovered note="No diagnostics file: the CLI stopped before writing it, so nothing shows a publish." ;;
+    dry) status=uncovered note="It ran as a dry run, so nothing was published." ;;
+    unpublished) status=uncovered note="Build $build was announced but never published." ;;
+    skipped) note="TurboSnap skipped the build, so the link is its ancestor." ;;
+    nothing) status=uncovered note="The CLI skipped the build without TurboSnap (such as with --skip), so nothing was built or published." ;;
+  esac
+  if [[ "$pub" != none && "$pub" != nothing && "$ran" != "$mode" ]]; then
+    status=uncovered
+    case "$mode:$ran" in
+      off:*) note="TurboSnap ran (from the arguments or a config file), so this isn't the TurboSnap-off cell. $note" ;;
+      *:off) note="TurboSnap didn't run. $note" ;;
+      v1:v2) note="The index applied TurboSnap 2.0, so 1.0 didn't decide this build. $note" ;;
+      v2:v1) note="The index didn't apply TurboSnap 2.0, so 1.0 decided this build. $note" ;;
+    esac
+  fi
+  note="$bail $note"; note="${note# }"
+  note="${note% }"
+  row "$status" "$code" "$key" "$build" "$snaps" "${note:--}" "$app"
+}
+
+# matrix [--fixtures a,b] [--package-managers] [--turbosnap] [--compare REF] [--cli BUNDLE] [--jobs N] -- <chromatic args...>
+# Publishes one CLI invocation for real in a fresh copy of every builder fixture (the e2e fixtures with the
+# Storybook at the root), so a builder-specific break can't hide behind the one fixture that was tried.
+# --package-managers adds the monorepo-* fixtures. --turbosnap adds two cells per fixture, each a baseline,
+# a committed Button change, then the invocation with --only-changed under TurboSnap 1.0 (v1) or 2.0 (v2).
+# --compare repeats every cell with the CLI built at REF. Prints one Markdown evidence block, also saved to
+# $EVIDENCE/matrix.md. Exits 0 when every cell published a build in the mode asked for, else 1, whatever the CLI exited.
+cmd_matrix() {
+  local fixtures="" pms=0 turbosnap=0 compare="" cli="$CLI" jobs=3 a
+  while [[ $# -gt 0 && "$1" != "--" ]]; do
+    case "$1" in
+      --fixtures) fixtures="${2//,/ }"; shift 2 ;;
+      --package-managers) pms=1; shift ;;
+      --turbosnap) turbosnap=1; shift ;;
+      --compare) compare="$2"; shift 2 ;;
+      --cli) cli="$(cli_path "$2")"; shift 2 ;;
+      --jobs) jobs="$2"; shift 2 ;;
+      *) die "unknown matrix option $1" ;;
+    esac
+  done
+  [[ "${1:-}" == "--" ]] && shift
+  [[ "$jobs" =~ ^[1-9][0-9]*$ ]] || die "--jobs must be a positive whole number (got '$jobs')"
+  [[ -n "${CHROMATIC_PROJECT_TOKEN:-}" ]] \
+    || die "matrix publishes real builds; set CHROMATIC_PROJECT_TOKEN to a disposable project's token"
+  for a in "$@"; do
+    case "$a" in
+      -t | -t?* | --project-token | --project-token=*) die "pass the token through CHROMATIC_PROJECT_TOKEN, not -t or --project-token" ;;
+      --dry-run | --dry-run=*) die "--dry-run skips publish, verify and tests, so it can't stand in for a publish; drive a dry run with run" ;;
+      --diagnostics-file | --diagnostics-file=* | --no-diagnostics-file) die "matrix writes each cell's diagnostics file itself; drop $a" ;;
+    esac
+  done
+  if [[ "$cli" == "$CLI" ]]; then
+    [[ -f "$CLI" ]] || die "$CLI missing; run: control-chromatic setup"
+    [[ -z "$(stale_sources)" ]] || die "dist/bin.cjs is older than bin-src/ or node-src/; run: control-chromatic rebuild"
+  fi
+
+  # Other root-level fixtures, such as Vitest's, have no Storybook build script, so the builders are named.
+  local names=() f all="${fixtures:-react-vite react-webpack5 react-rsbuild}"
+  if (( pms )); then for f in "$REPO"/e2e/fixtures/monorepo-*/; do all+=" $(basename "$f")"; done; fi
+  for f in $all; do
+    require_safe_name fixture "$f"
+    [[ -d "$REPO/e2e/fixtures/$f" ]] || die "no fixture e2e/fixtures/$f"
+    [[ " ${names[*]-} " == *" $f "* ]] || names+=("$f")
+  done
+  local modes=(off); (( turbosnap )) && modes+=(v1 v2)
+
+  local cells="$EVIDENCE/matrix"
+  [[ -e "$cells" ]] && die "RUN_ID=$RUN_ID already ran a matrix; use a fresh RUN_ID"
+  mkdir -p "$cells" "$WORK"
+  # cleanup refuses while this pid is alive. On exit or interrupt, stop every cell, so none publishes or
+  # writes evidence after matrix has returned.
+  echo $$ > "$MATRIX_PID"
+  trap 'for a in $(jobs -p); do kill_tree "$a"; done; rm -f "$MATRIX_PID"' EXIT
+  trap 'exit 130' INT TERM
+
+  local whiches=(branch) base_cli="" base_skip="" base_desc=""
+  if [[ -n "$compare" ]]; then
+    whiches+=(base)
+    if base_cli="$(cmd_build_ref matrix-base "$compare" 2> "$cells/build-ref.log")"; then
+      base_desc="built from \`$compare\` (\`$(git -C "$REPO" rev-parse --short "$compare^{commit}")\`)"
+    else
+      base_skip="build-ref $compare failed: $(tail -1 "$cells/build-ref.log")"
+    fi
+  fi
+
+  local ids=() which mode id bundle
+  echo "==> matrix: ${names[*]} × TurboSnap ${modes[*]} × CLI ${whiches[*]} (evidence: $EVIDENCE)" >&2
+  for which in "${whiches[@]}"; do
+    bundle="$cli"; [[ "$which" == base ]] && bundle="$base_cli"
+    for f in "${names[@]}"; do
+      for mode in "${modes[@]}"; do
+        id="$which-$f-$mode"; ids+=("$id")
+        if [[ "$which" == base && -n "$base_skip" ]]; then
+          matrix_row "$cells/$id.cell" base "$f" "$mode" skipped - - - - "$base_skip" -
+          continue
+        fi
+        while (( $(jobs -rp | wc -l) >= jobs )); do sleep 1; done
+        matrix_cell "$cells" "$id" "$which" "$bundle" "$f" "$mode" "$@" > "$cells/$id.log" 2>&1 &
+      done
+    done
+  done
+  wait || true
+  local code=0
+  matrix_report "$cells" "$cli" "$base_desc" "${ids[@]}" -- "$@" | tee "$EVIDENCE/matrix.md" || code=$?
+  echo "==> evidence block saved to $EVIDENCE/matrix.md; per-cell output in $EVIDENCE/m-*" >&2
+  return "$code"
+}
+
+# matrix_report <cell dir> <bundle> <base description> <cell ids...> -- <chromatic args...>: print the
+# Markdown evidence block. Returns 1 when any cell was skipped, stopped, or ran in the wrong TurboSnap mode.
+matrix_report() {
+  local cells="$1" bundle="$2" base_desc="$3"; shift 3
+  local ids=(); while [[ $# -gt 0 && "$1" != "--" ]]; do ids+=("$1"); shift; done
+  [[ "${1:-}" == "--" ]] && shift
+  local fail=0 id which name mode status code key build snaps note app ts result link
+  local apps=" " rows=() gaps=() diffs=() branch_exits=" "
+
+  local cli_line
+  if [[ "$bundle" == "$CLI" ]]; then
+    cli_line="\`dist/bin.cjs\` $(node "$CLI" --version), built from \`$(git -C "$REPO" rev-parse --abbrev-ref HEAD)\` at \`$(git -C "$REPO" rev-parse --short HEAD)\`"
+    [[ -z "$(git -C "$REPO" status --porcelain -- bin-src node-src package.json yarn.lock)" ]] \
+      || cli_line+=" plus uncommitted changes to the CLI"
+  else
+    cli_line="\`$bundle\` $(node "$bundle" --version 2> /dev/null || echo '(unknown version)')"
+  fi
+
+  for id in "${ids[@]}"; do
+    if [[ -s "$cells/$id.cell" ]]; then
+      IFS=$'\t' read -r which name mode status code key build snaps note app < "$cells/$id.cell"
+    else
+      which="${id%%-*}" mode="${id##*-}" name="${id#*-}"; name="${name%-*}"
+      status=skipped code=- key=- build=- snaps=- app=-
+      note="the cell stopped without a result (log: matrix/$id.log in the evidence dir)"
+    fi
+    case "$mode" in off) ts=off ;; v1) ts=1.0 ;; v2) ts=2.0 ;; esac
+    [[ "$note" == - ]] && note=""
+    link="$build"
+    if [[ "$build" != - && "$app" != - ]]; then
+      link="[$build](https://www.chromatic.com/build?appId=$app&number=$build)"
+      [[ "$apps" == *" $app "* ]] || apps+="$app "
+    fi
+    result="$code ($key)"
+    case "$status" in
+      skipped) result="skipped" fail=1; gaps+=("- \`$name\`, TurboSnap $ts, $which CLI: skipped, $note") ;;
+      uncovered) result+=", ⚠ not covered" fail=1; gaps+=("- \`$name\`, TurboSnap $ts, $which CLI: not covered. $note") ;;
+    esac
+    [[ "$which" == branch && "$status" != skipped && "$branch_exits" != *" $code "* ]] && branch_exits+="$code "
+    rows+=("| $which | \`$name\` | $(fixture_builder "$REPO/e2e/fixtures/$name") | $(fixture_package_manager "$REPO/e2e/fixtures/$name") | $ts | $result | $link | $snaps | $note |")
+    if [[ "$which" == base && -s "$cells/branch-${id#base-}.cell" && "$status" != skipped ]]; then
+      local b_code b_key b_snaps
+      IFS=$'\t' read -r _ _ _ _ b_code b_key _ b_snaps _ < "$cells/branch-${id#base-}.cell"
+      [[ "$b_code $b_key $b_snaps" == "$code $key $snaps" ]] \
+        || diffs+=("- \`$name\`, TurboSnap $ts: base exited $code ($key) with $snaps, branch exited $b_code ($b_key) with $b_snaps")
+    fi
+  done
+
+  echo "#### CLI verification matrix"
+  echo
+  echo "- CLI: $cli_line"
+  [[ -n "$base_desc" ]] && echo "- Compared with: the CLI $base_desc"
+  echo "- Chromatic project: $( [[ "$apps" == " " ]] && echo "unknown (no cell reached the backend)" || echo "$apps" | sed 's/^ //; s/ $//; s/\([^ ]*\)/`\1`/g; s/ /, /g'), token from \`CHROMATIC_PROJECT_TOKEN\` (not shown)"
+  echo "- Backend: ${CHROMATIC_INDEX_URL:-https://index.chromatic.com}"
+  echo "- Invocation: \`chromatic$(redacted_args "$@")\`, with \`--build-script-name build-storybook\` added unless it names a build. No \`--dry-run\`; a cell counts only when its diagnostics show a published build."
+  [[ "${ids[*]}" == *-v[12]* ]] \
+    && echo "- TurboSnap cells publish a baseline, commit a change to \`Button\`, then add \`--only-changed\`; 1.0 runs with \`CHROMATIC_TURBOSNAP_DISABLE_HASHES=true\`, 2.0 with \`CHROMATIC_TURBOSNAP_DISABLE_V1=true\`."
+  echo "- Ran: $(date -u '+%Y-%m-%d %H:%M UTC')"
+  echo
+  echo "| CLI | Fixture | Builder | Package manager | TurboSnap | Exit | Build | Snapshots | Notes |"
+  echo "|---|---|---|---|---|---|---|---|---|"
+  printf '%s\n' "${rows[@]}"
+  echo
+  if (( ${#gaps[@]} )); then echo "**Skipped or not covered (${#gaps[@]}):**"; printf '%s\n' "${gaps[@]}"; else echo "Every cell published its build or had it skipped by TurboSnap, in the mode asked for."; fi
+  local n_exits; n_exits="$(echo $branch_exits | wc -w | tr -d ' ')"
+  (( n_exits > 1 )) && { echo; echo "**⚠ The branch CLI exited differently across cells:** exit codes $(echo $branch_exits)"; }
+  if (( ${#diffs[@]} )); then echo; echo "**Base and branch differ:**"; printf '%s\n' "${diffs[@]}"; fi
+  return "$fail"
+}
+
 # CLIs before 18.13.1 (CAP-5317) put the raw project token and session JWT under .analytics
 # and any -t value in .options.originalArgv. install-published can run those, so scrub both
 # before evidence outlives the run.
@@ -368,6 +650,9 @@ scrub_evidence() {
 }
 
 cmd_cleanup() {
+  if [[ -s "$MATRIX_PID" ]] && kill -0 "$(cat "$MATRIX_PID")" 2> /dev/null; then
+    die "a matrix is still running for RUN_ID=$RUN_ID (pid $(cat "$MATRIX_PID")); wait for it or stop it first"
+  fi
   if [[ -s "$SESSIONS_FILE" ]]; then
     while read -r s; do kill_tmux "$s"; done < "$SESSIONS_FILE"
     rm -f "$SESSIONS_FILE"
@@ -408,6 +693,7 @@ case "$sub" in
   install-published) cmd_install_published "$@" ;;
   run) cmd_run "$@" ;;
   tty) cmd_tty "$@" ;;
+  matrix) cmd_matrix "$@" ;;
   cleanup) cmd_cleanup ;;
   *) sed -n '2,4p' "${BASH_SOURCE[0]}"; exit 2 ;;
 esac
