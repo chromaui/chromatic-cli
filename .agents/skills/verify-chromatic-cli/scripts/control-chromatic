@@ -305,24 +305,16 @@ cmd_run() {
   echo "-- stderr ($(wc -l < "$out/stderr.txt") lines, first 20):"; head -20 "$out/stderr.txt"
 }
 
-# kill_tree <pid>: send TERM to a process and everything it started, printing each pid.
-kill_tree() {
-  local kids a; kids="$(pgrep -P "$1" || true)"
-  kill "$1" 2> /dev/null || true
-  echo "$1"
-  for a in $kids; do kill_tree "$a"; done
-}
-
-# stop_cells: stop every matrix cell and wait until all their processes are gone (KILL after 10 seconds), so
-# cleanup can't remove a fixture or scrub evidence while a cell is still writing to it.
+# stop_cells: stop every matrix cell and wait until nothing in its process group is left (KILL after 10
+# seconds), so cleanup can't remove a fixture or scrub evidence while a cell is still writing to it. Each cell
+# runs in its own process group (set -m in cmd_matrix), which also holds descendants whose parent has exited.
 stop_cells() {
-  local jp pids a n=0
+  local jp a n=0
   jp="$(jobs -p)"
-  pids="$(for a in $jp; do kill_tree "$a"; done)"
-  [[ -z "$jp" ]] || wait $jp 2> /dev/null || true
-  for a in $pids; do
-    while kill -0 "$a" 2> /dev/null; do
-      (( n++ < 50 )) || { kill -KILL "$a" 2> /dev/null || true; break; }
+  for a in $jp; do kill -TERM -- "-$a" 2> /dev/null || true; done
+  for a in $jp; do
+    while kill -0 -- "-$a" 2> /dev/null; do
+      (( n++ < 50 )) || kill -KILL -- "-$a" 2> /dev/null || true
       sleep 0.2
     done
   done
@@ -544,6 +536,9 @@ cmd_matrix() {
   echo $$ > "$MATRIX_PID"
   trap stop_cells EXIT
   trap 'exit 130' INT TERM
+  # Job control gives each background cell its own process group. It also stops bash from pointing their
+  # stdin at /dev/null, so the cells do that themselves below.
+  set -m
 
   local whiches=(branch) base_cli="" base_skip="" base_desc=""
   if [[ -n "$compare" ]]; then
@@ -567,7 +562,7 @@ cmd_matrix() {
           continue
         fi
         while (( $(jobs -rp | wc -l) >= jobs )); do sleep 1; done
-        matrix_cell "$cells" "$id" "$which" "$bundle" "$f" "$mode" "$@" > "$cells/$id.log" 2>&1 &
+        matrix_cell "$cells" "$id" "$which" "$bundle" "$f" "$mode" "$@" < /dev/null > "$cells/$id.log" 2>&1 &
       done
     done
   done
