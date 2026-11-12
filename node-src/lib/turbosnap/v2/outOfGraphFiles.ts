@@ -7,7 +7,7 @@ import { FileHash, FilePath, rollUpEntryHashes } from './graph';
 import { ManifestInput } from './manifestInput';
 import { gitRootGlobMatcher, normalizeStatsPath } from './paths';
 import { ProjectFiles } from './projectFiles';
-import { partitionSkipped, SkipReason, SkipRule } from './skippedFiles';
+import { type buildSkipRule, partitionSkipped, SkipReason, SkipRule } from './skippedFiles';
 import {
   EXTERNALS_KEY,
   STATIC_FILES_KEY,

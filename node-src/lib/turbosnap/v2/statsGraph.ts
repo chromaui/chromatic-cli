@@ -7,6 +7,7 @@ import {
   SKIPPED_HASH,
   TurboSnapFile,
 } from './graph';
+import type { serializeManifest } from './manifest';
 import { ManifestInput } from './manifestInput';
 import {
   canonicalFileNames,
@@ -18,7 +19,7 @@ import {
   StatsRoots,
 } from './paths';
 import { ProjectFiles } from './projectFiles';
-import { partitionSkipped, SkipReason, SkipRule } from './skippedFiles';
+import { type buildSkipRule, partitionSkipped, SkipReason, SkipRule } from './skippedFiles';
 import { CONFIG_ENTRY_FILES, detectStoryFiles } from './storyDetection';
 
 /** The part of {@link ManifestInput} reading the stats file needs: the two roots and the disk. */

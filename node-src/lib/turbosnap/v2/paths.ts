@@ -245,9 +245,11 @@ export function isSyntheticFile(path: FilePath): boolean {
     return true;
   }
 
-  // A NUL proxy for a relative path folds onto that file (see {@link foldStatsId}); any other
-  // leading NUL — a bare runtime helper like `\0commonjsHelpers.js` or an opaque rooted id like
-  // `\0/@data-uri/...` — names nothing on disk. Asked on the raw id: stripping would remove the NUL.
+  /**
+   * A NUL proxy for a relative path folds onto that file (see {@link foldStatsId}); any other
+   * leading NUL — a bare runtime helper like `\0commonjsHelpers.js` or an opaque rooted id like
+   * `\0/@data-uri/...` — names nothing on disk. Asked on the raw id: stripping would remove the NUL.
+   */
   return path.startsWith(NUL) && !FOLDABLE_NUL_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 

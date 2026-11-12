@@ -1,3 +1,7 @@
+import type { hashOutOfGraphFiles } from './outOfGraphFiles';
+import type { collectStorybookFiles } from './storybookFiles';
+import type { resolveStorybookVersion } from './storybookVersion';
+
 /**
  * The synthetic keys in the manifest's `storybookConfigHashes` map. They share one namespace and one
  * invariant, so they are declared together: a canonical relative path always starts with `./` or

@@ -96,7 +96,7 @@ interface ProcessedModule {
   // the literal ` lazy ` marker and the include-regex text, which normalization would destroy. Do
   // not key on it or treat it as a path — use `filePath` for that.
   rawName: string;
-  // The module's canonical root file path (see {@link rootFilePath}). Also serves as its importer key.
+  /** The module's canonical root file path (see {@link rootFilePath}). Also serves as its importer key. */
   filePath: FilePath;
   // Whether `filePath` has a real file on disk.
   onDisk: boolean;
