@@ -46,18 +46,18 @@ A few things the tree doesn't show:
 - **The Storybook version is tracked as a string** because on some builders the preview runtime is served outside the module graph, so no file hash would see an upgrade. If no version can be resolved, building the manifest fails rather than silently under-capturing.
 - **`package.json` and lockfiles have no special roll-up.** Dependency changes are normally detected through the installed files in the graph, avoiding recaptures on lockfile churn alone. A package manifest or lockfile is still hashed if it appears in the graph or an off-disk sweep, including `--externals`.
 - **A manifest needs at least one story file.** The index compares each story under its key in both builds, so a manifest with none would make every story look unchanged. Stats that resolve to no story files, usually because the project root is not where Storybook was built, fail the manifest and TurboSnap 1.0 decides the build.
-- **Categories with no files are left out** of `storybookConfigHashes`. `storybookConfigFiles` and `storybookVersion` are always present, because the index requires them. For E2E builds, see [E2E builds](#e2e-builds).
+- **Categories with no files are left out** of `storybookConfigHashes`. `storybookConfigFiles` and `storybookVersion` are always present, because the index requires them; with no config files, `storybookConfigFiles` is the roll-up of nothing, a constant. For E2E builds, see [E2E builds](#e2e-builds).
 
 ## E2E builds
 
 A `--vitest` build uploads the Storybook that `@chromatic-com/vitest` ships, so the project has no Storybook config or Storybook install of its own. The stats come from the package's Vitest reporter: each generated `.stories.json` imports its test file, which imports the components under test. Story files live in the gitignored `.vitest` directory, so their bytes are skipped as untracked, but their edges still roll the test file and components into the story hash.
 
-The two config entries the index requires come from the package instead:
+The two config entries the index requires are filled without one:
 
 | Entry | Storybook project | Vitest build |
 |---|---|---|
 | `storybookVersion` | The installed Storybook version | The package and its version, e.g. `@chromatic-com/vitest@1.0.2` |
-| `storybookConfigFiles` | Roll-up of the config directory | Hash of that same string, so a package upgrade recaptures everything |
+| `storybookConfigFiles` | Roll-up of the config directory | Roll-up of no files, a constant. A package upgrade recaptures everything through `storybookVersion` |
 
 There is no config-directory sweep, so `preview` is omitted and the manifest's `storybookConfigFiles` detail is empty. `staticFiles` is omitted too, because static directories come from the main config the project doesn't have; `chromatic turbosnap-manifest --vitest --static-dir <dir>` still hashes one you pass.
 
