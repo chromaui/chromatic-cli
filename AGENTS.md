@@ -34,6 +34,8 @@ Instead:
 - **Reproduce customer setups generically.** Build fixtures with neutral names (`my-app`, `packages/ui`, `Button.stories.tsx`) and only the structure needed to trigger the bug.
 - **Rewrite rather than quote** error messages and logs: keep the part that comes from this CLI, and replace anything that comes from the customer's project with a placeholder.
 
+Public docs and comments describe what the CLI does, not how the Index or other private services decide things.
+
 If you are unsure whether something is identifying, leave it out. If a ticket title itself names a customer, write a neutral title of your own.
 
 ## Label every pull request
