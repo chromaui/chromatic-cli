@@ -82,10 +82,10 @@ interface ManifestFile {
 /**
  * Rolls the graph a stats file describes up into a TurboSnap manifest: the per-story hashes, the
  * Storybook-wide hashes and the whole-Storybook gate. Reading the stats file is
- * readStatsGraph's job; everything here works in canonical paths.
+ * `readStatsGraph`'s job; everything here works in canonical paths.
  *
  * @param stats The stats file to parse.
- * @param input Where the project is and what to read it with; see ManifestInput.
+ * @param input Where the project is and what to read it with; see `ManifestInput`.
  *
  * @returns The manifest containing the file hashes, story file hashes, Storybook config file hashes,
  * and Storybook hash.

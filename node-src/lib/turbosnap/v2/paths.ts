@@ -8,7 +8,7 @@ import { FilePath } from './graph';
 
 /**
  * The two roots that anchor a stats module path. They always travel together through
- * canonicalization: normalizeStatsPath resolves a relative stats path from `statsRoot`, then
+ * canonicalization: `normalizeStatsPath` resolves a relative stats path from `statsRoot`, then
  * names it relative to `projectRoot`.
  */
 export interface StatsRoots {
@@ -19,13 +19,13 @@ export interface StatsRoots {
 }
 
 /**
- * The canonical paths of a stats module's source files: its moduleFileNames, each folded
- * onto the file it stands for (see foldStatsId) and normalized, root first. The single
+ * The canonical paths of a stats module's source files: its `moduleFileNames`, each folded
+ * onto the file it stands for (see `foldStatsId`) and normalized, root first. The single
  * place the "canonical file names" rule lives, so every walk over
  * `stats.modules` reads the same definition.
  *
  * @param module The stats module.
- * @param roots The roots to anchor against. See StatsRoots.
+ * @param roots The roots to anchor against. See `StatsRoots`.
  *
  * @returns The canonical file paths, root first, with empty entries and duplicates dropped.
  */
@@ -37,12 +37,12 @@ export function canonicalFileNames(module: Module, roots: StatsRoots): FilePath[
 
 /**
  * The canonical paths that import a stats module: its `reasons` mapped to `moduleName`, entry reasons
- * (null `moduleName`) dropped, each folded onto the file it stands for (see foldStatsId)
+ * (null `moduleName`) dropped, each folded onto the file it stands for (see `foldStatsId`)
  * and normalized. The single place the "canonical importers" rule lives,
  * so `readStatsGraph` and story detection cannot drift apart.
  *
  * @param module The stats module.
- * @param roots The roots to anchor against. See StatsRoots.
+ * @param roots The roots to anchor against. See `StatsRoots`.
  *
  * @returns The canonical importer paths.
  */
@@ -54,12 +54,12 @@ export function canonicalImporters(module: Module, roots: StatsRoots): FilePath[
 }
 
 /**
- * The canonical path of a stats module's root source file: the first of its canonicalFileNames.
+ * The canonical path of a stats module's root source file: the first of its `canonicalFileNames`.
  * Only the root identifies the module and matches it against importers; the other inner names of a
  * concatenation group are its descendants.
  *
  * @param module The stats module.
- * @param roots The roots to anchor against. See StatsRoots.
+ * @param roots The roots to anchor against. See `StatsRoots`.
  *
  * @returns The canonical root path, or undefined when the module names no files.
  */
@@ -245,7 +245,7 @@ export function isSyntheticFile(path: FilePath): boolean {
     return true;
   }
 
-  // A NUL proxy for a relative path folds onto that file (see foldStatsId); any other
+  // A NUL proxy for a relative path folds onto that file (see `foldStatsId`); any other
   // leading NUL — a bare runtime helper like `\0commonjsHelpers.js` or an opaque rooted id like
   // `\0/@data-uri/...` — names nothing on disk. Asked on the raw id: stripping would remove the NUL.
   return path.startsWith(NUL) && !FOLDABLE_NUL_PREFIXES.some((prefix) => path.startsWith(prefix));
@@ -256,7 +256,7 @@ export function isSyntheticFile(path: FilePath): boolean {
  * Storybook project root. Relative stats paths are first resolved from `statsRoot`, because a
  * builder may name them from the repository root even though manifest keys anchor at the project.
  * Stats ids are folded onto the file they stand for by the caller before they reach here (see
- * foldStatsId): this function also keys real on-disk paths, where a literal `?` or `!` can
+ * `foldStatsId`): this function also keys real on-disk paths, where a literal `?` or `!` can
  * be part of the filename. Synthetic modules (e.g. Vite's `virtual:` entries and inline `data:` URLs)
  * have no on-disk location and are returned unchanged.
  *
@@ -309,8 +309,8 @@ function prefixInProjectPath(relativePath: FilePath): FilePath {
  * that was loaded, so the id folds onto it. A require-context name is a glob expression whose
  * include regex can hold `!` and `?` (`(?!.*node_modules)`), so it passes through unchanged.
  *
- * Every stats id is folded exactly once, where it enters the graph (see canonicalFileNames,
- * canonicalImporters and the on-disk locator in statsGraph). The shared normalizers never
+ * Every stats id is folded exactly once, where it enters the graph (see `canonicalFileNames`,
+ * `canonicalImporters` and the on-disk locator in statsGraph). The shared normalizers never
  * fold: they also key real disk paths, where a `?` or `!` is part of the filename.
  *
  * @param statsPath The module name from the stats file.
@@ -367,9 +367,9 @@ function stripQuery(statsPath: FilePath): FilePath {
 
 /**
  * Resolves a stats module path to an absolute on-disk path for hashing, anchoring relative paths at
- * the Storybook project root. Escape markers are removed first; see stripNullBytes. The id
+ * the Storybook project root. Escape markers are removed first; see `stripNullBytes`. The id
  * is folded onto the file it stands for by the caller before it reaches here; see
- * foldStatsId.
+ * `foldStatsId`.
  *
  * @param statsPath The module name from the stats file.
  * @param statsRoot The absolute directory relative stats paths are named from.

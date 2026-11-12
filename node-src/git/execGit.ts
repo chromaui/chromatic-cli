@@ -43,7 +43,7 @@ function getGitTimeout(depOptions: GitDeps['options']): number {
  * @param deps.log Standard context logger.
  * @param deps.options Options object for the Git command.
  * @param command The command to execute.
- * @param options Execa options, plus `logResult`; see ExecGitOptions.
+ * @param options Execa options, plus `logResult`; see `ExecGitOptions`.
  * @param options.logResult Whether to write the command's output to the debug log.
  *
  * @returns The result of the command from the terminal.

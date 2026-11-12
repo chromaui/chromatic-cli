@@ -110,7 +110,7 @@ function numberNodes(
 }
 
 /**
- * Ranks every node by its entry identity (see hashEntryIdentity), so a subtree's entries in
+ * Ranks every node by its entry identity (see `hashEntryIdentity`), so a subtree's entries in
  * sorted order are its ranks in ascending order. Skipped files have no identity and rank after every
  * hashed node, where no byte range reaches them.
  *

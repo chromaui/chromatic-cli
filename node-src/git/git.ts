@@ -238,7 +238,7 @@ export async function commitExists(deps: GitDeps, commit: string) {
 }
 
 /**
- * Check commits one at a time with commitExists.
+ * Check commits one at a time with `commitExists`.
  *
  * @param deps Function dependencies.
  * @param commits The commits to check.
