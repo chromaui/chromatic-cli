@@ -65,7 +65,9 @@ There is no config-directory sweep, so `preview` is omitted and the manifest's `
 
 Known gap: `@chromatic-com/vitest` numbers its `.stories.json` files in the order tests finish, so the same test can get a different key on the next run. The index compares a story's hash under the same key in both builds, so a renamed key recaptures that story. That over-captures; it never skips a change.
 
-Known gap: `vitest.config.ts` and anything it pulls in, such as a Vite `define`, are not in the stats `@chromatic-com/vitest` 1.0.2 writes, so a change there moves no hash and recaptures nothing. TurboSnap 1.0 has the same gap. Until the package reports it, pass `--externals vitest.config.ts` so a change to it recaptures every story.
+Known gap: `@chromatic-com/vitest` adds the Vitest config file to the stats, so a change to it moves every story hash. On Vitest 5, a Vitest bug ([vitest-dev/vitest#11951](https://github.com/vitest-dev/vitest/issues/11951)) drops it when Vitest finds the config on its own, so it is only there when the tests run with `--config`. Until the package ships a fallback, pass `--externals vitest.config.ts` so a change to it recaptures every story. TurboSnap 1.0 has the same gap.
+
+Known gap: files the Vitest config imports are never tracked, because the package adds the config without following its imports. A change there, such as to a shared Vite config, moves no hash. Add those files to `--externals` too.
 
 ## What the index does with the roll-ups
 
