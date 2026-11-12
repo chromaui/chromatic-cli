@@ -57,13 +57,13 @@ export const Tracing = () =>
 
 export const BailedPackageFile = () =>
   captureTask(
-    bailed({ turboSnap: { bailReason: { changedPackageFiles: ['package.json'] } } } as any),
+    bailed({ turboSnap: { bailReason: { changedPackageFiles: ['package.json'] } } }),
     validating(ctx)
   );
 
 export const BailedLockfile = () =>
   captureTask(
-    bailed({ turboSnap: { bailReason: { changedPackageFiles: ['yarn.lock'] } } } as any),
+    bailed({ turboSnap: { bailReason: { changedPackageFiles: ['yarn.lock'] } } }),
     validating(ctx)
   );
 
@@ -73,7 +73,7 @@ export const BailedSiblings = () =>
       turboSnap: {
         bailReason: { changedStorybookFiles: ['.storybook/preview.js', '.storybook/otherfile.js'] },
       },
-    } as any),
+    }),
     validating(ctx)
   );
 

@@ -39,7 +39,7 @@ describe('filterBreadcrumb', () => {
     const actual = filterBreadcrumb({
       category: 'console',
       message: blueMessage,
-    } as Sentry.Breadcrumb);
+    });
     expect(actual?.message).toBe('message');
   });
 
@@ -47,7 +47,7 @@ describe('filterBreadcrumb', () => {
     const actual = filterBreadcrumb({
       category: 'console',
       message: '',
-    } as Sentry.Breadcrumb);
+    });
     expect(actual).toBeNull();
   });
 });

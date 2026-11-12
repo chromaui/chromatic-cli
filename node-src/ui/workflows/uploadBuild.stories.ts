@@ -76,14 +76,14 @@ const buildContext = { options: {} } as any;
 const buildCommand = 'yarn run build-storybook -o storybook-static';
 const build = {
   Initial: () => buildInitial(buildContext),
-  Building: () => buildPending({ ...buildContext, buildCommand } as any),
+  Building: () => buildPending({ ...buildContext, buildCommand }),
   Built: () =>
     buildSuccess({
       ...buildContext,
       now: 0,
       startedAt: -32_100,
       buildLogFile: '/users/me/project/build-storybook.log',
-    } as any),
+    }),
 };
 
 // initialize.stories now returns rendered ANSI strings (Clack capture), which the old task() path
@@ -108,7 +108,7 @@ const upload = {
       uploadedBytes: 1_234_567,
       uploadedFiles: 42,
       fileInfo: { paths: { length: 42 } },
-    } as any),
+    }),
 };
 
 // verify.stories now returns rendered ANSI strings (Clack capture), which the old task() path can't
@@ -121,8 +121,7 @@ const verifiedBuild = {
 const verify = {
   Initial: () => verifyInitial(buildContext),
   Pending: () => verifyPending(buildContext),
-  Published: () =>
-    verifySuccess({ ...buildContext, isPublishOnly: true, build: verifiedBuild } as any),
+  Published: () => verifySuccess({ ...buildContext, isPublishOnly: true, build: verifiedBuild }),
 };
 
 // snapshot.stories now returns rendered ANSI strings (Clack capture), which the old task() path
@@ -141,32 +140,35 @@ const snapshotBuild = {
 const snapshot = {
   Initial: () => snapshotInitial(buildContext),
   Pending: () =>
-    snapshotPending({ ...buildContext, build: snapshotBuild } as any, {
-      cursor: 6,
-      label: 'ComponentName › StoryName',
-    }),
+    snapshotPending(
+      { ...buildContext, build: snapshotBuild },
+      {
+        cursor: 6,
+        label: 'ComponentName › StoryName',
+      }
+    ),
   BuildPassed: () =>
     snapshotSuccess({
       ...buildContext,
       build: { ...snapshotBuild, status: 'PASSED' },
       now: 0,
       startedAt: -123_456,
-    } as any),
+    }),
   BuildComplete: () =>
     snapshotSuccess({
       ...buildContext,
       build: snapshotBuild,
       now: 0,
       startedAt: -123_456,
-    } as any),
+    }),
   BuildAutoAccepted: () =>
     snapshotSuccess({
       ...buildContext,
       build: { ...snapshotBuild, autoAcceptChanges: true },
       now: 0,
       startedAt: -123_456,
-    } as any),
-  SkippedPublishOnly: () => snapshotSkipped({ ...buildContext, isPublishOnly: true } as any),
+    }),
+  SkippedPublishOnly: () => snapshotSkipped({ ...buildContext, isPublishOnly: true }),
 };
 
 export default {

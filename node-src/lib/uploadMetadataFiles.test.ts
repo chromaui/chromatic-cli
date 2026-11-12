@@ -74,7 +74,7 @@ describe('uploadMetadataFiles', () => {
           },
         }),
       },
-    } as any;
+    };
 
     await uploadMetadataFiles(ctx);
 
@@ -101,7 +101,7 @@ describe('uploadMetadataFiles', () => {
           uploadMetadata: { info: { targets: [target] }, userErrors: [] },
         }),
       },
-    } as any;
+    };
 
     await uploadMetadataFiles(ctx);
 
@@ -120,7 +120,7 @@ describe('uploadMetadataFiles', () => {
       announcedBuild: { id: '1' },
       build: { storybookUrl: 'https://sample-storybook.dev-chromatic.com' },
       client: { runQuery },
-    } as any;
+    };
 
     await uploadMetadataFiles(ctx);
 
@@ -153,7 +153,7 @@ describe('uploadMetadataFiles', () => {
       announcedBuild: { id: '1' },
       build: { storybookUrl: 'https://sample-storybook.dev-chromatic.com' },
       client: { runQuery },
-    } as any;
+    };
 
     await uploadMetadataFiles(ctx);
 
@@ -184,7 +184,7 @@ describe('uploadMetadataFiles', () => {
           uploadMetadata: { info: { targets: [target] }, userErrors: [] },
         }),
       },
-    } as any;
+    };
 
     await expect(uploadMetadataFiles(ctx)).resolves.toBeUndefined();
 

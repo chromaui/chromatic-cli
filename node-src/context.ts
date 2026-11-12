@@ -3,7 +3,6 @@ import { DEFAULT_GIT_TIMEOUT_SECONDS } from './git/constants';
 import GraphQLClient from './io/graphqlClient';
 import HTTPClient from './io/httpClient';
 import { getConfiguration } from './lib/getConfiguration';
-import { Context } from './types';
 
 /**
  * Wire up an initial context with the HTTP/GraphQL clients and resolved configuration. Callers are
@@ -39,5 +38,5 @@ export async function setupContext(
     );
   }
 
-  return ctx as Context;
+  return ctx;
 }

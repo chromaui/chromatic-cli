@@ -25,6 +25,6 @@ export const getPackageManagerVersion = async (packageManager: string) => {
     throw new Error(`Unexpected missing output for command: '${command}'`);
   }
 
-  const [output] = (stdout.toString() as string).trim().split('\n', 1);
+  const [output] = stdout.toString().trim().split('\n', 1);
   return output.trim().replace(/^v/, '');
 };

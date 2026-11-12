@@ -67,5 +67,5 @@ export function runCommand(
     clearTimeout(timeoutId);
   });
 
-  return Object.assign(racedPromise, subprocess) as ResultPromise;
+  return Object.assign(racedPromise, subprocess);
 }

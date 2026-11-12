@@ -84,22 +84,19 @@ const reactNativeContext = {
 };
 
 export const FatalErrorInvalidReactNativeAndroid = () => {
-  const message = invalidReactNative(reactNativeContext as any, ['storybook.apk']).output;
+  const message = invalidReactNative(reactNativeContext, ['storybook.apk']).output;
   const error = { name: 'InvalidBuild', message, stack };
   return fatalError(context as any, error, timestamp);
 };
 
 export const FatalErrorInvalidReactNativeIos = () => {
-  const message = invalidReactNative(reactNativeContext as any, ['storybook.app']).output;
+  const message = invalidReactNative(reactNativeContext, ['storybook.app']).output;
   const error = { name: 'InvalidBuild', message, stack };
   return fatalError(context as any, error, timestamp);
 };
 
 export const FatalErrorInvalidReactNativeBothMissing = () => {
-  const message = invalidReactNative(reactNativeContext as any, [
-    'storybook.apk',
-    'storybook.app',
-  ]).output;
+  const message = invalidReactNative(reactNativeContext, ['storybook.apk', 'storybook.app']).output;
   const error = { name: 'InvalidBuild', message, stack };
   return fatalError(context as any, error, timestamp);
 };

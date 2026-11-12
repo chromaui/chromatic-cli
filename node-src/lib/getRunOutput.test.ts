@@ -47,7 +47,7 @@ describe('getRunOutput', () => {
   });
 
   it('leaves the counts undefined when there is no build', () => {
-    const output = getRunOutput({ exitCode: 254 } as any);
+    const output = getRunOutput({ exitCode: 254 });
 
     expect(output.code).toBe(254);
     expect(output.pendingCount).toBeUndefined();

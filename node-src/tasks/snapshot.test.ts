@@ -54,7 +54,7 @@ const runSnapshot = async (ctx: any) => {
   const report = vi.fn();
   const deps = { report, client: ctx.client, log: ctx.log, env: ctx.env, options: ctx.options };
   const input = extractSnapshotInput(ctx);
-  const result = await snapshotProject(deps as any, input as any);
+  const result = await snapshotProject(deps, input);
   if (result.kind === 'continue') {
     applySnapshotOutput(ctx, result.output);
   }

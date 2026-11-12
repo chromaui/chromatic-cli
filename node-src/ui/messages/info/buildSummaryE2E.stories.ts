@@ -15,7 +15,7 @@ export const BuildPassed = () =>
       webUrl: 'https://www.chromatic.com/build?appId=59c59bd0183bd100364e1d57&number=42',
       pendingCount: 0,
     },
-  } as any);
+  });
 
 export const BuildCompletedViaExitZeroWithChanges = () =>
   buildSummary({
@@ -26,7 +26,7 @@ export const BuildCompletedViaExitZeroWithChanges = () =>
       status: 'PENDING',
       pendingCount: 2,
     },
-  } as any);
+  });
 
 export const FirstBuildPassed = () =>
   buildSummary({
@@ -41,4 +41,4 @@ export const FirstBuildPassed = () =>
       actualCaptureCount: 20,
       app: { setupUrl: 'https://www.chromatic.com/setup?appId=59c59bd0183bd100364e1d57' },
     },
-  } as any);
+  });

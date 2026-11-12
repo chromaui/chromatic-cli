@@ -485,7 +485,7 @@ it('passes options error to experimental_onTaskError', async () => {
   const ctx = getContext([]);
   ctx.extraOptions = {
     experimental_onTaskError: vi.fn(),
-  } as any;
+  };
 
   ctx.env.CHROMATIC_PROJECT_TOKEN = '';
   await runAll(ctx);

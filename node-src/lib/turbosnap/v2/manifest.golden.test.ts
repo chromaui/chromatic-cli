@@ -61,7 +61,7 @@ const GOLDEN_STATS: Stats = {
     { id: 6, name: previewTheme, reasons: [{ moduleName: preview }] },
     { id: 7, name: entryPreview, reasons: [{ moduleName: './storybook-config-entry.js' }] },
   ],
-} as unknown as Stats;
+};
 
 const GOLDEN_FILE_HASHES = {
   [buttonStory]: 'aaaaaaaaaaaaaaaa',

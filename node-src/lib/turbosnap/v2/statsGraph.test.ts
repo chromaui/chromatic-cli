@@ -283,10 +283,7 @@ describe('readStatsGraph missing names', () => {
           id: 1,
           name: '/repo/packages/ui/src/Button.stories.tsx',
           // An entry reason carries `moduleName: null`; the stories-entry reason must still apply.
-          reasons: [
-            { moduleName: null as unknown as string },
-            { moduleName: './storybook-stories.js' },
-          ],
+          reasons: [{ moduleName: null }, { moduleName: './storybook-stories.js' }],
         },
       ],
     };
