@@ -238,11 +238,11 @@ async function listExternalFiles(
  * also in the graph is covered twice: once in whichever subtree imports it, and once here.
  *
  * The static and externals sections contribute no entry when they have no files, matching how the
- * `storybookGlobals` roll-up is omitted when empty. The config section contributes one for every
- * Storybook project, because `listConfigAndStaticFiles` refuses to sweep it without the main
- * config and `hashOutOfGraphFiles` never drops the main config into another section, which is
- * what keeps the Index's required `storybookConfigFiles` satisfied. An E2E build has no config
- * section, so `buildManifest` fills that entry from the E2E package's version instead.
+ * `storybookGlobals` roll-up is omitted when empty. The config section always contributes one,
+ * because the Index requires `storybookConfigFiles`. For a Storybook project it is never empty:
+ * `listConfigAndStaticFiles` refuses to sweep without the main config, and `hashOutOfGraphFiles`
+ * never drops the main config into another section. An E2E build has no config directory, so its
+ * entry is the roll-up of nothing, a constant; a package upgrade moves `storybookVersion` instead.
  *
  * The roll-ups are path-sensitive, as the graph-rolled entries now are too: a static asset is served
  * at its path and a config file is loaded by name, so a byte-preserving rename changes what Storybook
@@ -269,7 +269,7 @@ export function rollUpOutOfGraphFiles(
 
   return new Map(
     sections
-      .filter(([, files]) => files.size > 0)
+      .filter(([key, files]) => key === STORYBOOK_CONFIG_KEY || files.size > 0)
       .map(([key, files]) => [key, rollUpEntryHashes([...files], h64ToString)])
   );
 }

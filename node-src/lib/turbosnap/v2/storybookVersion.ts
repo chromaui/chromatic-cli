@@ -37,15 +37,24 @@ function isTrustedVersion(packageName: string, version: string) {
  * been used to build the Storybook. It then walks up every ancestor `node_modules` to find the
  * first package it can resolve.
  *
+ * An E2E build has no Storybook of its own, so its E2E package stands in; see
+ * `resolveE2EPackageVersion`.
+ *
  * @param input Where to resolve from and what to read the disk with.
  * @param input.configDir The absolute Storybook config directory to resolve from.
+ * @param input.projectRoot The absolute project root an E2E package is resolved from.
+ * @param input.e2ePackage The E2E package an E2E build uploads the Storybook of, if any.
  * @param input.projectFiles How to read the disk.
  *
- * @returns The installed Storybook version (e.g. `9.1.20`).
+ * @returns The installed Storybook version (e.g. `9.1.20`), or the E2E package and its version.
  */
 export function resolveStorybookVersion(
-  input: Pick<ManifestInput, 'configDir' | 'projectFiles'>
+  input: Pick<ManifestInput, 'configDir' | 'projectRoot' | 'e2ePackage' | 'projectFiles'>
 ): string {
+  if (input.e2ePackage) {
+    return resolveE2EPackageVersion(input.e2ePackage, input);
+  }
+
   for (const packageName of STORYBOOK_CORE_PACKAGES) {
     const version = input.projectFiles.packageVersion(input.configDir, packageName);
     if (version && isTrustedVersion(packageName, version)) {
@@ -74,7 +83,7 @@ export function resolveStorybookVersion(
  *
  * @returns The package and its installed version (e.g. `@chromatic-com/vitest@1.0.2`).
  */
-export function resolveE2EPackageVersion(
+function resolveE2EPackageVersion(
   e2ePackage: string,
   input: Pick<ManifestInput, 'projectRoot' | 'projectFiles'>
 ): string {

@@ -34,7 +34,7 @@ describe('buildManifest for an E2E build', () => {
     return fixture;
   }
 
-  it('stands the E2E package in for the Storybook config and version', async () => {
+  it('stands the E2E package in for the Storybook version and keeps the required config entry', async () => {
     const { input } = e2eFixture();
 
     const manifest = await buildManifest(stats, input);
@@ -55,9 +55,7 @@ describe('buildManifest for an E2E build', () => {
     disk.packageVersions = { ...disk.packageVersions, '@chromatic-com/vitest': '1.0.3' };
     const after = await buildManifest(stats, input);
 
-    expect(after.storybookConfigHashes.get('storybookConfigFiles')).not.toBe(
-      before.storybookConfigHashes.get('storybookConfigFiles')
-    );
+    expect(after.storybookConfigHashes.get('storybookVersion')).toBe('@chromatic-com/vitest@1.0.3');
     expect(after.storybookHash).not.toBe(before.storybookHash);
     expect(after.storyFileHashes).toEqual(before.storyFileHashes);
   });
