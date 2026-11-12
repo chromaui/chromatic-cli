@@ -238,7 +238,7 @@ export async function commitExists(deps: GitDeps, commit: string) {
 }
 
 /**
- * Check commits one at a time with {@link commitExists}.
+ * Check commits one at a time with commitExists.
  *
  * @param deps Function dependencies.
  * @param commits The commits to check.
@@ -349,7 +349,7 @@ const NAME_STATUS_CODES: Record<string, ChangedFileStatus> = {
  * See: https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-pathspec for details on
  * magic pathspecs.
  *
- * @returns One {@link ChangedFileWithStatus} per changed file.
+ * @returns One entry per changed file.
  */
 export async function getChangedFilesWithStatus(
   deps: GitDeps,

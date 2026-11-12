@@ -59,7 +59,7 @@ const EXTERNAL_MODULE = /^external "/;
 /**
  * Detects which modules in the stats are story files.
  *
- * @param context The context required for story detection. See {@link StoryDetectionContext}.
+ * @param context The context required for story detection. See StoryDetectionContext.
  * @param stats The stats file to parse.
  *
  * @returns The canonical paths of the story files.
@@ -96,7 +96,7 @@ interface ProcessedModule {
   // the literal ` lazy ` marker and the include-regex text, which normalization would destroy. Do
   // not key on it or treat it as a path — use `filePath` for that.
   rawName: string;
-  // The module's canonical root file path (see {@link rootFilePath}). Also serves as its importer key.
+  // The module's canonical root file path (see rootFilePath). Also serves as its importer key.
   filePath: FilePath;
   // Whether `filePath` has a real file on disk.
   onDisk: boolean;
@@ -105,14 +105,14 @@ interface ProcessedModule {
 }
 
 /**
- * Walks the stats modules once and turns each into a {@link ProcessedModule}, so the heavy per-module
+ * Walks the stats modules once and turns each into a ProcessedModule, so the heavy per-module
  * work (the canonical path and the canonical importer names) runs one time and both steps read the
  * same shape.
  *
  * A module is kept when it is not an external and has a non-null canonical file path. On-disk and
  * off-disk modules are both kept.
  *
- * @param context The context required for story detection. See {@link StoryDetectionContext}.
+ * @param context The context required for story detection. See StoryDetectionContext.
  * @param stats The stats file to parse.
  *
  * @returns The processed modules.
@@ -158,7 +158,7 @@ function processModules(context: StoryDetectionContext, stats: Stats): Processed
  * @param filePath The module's canonical file path.
  * @param matchedStoryImporters The story importers that claim it.
  * @param contextsExcludingNodeModules Canonical keys of the lazy contexts whose glob excluded
- * `node_modules`; see {@link excludesNodeModules}.
+ * `node_modules`; see excludesNodeModules.
  *
  * @returns Whether the module is a story file.
  */
@@ -183,8 +183,8 @@ function isStoryFile(
  * such context (a module imported by an entry file that isn't itself a real file) as a story
  * importer too, so both builders are covered.
  *
- * @param context The context required for story detection. See {@link StoryDetectionContext}.
- * @param modules The processed modules to scan (see {@link processModules}).
+ * @param context The context required for story detection. See StoryDetectionContext.
+ * @param modules The processed modules to scan (see processModules).
  *
  * @returns The set of canonical importer keys that indicate a story file.
  */

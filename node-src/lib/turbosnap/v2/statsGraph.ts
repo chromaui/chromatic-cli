@@ -21,7 +21,7 @@ import { ProjectFiles } from './projectFiles';
 import { partitionSkipped, SkipReason, SkipRule } from './skippedFiles';
 import { CONFIG_ENTRY_FILES, detectStoryFiles } from './storyDetection';
 
-/** The part of {@link ManifestInput} reading the stats file needs: the two roots and the disk. */
+/** The part of ManifestInput reading the stats file needs: the two roots and the disk. */
 export type StatsContext = Pick<ManifestInput, 'projectRoot' | 'statsRoot' | 'projectFiles'>;
 
 /**
@@ -31,15 +31,15 @@ export type StatsContext = Pick<ManifestInput, 'projectRoot' | 'statsRoot' | 'pr
  *
  * The graph is *unpruned*: synthetic nodes with no file on disk (require-context globs, externals,
  * virtual modules) are still members, because they are members of the subtrees the roll-ups walk.
- * {@link serializeManifest} filters them only when the manifest is written. Files v2 skips are
- * members too, hashed as {@link SKIPPED_HASH}, which is what tells them apart from synthetic nodes.
+ * serializeManifest filters them only when the manifest is written. Files v2 skips are
+ * members too, hashed as SKIPPED_HASH, which is what tells them apart from synthetic nodes.
  */
 export interface StatsGraph {
   /** Every module path, with its content hash and the paths it depends on. */
   files: Map<FilePath, TurboSnapFile>;
   /**
    * An entry for every on-disk file, keyed by canonical path: its content hash, or
-   * {@link SKIPPED_HASH} when v2 skipped the file (see {@link buildSkipRule}). A missing entry
+   * SKIPPED_HASH when v2 skipped the file (see buildSkipRule). A missing entry
    * means there is no file on disk.
    */
   hashes: Map<FilePath, FileHash>;
@@ -56,7 +56,7 @@ export interface StatsGraph {
   storyFiles: Set<FilePath>;
   /**
    * Known builder-generated modules that load preview annotations for every story. The paths are
-   * canonical and include only roots present in this graph; see {@link detectGlobalRoots}.
+   * canonical and include only roots present in this graph; see detectGlobalRoots.
    */
   globalRoots: Set<FilePath>;
 }
@@ -86,12 +86,12 @@ const VITE_COMPOSITION_ROOTS = new Set([
  *
  * @param stats The stats file to parse.
  * @param context The context the stats file was built in, which is needed to resolve module paths to
- * absolute files; see {@link StatsContext}.
- * @param skipRule Which on-disk files to leave unhashed; see {@link buildSkipRule}.
- * @param onDiskFiles The graph's files on disk, from {@link locateOnDiskFiles}; the same inventory
+ * absolute files; see StatsContext.
+ * @param skipRule Which on-disk files to leave unhashed; see buildSkipRule.
+ * @param onDiskFiles The graph's files on disk, from locateOnDiskFiles; the same inventory
  * the skip rule was built from.
  *
- * @returns The unpruned graph; see {@link StatsGraph}.
+ * @returns The unpruned graph; see StatsGraph.
  */
 export async function readStatsGraph(
   stats: Stats,
@@ -145,13 +145,13 @@ export async function readStatsGraph(
  * trace at an untraced importer, which is what the documented recipes rely on, untracing a barrel to
  * untrace what it re-exports and untracing a global decorator to untrace the utilities it imports.
  * The node itself stays, so an untraced story file is still a story file and an importer's edge to
- * it is still recorded. An untracked file keeps its edges; see {@link SkipReason}.
+ * it is still recorded. An untracked file keeps its edges; see SkipReason.
  *
  * @param files The graph, mutated in place.
  * @param skippedFiles The skipped files with their reasons, keyed by canonical path.
  *
  * @returns The untraced files and everything the severed edges led to; see
- * {@link StatsGraph.untracedSubtrees}.
+ * StatsGraph.untracedSubtrees.
  */
 function wallOffUntracedFiles(
   files: Map<FilePath, TurboSnapFile>,
@@ -181,7 +181,7 @@ function wallOffUntracedFiles(
  * @param files The unpruned canonical graph. Composition roots are usually synthetic and therefore
  * absent from the content hashes, but they are retained in this graph.
  * @param roots The filesystem roots used to resolve builder-specific module names; see
- * {@link StatsRoots}.
+ * StatsRoots.
  *
  * @returns The canonical paths of the global composition roots present in the graph.
  */
@@ -253,10 +253,10 @@ function ensureFile(
  * Synthetic modules (e.g. Vite's `virtual:` entries and inline `data:` URLs) have no on-disk
  * location. Skipping them is stats policy, which is why it is asked here rather than of the disk.
  * Beyond that, only a regular file is hashable, and what counts as one is the module's rule; see
- * {@link ProjectFiles.isFile}. Skipping a name with no file loses no evidence, because such a name is
+ * ProjectFiles.isFile. Skipping a name with no file loses no evidence, because such a name is
  * never a source file and so can never be edited as one.
  *
- * @param id The folded stats id; see {@link foldStatsId}.
+ * @param id The folded stats id; see foldStatsId.
  * @param statsRoot The directory relative stats paths are named from.
  * @param projectFiles How to read the disk.
  *
@@ -309,12 +309,12 @@ export function locateOnDiskFiles(
 }
 
 /**
- * Hashes every on-disk file, keyed by canonical path. A file v2 skips gets {@link SKIPPED_HASH} in
+ * Hashes every on-disk file, keyed by canonical path. A file v2 skips gets SKIPPED_HASH in
  * place of a content hash, so the one invariant the graph relies on, an entry per on-disk file, is
  * established where the skip is decided rather than by every caller.
  *
  * @param onDiskFiles The absolute path of each on-disk file, keyed by canonical path.
- * @param skipRule Which files to skip; see {@link buildSkipRule}.
+ * @param skipRule Which files to skip; see buildSkipRule.
  * @param projectFiles How to read the disk.
  *
  * @returns The hash of every on-disk file, and the skipped files with their reasons, both keyed by

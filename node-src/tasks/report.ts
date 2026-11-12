@@ -80,7 +80,7 @@ interface ReportQueryResult {
 /**
  * Generate a JUnit report XML file for a particular run.
  *
- * @param ctx The {@link Context} for which we're generating a report.
+ * @param ctx The context for which we're generating a report.
  */
 export const generateReport = async (ctx: Context) => {
   const { log } = ctx;
@@ -123,7 +123,7 @@ export const generateReport = async (ctx: Context) => {
 /**
  * Query the build for the report and return the build with all the paginated tests.
  *
- * @param ctx The {@link Context} for which we're generating a report.
+ * @param ctx The context for which we're generating a report.
  *
  * @returns The build with all the tests.
  */
@@ -155,8 +155,8 @@ const queryBuildForReport = async (ctx: Context) => {
 /**
  * Generate a single `<testcase>` within a JUnit report and test run with Chromatic.
  *
- * @param suite The {@link TestSuite} we're currently processing.
- * @param test The {@link VisualTest} we're currently processing, contained in `suite`.
+ * @param suite The test suite we're currently processing.
+ * @param test The visual test we're currently processing, contained in `suite`.
  */
 const generateReportTestCase = (suite: TestSuite, test: VisualTest) => {
   const { status, result, spec, parameters, mode } = test;

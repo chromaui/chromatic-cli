@@ -5,7 +5,7 @@
  */
 
 /**
- * Every `<configDir>/preview.*` subtree, unioned and rolled up; see {@link collectStorybookFiles}.
+ * Every `<configDir>/preview.*` subtree, unioned and rolled up; see collectStorybookFiles.
  * One category entry rather than one entry per preview path, so the map stays a homogeneous set of
  * category roll-ups.
  */
@@ -28,7 +28,7 @@ export const STORYBOOK_GLOBALS_KEY = 'storybookGlobals';
 /**
  * The installed Storybook version. Unlike every other entry this is a version string rather than a
  * hash, because the preview core runtime is served outside the module graph on webpack and rspack;
- * see {@link resolveStorybookVersion}.
+ * see resolveStorybookVersion.
  */
 export const STORYBOOK_VERSION_KEY = 'storybookVersion';
 
@@ -43,14 +43,14 @@ export const STORYBOOK_VERSION_KEY = 'storybookVersion';
  */
 export const STORYBOOK_CONFIG_KEY = 'storybookConfigFiles';
 
-/** The static directories; see {@link STORYBOOK_CONFIG_KEY}. */
+/** The static directories; see STORYBOOK_CONFIG_KEY. */
 export const STATIC_FILES_KEY = 'staticFiles';
 
 /**
  * The files matching the user's `--externals` globs, rolled up. The user names these because they
  * affect the built Storybook in a way no trace can see (a Tailwind config, a global stylesheet), so
  * the Index bails TurboSnap when this entry moves between a build and its baseline, as v1 bails when
- * such a file is in the git diff. See {@link hashOutOfGraphFiles}.
+ * such a file is in the git diff. See hashOutOfGraphFiles.
  */
 export const EXTERNALS_KEY = 'externals';
 
