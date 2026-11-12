@@ -21,9 +21,10 @@ jobs:
       - name: E2E fixture Storybook versions
         run: node e2e/check-storybook-versions.mjs
 
-      # Runs before the build so it can't depend on generated output.
+      # Runs before the build so it can't depend on generated output. The production run leaves out
+      # tests, stories, and frames, so it fails on an export only they use.
       - name: Dead code and dependency audit
-        run: yarn knip
+        run: yarn knip && yarn knip --production
 
       # check types and linting issues
       - run: yarn typescript:check
