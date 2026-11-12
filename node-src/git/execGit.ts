@@ -35,7 +35,7 @@ const defaultOptions: Options = {
  *
  @returns the git timeout in milliseconds, defaulting to `DEFAULT_GIT_TIMEOUT_SECONDS` if not set.
  */
-function getGitTimeout(depOptions: GitDeps['options']): number {
+export function getGitTimeout(depOptions: GitDeps['options']): number {
   return depOptions.gitTimeout ?? DEFAULT_GIT_TIMEOUT_SECONDS * 1000;
 }
 

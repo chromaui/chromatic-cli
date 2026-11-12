@@ -16,6 +16,7 @@ import {
   execGitCommandCountLines,
   execGitCommandEntries,
   execGitCommandOneLine,
+  getGitTimeout,
   GitDeps,
 } from './execGit';
 import { resolveSymlinkAtReference } from './treeAtReference';
@@ -666,10 +667,7 @@ export function trackedFiles(
  * @returns The timeout in milliseconds.
  */
 function getMetadataGitTimeout(deps: GitDeps) {
-  return Math.min(
-    deps.options.gitTimeout ?? DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS,
-    DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS
-  );
+  return Math.min(getGitTimeout(deps.options), DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS);
 }
 
 /**
