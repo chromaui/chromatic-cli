@@ -5,10 +5,6 @@ const isSupported =
 
 const cross = isSupported ? '✖' : '×';
 const check = isSupported ? '✔' : '√';
-export const arrowDown = `↓`;
-export const arrowRight = `→`;
-export const chevronRight = `›`;
-export const spinner = `⠋`;
 
 export const info = chalk.blue(isSupported ? 'ℹ' : 'i');
 export const success = chalk.green(check);

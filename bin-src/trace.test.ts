@@ -1,12 +1,6 @@
 import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  baseDirectoryNote,
-  rootDirectoryNote,
-  storybookDirectoryNote,
-  traceSuggestions,
-} from '../node-src/ui/messages/info/tracedAffectedFiles';
 import { main } from './trace';
 
 afterEach(() => {
@@ -16,6 +10,8 @@ afterEach(() => {
 // Call main() in-process rather than spawning `yarn chromatic trace`, which runs dist/bin.cjs:
 // that build is missing on a fresh checkout and stale after a source change, so a spawned
 // test either fails for no reason or passes against old code.
+const rootDirectoryNote = 'The root directory of your project:';
+
 async function trace(args: string[]) {
   const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
   await main([...args, '-s', 'bin-src/__mocks__/previewStatsJson/preview-stats.trimmed.json']);
@@ -46,9 +42,9 @@ describe('chromatic trace', () => {
     ]);
 
     expect(output).toContain(rootDirectoryNote);
-    expect(output).toContain(baseDirectoryNote);
-    expect(output).toContain(storybookDirectoryNote);
-    expect(output).toContain(traceSuggestions);
+    expect(output).toContain('The base directory (The relative path from the root');
+    expect(output).toContain('The storybook directory (The directory can either be');
+    expect(output).toContain('If you are having trouble with tracing');
     expect(output).toContain('node-src/ui/messages/errors/invalidReportPath.stories.ts');
     expect(output).toContain('node-src/ui/messages/errors/invalidReportPath.ts');
   });

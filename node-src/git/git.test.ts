@@ -30,7 +30,6 @@ import {
   getVersion,
   getVisitedCommitDetails,
   hasPreviousCommit,
-  NULL_BYTE,
   trackedFiles,
 } from './git';
 
@@ -414,7 +413,7 @@ describe('findFilesFromRepositoryRoot', () => {
     const filesFound = ['package.json', 'another/package/package.json'];
 
     // first call from getRepositoryRoot()
-    execGitCommand.mockResolvedValueOnce(filesFound.join(NULL_BYTE));
+    execGitCommand.mockResolvedValueOnce(filesFound.join('\0'));
 
     const results = await findFilesFromRepositoryRoot(
       ctx,

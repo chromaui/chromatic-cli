@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Context, Module } from '../../../types';
 import TestLogger from '../../testLogger';
-import { normalizePath } from '../statsPaths';
+import { normalizeStatsName } from '../statsPaths';
 import { getDependentStoryFiles } from './getDependentStoryFiles';
 
 const CSF_GLOB = String.raw`./src sync ^\.\/(?:(?!\.)(?=.)[^/]*?\.stories\.js)$`;
@@ -1361,7 +1361,7 @@ describe('getDependentStoryFiles', () => {
   ])('does not trace a changed file through the opaque NUL module %j', async (helperId) => {
     const ctx = getContext({ storybookBaseDir: 'packages/ui' });
     // The name the id had when the NUL was stripped
-    const phantomFile = normalizePath(
+    const phantomFile = normalizeStatsName(
       helperId.slice(1),
       '/path/to/project',
       ctx.storybook.projectRoot
@@ -1624,29 +1624,33 @@ describe('getDependentStoryFiles', () => {
   });
 });
 
-describe('normalizePath', () => {
+describe('normalizeStatsName', () => {
   it('converts absolute paths to relative paths', () => {
     const projectRoot = '/path/to/project';
-    const normalized = normalizePath(`${projectRoot}/src/webapp/file.js`, projectRoot);
+    const normalized = normalizeStatsName(
+      `${projectRoot}/src/webapp/file.js`,
+      projectRoot,
+      projectRoot
+    );
     expect(normalized).toBe('src/webapp/file.js');
   });
 
   it('returns already relative paths as-is', () => {
     const projectRoot = '/path/to/project';
-    const normalized = normalizePath(`src/webapp/file.js`, projectRoot);
+    const normalized = normalizeStatsName(`src/webapp/file.js`, projectRoot, projectRoot);
     expect(normalized).toBe('src/webapp/file.js');
   });
 
   it('handles complex relative paths', () => {
     const projectRoot = '/path/to/project';
-    const normalized = normalizePath(`../webapp/file.js`, projectRoot);
+    const normalized = normalizeStatsName(`../webapp/file.js`, projectRoot, projectRoot);
     expect(normalized).toBe('../webapp/file.js');
   });
 
   describe('with workingDir', () => {
     it('makes relative paths relative to the project root', () => {
       const projectRoot = '/path/to/project';
-      const normalized = normalizePath(
+      const normalized = normalizeStatsName(
         `folder/file.js`,
         projectRoot,
         `${projectRoot}/packages/webapp`
@@ -1656,7 +1660,7 @@ describe('normalizePath', () => {
 
     it('handles complex relative paths', () => {
       const projectRoot = '/path/to/project';
-      const normalized = normalizePath(
+      const normalized = normalizeStatsName(
         `../../packages/webapp/folder/file.js`,
         projectRoot,
         `${projectRoot}/packages/tools`
@@ -1666,7 +1670,7 @@ describe('normalizePath', () => {
 
     it('converts absolute paths to relative paths as normal', () => {
       const projectRoot = '/path/to/project';
-      const normalized = normalizePath(
+      const normalized = normalizeStatsName(
         `${projectRoot}/packages/webapp/file.js`,
         projectRoot,
         `${projectRoot}/packages/webapp`
@@ -1676,7 +1680,7 @@ describe('normalizePath', () => {
 
     it('does not affect paths outside of working dir', () => {
       const projectRoot = '/path/to/project';
-      const normalized = normalizePath(
+      const normalized = normalizeStatsName(
         `${projectRoot}/packages/webapp/file.js`,
         projectRoot,
         `${projectRoot}/packages/tools`

@@ -14,7 +14,7 @@ import { initial, starting, success } from '../ui/tasks/uploadShare';
  *
  * @param ctx The context set when executing the CLI.
  */
-export const uploadShareFiles = async (ctx: Context) => {
+const uploadShareFiles = async (ctx: Context) => {
   const { paths = [], lengths = [] } = ctx.fileInfo ?? {};
 
   if (!ctx.share) {

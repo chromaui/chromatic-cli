@@ -2,11 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as execGit from '../../../git/execGit';
 import TestLogger from '../../testLogger';
-import {
-  arePackageDependenciesEqual,
-  clearFileCache,
-  findChangedPackageFiles,
-} from './findChangedPackageFiles';
+import { findChangedPackageFiles } from './findChangedPackageFiles';
 
 vi.mock('../../../git/execGit');
 
@@ -29,7 +25,6 @@ const mockFileContents = (packagesCommitsByFile) => {
 
 beforeEach(() => {
   execGitCommand.mockReset();
-  clearFileCache();
 });
 
 describe('findChangedPackageFiles', () => {
@@ -156,163 +151,174 @@ describe('findChangedPackageFiles', () => {
   });
 });
 
-describe('arePackageDependenciesEqual', () => {
-  it('returns true if dependencies objects have same number of keys', () => {
+const arePackageDependenciesEqual = async (
+  base: Record<string, unknown>,
+  head: Record<string, unknown>
+) => {
+  mockFileContents({ 'package.json': { A: base, HEAD: head } });
+  const changed = await findChangedPackageFiles(ctx, [
+    { commit: 'A', changedFiles: ['package.json'] },
+  ]);
+  return changed.length === 0;
+};
+
+describe('comparing package.json dependencies', () => {
+  it('returns true if dependencies objects have same number of keys', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         { dependencies: { a: '1', b: '2' } },
         { dependencies: { a: '1', b: '2' } }
       )
     ).toBe(true);
   });
 
-  it("returns false if dependencies objects don't have same number of keys", () => {
+  it("returns false if dependencies objects don't have same number of keys", async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         { dependencies: { a: '1', b: '2' } },
         { dependencies: { a: '1' } }
       )
     ).toBe(false);
   });
 
-  it('returns false if dependencies have same number of keys but keys not the same keys', () => {
+  it('returns false if dependencies have same number of keys but keys not the same keys', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         { dependencies: { a: '1', b: '2' } },
         { dependencies: { a: '1', c: '3' } }
       )
     ).toBe(false);
   });
 
-  it('returns false if values of dependencies entries are not the same', () => {
+  it('returns false if values of dependencies entries are not the same', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         { dependencies: { a: '1', b: '2' } },
         { dependencies: { a: '1', b: '1.1' } }
       )
     ).toBe(false);
   });
 
-  it('returns true if dependencies objects have same number of keys, same keys, and same values', () => {
+  it('returns true if dependencies objects have same number of keys, same keys, and same values', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         { dependencies: { a: '1', b: '2', c: '3' } },
         { dependencies: { a: '1', b: '2', c: '3' } }
       )
     ).toBe(true);
   });
 
-  it('returns true for dependencies objects with same keys and values, even if properties are in different order', () => {
+  it('returns true for dependencies objects with same keys and values, even if properties are in different order', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         { dependencies: { a: '1', b: '2', c: '3' } },
         { dependencies: { c: '3', a: '1', b: '2' } }
       )
     ).toBe(true);
   });
 
-  it('returns false if devDependencies are different', () => {
+  it('returns false if devDependencies are different', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         { devDependencies: { a: '1', b: '2' } },
         { devDependencies: { a: '1', b: '2.2' } }
       )
     ).toBe(false);
   });
 
-  it('returns false if peerDependencies are different', () => {
+  it('returns false if peerDependencies are different', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         { peerDependencies: { a: '1', b: '2' } },
         { peerDependencies: { a: '1', b: '2.2' } }
       )
     ).toBe(false);
   });
 
-  it('returns false if overrides are different', () => {
+  it('returns false if overrides are different', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         { overrides: { a: '1', b: '2' } },
         { overrides: { a: '1', b: '2.2' } }
       )
     ).toBe(false);
   });
 
-  it('returns true if nested overrides are same', () => {
+  it('returns true if nested overrides are same', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         { overrides: { a: '1', b: { c: '1' } } },
         { overrides: { a: '1', b: { c: '1' } } }
       )
     ).toBe(true);
   });
 
-  it('returns false if nested overrides values have different values', () => {
+  it('returns false if nested overrides values have different values', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         { overrides: { a: '1', b: { c: '1' } } },
         { overrides: { a: '1', b: { c: '2' } } }
       )
     ).toBe(false);
   });
 
-  it('returns false if nested overrides are not same type', () => {
+  it('returns false if nested overrides are not same type', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         { overrides: { a: '1', b: { c: '1' } } },
         { overrides: { a: '1', b: '2' } }
       )
     ).toBe(false);
   });
 
-  it('returns false if optionalDependencies are different', () => {
+  it('returns false if optionalDependencies are different', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         { optionalDependencies: { a: '1', b: '1' } },
         { optionalDependencies: { a: '1', b: '2' } }
       )
     ).toBe(false);
   });
 
-  it('returns false if resolutions are different', () => {
+  it('returns false if resolutions are different', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         { resolutions: { a: '1', b: '1' } },
         { resolutions: { a: '1', b: '2' } }
       )
     ).toBe(false);
   });
 
-  it('returns false if peerDependenciesMeta are different', () => {
+  it('returns false if peerDependenciesMeta are different', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         { peerDependenciesMeta: { a: { optional: true } } },
         { peerDependenciesMeta: { a: { optional: false } } }
       )
     ).toBe(false);
   });
 
-  it('returns false if dependenciesMeta are different', () => {
+  it('returns false if dependenciesMeta are different', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         { dependenciesMeta: { a: { optional: true } } },
         { dependenciesMeta: { a: { optional: false } } }
       )
     ).toBe(false);
   });
 
-  it('returns false if pnpm-specific fields are different', () => {
+  it('returns false if pnpm-specific fields are different', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         { pnpm: { overrides: { foo: '1' } } },
         { pnpm: { overrides: { foo: '2' } } }
       )
     ).toBe(false);
   });
 
-  it("returns true if differing object fields aren't dependency-related", () => {
+  it("returns true if differing object fields aren't dependency-related", async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         {
           scripts: {
             test: 'yarn jest --watch',
@@ -330,9 +336,9 @@ describe('arePackageDependenciesEqual', () => {
     ).toBe(true);
   });
 
-  it("returns true if differing non-object fields aren't dependency-related", () => {
+  it("returns true if differing non-object fields aren't dependency-related", async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         {
           version: '1.0',
           dependencies: { a: '1' },
@@ -345,9 +351,9 @@ describe('arePackageDependenciesEqual', () => {
     ).toBe(true);
   });
 
-  it('returns false if multiple dependency fields differ', () => {
+  it('returns false if multiple dependency fields differ', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         {
           dependencies: { a: '1' },
           devDependencies: { c: '3' },
@@ -360,9 +366,9 @@ describe('arePackageDependenciesEqual', () => {
     ).toBe(false);
   });
 
-  it('returns true if all dependency fields are the same', () => {
+  it('returns true if all dependency fields are the same', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         {
           dependencies: { a: '1', b: '2', c: '3' },
           devDependencies: { d: '4', e: '5', f: '6' },
@@ -413,9 +419,9 @@ describe('arePackageDependenciesEqual', () => {
     ).toBe(true);
   });
 
-  it('returns false if dependency moves from one dependency object to the other', () => {
+  it('returns false if dependency moves from one dependency object to the other', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         // same number of keys, but move between
         { dependencies: { a: '1' }, devDependencies: { b: '2' } },
         { dependencies: { b: '2' }, devDependencies: { a: '1' } }
@@ -423,9 +429,9 @@ describe('arePackageDependenciesEqual', () => {
     ).toBe(false);
   });
 
-  it('returns true if non-dependency fields are added or removed', () => {
+  it('returns true if non-dependency fields are added or removed', async () => {
     expect(
-      arePackageDependenciesEqual(
+      await arePackageDependenciesEqual(
         {
           name: 'foo',
           scripts: { test: 'yarn jest --watch' },
@@ -440,15 +446,17 @@ describe('arePackageDependenciesEqual', () => {
     ).toBe(true);
   });
 
-  it('returns false if dependency objects are added', () => {
-    expect(arePackageDependenciesEqual({}, { dependencies: { a: '1' } })).toBe(false);
+  it('returns false if dependency objects are added', async () => {
+    expect(await arePackageDependenciesEqual({}, { dependencies: { a: '1' } })).toBe(false);
   });
 
-  it('returns false if dependency objects are removed', () => {
-    expect(arePackageDependenciesEqual({ dependencies: { a: '1' } }, {})).toBe(false);
+  it('returns false if dependency objects are removed', async () => {
+    expect(await arePackageDependenciesEqual({ dependencies: { a: '1' } }, {})).toBe(false);
   });
 
-  it('returns true if dependencies are null', () => {
-    expect(arePackageDependenciesEqual({ dependencies: null }, { dependencies: null })).toBe(true);
+  it('returns true if dependencies are null', async () => {
+    expect(await arePackageDependenciesEqual({ dependencies: null }, { dependencies: null })).toBe(
+      true
+    );
   });
 });

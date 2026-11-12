@@ -8,7 +8,7 @@ import stripAnsi from 'strip-ansi';
  *
  * @returns The modified event.
  */
-export function filterErrorEvent(event: Sentry.ErrorEvent) {
+function filterErrorEvent(event: Sentry.ErrorEvent) {
   // Remove ANSI escape codes from error messages
   if (event.message) {
     event.message = stripAnsi(event.message);
@@ -31,7 +31,7 @@ export function filterErrorEvent(event: Sentry.ErrorEvent) {
  *
  * @returns The modified breadcrumb, or `null` when it is not desired.
  */
-export function filterBreadcrumb(breadcrumb: Sentry.Breadcrumb) {
+function filterBreadcrumb(breadcrumb: Sentry.Breadcrumb) {
   if (breadcrumb.category === 'console') {
     // Do not send breadcrumbs for console newlines
     if (breadcrumb.message === '') {

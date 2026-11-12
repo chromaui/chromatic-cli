@@ -71,7 +71,7 @@ function findConfigFlags({
  * parsed AST answers `getSafeFieldValue` instead. `readMainConfig` hides that behind `readField`, so
  * callers read fields the same way without caring which form the config took.
  */
-export interface MainConfigReader {
+interface MainConfigReader {
   /** Reads a top-level field, returning `undefined` when it is absent. */
   readField: (field: string) => unknown;
 }
@@ -143,6 +143,9 @@ async function findReferences(mainConfig?: MainConfigReader) {
  * The two sources resolve against different roots: Storybook runs the build script from the project
  * root, but reads `staticDirs` entries relative to the config directory that declares them.
  *
+ * Exported only for its unit tests, which feed it each `staticDirs` shape through a fake config.
+ * Through `getStorybookMetadata`, every shape would need its own fixture project.
+ *
  * @param input The loaded config and the roots each source of directories resolves against.
  * @param input.mainConfig The loaded main config, or undefined when it could not be read.
  * @param input.configDirectory The absolute config directory `staticDirs` entries resolve against.
@@ -151,6 +154,8 @@ async function findReferences(mainConfig?: MainConfigReader) {
  *   resolve against.
  *
  * @returns The resolved static directories, or `{}` when there are none.
+ *
+ * @internal
  */
 export function findStaticDirectories({
   mainConfig,
@@ -230,7 +235,7 @@ export async function findStorybookConfigFile(
  *
  * @returns The config reader, or undefined when neither path yielded a config.
  */
-export async function readMainConfig(
+async function readMainConfig(
   configDirectory: string,
   log: StorybookInfoDeps['log']
 ): Promise<MainConfigReader | undefined> {

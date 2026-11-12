@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
   classifyChangedPackageFilesDetail,
   classifyInvalidChangedFilesDetail,
-  detectLockfileKind,
 } from './classifyBailDetail';
 import {
   AncestorMissingError,
@@ -65,27 +64,21 @@ describe('classifyChangedPackageFilesDetail', () => {
   });
 });
 
-describe('detectLockfileKind', () => {
-  it('returns "yarn.lock" for a yarn lockfile path', () => {
-    expect(detectLockfileKind('/tmp/checkout-abc/yarn.lock')).toBe('yarn.lock');
-  });
+const lockfileKindOf = (lockfilePath: string) =>
+  classifyChangedPackageFilesDetail(new LockFileSizeExceededError(lockfilePath, 1)).lockfileKind;
 
-  it('returns "pnpm-lock.yaml" for a pnpm lockfile path', () => {
-    expect(detectLockfileKind('/tmp/checkout-abc/pnpm-lock.yaml')).toBe('pnpm-lock.yaml');
-  });
-
-  it('returns "package-lock.json" for an npm lockfile path', () => {
-    expect(detectLockfileKind('/tmp/checkout-abc/package-lock.json')).toBe('package-lock.json');
-  });
-
-  it('returns undefined for an unrecognized path', () => {
-    expect(detectLockfileKind('/tmp/checkout-abc/package.json')).toBeUndefined();
-    expect(detectLockfileKind('')).toBeUndefined();
-  });
-
-  it('does not match a path whose basename only happens to end with a lockfile name', () => {
-    expect(detectLockfileKind('/tmp/checkout-abc/my.yarn.lock')).toBeUndefined();
-    expect(detectLockfileKind('/tmp/checkout-abc/old-package-lock.json')).toBeUndefined();
+describe('lockfileKind', () => {
+  it.each([
+    { lockfilePath: '/tmp/checkout-abc/yarn.lock', expected: 'yarn.lock' },
+    { lockfilePath: '/tmp/checkout-abc/pnpm-lock.yaml', expected: 'pnpm-lock.yaml' },
+    { lockfilePath: '/tmp/checkout-abc/package-lock.json', expected: 'package-lock.json' },
+    { lockfilePath: '/tmp/checkout-abc/package.json', expected: undefined },
+    { lockfilePath: '', expected: undefined },
+    // The basename only ends with a lockfile name.
+    { lockfilePath: '/tmp/checkout-abc/my.yarn.lock', expected: undefined },
+    { lockfilePath: '/tmp/checkout-abc/old-package-lock.json', expected: undefined },
+  ])('is $expected for $lockfilePath', ({ lockfilePath, expected }) => {
+    expect(lockfileKindOf(lockfilePath)).toBe(expected);
   });
 });
 

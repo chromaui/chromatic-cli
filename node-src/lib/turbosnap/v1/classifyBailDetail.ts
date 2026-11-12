@@ -20,7 +20,7 @@ import {
  *
  * @returns The matching lockfile filename, or `undefined` if none match.
  */
-export function detectLockfileKind(filePath: string): string | undefined {
+function detectLockfileKind(filePath: string): string | undefined {
   const basename = path.basename(filePath);
   return SUPPORTED_LOCK_FILES.find((lockfile) => basename === lockfile);
 }

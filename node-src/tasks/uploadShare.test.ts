@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { uploadFiles } from '../lib/uploadFiles';
-import { uploadShareFiles } from './uploadShare';
+import uploadShare from './uploadShare';
+
+// Runs the share upload task the way the pipeline does.
+const uploadShareFiles = (ctx: any) => uploadShare(ctx).task(ctx, {} as any);
 
 vi.mock('../lib/uploadFiles');
 

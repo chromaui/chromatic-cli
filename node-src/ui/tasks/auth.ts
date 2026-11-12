@@ -26,9 +26,3 @@ export const authenticated = (ctx: Context) => ({
     ? `Using project token '${mask(ctx.options.projectToken)}'`
     : `Using project ID '${ctx.options.projectId}' and user token`,
 });
-
-export const invalidToken = (ctx: Context) => ({
-  status: 'error',
-  title: `Failed to authenticate with Chromatic${environment(ctx.env.CHROMATIC_INDEX_URL)}`,
-  output: `Invalid project token '${ctx.options.projectToken}'`,
-});

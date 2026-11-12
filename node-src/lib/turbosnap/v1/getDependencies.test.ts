@@ -10,7 +10,9 @@ import { checkoutFile } from '../../../git/git';
 import TestLogger from '../../testLogger';
 import { SUPPORTED_LOCK_FILES } from '../../utilities';
 import { LockFileParseFailedError, LockFileSizeExceededError } from './errors';
-import { getDependencies, MAX_LOCK_FILE_SIZE } from './getDependencies';
+import { getDependencies } from './getDependencies';
+
+const MAX_LOCK_FILE_SIZE = 10_485_760; // The 10 MB default
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

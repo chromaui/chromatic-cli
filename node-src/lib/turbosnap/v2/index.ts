@@ -13,7 +13,7 @@ import { BuildUploadHashesResponse, uploadHashes } from './uploadHashes';
  * The level a v2 failure is logged at. We do this because we don't need logs showing up if the
  * user didn't request TurboSnap for the build. Debug logs are fine.
  */
-export type FailureLogLevel = 'error' | 'debug';
+type FailureLogLevel = 'error' | 'debug';
 
 /**
  * The input to build the manifest (see {@link ManifestInput}), plus what this entry point adds on

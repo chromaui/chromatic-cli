@@ -5,12 +5,9 @@ import { tmpdir } from 'os';
 import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  findStaticDirectories,
-  getStorybookMetadata,
-  MainConfigReader,
-  readMainConfig,
-} from './getStorybookMetadata';
+import { findStaticDirectories, getStorybookMetadata } from './getStorybookMetadata';
+
+type MainConfigReader = NonNullable<Parameters<typeof findStaticDirectories>[0]['mainConfig']>;
 
 // Passes through to the real implementation unless a test makes a package lookup hang.
 vi.mock('fs-extra', async (importOriginal) => {
@@ -137,29 +134,15 @@ function projectRootOf(project: string) {
   return path.resolve(FIXTURES, project);
 }
 
-describe('readMainConfig reader', () => {
-  it('reads a top-level field off an evaluated module', async () => {
-    const mainConfig = await readMainConfig(`${FIXTURES}/js-cjs/.storybook`, getDeps('js-cjs').log);
-
-    expect(mainConfig?.readField('staticDirs')).toEqual(['./static', '../public']);
-  });
-
-  it('unwraps a default export off an evaluated module', async () => {
-    const mainConfig = await readMainConfig(
-      `${FIXTURES}/js-cjs-default-export/.storybook`,
-      getDeps('js-cjs-default-export').log
+describe('getStorybookMetadata without a readable main config', () => {
+  it('reports no static directories and an unknown builder', async () => {
+    const metadata = await getStorybookMetadata(
+      getDeps('does-not-exist'),
+      projectRootOf('does-not-exist')
     );
 
-    expect(mainConfig?.readField('staticDirs')).toEqual(['./static', '../public']);
-  });
-
-  it('returns undefined when neither read path yields a config', async () => {
-    const mainConfig = await readMainConfig(
-      `${FIXTURES}/does-not-exist/.storybook`,
-      getDeps('does-not-exist').log
-    );
-
-    expect(mainConfig).toBeUndefined();
+    expect(metadata.staticDirs).toBeUndefined();
+    expect(metadata.builder).toEqual({ name: 'unknown', packageVersion: '0' });
   });
 });
 
@@ -167,6 +150,7 @@ describe('getStorybookMetadata staticDirs discovery', () => {
   it.each([
     { project: 'ts-esm', shape: 'a parsed main.ts' },
     { project: 'js-cjs', shape: 'an evaluated cjs main.js' },
+    { project: 'js-cjs-default-export', shape: 'an evaluated main.js with a default export' },
     { project: 'js-esm', shape: 'an esm main.js' },
     { project: 'js-esm-unrequirable', shape: "a main.js require() can't evaluate" },
     { project: 'mjs-esm', shape: 'a parsed main.mjs' },

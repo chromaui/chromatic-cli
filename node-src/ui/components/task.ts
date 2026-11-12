@@ -1,16 +1,13 @@
 import chalk from 'chalk';
 import { dedent } from 'ts-dedent';
 
-import {
-  arrowDown,
-  arrowRight,
-  chevronRight,
-  error,
-  info,
-  spinner,
-  success,
-  warning,
-} from './icons';
+import { error, info, success, warning } from './icons';
+
+// Renders the Listr-era task states in stories. The CLI renders tasks with Clack instead.
+const arrowDown = `↓`;
+const arrowRight = `→`;
+const chevronRight = `›`;
+const spinner = `⠋`;
 
 const icons = {
   initial: chalk.gray(chevronRight),

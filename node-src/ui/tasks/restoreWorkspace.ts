@@ -1,8 +1,3 @@
-export const initial = {
-  status: 'initial',
-  title: 'Restore workspace',
-};
-
 export const pending = () => ({
   status: 'pending',
   title: 'Restoring your workspace',
