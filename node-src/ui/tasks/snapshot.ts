@@ -97,7 +97,7 @@ export const pending = (
 };
 /* eslint-enable complexity */
 
-export const buildPassed = (ctx: Context) => {
+const buildPassed = (ctx: Context) => {
   const { snapshots, components, stories, e2eTests } = stats(ctx);
   const output = isE2EBuild(ctx.options)
     ? `Tested ${e2eTests}; captured ${snapshots} in ${getDuration(ctx)}`
@@ -110,7 +110,7 @@ export const buildPassed = (ctx: Context) => {
   };
 };
 
-export const buildComplete = (ctx: Context) => {
+const buildComplete = (ctx: Context) => {
   const { snapshots, components, stories, e2eTests } = stats(ctx);
   const output = isE2EBuild(ctx.options)
     ? `Tested ${e2eTests}; captured ${snapshots} in ${getDuration(ctx)}`
@@ -125,7 +125,7 @@ export const buildComplete = (ctx: Context) => {
   };
 };
 
-export const buildBroken = (ctx: Context) => {
+const buildBroken = (ctx: Context) => {
   const { snapshots, components, stories, e2eTests, errors, e2eErrors } = stats(ctx);
   const output = isE2EBuild(ctx.options)
     ? `Tested ${e2eTests}; captured ${snapshots} and found ${e2eErrors}`
@@ -138,7 +138,7 @@ export const buildBroken = (ctx: Context) => {
   };
 };
 
-export const buildFailed = (ctx: Context) => {
+const buildFailed = (ctx: Context) => {
   return {
     status: 'error',
     title: `Build ${ctx.build.number} failed due to system error`,
@@ -146,7 +146,7 @@ export const buildFailed = (ctx: Context) => {
   };
 };
 
-export const buildCanceled = (ctx: Context) => {
+const buildCanceled = (ctx: Context) => {
   return {
     status: 'error',
     title: `Build ${ctx.build.number} canceled`,

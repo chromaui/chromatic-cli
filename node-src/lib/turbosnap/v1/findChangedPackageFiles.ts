@@ -45,33 +45,41 @@ const dependencyFields = [
   // most pnpm.* configs are dependency-related: https://pnpm.io/package_json#pnpmoverrides
   'pnpm',
 ];
-export const arePackageDependenciesEqual = (
+const arePackageDependenciesEqual = (
   packageJsonA: Record<string, unknown>,
   packageJsonB: Record<string, unknown>
 ) => dependencyFields.every((field) => isEqual(packageJsonA[field], packageJsonB[field]));
 
-const fileCache = new Map<string, string>();
-const readGitFile = async (ctx: Pick<Context, 'log'>, fileName: string, commit = 'HEAD') => {
+// Caches `git show` output for one `findChangedPackageFiles` call, which reads the HEAD version
+// of a manifest once per baseline commit.
+type FileCache = Map<string, string>;
+
+const readGitFile = async (
+  ctx: Pick<Context, 'log'>,
+  fileCache: FileCache,
+  fileName: string,
+  commit = 'HEAD'
+) => {
   const key = `${commit}:${fileName}`;
   if (fileCache.has(key)) return fileCache.get(key);
   const contents = await execGitCommand(ctx, `git show ${key}`);
   if (contents) fileCache.set(key, contents);
   return contents;
 };
-export const clearFileCache = () => fileCache.clear();
 
 // Filters a list of manifest files by whether they have dependency-related changes compared to
 // their counterpart from another (baseline) commit.
 const getManifestFilesWithChangedDependencies = async (
   ctx: Pick<Context, 'log'>,
+  fileCache: FileCache,
   manifestFiles: string[],
   commit: string
 ) => {
   const withChangedDependencies = await Promise.all(
     manifestFiles.map(async (fileName) => {
       try {
-        const base = await readGitFile(ctx, fileName, commit);
-        const head = await readGitFile(ctx, fileName);
+        const base = await readGitFile(ctx, fileCache, fileName, commit);
+        const head = await readGitFile(ctx, fileCache, fileName);
 
         if (!base || !head) {
           throw new Error('Failed to read git file');
@@ -92,11 +100,12 @@ export const findChangedPackageFiles = async (
   ctx: Pick<Context, 'log'>,
   packageMetadataChanges: { changedFiles: string[]; commit: string }[]
 ) => {
+  const fileCache: FileCache = new Map();
   const changedManifestFiles = await Promise.all(
     packageMetadataChanges.map(({ changedFiles, commit }) => {
       const changedManifestFiles = changedFiles.filter((f) => isPackageMetadataFile(f));
       if (changedManifestFiles.length === 0) return [];
-      return getManifestFilesWithChangedDependencies(ctx, changedManifestFiles, commit);
+      return getManifestFilesWithChangedDependencies(ctx, fileCache, changedManifestFiles, commit);
     })
   );
   // Remove duplicate entries (in case multiple ancestor builds changed the same package.json)

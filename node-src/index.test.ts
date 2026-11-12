@@ -11,7 +11,6 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 
 import { getGitInfo, run, runAll, shouldUploadMetadata } from '.';
 import * as git from './git/git';
-import { DNSResolveAgent } from './io/getDNSResolveAgent';
 import * as checkPackageJson from './lib/checkPackageJson';
 import getEnvironment from './lib/getEnvironment';
 import parseArguments from './lib/parseArguments';
@@ -709,8 +708,9 @@ it('uses custom DNS server if provided', async () => {
   ctx.env.CHROMATIC_DNS_SERVERS = ['1.2.3.4'];
   await runAll(ctx);
   expect(dns.setServers).toHaveBeenCalledWith(['1.2.3.4']);
-  // The lookup isn't actually performed because fetch is mocked, so we just check the agent.
-  expect((fetch as any).mock.calls[0][1].agent).toBeInstanceOf(DNSResolveAgent);
+  // fetch is mocked, so call the agent's lookup ourselves to check it resolves through `dns`.
+  (fetch as any).mock.calls[0][1].agent.options.lookup('index.chromatic.com', {}, vi.fn());
+  expect(dns.resolve).toHaveBeenCalledWith('index.chromatic.com', expect.any(Function));
 });
 
 describe('with TurboSnap', () => {

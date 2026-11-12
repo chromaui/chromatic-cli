@@ -21,11 +21,10 @@ import {
   success as initializeSuccess,
 } from '../tasks/initialize';
 import {
-  buildComplete as snapshotBuildComplete,
-  buildPassed as snapshotBuildPassed,
   initial as snapshotInitial,
   pending as snapshotPending,
   skipped as snapshotSkipped,
+  success as snapshotSuccess,
 } from '../tasks/snapshot';
 import {
   initial as storybookInfoInitial,
@@ -149,11 +148,16 @@ const snapshot = {
       label: 'Snapshot #1 w1280h720',
     }),
   BuildPassed: () =>
-    snapshotBuildPassed({ ...ctx, build: snapshotBuild, now: 0, startedAt: -123_456 } as any),
+    snapshotSuccess({
+      ...ctx,
+      build: { ...snapshotBuild, status: 'PASSED' },
+      now: 0,
+      startedAt: -123_456,
+    } as any),
   BuildComplete: () =>
-    snapshotBuildComplete({ ...ctx, build: snapshotBuild, now: 0, startedAt: -123_456 } as any),
+    snapshotSuccess({ ...ctx, build: snapshotBuild, now: 0, startedAt: -123_456 } as any),
   BuildAutoAccepted: () =>
-    snapshotBuildComplete({
+    snapshotSuccess({
       ...ctx,
       build: { ...snapshotBuild, autoAcceptChanges: true },
       now: 0,

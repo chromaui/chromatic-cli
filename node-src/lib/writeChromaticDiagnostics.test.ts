@@ -4,27 +4,35 @@ import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createLogger } from './log';
-import {
-  getDiagnostics,
-  removeChromaticDiagnostics,
-  writeChromaticDiagnostics,
-} from './writeChromaticDiagnostics';
+import { removeChromaticDiagnostics, writeChromaticDiagnostics } from './writeChromaticDiagnostics';
 
 vi.mock('jsonfile');
 vi.mock('fs');
 
-describe('getDiagnostics', () => {
-  it('returns context object', () => {
+describe('diagnostics file contents', () => {
+  const diagnosticsFile = 'chromatic-diagnostics.json';
+
+  // Returns what `writeChromaticDiagnostics` writes to the diagnostics file for `ctx`.
+  const writtenDiagnostics = async (ctx: Record<string, any>) => {
+    await writeChromaticDiagnostics({
+      log: createLogger(),
+      ...ctx,
+      options: { diagnosticsFile, ...ctx.options },
+    } as any);
+    return vi.mocked(jsonfile.writeFile).mock.lastCall?.[1];
+  };
+
+  it('writes the context object', async () => {
     const ctx = { build: { number: 1 } };
-    expect(getDiagnostics(ctx as any)).toEqual(ctx);
+    expect(await writtenDiagnostics(ctx)).toEqual({ ...ctx, options: { diagnosticsFile } });
   });
 
-  it('omits certain fields', () => {
-    const ctx = { analytics: {}, argv: [], client: {}, env: {}, log: {}, pkg: {}, title: {} };
-    expect(getDiagnostics(ctx as any)).toEqual({});
+  it('omits certain fields', async () => {
+    const ctx = { analytics: {}, argv: [], client: {}, env: {}, pkg: {}, title: {} };
+    expect(await writtenDiagnostics(ctx)).toEqual({ options: { diagnosticsFile } });
   });
 
-  it('redacts sensitive fields', () => {
+  it('redacts sensitive fields', async () => {
     const ctx = {
       build: { number: 1, reportToken: 'foo' },
       flags: { projectToken: 'bar' },
@@ -33,11 +41,11 @@ describe('getDiagnostics', () => {
       packageJson: { scripts: { chromatic: 'chromatic -t bar', ci: 'chromatic -t qux' } },
       env: { CHROMATIC_PROJECT_TOKEN: 'qux' },
     };
-    expect(getDiagnostics(ctx as any)).toEqual({
+    expect(await writtenDiagnostics(ctx)).toEqual({
       build: { number: 1, reportToken: undefined },
       flags: { projectToken: undefined },
       extraOptions: { userToken: undefined },
-      options: { originalArgv: undefined },
+      options: { diagnosticsFile, originalArgv: undefined },
       packageJson: {
         scripts: { chromatic: 'chromatic -t <redacted>', ci: 'chromatic -t <redacted>' },
       },

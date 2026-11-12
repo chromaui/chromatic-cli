@@ -20,7 +20,7 @@ import {
 import { resolveSymlinkAtReference } from './treeAtReference';
 
 const newline = /\r\n|\r|\n/; // Git may return \n even on Windows, so we can't use EOL
-export const NULL_BYTE = '\0'; // Separator used when running `git ls-files` with `-z`
+const NULL_BYTE = '\0'; // Separator used when running `git ls-files` with `-z`
 
 /**
  * Get the version of Git from the host.

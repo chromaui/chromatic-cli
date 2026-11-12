@@ -1,16 +1,7 @@
 import { clackProgressBarRenderer } from '../../renderer/engine/clack/progressRenderer';
 import { captureTask } from '../../renderer/storybook/captureTask';
 import { Context, Task } from '../../types';
-import {
-  buildBroken,
-  buildCanceled,
-  buildComplete,
-  buildFailed,
-  buildPassed,
-  dryRun,
-  pending,
-  skipped,
-} from './snapshot';
+import { dryRun, pending, skipped, success } from './snapshot';
 
 // Node-side scenarios for the snapshot task. The `?clack` Vite plugin runs this module in Node,
 // renders each export through the real Clack progress-bar renderer (snapshot reports discrete
@@ -74,14 +65,17 @@ export const PendingOnlyStoryNames = () =>
   );
 
 export const BuildPassed = () =>
-  make(buildPassed({ ...ctx, build, now, startedAt }), start({ ...ctx, build } as Context));
+  make(
+    success({ ...ctx, build: { ...build, status: 'PASSED' }, now, startedAt }),
+    start({ ...ctx, build } as Context)
+  );
 
 export const BuildComplete = () =>
-  make(buildComplete({ ...ctx, build, now, startedAt }), start({ ...ctx, build } as Context));
+  make(success({ ...ctx, build, now, startedAt }), start({ ...ctx, build } as Context));
 
 export const BuildAutoAccepted = () =>
   make(
-    buildComplete({ ...ctx, build: { ...build, autoAcceptChanges: true }, now, startedAt }),
+    success({ ...ctx, build: { ...build, autoAcceptChanges: true }, now, startedAt }),
     start({ ...ctx, build } as Context)
   );
 
@@ -92,11 +86,14 @@ export const BuildAutoAccepted = () =>
 const completed = (state: Task) =>
   make({ ...state, status: 'success' }, start({ ...ctx, build } as Context));
 
-export const BuildBroken = () => completed(buildBroken({ ...ctx, build, now, startedAt }));
+export const BuildBroken = () =>
+  completed(success({ ...ctx, build: { ...build, status: 'BROKEN' }, now, startedAt }));
 
-export const BuildFailed = () => completed(buildFailed({ ...ctx, build, now, startedAt }));
+export const BuildFailed = () =>
+  completed(success({ ...ctx, build: { ...build, status: 'FAILED' }, now, startedAt }));
 
-export const BuildCanceled = () => completed(buildCanceled({ ...ctx, build, now, startedAt }));
+export const BuildCanceled = () =>
+  completed(success({ ...ctx, build: { ...build, status: 'CANCELLED' }, now, startedAt }));
 
 // --dry-run and the upstream skipSnapshots reasons all self-skip; runTask drives the skipped state
 // through `renderer.succeed`.

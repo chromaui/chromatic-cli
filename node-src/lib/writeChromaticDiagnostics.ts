@@ -54,7 +54,7 @@ export function removeChromaticDiagnostics(ctx: Context) {
  *
  * @returns An object containing all information for the Chromatic diagnostics file.
  */
-export function getDiagnostics(ctx: Context) {
+function getDiagnostics(ctx: Context) {
   // Drop some fields that are not useful to have and redact sensitive fields. The analytics
   // client holds the authenticated GraphQL client, and originalArgv may contain a raw token.
   // Tokens can also appear inside other strings, such as a package.json script.

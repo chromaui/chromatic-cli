@@ -4,7 +4,10 @@ import { fileURLToPath } from 'url';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
-import { generateReport } from './report';
+import report from './report';
+
+// Runs the report task the way the pipeline does.
+const generateReport = (ctx: any) => report(ctx).task(ctx, {} as any);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

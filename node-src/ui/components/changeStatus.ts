@@ -19,20 +19,20 @@ interface FormatParameters {
   hasAccessibility: boolean;
 }
 
-export const formatChangeCount = ({ testCount, hasAccessibility }: FormatParameters) =>
+const formatChangeCount = ({ testCount, hasAccessibility }: FormatParameters) =>
   pluralize(
     hasAccessibility ? 'visual and accessibility changes' : 'visual changes',
     testCount,
     true
   );
 
-export const formatPendingMessage = ({ testCount, hasAccessibility }: FormatParameters) =>
+const formatPendingMessage = ({ testCount, hasAccessibility }: FormatParameters) =>
   `${formatChangeCount({ testCount, hasAccessibility })} must be accepted as ${pluralize('baseline', testCount)}`;
 
-export const formatAcceptedMessage = ({ testCount, hasAccessibility }: FormatParameters) =>
+const formatAcceptedMessage = ({ testCount, hasAccessibility }: FormatParameters) =>
   `${formatChangeCount({ testCount, hasAccessibility })} accepted as ${pluralize('baseline', testCount)}`;
 
-export const formatDeniedMessage = ({ testCount, hasAccessibility }: FormatParameters) =>
+const formatDeniedMessage = ({ testCount, hasAccessibility }: FormatParameters) =>
   `${formatChangeCount({ testCount, hasAccessibility })} denied`;
 
 type ChangeStatusBuild = Partial<

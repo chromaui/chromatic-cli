@@ -5,7 +5,7 @@ import {
   gatherGitInfo,
 } from '../tasks/gitInfo';
 import { Context } from '../types';
-import { pending, skippedForCommit, skippedRebuild, success } from '../ui/tasks/gitInfo';
+import { initial, pending, skippedForCommit, skippedRebuild, success } from '../ui/tasks/gitInfo';
 import { runTask } from './engine';
 import { clackTaskLogRenderer } from './engine/clack/taskLogRenderer';
 import { getRenderer } from './engine/getRenderer';
@@ -20,7 +20,7 @@ export async function renderGitInfo(ctx: Context): Promise<void> {
     ctx,
     {
       name: 'gitInfo',
-      title: 'Retrieve git information',
+      title: initial.title,
       transitions: {
         pending,
         success,

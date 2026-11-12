@@ -9,6 +9,22 @@
     // .storybook/clackCapture.ts loads these through jiti and renders every export as a story.
     "node-src/**/*.frames.ts",
   ],
+  // `knip --production` (also run in CI) analyzes only the `!` patterns: the code we ship, without
+  // tests, stories, frames, or the helpers only they use. An export used only by those fails it.
+  "project": [
+    "**/*.{js,mjs,cjs,jsx,ts,tsx,mts,cts}!",
+    // Release and e2e tooling that only CI runs.
+    "!{scripts,e2e}/**!",
+    "!**/__fixtures__/**!",
+    "!**/__mocks__/**!",
+    "!**/*.fake.ts!",
+    "!node-src/git/mocks/**!",
+    "!node-src/git/generateGitRepository.ts!",
+    "!node-src/lib/{testLogger,testUtilities}.ts!",
+    // The harness that renders `*.frames.ts` and the stories.
+    "!node-src/renderer/storybook/**!",
+    "!node-src/ui/components/task.ts!",
+  ],
   "ignore": [
     // Standalone projects with their own package.json that e2e/prepare.mjs and the smoke-test
     // workflow copy out and install. They are not part of this package.

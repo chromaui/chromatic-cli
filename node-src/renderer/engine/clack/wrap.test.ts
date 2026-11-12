@@ -1,21 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  CLACK_PREFIX_RESERVE,
-  getTerminalWidth,
-  MAX_OPTIMAL_WIDTH,
-  MIN_CONTENT_WIDTH,
-  protectUrls,
-  supportsHyperlinks,
-  wrapTextForClack,
-} from './wrap';
+import { protectUrls, wrapTextForClack } from './wrap';
 
-// Mirrors the wrap-width formula in wrap.ts so expectations track the same constants as the source.
+// Text wraps 10 columns inside the terminal, to leave room for Clack's prefix, but never narrower
+// than 40 or wider than 80 columns.
 function targetWidthFor(terminalWidth: number): number {
-  return Math.min(
-    Math.max(terminalWidth - CLACK_PREFIX_RESERVE, MIN_CONTENT_WIDTH),
-    MAX_OPTIMAL_WIDTH
-  );
+  return Math.min(Math.max(terminalWidth - 10, 40), 80);
 }
 
 // protectUrls truncates an over-long URL's display text to `slice(0, maxLength - 3) + '...'`.
@@ -56,15 +46,18 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe('getTerminalWidth', () => {
-  it('returns process.stdout.columns when available', () => {
+// Without an explicit width, wrapTextForClack wraps to the terminal's.
+const wrappedWidth = () => visibleLength(wrapTextForClack('x'.repeat(200)).split('\n')[0]);
+
+describe('terminal width', () => {
+  it('reads process.stdout.columns when available', () => {
     setColumns(120);
-    expect(getTerminalWidth()).toBe(120);
+    expect(wrappedWidth()).toBe(targetWidthFor(120));
   });
 
   it('falls back to 80 when columns is undefined', () => {
     setColumns(undefined);
-    expect(getTerminalWidth()).toBe(80);
+    expect(wrappedWidth()).toBe(targetWidthFor(80));
   });
 
   it('falls back to 80 when reading columns throws', () => {
@@ -74,37 +67,39 @@ describe('getTerminalWidth', () => {
       },
       configurable: true,
     });
-    expect(getTerminalWidth()).toBe(80);
+    expect(wrappedWidth()).toBe(targetWidthFor(80));
   });
 });
 
-describe('supportsHyperlinks', () => {
-  it('returns true for iTerm.app >= 3.1', () => {
+const linksUrls = () => wrapTextForClack('Visit https://example.com').includes(`${ESC}]8;;`);
+
+describe('hyperlink support', () => {
+  it('links URLs for iTerm.app >= 3.1', () => {
     vi.stubEnv('TERM_PROGRAM', 'iTerm.app');
     vi.stubEnv('TERM_PROGRAM_VERSION', '3.4.0');
-    expect(supportsHyperlinks()).toBe(true);
+    expect(linksUrls()).toBe(true);
   });
 
-  it('returns false for iTerm.app < 3.1', () => {
+  it('does not link URLs for iTerm.app < 3.1', () => {
     vi.stubEnv('TERM_PROGRAM', 'iTerm.app');
     vi.stubEnv('TERM_PROGRAM_VERSION', '3.0.0');
-    expect(supportsHyperlinks()).toBe(false);
+    expect(linksUrls()).toBe(false);
   });
 
-  it('returns true for iTerm.app without a version', () => {
+  it('links URLs for iTerm.app without a version', () => {
     vi.stubEnv('TERM_PROGRAM', 'iTerm.app');
     vi.stubEnv('TERM_PROGRAM_VERSION', '');
-    expect(supportsHyperlinks()).toBe(true);
+    expect(linksUrls()).toBe(true);
   });
 
-  it('returns false for Apple_Terminal (macOS Terminal.app)', () => {
+  it('does not link URLs for Apple_Terminal (macOS Terminal.app)', () => {
     vi.stubEnv('TERM_PROGRAM', 'Apple_Terminal');
-    expect(supportsHyperlinks()).toBe(false);
+    expect(linksUrls()).toBe(false);
   });
 
-  it('returns true for unknown terminals', () => {
+  it('links URLs for unknown terminals', () => {
     vi.stubEnv('TERM_PROGRAM', '');
-    expect(supportsHyperlinks()).toBe(true);
+    expect(linksUrls()).toBe(true);
   });
 });
 

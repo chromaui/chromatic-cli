@@ -6,4 +6,3 @@ export default {
 
 export const Authenticating = () => frames.Authenticating;
 export const Authenticated = () => frames.Authenticated;
-export const InvalidToken = () => frames.InvalidToken;

@@ -82,7 +82,7 @@ interface ReportQueryResult {
  *
  * @param ctx The {@link Context} for which we're generating a report.
  */
-export const generateReport = async (ctx: Context) => {
+const generateReport = async (ctx: Context) => {
   const { log } = ctx;
   const { junitReport } = ctx.options;
   const { number: buildNumber } = ctx.build;

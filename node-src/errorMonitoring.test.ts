@@ -1,8 +1,14 @@
+import './errorMonitoring';
+
 import * as Sentry from '@sentry/node';
 import chalk from 'chalk';
 import { describe, expect, it } from 'vitest';
 
-import { filterBreadcrumb, filterErrorEvent } from './errorMonitoring';
+// The filters are tested through the options the module passes to `Sentry.init`.
+const { beforeBreadcrumb, beforeSend } = Sentry.getClient()?.getOptions() ?? {};
+const filterErrorEvent = (event: Sentry.ErrorEvent, hint: Sentry.EventHint = {}) =>
+  beforeSend?.(event, hint) as Sentry.ErrorEvent;
+const filterBreadcrumb = (breadcrumb: Sentry.Breadcrumb) => beforeBreadcrumb?.(breadcrumb);
 
 const redError = chalk.red('error');
 const blueMessage = chalk.blue('message');

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { Context } from '../types';
 import getEnvironment from './getEnvironment';
-import getOptions, { findBuildScriptName } from './getOptions';
+import getOptions from './getOptions';
 import parseArguments from './parseArguments';
 import TestLogger from './testLogger';
 
@@ -347,18 +347,18 @@ describe('getOptions', () => {
   );
 });
 
-describe('findBuildScriptName', () => {
-  it('prefers the user-configured name', () => {
-    expect(findBuildScriptName({ 'build-storybook': 'build-storybook' }, 'custom')).toBe('custom');
-  });
+const withScripts = (scripts: Record<string, string>) => ({
+  ...getContext([]),
+  packageJson: { scripts },
+});
 
+describe('buildScriptName', () => {
   it('falls back to a script that runs build-storybook under another name', () => {
-    expect(findBuildScriptName({ otherBuildStorybook: 'build-storybook --stats-json' })).toBe(
-      'otherBuildStorybook'
-    );
+    const ctx = withScripts({ otherBuildStorybook: 'build-storybook --stats-json' });
+    expect(getOptions(ctx).buildScriptName).toBe('otherBuildStorybook');
   });
 
   it('names the conventional script when there is nothing to find', () => {
-    expect(findBuildScriptName({ lint: 'eslint .' })).toBe('build-storybook');
+    expect(getOptions(withScripts({ lint: 'eslint .' })).buildScriptName).toBe('build-storybook');
   });
 });

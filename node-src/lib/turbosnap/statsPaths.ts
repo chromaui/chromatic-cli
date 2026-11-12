@@ -26,7 +26,7 @@ export const getPackageName = (modulePath: string) => {
  *
  * @returns A normalized path to the file.
  */
-export function normalizePath(
+function normalizePath(
   filePath: string,
   rootPath: AbsolutePath,
   projectRoot: AbsolutePath = rootPath

@@ -1,10 +1,10 @@
 import wrapAnsi from 'wrap-ansi';
 
 const DEFAULT_WIDTH = 80;
-export const MAX_OPTIMAL_WIDTH = 80;
+const MAX_OPTIMAL_WIDTH = 80;
 // Reserve columns for Clack's left-edge formatting (vertical bar + indent).
-export const CLACK_PREFIX_RESERVE = 10;
-export const MIN_CONTENT_WIDTH = 40;
+const CLACK_PREFIX_RESERVE = 10;
+const MIN_CONTENT_WIDTH = 40;
 const MIN_URL_LENGTH = 20;
 
 // Matches CSI SGR sequences and OSC 8 hyperlink start/end markers. The control chars in the
@@ -21,7 +21,7 @@ const OSC8_END = `${OSC8_START}${OSC8_BELL}`;
 /**
  * @returns The current terminal width, falling back to 80 if it can't be determined.
  */
-export function getTerminalWidth(): number {
+function getTerminalWidth(): number {
   try {
     return process.stdout.columns || DEFAULT_WIDTH;
   } catch {
@@ -33,7 +33,7 @@ export function getTerminalWidth(): number {
  * @returns Whether the current terminal supports OSC 8 hyperlinks. macOS Terminal.app is the
  * notable holdout among modern terminals.
  */
-export function supportsHyperlinks(): boolean {
+function supportsHyperlinks(): boolean {
   try {
     const termProgram = (process.env.TERM_PROGRAM || '').trim();
     const termProgramVersion = (process.env.TERM_PROGRAM_VERSION || '').trim();
@@ -68,12 +68,17 @@ function getVisibleLength(input: string): number {
  * Find URLs in text and wrap them in OSC 8 hyperlinks (truncating display text if needed) so
  * line-wrapping doesn't shatter them across lines.
  *
+ * Exported only for its unit tests, which check each URL length rule on its own, before
+ * `wrapTextForClack` rewraps the result.
+ *
  * @param text The raw text potentially containing URLs.
  * @param options Optional width budgets.
  * @param options.maxUrlLength Maximum visible URL length before truncation.
  * @param options.maxLineWidth Total width of the line; informs available space for the URL.
  *
  * @returns The text with URLs replaced by OSC 8 sequences (when supported).
+ *
+ * @internal
  */
 export function protectUrls(
   text: string,

@@ -67,6 +67,7 @@ When a mistake keeps coming back, enforce the rule with a check and record it he
 | Tests call commands in-process, never through `yarn chromatic` or `dist/bin.cjs` | ESLint `no-restricted-syntax` on `*.test.*` |
 | Each e2e fixture's Storybook packages match its `storybook` version, in `package.json` and the lockfile | `e2e/check-storybook-versions.mjs` in the lint-and-test workflow |
 | The bundled `dist/node.d.cts` typechecks for consumers with `skipLibCheck: false` | `yarn typescript:check-declarations` in the lint-and-test workflow |
+| Shipped code exports nothing that only tests, stories, or frames use. Delete it, un-export it, or test it through its caller; a deliberate seam carries `@internal` with the reason. Test-only helpers go in `knip.jsonc`'s `!…!` project patterns | `yarn knip --production` in the lint-and-test workflow |
 | Prettier skips Markdown, so it keeps its compact formatting; JS/TS must match Prettier | `.prettierignore` (`*.md`); ESLint `prettier/prettier` for JS/TS |
 | Behavior and output changes are verified in the real CLI | Judgment ([Verify changes in the real CLI](#verify-changes-in-the-real-cli)) |
 | No private customer details in public places | Judgment ([This repository is public](#this-repository-is-public)) |

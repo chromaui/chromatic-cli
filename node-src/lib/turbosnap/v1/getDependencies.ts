@@ -13,7 +13,7 @@ import { posix } from '../../posix';
 import { PNPM_LOCK_FILE } from '../../utilities';
 import { LockFileParseFailedError, LockFileSizeExceededError } from './errors';
 
-export const MAX_LOCK_FILE_SIZE = 10_485_760; // 10 MB
+const MAX_LOCK_FILE_SIZE = 10_485_760; // 10 MB
 
 // The same options `snyk-nodejs-plugin` uses when it drives the pnpm parser for us.
 const PNPM_PARSE_OPTIONS = {
