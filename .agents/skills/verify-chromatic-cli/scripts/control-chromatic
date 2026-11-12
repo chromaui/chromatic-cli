@@ -305,11 +305,28 @@ cmd_run() {
   echo "-- stderr ($(wc -l < "$out/stderr.txt") lines, first 20):"; head -20 "$out/stderr.txt"
 }
 
-# kill_tree <pid>: stop a process and everything it started.
+# kill_tree <pid>: send TERM to a process and everything it started, printing each pid.
 kill_tree() {
   local kids a; kids="$(pgrep -P "$1" || true)"
   kill "$1" 2> /dev/null || true
+  echo "$1"
   for a in $kids; do kill_tree "$a"; done
+}
+
+# stop_cells: stop every matrix cell and wait until all their processes are gone (KILL after 10 seconds), so
+# cleanup can't remove a fixture or scrub evidence while a cell is still writing to it.
+stop_cells() {
+  local jp pids a n=0
+  jp="$(jobs -p)"
+  pids="$(for a in $jp; do kill_tree "$a"; done)"
+  [[ -z "$jp" ]] || wait $jp 2> /dev/null || true
+  for a in $pids; do
+    while kill -0 "$a" 2> /dev/null; do
+      (( n++ < 50 )) || { kill -KILL "$a" 2> /dev/null || true; break; }
+      sleep 0.2
+    done
+  done
+  rm -f "$MATRIX_PID"
 }
 
 # kill_tmux <session>: stop the drive's own tmux server and remove the socket it leaves behind.
@@ -417,6 +434,9 @@ matrix_cell() {
       --exit-zero-on-changes --skip-update-check --diagnostics-file "$EVIDENCE/$label-baseline/d.json" > /dev/null
     local base_code; base_code="$(cat "$EVIDENCE/$label-baseline/exit_code")"
     [[ "$base_code" == 0 ]] || { skip "TurboSnap baseline build exited $base_code (evidence: $label-baseline)"; return; }
+    jq -e '.announcedBuild.status == "PUBLISHED" and .build.number == .announcedBuild.number' \
+      "$EVIDENCE/$label-baseline/d.json" > /dev/null 2>&1 \
+      || { skip "TurboSnap baseline build wasn't published (evidence: $label-baseline)"; return; }
     sed -i.bak 's/New/Fresh/' "$cwd/src/Button.tsx" && rm -f "$cwd/src/Button.tsx.bak"
     cmd_commit "$dir" "Change Button" > /dev/null
     args_have --only-changed "${args[@]}" || args+=(--only-changed)
@@ -513,6 +533,7 @@ cmd_matrix() {
     [[ -d "$REPO/e2e/fixtures/$f" ]] || die "no fixture e2e/fixtures/$f"
     [[ " ${names[*]-} " == *" $f "* ]] || names+=("$f")
   done
+  (( ${#names[@]} )) || die "--fixtures names no fixture (got '$fixtures')"
   local modes=(off); (( turbosnap )) && modes+=(v1 v2)
 
   local cells="$EVIDENCE/matrix"
@@ -521,7 +542,7 @@ cmd_matrix() {
   # cleanup refuses while this pid is alive. On exit or interrupt, stop every cell, so none publishes or
   # writes evidence after matrix has returned.
   echo $$ > "$MATRIX_PID"
-  trap 'for a in $(jobs -p); do kill_tree "$a"; done; rm -f "$MATRIX_PID"' EXIT
+  trap stop_cells EXIT
   trap 'exit 130' INT TERM
 
   local whiches=(branch) base_cli="" base_skip="" base_desc=""

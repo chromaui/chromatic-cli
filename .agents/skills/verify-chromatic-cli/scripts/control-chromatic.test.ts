@@ -190,12 +190,14 @@ if (args.includes('--skip')) {
 const turboSnap = args.includes('--only-changed') ? {} : undefined;
 const v2 = turboSnap && process.env.FAKE_V2 && process.env.CHROMATIC_TURBOSNAP_DISABLE_V1;
 // A failed build keeps the ancestor in .build; a TurboSnap skip reports the ancestor deliberately.
+const baseline = args[args.indexOf('--diagnostics-file') + 1].includes('-baseline');
 const failed = 'failing' in deps;
-const skip = 'skipping' in deps;
+const skip = 'skipping' in deps && !baseline;
+const lost = 'unpublished-baseline' in deps && baseline;
 fs.writeFileSync(args[args.indexOf('--diagnostics-file') + 1], JSON.stringify({
   exitCodeKey: webpack ? 'BUILD_FAILED' : failed ? 'NPM_BUILD_STORYBOOK_FAILED' : 'OK',
-  announcedBuild: { app: { id: 'app123' }, number, status: failed || skip ? 'ANNOUNCED' : 'PUBLISHED' },
-  build: { number: failed || skip ? 42 : number, actualCaptureCount: 2 },
+  announcedBuild: { app: { id: 'app123' }, number, status: failed || skip || lost ? 'ANNOUNCED' : 'PUBLISHED' },
+  build: { number: failed || skip || lost ? 42 : number, actualCaptureCount: 2 },
   skip,
   turboSnap,
   hashBasedTurboSnap: v2 ? { bailed: false } : undefined,
@@ -219,6 +221,12 @@ process.exit(webpack ? 2 : failed ? 105 : 0);
     expect(result.status).toBe(2);
     expect(result.stderr).not.toContain(token);
     expect(existsSync(join(root, 'runs/test/evidence/matrix'))).toBe(false);
+  });
+
+  it('refuses a --fixtures list that names no fixture', () => {
+    const result = matrix(['--fixtures', ',']);
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('--fixtures names no fixture');
   });
 
   it('refuses to run without CHROMATIC_PROJECT_TOKEN', () => {
@@ -297,6 +305,13 @@ process.exit(webpack ? 2 : failed ? 105 : 0);
     expect(turboSnap.stdout).not.toContain('`skipping`, TurboSnap 1.0, branch CLI');
 
     rmSync(join(root, 'runs'), { recursive: true });
+    addFixture('lost', 'unpublished-baseline');
+    const lostBaseline = matrix(['--fixtures', 'lost', '--turbosnap']);
+    expect(lostBaseline.stdout).toContain(
+      "- `lost`, TurboSnap 1.0, branch CLI: skipped, TurboSnap baseline build wasn't published"
+    );
+
+    rmSync(join(root, 'runs'), { recursive: true });
     const skip = matrix(['--fixtures', 'react-vite', '--', '--skip']);
     expect(skip.status).toBe(1);
     expect(skip.stdout).toContain(
@@ -359,6 +374,7 @@ process.exit(webpack ? 2 : failed ? 105 : 0);
 
   it('repeats every cell with the --compare CLI and lists the cells that differ', () => {
     const result = matrix(['--compare', 'HEAD', '--fixtures', 'react-vite,react-webpack5']);
+    expect(result.status, result.stdout).toBe(0);
     const rows = result.stdout.split('\n').filter((line) => /^\| (base|branch) /.test(line));
     expect(rows).toEqual([
       expect.stringMatching(/^\| branch \| `react-vite` .* 0 \(OK\)/),
