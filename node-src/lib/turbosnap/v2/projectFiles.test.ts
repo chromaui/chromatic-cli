@@ -360,11 +360,10 @@ describe('realProjectFiles packageVersion', () => {
     const repositoryRoot = temporaryDirectory();
     const projectRoot = path.join(repositoryRoot, 'packages/ui');
     mkdirSync(projectRoot, { recursive: true });
-    install(repositoryRoot, '@scope/sealed', {
-      name: '@scope/sealed',
-      version: '1.2.3',
-      exports: { '.': './index.js' },
-    });
+    const sealed = { name: '@scope/sealed', exports: { '.': './index.js' } };
+    // Node uses the nearest install, so a hoisted copy of another version must not win.
+    install(repositoryRoot, '@scope/sealed', { ...sealed, version: '0.0.1' });
+    install(projectRoot, '@scope/sealed', { ...sealed, version: '1.2.3' });
 
     expect(
       realProjectFiles({ log, options: {} }).packageVersion(projectRoot, '@scope/sealed')
