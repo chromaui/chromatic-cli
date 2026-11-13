@@ -5,13 +5,7 @@ import { hasYarn } from 'yarn-or-npm';
 import { Context } from '..';
 import outdatedPackage from '../ui/messages/warnings/outdatedPackage';
 import spawn from './spawn';
-
-const rejectIn = (ms: number) =>
-  new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms)
-  );
-const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
-  Promise.race([promise, rejectIn(ms)]);
+import { withTimeout } from './utilities';
 
 /**
  * Check for a newer version of the CLI.

@@ -96,40 +96,33 @@ export async function main(argv: string[]) {
   // the only thing on stdout.
   const log = createLogger({}, { logPrefix: '', logLevel: 'error' });
 
-  try {
-    const gitRoot = await getRepositoryRoot({ log, options: {} });
-    const projectRoot = getStorybookProjectRoot({
-      storybookBaseDir: cli.flags.storybookBaseDir,
-      gitRootPath: gitRoot,
-    });
+  const gitRoot = await getRepositoryRoot({ log, options: {} });
+  const projectRoot = getStorybookProjectRoot({
+    storybookBaseDir: cli.flags.storybookBaseDir,
+    gitRootPath: gitRoot,
+  });
 
-    // The stats file is the one input with no default that works everywhere, so a project whose
-    // Storybook builds elsewhere hits this first. Name the path we looked at and repeat the flags,
-    // rather than leaving the user with a bare ENOENT.
-    const statsPath = path.resolve(projectRoot, cli.flags.statsFile);
-    if (!existsSync(statsPath)) {
-      log.error(`No stats file at ${statsPath}\n`);
-      log.error(cli.help);
-      return process.exit(1);
-    }
-
-    const manifest = await buildManifest(await readStatsFile(statsPath), {
-      log,
-      projectRoot,
-      gitRoot,
-      untraced: cli.flags.untraced ?? [],
-      configDir: path.resolve(projectRoot, cli.flags.configDir),
-      ...(cli.flags.vitest && { e2ePackage: '@chromatic-com/vitest' }),
-      staticDirs: (cli.flags.staticDir?.split(',') ?? []).map((directory) =>
-        path.resolve(projectRoot, directory)
-      ),
-      externals: cli.flags.externals ?? [],
-      projectFiles: realProjectFiles({ log, options: {} }),
-    });
-
-    process.stdout.write(JSON.stringify(serializeManifest(manifest), undefined, 2));
-  } catch (err) {
-    log.error(`Error: ${err.message}`);
-    process.exit(1);
+  // The stats file is the one input with no default that works everywhere, so a project whose
+  // Storybook builds elsewhere hits this first. Name the path we looked at and repeat the flags,
+  // rather than leaving the user with a bare ENOENT.
+  const statsPath = path.resolve(projectRoot, cli.flags.statsFile);
+  if (!existsSync(statsPath)) {
+    throw new Error(`No stats file at ${statsPath}\n\n${cli.help}`);
   }
+
+  const manifest = await buildManifest(await readStatsFile(statsPath), {
+    log,
+    projectRoot,
+    gitRoot,
+    untraced: cli.flags.untraced ?? [],
+    configDir: path.resolve(projectRoot, cli.flags.configDir),
+    ...(cli.flags.vitest && { e2ePackage: '@chromatic-com/vitest' }),
+    staticDirs: (cli.flags.staticDir?.split(',') ?? []).map((directory) =>
+      path.resolve(projectRoot, directory)
+    ),
+    externals: cli.flags.externals ?? [],
+    projectFiles: realProjectFiles({ log, options: {} }),
+  });
+
+  process.stdout.write(JSON.stringify(serializeManifest(manifest), undefined, 2));
 }

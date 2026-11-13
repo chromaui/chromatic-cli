@@ -79,10 +79,5 @@ export async function main(argv: string[]) {
     }
   );
 
-  try {
-    await trimStatsFile(input[0] ?? './storybook-static/preview-stats.json');
-  } catch (err) {
-    console.error(err instanceof Error ? err.message : err);
-    process.exitCode = 1;
-  }
+  await trimStatsFile(input[0] ?? './storybook-static/preview-stats.json');
 }
