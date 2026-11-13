@@ -3,6 +3,7 @@ import { createInterface } from 'node:readline';
 import type { Options } from 'execa';
 
 import { runCommand } from '../lib/shell/shell';
+import { NULL_BYTE } from '../lib/utilities';
 import { Deps } from '../types';
 import gitNoCommits from '../ui/messages/errors/gitNoCommits';
 import gitNotInitialized from '../ui/messages/errors/gitNotInitialized';
@@ -27,8 +28,6 @@ const defaultOptions: Options = {
   shell: true, // we'll deal with escaping ourselves (for now)
 };
 
-const NULL_BYTE = '\0';
-
 /**
  * Retrieve the git timeout in milliseconds.
  *
@@ -36,7 +35,7 @@ const NULL_BYTE = '\0';
  *
  @returns the git timeout in milliseconds, defaulting to `DEFAULT_GIT_TIMEOUT_SECONDS` if not set.
  */
-function getGitTimeout(depOptions: GitDeps['options']): number {
+export function getGitTimeout(depOptions: GitDeps['options']): number {
   return depOptions.gitTimeout ?? DEFAULT_GIT_TIMEOUT_SECONDS * 1000;
 }
 

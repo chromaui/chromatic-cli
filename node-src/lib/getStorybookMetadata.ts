@@ -11,16 +11,10 @@ import { AbsolutePath, Storybook } from '../types';
 import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
 import { builders } from './builders';
 import { meowImportMeta } from './meowImportMeta';
+import { withTimeout } from './utilities';
 import { viewLayers } from './viewLayers';
 
-// The timer is unref'd so a lookup that wins the race doesn't keep the process alive until it fires.
-const timeout = (ms: number) =>
-  new Promise<never>((_, reject) => {
-    setTimeout(
-      () => reject(new Error('Timeout while resolving Storybook view layer package')),
-      ms
-    ).unref();
-  });
+const LOOKUP_TIMEOUT_MESSAGE = 'Timeout while resolving Storybook view layer package';
 
 /**
  * Reads the `-c` and `-s` flags out of the project's Storybook build script.
@@ -94,14 +88,15 @@ async function findBuilder(mainConfig?: MainConfigReader) {
   if (typeof framework?.name === 'string') {
     const sbV7BuilderName = framework.name;
 
-    return Promise.race([
+    return withTimeout(
       resolvePackageJson(sbV7BuilderName)
         .then((json) => ({ builder: { name: sbV7BuilderName, packageVersion: json.version } }))
         .catch(() => {
           throw new Error(packageDoesNotExist(sbV7BuilderName));
         }),
-      timeout(10_000),
-    ]);
+      10_000,
+      LOOKUP_TIMEOUT_MESSAGE
+    );
   }
 
   let name = 'webpack4'; // default builder in Storybook v6
@@ -112,14 +107,15 @@ async function findBuilder(mainConfig?: MainConfigReader) {
     name = builder.name;
   }
 
-  return Promise.race([
+  return withTimeout(
     resolvePackageJson(builders[name])
       .then((json) => ({ builder: { name, packageVersion: json.version } }))
       .catch(() => {
         throw new Error(packageDoesNotExist(builders[name]));
       }),
-    timeout(10_000),
-  ]);
+    10_000,
+    LOOKUP_TIMEOUT_MESSAGE
+  );
 }
 
 // TODO: Update this when we start tracking refs within the project.json file; if refs are tracked there, we can skip this logic
@@ -431,14 +427,15 @@ async function findStorybookVersion({ env, log, options, packageJson }: Storyboo
       return { version };
     }
     // Verify that the viewlayer package is actually present in node_modules.
-    return Promise.race([
+    return withTimeout(
       resolvePackageJson(pkg)
         .then((json) => ({ version: json.version }))
         .catch(() => {
           throw new Error(packageDoesNotExist(pkg));
         }),
-      timeout(10_000),
-    ]);
+      10_000,
+      LOOKUP_TIMEOUT_MESSAGE
+    );
   }
 
   if (!options.interactive) {
@@ -448,7 +445,7 @@ async function findStorybookVersion({ env, log, options, packageJson }: Storyboo
   // We might have a transitive dependency (e.g. through `@nuxtjs/storybook` which depends on
   // `@storybook/vue`). In this case we look for any viewlayer package present in node_modules,
   // and return the first one we find.
-  return Promise.race([
+  return withTimeout(
     Promise.any(
       Object.entries(viewLayers).map(async ([key]) => {
         const json = await resolvePackageJson(key);
@@ -457,8 +454,9 @@ async function findStorybookVersion({ env, log, options, packageJson }: Storyboo
     ).catch(() => {
       throw new Error(packageDoesNotExist(pkg));
     }),
-    timeout(10_000),
-  ]);
+    10_000,
+    LOOKUP_TIMEOUT_MESSAGE
+  );
 }
 
 /**
