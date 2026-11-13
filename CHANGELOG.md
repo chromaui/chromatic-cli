@@ -1,3 +1,42 @@
+# v18.14.4 (Fri Nov 13 2026)
+
+#### 🐛 Bug Fix
+
+- Run TurboSnap 2.0 on Vitest builds, and skip it for Playwright and Cypress [#1677](https://github.com/chromaui/chromatic-cli/pull/1677) ([@codykaup](https://github.com/codykaup))
+- Pass the upload result through the upload task unchanged [#1687](https://github.com/chromaui/chromatic-cli/pull/1687) ([@justin-thurman](https://github.com/justin-thurman))
+- Let register.js handle every subcommand failure [#1686](https://github.com/chromaui/chromatic-cli/pull/1686) ([@codykaup](https://github.com/codykaup))
+- Delete duplicated timeout and NUL helpers [#1685](https://github.com/chromaui/chromatic-cli/pull/1685) ([@codykaup](https://github.com/codykaup))
+- Lint unneeded nullish guards and type assertions [#1680](https://github.com/chromaui/chromatic-cli/pull/1680) ([@codykaup](https://github.com/codykaup))
+- Replace JSDoc links with code names [#1683](https://github.com/chromaui/chromatic-cli/pull/1683) ([@codykaup](https://github.com/codykaup))
+- Require git options on every git call so none drops gitTimeout [#1681](https://github.com/chromaui/chromatic-cli/pull/1681) ([@codykaup](https://github.com/codykaup))
+- Refuse to build a TurboSnap 2.0 manifest with no story files [#1676](https://github.com/chromaui/chromatic-cli/pull/1676) ([@codykaup](https://github.com/codykaup))
+- Add a Vitest e2e fixture with no Storybook of its own [#1675](https://github.com/chromaui/chromatic-cli/pull/1675) ([@codykaup](https://github.com/codykaup))
+- Run knip in production mode in CI [#1682](https://github.com/chromaui/chromatic-cli/pull/1682) ([@codykaup](https://github.com/codykaup))
+- Exit 1 with the error message when a subcommand fails [#1674](https://github.com/chromaui/chromatic-cli/pull/1674) ([@codykaup](https://github.com/codykaup))
+- Remove Codecov from CI [#1673](https://github.com/chromaui/chromatic-cli/pull/1673) ([@codykaup](https://github.com/codykaup))
+- Retain ancestor build details in diagnostics [#1672](https://github.com/chromaui/chromatic-cli/pull/1672) (reubenellis@Reubens-MacBook-Pro-2.local)
+- Correct verify-chromatic-cli recipes found stale in a live pass [#1646](https://github.com/chromaui/chromatic-cli/pull/1646) ([@codykaup](https://github.com/codykaup))
+- Remove dead environment field, git param, and task option [#1668](https://github.com/chromaui/chromatic-cli/pull/1668) ([@codykaup](https://github.com/codykaup))
+- Fix Blob$1 type error in bundled chromatic/node declarations [#1669](https://github.com/chromaui/chromatic-cli/pull/1669) ([@codykaup](https://github.com/codykaup))
+- Remove the test-only countNodeModulesFiles helper [#1667](https://github.com/chromaui/chromatic-cli/pull/1667) ([@codykaup](https://github.com/codykaup))
+- Remove three unused error message modules [#1666](https://github.com/chromaui/chromatic-cli/pull/1666) ([@codykaup](https://github.com/codykaup))
+- Ignore trailing slashes in the Git remote URL when deriving the repository slug [#1583](https://github.com/chromaui/chromatic-cli/pull/1583) ([@RaphaelFakhri](https://github.com/RaphaelFakhri))
+- Cancel superseded check-labels runs and exclude Markdown from Prettier [#1657](https://github.com/chromaui/chromatic-cli/pull/1657) ([@codykaup](https://github.com/codykaup))
+- Bump mime-types and @types/mime-types [#1651](https://github.com/chromaui/chromatic-cli/pull/1651) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Refuse build-ref comparisons with different dependencies [#1647](https://github.com/chromaui/chromatic-cli/pull/1647) ([@justin-thurman](https://github.com/justin-thurman))
+- Report bundled dependency version changes in package-size comments [#1648](https://github.com/chromaui/chromatic-cli/pull/1648) ([@justin-thurman](https://github.com/justin-thurman))
+- Remove unused upload lifecycle callback options [#1658](https://github.com/chromaui/chromatic-cli/pull/1658) ([@justin-thurman](https://github.com/justin-thurman))
+
+#### Authors: 5
+
+- [@dependabot[bot]](https://github.com/dependabot[bot])
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Justin Thurman ([@justin-thurman](https://github.com/justin-thurman))
+- Raphael Fakhri ([@RaphaelFakhri](https://github.com/RaphaelFakhri))
+- Reuben Ellis ([@ethriel3695](https://github.com/ethriel3695))
+
+---
+
 # v18.14.3 (Mon Nov 09 2026)
 
 #### 🐛 Bug Fix
