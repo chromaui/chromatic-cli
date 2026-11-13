@@ -1,3 +1,4 @@
+import { exitCodes, TaskFailure } from '../lib/setExitCode';
 import { Context, Deps, TaskFunction } from '../types';
 import invalidProjectId from '../ui/messages/errors/invalidProjectId';
 import invalidProjectToken from '../ui/messages/errors/invalidProjectToken';
@@ -89,15 +90,19 @@ export const runAuth: TaskFunction<AuthInput, AuthOutput, AuthDeps> = async (dep
   try {
     const token = await getToken(deps, input);
     deps.client.setAuthorization(token);
-  } catch (errors) {
-    const message = errors[0]?.message;
+  } catch (error) {
+    // GraphQLClient throws a single error, or an array when the API returns several
+    const message = [error].flat()[0]?.message;
+    // Keep the exit code these failures have always had
+    const failure = { exitCode: exitCodes.GRAPHQL_ERROR, userError: true };
     if (message?.match('Must login') || message?.match('No Access')) {
-      throw new Error(invalidProjectId({ projectId: input.mode === 'cli' ? input.projectId : '' }));
+      const projectId = input.mode === 'cli' ? input.projectId : '';
+      throw new TaskFailure(invalidProjectId({ projectId }), failure);
     }
     if (message?.match('No app with code')) {
-      throw new Error(invalidProjectToken({ projectToken: input.projectToken }));
+      throw new TaskFailure(invalidProjectToken({ projectToken: input.projectToken }), failure);
     }
-    throw errors;
+    throw error;
   }
 
   // Pre-flight: fetch app type so storybookInfo can skip the build-storybook script

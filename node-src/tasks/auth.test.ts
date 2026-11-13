@@ -75,7 +75,7 @@ describe('runAuth', () => {
 
   it('throws invalidProjectId on "Must login" / "No Access"', async () => {
     const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
-    client.runQuery.mockRejectedValue([{ message: 'Must login' }]);
+    client.runQuery.mockRejectedValue({ message: 'Must login' });
     const deps = buildDeps({ client: client as any });
 
     const input: AuthInput = {
@@ -84,15 +84,17 @@ describe('runAuth', () => {
       userToken: 'tok',
       projectToken: 'test',
     };
-    await expect(runAuth(deps, input)).rejects.toThrow(/Project:abc/);
+    await expect(runAuth(deps, input)).rejects.toThrow(/Invalid project ID: Project:abc/);
   });
 
   it('throws invalidProjectToken on "No app with code"', async () => {
     const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
-    client.runQuery.mockRejectedValue([{ message: 'No app with code' }]);
+    client.runQuery.mockRejectedValue({ message: "No app with code 'bad-token' found" });
     const deps = buildDeps({ client: client as any });
 
     const input: AuthInput = { mode: 'app', projectToken: 'bad-token' };
-    await expect(runAuth(deps, input)).rejects.toThrow(/bad-token/);
+    const failure = runAuth(deps, input);
+    await expect(failure).rejects.toThrow(/Invalid .*--project-token.* 'bad-token'/);
+    await expect(failure).rejects.toMatchObject({ exitCode: 202, userError: true });
   });
 });
