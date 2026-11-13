@@ -73,9 +73,10 @@ describe('runAuth', () => {
     expect(result).toEqual({ kind: 'continue', output: { isReactNativeApp: false } });
   });
 
-  it('throws invalidProjectId on "Must login" / "No Access"', async () => {
+  it('throws invalidProjectId on "No Access"', async () => {
     const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
-    client.runQuery.mockRejectedValue({ message: 'Must login' });
+    // GraphQLClient throws an array when the API returns several errors
+    client.runQuery.mockRejectedValue([{ message: 'No Access' }, { message: 'No Access' }]);
     const deps = buildDeps({ client: client as any });
 
     const input: AuthInput = {
@@ -84,7 +85,9 @@ describe('runAuth', () => {
       userToken: 'tok',
       projectToken: 'test',
     };
-    await expect(runAuth(deps, input)).rejects.toThrow(/Invalid project ID: Project:abc/);
+    const failure = runAuth(deps, input);
+    await expect(failure).rejects.toThrow(/Invalid project ID: Project:abc/);
+    await expect(failure).rejects.toMatchObject({ exitCode: 202 });
   });
 
   it('throws invalidProjectToken on "No app with code"', async () => {
@@ -95,6 +98,6 @@ describe('runAuth', () => {
     const input: AuthInput = { mode: 'app', projectToken: 'bad-token' };
     const failure = runAuth(deps, input);
     await expect(failure).rejects.toThrow(/Invalid .*--project-token.* 'bad-token'/);
-    await expect(failure).rejects.toMatchObject({ exitCode: 202, userError: true });
+    await expect(failure).rejects.toMatchObject({ exitCode: 202 });
   });
 });

@@ -94,8 +94,8 @@ export const runAuth: TaskFunction<AuthInput, AuthOutput, AuthDeps> = async (dep
     // GraphQLClient throws a single error, or an array when the API returns several
     const message = [error].flat()[0]?.message;
     // Keep the exit code these failures have always had
-    const failure = { exitCode: exitCodes.GRAPHQL_ERROR, userError: true };
-    if (message?.match('Must login') || message?.match('No Access')) {
+    const failure = { exitCode: exitCodes.GRAPHQL_ERROR };
+    if (message?.match('No Access')) {
       const projectId = input.mode === 'cli' ? input.projectId : '';
       throw new TaskFailure(invalidProjectId({ projectId }), failure);
     }
