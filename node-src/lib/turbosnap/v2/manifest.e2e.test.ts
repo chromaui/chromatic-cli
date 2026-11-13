@@ -114,6 +114,17 @@ describe('buildManifest for an E2E build', () => {
     expect(after.storyFileHashes).not.toEqual(before.storyFileHashes);
   });
 
+  // Vitest without chromaticPlugin({ turboSnap: true }) writes no stats of its own, so the
+  // generated story files import nothing.
+  it('refuses to build when no story file reaches a tracked file', async () => {
+    const { input } = e2eFixture();
+    const storiesOnly: Stats = { modules: [stats.modules[0]] };
+
+    await expect(buildManifest(storiesOnly, input)).rejects.toThrow(
+      'Found no tracked files behind the story files of this E2E build.'
+    );
+  });
+
   it('refuses to build without the E2E package installed', async () => {
     const { disk, input } = e2eFixture();
     disk.packageVersions = { storybook: '10.2.13' };

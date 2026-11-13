@@ -63,8 +63,8 @@ export async function traceChangedFiles(
   return runTurboSnapV1(ctx, stats, statsPath, { hashBased, onTraceWithV1 });
 }
 
-// Playwright and Cypress report no module graph, so their manifest would list no story files and
-// hash the same on every build, and TurboSnap 2.0 could skip captures that changed.
+// Playwright and Cypress report no module graph, so their generated story files reach no tracked
+// files and would hash the same on every build, and TurboSnap 2.0 could skip captures that changed.
 function shouldCollectHashes(ctx: Context) {
   return !isHashCollectionDisabled(ctx) && !ctx.options.playwright && !ctx.options.cypress;
 }
