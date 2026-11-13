@@ -24,7 +24,7 @@ storybookHash
 ├── storybookConfigHashes      one entry per Storybook-wide category
 │   ├── preview                = <configDir>/preview.* found in the graph and their imports
 │   ├── storybookGlobals       = global graph inputs, plus unreached graph files and their imports
-│   ├── storybookConfigFiles   = files in <configDir>, except .md and .txt, read off disk
+│   ├── storybookConfigFiles   = <configDir>/main.*, preview.*, preview-head.html and preview-body.html, read off disk
 │   ├── staticFiles            = configured static files and directory contents, read off disk
 │   ├── externals              = every git-tracked file matching --externals, read off disk
 │   └── storybookVersion       = the installed Storybook version string, not a hash
@@ -99,7 +99,7 @@ The globs for `--untraced` and `--externals` are relative to the git root. Skip 
 Exceptions:
 
 - Installed packages under `node_modules` are hashed even though they are gitignored, since a dependency upgrade is a real change. They can still be excluded with `--untraced`. Generated directories under `node_modules`, such as `.federation`, are not exempt from the untracked rule.
-- The main config (`<configDir>/main.*`) is always hashed into `storybookConfigFiles`, whatever the skip rule says.
+- The allowlisted config files (`<configDir>/main.*`, `preview.*`, `preview-head.html` and `preview-body.html`) are never untraced, matching TurboSnap 1.0. They can still be untracked, except the main config, which is always hashed into `storybookConfigFiles`.
 - Externals ignore the skip rule. A file that is both untraced and external still moves the `externals` entry.
 - Uncommitted edits do not make a tracked file untracked; it is still hashed unless explicitly untraced.
 

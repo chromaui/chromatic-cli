@@ -72,11 +72,13 @@ const GOLDEN_FILE_HASHES = {
   [previewTheme]: 'ffffffffffffffff',
   [entryPreview]: '1111111111111111',
   '/repo/packages/ui/.storybook/main.ts': '2222222222222222',
-  // The static dir is nested in the config dir, so its files feed both sweeps
+  // The static dir is nested in the config dir, but only allowlisted config files feed the config
+  // sweep, so its files feed only the static sweep
   '/repo/packages/ui/.storybook/static/mockServiceWorker.js': '3333333333333333',
   // Documentation in the static dir is included there, but not in the config sweep
   '/repo/packages/ui/.storybook/static/README.md': '4444444444444444',
-  // Documentation in the config dir is NOT included
+  // Documentation in the config dir is NOT included (nor is the preview's theme.ts, which the
+  // preview roll-up covers)
   '/repo/packages/ui/.storybook/README.md': '5555555555555555',
 };
 
@@ -86,7 +88,7 @@ const GOLDEN_DIRECTORY_TREE = {
 };
 
 // The published values. See the header before touching these.
-const GOLDEN_STORYBOOK_HASH = 'c8bde9dc3092fa75';
+const GOLDEN_STORYBOOK_HASH = 'bc31c9647dd1a73a';
 
 const GOLDEN_STORY_FILES: Record<string, string> = {
   './src/Button.stories.tsx': '7b79c90e28f3ac31',
@@ -97,7 +99,7 @@ const GOLDEN_STORYBOOK_FILES: Record<string, string> = {
   preview: '9d9e21e4dd276f48',
   storybookGlobals: '372009144b241f17',
   storybookVersion: '9.1.20',
-  storybookConfigFiles: 'dc883bfdd7638f40',
+  storybookConfigFiles: '37f89f7ec1d37aa1',
   staticFiles: '44658ab79756b51f',
 };
 
@@ -144,7 +146,7 @@ describe('manifest golden hashes', () => {
 // publishes unchanged hashes.
 const tailwindConfig = '/repo/tailwind.config.js';
 
-const GOLDEN_EXTERNALS_STORYBOOK_HASH = '228e2d6599ec488b';
+const GOLDEN_EXTERNALS_STORYBOOK_HASH = '31a2e5ec3ab37989';
 const GOLDEN_EXTERNALS_ROLL_UP = '514589031a7051a4';
 
 function goldenExternalsFixture() {
