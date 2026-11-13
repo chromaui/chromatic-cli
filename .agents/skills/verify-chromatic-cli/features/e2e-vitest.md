@@ -22,7 +22,7 @@ Preconditions:
 
 - Everything in `publish-build` preconditions for the networked journeys: backend reachable, token from `CHROMATIC_PROJECT_TOKEN`, disposable project.
 - Prepare the fixture with `F=$($S e2e-fixture react-vitest | tail -1)`. Besides the install, `e2e-fixture` runs `npx playwright install chromium` and `npm test` for it, so `$F/.vitest/chromatic` already holds two archives and `preview-stats.json`.
-- `$S run` and `$S tty` set `NODE_PATH` to `<cwd>/node_modules`, so `dist/bin.cjs` can find `@chromatic-com/vitest` the way a project-local `chromatic` install would.
+- For drives whose args include `--vitest`, `$S run` and `$S tty` set `NODE_PATH` to `<cwd>/node_modules`, so `dist/bin.cjs` can find `@chromatic-com/vitest` the way a project-local `chromatic` install would.
 - After every `$S commit`, run `(cd "$F" && npm test)` so the archives and stats describe the new commit.
 
 - **Baseline.** Run `$S run vitest-baseline --cwd "$F" -- --vitest --only-changed --exit-zero-on-changes`. Exit code `0`. stdout shows `Running command: node <F>/node_modules/@chromatic-com/vitest/dist/bin/build-archive-storybook.mjs --output-dir=<tmp> --webpack-stats-json=<tmp>` and `Tested 2 tests; captured 2 snapshots`.
@@ -41,6 +41,7 @@ Preconditions:
 - The stats under `.vitest/chromatic/preview-stats.json` list test files but no story-entry module, so `turbosnap-manifest --vitest -s .vitest/chromatic/preview-stats.json` exits `1` with `Error: Found no story files in the stats file …`. Use the stats `build-archive-storybook --stats-json` writes, which the CLI does itself on a real build.
 - `@chromatic-com/vitest` numbers `.stories.json` files in the order tests finish, so the same test can be `src-badge-1` on one run and `src-badge-2` on the next. TurboSnap 2.0 then sees a different story key and recaptures it. Do not report that as a CLI bug.
 - `--storybook-base-dir` must be the directory the tests ran in, because the reporter names paths relative to it. Anywhere else, TurboSnap 2.0 finds no story files and uploads nothing (see `tsm-no-stories` in `turbosnap-manifest`).
+- `NODE_PATH` is scoped to E2E drives on purpose. It is a fallback for every `require`, in the bundle and the processes it spawns, so setting it everywhere could hide a real bug where the CLI can't find a package the project installs. A project-local `npx chromatic --vitest` finds `@chromatic-com/vitest` without it; the helper only needs it because it runs this checkout's bundle from outside the project.
 - Running the main command without `NODE_PATH` (outside `$S run`/`$S tty`) fails with `Failed to import @chromatic-com/vitest, is it installed in package.json?`, because the bundle resolves packages from its own location.
 - Without `turboSnap: true`, a build where TurboSnap 1.0 is disabled exits `0` and captures every snapshot, while TurboSnap 2.0 still refuses. That happens on the first build of a branch, and on a rebuild of a commit that already has a passed build (stdout: `found 1 parent build; TurboSnap disabled`). Commit before the build to see the `254`.
 - A copy of the fixture made with `cp -r` keeps stats naming the original path. Rerun `npm test` in the copy.

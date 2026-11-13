@@ -278,6 +278,18 @@ record_command() {
   printf 'cwd: %s\ncommand%s: node %s%s\n' "$cwd" "$mode" "$CLI" "$(redacted_args "$@")" > "$out/command.txt"
 }
 
+# is_e2e_drive <cli args...>: whether the drive builds an E2E project (--vitest, --playwright,
+# --cypress). Only those get NODE_PATH: the bundle must load the project's E2E package, which a
+# project-local `chromatic` install finds on its own. NODE_PATH is a fallback for every require, in
+# the bundle and the processes it spawns, so setting it on other drives could hide a real resolution bug.
+is_e2e_drive() {
+  local arg
+  for arg in "$@"; do
+    case "$arg" in --vitest | --playwright | --cypress | --vitest=* | --playwright=* | --cypress=*) return 0 ;; esac
+  done
+  return 1
+}
+
 # run <label> [--cwd DIR] [--cli BUNDLE] -- <cli args...>
 cmd_run() {
   local label="${1:-}"; shift || true
@@ -296,9 +308,10 @@ cmd_run() {
   record_command "$out" "$cwd" "" "$@"
   set +e
   # stdin is an empty pipe (non-TTY, never /dev/null) so the CLI takes its non-interactive path.
-  # NODE_PATH lets the bundle require the project's packages, such as @chromatic-com/vitest, as a
+  # An E2E drive gets NODE_PATH so the bundle can require the project's E2E package, as a
   # project-local `chromatic` install would; this checkout's own node_modules still resolve first.
-  (cd "$cwd" && : | NODE_PATH="$PWD/node_modules" node "$CLI" "$@" > "$out/stdout.txt" 2> "$out/stderr.txt")
+  local e2e=""; is_e2e_drive "$@" && e2e=1
+  (cd "$cwd" && np="${e2e:+$PWD/node_modules}" && : | env ${np:+"NODE_PATH=$np"} node "$CLI" "$@" > "$out/stdout.txt" 2> "$out/stderr.txt")
   local code=$?
   set -e
   echo "$code" > "$out/exit_code"
@@ -332,6 +345,7 @@ cmd_tty() {
   [[ "${1:-}" == "--" ]] && shift
   local out="$EVIDENCE/$label" session="${TMUX_PREFIX}${label}"; mkdir -p "$out"
   local argstr; argstr="$(printf ' %q' "$@")"
+  local node_path=""; is_e2e_drive "$@" && node_path='NODE_PATH="$PWD/node_modules" '
   record_command "$out" "$cwd" " (tty)" "$@"
   mkdir -p "$RUN_DIR"; echo "$session" >> "$SESSIONS_FILE"
   # Each drive gets its own tmux server (socket named after the session). A new session on
@@ -340,7 +354,7 @@ cmd_tty() {
   local t=(tmux -L "$session")
   kill_tmux "$session"
   "${t[@]}" new-session -d -s "$session" -x 120 -y 50 -c "$cwd" \
-    "NODE_PATH=\"\$PWD/node_modules\" node '$CLI'$argstr; echo __VERIFY_EXIT=\$?; sleep 3600"
+    "${node_path}node '$CLI'$argstr; echo __VERIFY_EXIT=\$?; sleep 3600"
   local waited=0
   until "${t[@]}" capture-pane -p -t "$session" -S - | grep -q '__VERIFY_EXIT='; do
     sleep 1; waited=$((waited + 1))
