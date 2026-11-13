@@ -355,17 +355,20 @@ describe('realProjectFiles packageVersion', () => {
     );
   });
 
-  it('reports no version for a package that does not export its own manifest', () => {
-    // Resolving `${name}/package.json` is what avoids the `dist/*` entries an `exports` map usually
-    // omits; a package that does not export the manifest either simply has no version to report.
-    const root = temporaryDirectory();
-    install(root, 'sealed', {
-      name: 'sealed',
+  it('reads the version of a package that does not export its own manifest', () => {
+    // `@chromatic-com/vitest` before 1.0.2 exports no `./package.json`, so Node refuses the subpath.
+    const repositoryRoot = temporaryDirectory();
+    const projectRoot = path.join(repositoryRoot, 'packages/ui');
+    mkdirSync(projectRoot, { recursive: true });
+    install(repositoryRoot, '@scope/sealed', {
+      name: '@scope/sealed',
       version: '1.2.3',
       exports: { '.': './index.js' },
     });
 
-    expect(realProjectFiles({ log, options: {} }).packageVersion(root, 'sealed')).toBeUndefined();
+    expect(
+      realProjectFiles({ log, options: {} }).packageVersion(projectRoot, '@scope/sealed')
+    ).toBe('1.2.3');
   });
 
   it('reports no version for a package whose manifest has none', () => {
