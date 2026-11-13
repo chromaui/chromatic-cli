@@ -41,13 +41,6 @@ export const publishBuild = async (
   const { id, reportToken } = announcedBuild;
   const { onlyStoryNames, onlyStoryFiles = input.onlyStoryFiles } = input.options;
 
-  let turboSnapBailReason;
-  let turboSnapStatus: TurboSnapStatus = 'UNUSED';
-  if (turboSnap) {
-    turboSnapBailReason = turboSnap.bailReason;
-    turboSnapStatus = turboSnap.bailReason ? 'BAILED' : 'APPLIED';
-  }
-
   const { publishBuild: publishedBuild } = await client.runQuery<PublishBuildMutationResult>(
     PublishBuildMutation,
     {
@@ -56,10 +49,7 @@ export const publishBuild = async (
         ...(onlyStoryFiles && { onlyStoryFiles }),
         ...(onlyStoryNames && { onlyStoryNames: [onlyStoryNames].flat() }),
         ...(replacementBuildIds && { replacementBuildIds }),
-        // GraphQL does not support union input types (yet), so we send an object
-        // @see https://github.com/graphql/graphql-spec/issues/488
-        ...(turboSnapBailReason && { turboSnapBailReason }),
-        turboSnapStatus,
+        ...turboSnapInput(turboSnap),
       },
     },
     { headers: { Authorization: `Bearer ${reportToken}` }, retries: 3 }
@@ -75,3 +65,20 @@ export const publishBuild = async (
     storybookUrl: publishedBuild.storybookUrl,
   };
 };
+
+function turboSnapInput(turboSnap: PublishBuildInput['turboSnap']) {
+  if (!turboSnap) {
+    return { turboSnapStatus: 'UNUSED' satisfies TurboSnapStatus };
+  }
+
+  const { bailReason, previewConfigInStats } = turboSnap;
+  return {
+    // GraphQL does not support union input types (yet), so we send an object
+    // @see https://github.com/graphql/graphql-spec/issues/488
+    ...(bailReason && { turboSnapBailReason: bailReason }),
+    ...(previewConfigInStats !== undefined && {
+      turboSnapPreviewConfigInStats: previewConfigInStats,
+    }),
+    turboSnapStatus: (bailReason ? 'BAILED' : 'APPLIED') satisfies TurboSnapStatus,
+  };
+}

@@ -660,6 +660,7 @@ describe('getDependentStoryFiles', () => {
     expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/preview.js'],
+      bailSubreason: 'previewConfig',
     });
   });
 
@@ -735,6 +736,7 @@ describe('getDependentStoryFiles', () => {
     expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/preview.js'],
+      bailSubreason: 'previewConfig',
     });
     expect(ctx.log.warn).toHaveBeenCalledWith(
       expect.stringContaining(
@@ -808,6 +810,7 @@ describe('getDependentStoryFiles', () => {
     expect(result.status).toBe('bailed');
     expect(result.turboSnap.bailReason).toEqual({
       changedStorybookFiles: ['path/to/storybook-config/preview.js'],
+      bailSubreason: 'importsOfPreviewConfig',
     });
     expect(result.turboSnap.bailPath).toEqual([
       'src/theme.js',
@@ -825,6 +828,71 @@ describe('getDependentStoryFiles', () => {
         chalk`{dim →} {bold src/theme.js}\n{dim →} {bold src/tokens.js}\n{dim →} {bold path/to/storybook-config/preview.js}`
       )
     );
+  });
+
+  // The changed file reaches a story too, so tracing must not stop at recapturing that story.
+  it.each([
+    [['./src/decorators.js', './src/Button.stories.js']],
+    [['./src/Button.stories.js', './src/decorators.js']],
+  ])(
+    'bails on a file imported by both preview.js and a story (importers %j)',
+    async (importers) => {
+      const changedFiles = ['src/theme.js'];
+      const modules = [
+        buildModule('./src/theme.js', ...importers),
+        buildModule('./src/decorators.js', './.storybook/preview.js'),
+        buildModule('./.storybook/preview.js', './.storybook/generated-stories-entry.js'),
+        buildModule('./src/Button.stories.js', CSF_GLOB),
+        buildModule(CSF_GLOB, './.storybook/generated-stories-entry.js'),
+      ];
+      const ctx = getContext({ configDir: '.storybook' });
+      const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+      expect(result.status).toBe('bailed');
+      expect(result.turboSnap.bailReason).toEqual({
+        changedStorybookFiles: ['.storybook/preview.js'],
+        bailSubreason: 'importsOfPreviewConfig',
+      });
+      expect(result.turboSnap.bailPath).toEqual([
+        'src/theme.js',
+        'src/decorators.js',
+        '.storybook/preview.js',
+      ]);
+    }
+  );
+
+  it.each([
+    ['main.mts', 'mainConfig'],
+    ['preview.ts', 'previewConfig'],
+    ['preview-head.html', 'previewHead'],
+    ['preview-body.html', 'previewBody'],
+  ])('reports which allowlisted config file %s changed', async (fileName, bailSubreason) => {
+    const changedFiles = [`path/to/storybook-config/${fileName}`];
+    const modules = [
+      buildModule('./src/foo.stories.js', CSF_GLOB),
+      buildModule(CSF_GLOB, './path/to/storybook-config/generated-stories-entry.js'),
+    ];
+    const ctx = getContext({ configDir: 'path/to/storybook-config' });
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result.turboSnap.bailReason).toEqual({
+      changedStorybookFiles: changedFiles,
+      bailSubreason,
+    });
+  });
+
+  it('reports a change concatenated into the preview config as an import of it', async () => {
+    const changedFiles = ['src/theme.ts'];
+    const modules = [
+      {
+        id: './path/to/storybook-config/preview.ts',
+        name: './path/to/storybook-config/preview.ts + 1 modules',
+        modules: [{ name: './path/to/storybook-config/preview.ts' }, { name: './src/theme.ts' }],
+        reasons: [{ moduleName: './path/to/storybook-config/generated-stories-entry.js' }],
+      },
+      buildModule(CSF_GLOB, './path/to/storybook-config/generated-stories-entry.js'),
+    ];
+    const ctx = getContext({ configDir: 'path/to/storybook-config' });
+    const result = await getDependentStoryFiles(ctx, { modules }, statsPath, changedFiles);
+    expect(result.turboSnap.bailReason).toMatchObject({ bailSubreason: 'importsOfPreviewConfig' });
   });
 
   it('bails on changed dependency of config file if it is in a single module chunk', async () => {
@@ -1560,6 +1628,7 @@ describe('getDependentStoryFiles', () => {
       expect(result.status).toBe('bailed');
       expect(result.turboSnap.bailReason).toEqual({
         changedStorybookFiles: ['src/stories/components/index.js'],
+        bailSubreason: 'importsOfPreviewConfig',
       });
       expect(result.turboSnap.bailPath).toEqual(['src/stories/components/index.js']);
       expect(result.turboSnap.globs).not.toContain(projectAnnotations);
@@ -1579,6 +1648,7 @@ describe('getDependentStoryFiles', () => {
       expect(result.status).toBe('bailed');
       expect(result.turboSnap.bailReason).toEqual({
         changedStorybookFiles: ['node_modules/@storybook/addon-a11y/dist/preview.js'],
+        bailSubreason: 'importsOfPreviewConfig',
       });
       expect(result.turboSnap.bailPath).toEqual([
         'node_modules/axe-core/axe.js',
@@ -1591,6 +1661,7 @@ describe('getDependentStoryFiles', () => {
       expect(result.status).toBe('bailed');
       expect(result.turboSnap.bailReason).toEqual({
         changedStorybookFiles: ['node_modules/@storybook/react/dist/entry-preview.js'],
+        bailSubreason: 'importsOfPreviewConfig',
       });
     });
 
@@ -1598,6 +1669,7 @@ describe('getDependentStoryFiles', () => {
       const result = await trace(['.storybook/preview.tsx']);
       expect(result.turboSnap.bailReason).toEqual({
         changedStorybookFiles: ['.storybook/preview.tsx'],
+        bailSubreason: 'previewConfig',
       });
     });
 
