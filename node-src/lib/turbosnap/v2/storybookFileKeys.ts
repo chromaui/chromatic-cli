@@ -40,8 +40,9 @@ export const STORYBOOK_VERSION_KEY = 'storybookVersion';
  *
  * `package.json` and lockfiles deliberately have no key here, even though they are also not modules.
  * v1 diffed them only to derive changed package *names*; v2 content-hashes the installed files that
- * are in the graph, which covers a dependency change more precisely. Hashing manifest bytes on top
- * would recapture everything on lockfile churn that v1 correctly captures nothing for.
+ * are in the graph, which covers a dependency change more precisely, except for files the stats
+ * leave out, such as assets Vite builds reference from CSS with `url()`. Hashing manifest bytes on
+ * top would recapture everything on lockfile churn that v1 correctly captures nothing for.
  */
 export const STORYBOOK_CONFIG_KEY = 'storybookConfigFiles';
 
