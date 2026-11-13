@@ -518,6 +518,36 @@ it('runs in simple situations', async () => {
   });
 });
 
+it('reports each distinct GraphQL error when the index returns several', async () => {
+  const graphqlError = {
+    path: ['announceBuild'],
+    locations: [{ line: 2, column: 3 }],
+    extensions: { code: 'INTERNAL_SERVER_ERROR' },
+  };
+  const errors = [
+    { ...graphqlError, message: 'First problem' },
+    { ...graphqlError, message: 'First problem' },
+    { ...graphqlError, message: 'Other problem' },
+  ];
+  const defaultFetch = fetch.getMockImplementation();
+  if (!defaultFetch) throw new Error('node-fetch is not mocked');
+  fetch.mockImplementation(async (url, init) => {
+    if (!String(init?.body).includes('AnnounceBuildMutation')) return defaultFetch(url, init);
+    return { ok: true, json: async () => ({ errors }) } as any;
+  });
+  onTestFinished(() => {
+    fetch.mockImplementation(defaultFetch);
+  });
+
+  const ctx = getContext(['--project-token=asdf1234']);
+  await runAll(ctx);
+
+  expect(ctx.exitCode).toBe(202); // GRAPHQL_ERROR
+  const [message] = ctx.testLogger.errors;
+  expect(message.match(/INTERNAL_SERVER_ERROR: First problem/g)).toHaveLength(1);
+  expect(message).toContain('INTERNAL_SERVER_ERROR: Other problem');
+});
+
 describe('with patch builds', () => {
   it('checks out the merge base before gathering git info', async () => {
     const callOrder: string[] = [];
