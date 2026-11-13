@@ -72,26 +72,20 @@ describe('generate-manifest', () => {
     );
   });
 
-  it('exits without generating a manifest when the config file is invalid', async () => {
+  it('fails without generating a manifest when the config file is invalid', async () => {
     mockGetConfiguration.mockRejectedValue(new TypeError('Configuration file is invalid'));
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
 
-    await main(['-o', './.storybook-static']);
+    await expect(main(['-o', './.storybook-static'])).rejects.toThrow(
+      'Configuration file is invalid'
+    );
 
     expect(generateManifest).not.toHaveBeenCalled();
-    expect(testLogger.error).toHaveBeenCalledWith('Error: Configuration file is invalid');
-    expect(exitSpy).toHaveBeenCalledWith(1);
-
-    exitSpy.mockRestore();
   });
 
-  it('shows error when output-dir is missing', async () => {
-    await main([]);
+  it('fails when output-dir is missing', async () => {
+    await expect(main([])).rejects.toThrow('--output-dir is required');
 
-    expect(testLogger.error).toHaveBeenCalledWith('Error: --output-dir is required');
     expect(generateManifest).not.toHaveBeenCalled();
-    expect(process.exitCode).toBe(1);
-    process.exitCode = undefined;
   });
 
   it('validates Storybook React Native version before generating manifest', async () => {
@@ -101,17 +95,12 @@ describe('generate-manifest', () => {
     expect(generateManifest).toHaveBeenCalledTimes(1);
   });
 
-  it('skips manifest generation and exits when validation fails', async () => {
+  it('skips manifest generation and fails when validation fails', async () => {
     const validationError = new Error('Unsupported Storybook React Native version');
     mockValidateStorybookReactNativeVersion.mockRejectedValue(validationError);
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
 
-    await main(['-o', './.storybook-static']);
+    await expect(main(['-o', './.storybook-static'])).rejects.toThrow(validationError);
 
     expect(generateManifest).not.toHaveBeenCalled();
-    expect(testLogger.error).toHaveBeenCalledWith(expect.stringContaining(validationError.message));
-    expect(exitSpy).toHaveBeenCalledWith(1);
-
-    exitSpy.mockRestore();
   });
 });

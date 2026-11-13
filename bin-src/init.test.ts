@@ -7,7 +7,10 @@ import {
   addChromaticScriptToPackageJson,
   createChromaticConfigFile,
   installArchiveDependencies,
+  main,
 } from './init';
+
+vi.mock('read-package-up', () => ({ readPackageUp: vi.fn(() => Promise.resolve(undefined)) }));
 
 vi.mock('jsonfile', async (importOriginal) => {
   return {
@@ -57,6 +60,25 @@ describe('addChromaticScriptToPackageJson', () => {
       },
       { spaces: 2 }
     );
+  });
+
+  it('fails when package.json cannot be written, without printing the error itself', async () => {
+    const warn = vi.spyOn(console, 'warn');
+    vi.mocked(writeFile).mockRejectedValueOnce(new Error('EACCES: permission denied'));
+    await expect(
+      addChromaticScriptToPackageJson({ packageJson: {}, packagePath: './package.json' })
+    ).rejects.toThrow('EACCES: permission denied');
+    expect(warn).not.toHaveBeenCalled();
+  });
+});
+
+describe('main', () => {
+  it('fails with exit code 253 outside a JavaScript project', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    await expect(main(['-f', 'storybook'])).rejects.toMatchObject({
+      message: expect.stringContaining('No package.json found'),
+      exitCode: 253,
+    });
   });
 });
 

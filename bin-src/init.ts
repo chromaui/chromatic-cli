@@ -9,6 +9,7 @@ import { readPackageUp } from 'read-package-up';
 
 import { meowImportMeta } from '../node-src/lib/meowImportMeta';
 import noPackageJson from '../node-src/ui/messages/errors/noPackageJson';
+import { SubcommandFailure } from './subcommandFailure';
 
 export const TestFramework = {
   STORYBOOK: 'storybook',
@@ -23,18 +24,14 @@ export const getPackageManagerInstallCommand = async (args: string[]) => {
 };
 
 export const addChromaticScriptToPackageJson = async ({ packageJson, packagePath }) => {
-  try {
-    const json = {
-      ...packageJson,
-      scripts: {
-        ...packageJson?.scripts,
-        chromatic: `chromatic`,
-      },
-    };
-    await writeFile(packagePath, json, { spaces: 2 });
-  } catch (err) {
-    console.warn(err);
-  }
+  const json = {
+    ...packageJson,
+    scripts: {
+      ...packageJson?.scripts,
+      chromatic: `chromatic`,
+    },
+  };
+  await writeFile(packagePath, json, { spaces: 2 });
 };
 
 export const createChromaticConfigFile = async ({
@@ -162,8 +159,8 @@ export async function main(argv: string[]) {
 
   const pkgInfo = await readPackageUp({ cwd: process.cwd() });
   if (!pkgInfo) {
-    console.error(noPackageJson());
-    process.exit(253);
+    // The main command exits 253 for this too (node-src/index.ts).
+    throw new SubcommandFailure(noPackageJson(), { exitCode: 253 });
   }
 
   const { path: packagePath, packageJson } = pkgInfo;

@@ -129,7 +129,7 @@ export async function buildManifest(
       `Found no story files in the stats file for the project at ${input.projectRoot}. Either Storybook was built in another directory (pass --storybook-base-dir <dir> pointing at it), or its builder names its stories entry in a way TurboSnap doesn't recognize.`
     );
   }
-  // An E2E build's story files are generated and untracked, so a story's hash only moves through
+  // An E2E build's story files are generated and usually gitignored, so a story's hash only moves through
   // the tracked files its edges reach. Without any, as when Vitest runs without
   // chromaticPlugin({ turboSnap: true }), every story hashes the same on every build.
   if (input.e2ePackage && !reachesTrackedFile(files, hashes, storyFiles)) {
@@ -273,9 +273,10 @@ function reachesTrackedFile(
   hashes: Map<FilePath, FileHash>,
   storyFiles: Set<FilePath>
 ): boolean {
+  // The story file itself doesn't count: its bytes are generated, even when someone commits them.
   return [...storyFiles].some((storyFile) =>
-    [...collectTransitiveDependencies(files, storyFile)].some((filePath) =>
-      hasContentHash(hashes, filePath)
+    [...collectTransitiveDependencies(files, storyFile)].some(
+      (filePath) => filePath !== storyFile && hasContentHash(hashes, filePath)
     )
   );
 }

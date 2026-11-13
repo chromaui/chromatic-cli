@@ -117,7 +117,9 @@ describe('buildManifest for an E2E build', () => {
   // Vitest without chromaticPlugin({ turboSnap: true }) writes no stats of its own, so the
   // generated story files import nothing.
   it('refuses to build when no story file reaches a tracked file', async () => {
-    const { input } = e2eFixture();
+    const { disk, input } = e2eFixture();
+    // Even when the generated archives are committed, their own bytes say nothing about the code.
+    disk.isUntracked = () => false;
     const storiesOnly: Stats = { modules: [stats.modules[0]] };
 
     await expect(buildManifest(storiesOnly, input)).rejects.toThrow(

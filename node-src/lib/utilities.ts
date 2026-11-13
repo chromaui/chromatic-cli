@@ -3,9 +3,34 @@ import picomatch, { Matcher } from 'picomatch';
 
 import { Context } from '../types';
 
+// The NUL character: git's `-z` entry separator, and the marker bundlers put in generated module ids.
+export const NULL_BYTE = '\0';
+
 export const lcfirst = (str: string) => `${str.charAt(0).toLowerCase()}${str.slice(1)}`;
 
 export const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Rejects with `message` if `promise` hasn't settled within `ms`. The timer is unref'd, so it never
+ * keeps the process alive by itself, not even while `promise` is still pending.
+ *
+ * @param promise The promise to race.
+ * @param ms How long to wait, in milliseconds.
+ * @param message The message of the error to reject with on timeout.
+ *
+ * @returns A promise that settles like `promise`, or rejects once `ms` has passed.
+ */
+export const withTimeout = <T>(
+  promise: Promise<T>,
+  ms: number,
+  message = `Timed out after ${ms}ms`
+): Promise<T> =>
+  Promise.race([
+    promise,
+    new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(message)), ms).unref();
+    }),
+  ]);
 
 export const throttle = (fn: (...args: any[]) => void, wait: number) => {
   let previous = 0;
