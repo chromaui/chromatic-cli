@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { SkippedBuildFields, uploadBuild } from '../lib/upload';
+import { uploadBuild, UploadBuildResult } from '../lib/upload';
 import { throttle } from '../lib/utilities';
 import { waitForSentinel } from '../lib/waitForSentinel';
 import { Context, Deps, FileDesc, TaskResult } from '../types';
@@ -16,14 +16,7 @@ export interface UploadInput {
   uploadContext: Context;
 }
 
-export interface UploadOutput {
-  sentinelUrls: string[];
-  uploadedBytes: number;
-  uploadedFiles: number;
-  skippedByTurboSnap?: boolean;
-  ancestorBuild?: Context['ancestorBuild'];
-  skippedBuild?: SkippedBuildFields;
-}
+export type UploadOutput = UploadBuildResult;
 
 const buildFileList = (ctx: Context, withHashes: boolean): FileDesc[] => {
   const lengthsByPath = new Map(
@@ -48,14 +41,7 @@ const uploadAndWaitForSentinels = async (
   ctx: Context,
   files: FileDesc[]
 ): Promise<UploadOutput> => {
-  const {
-    sentinelUrls,
-    uploadedBytes,
-    uploadedFiles,
-    skippedByTurboSnap,
-    ancestorBuild,
-    skippedBuild,
-  } = await uploadBuild(ctx, files, {
+  const result = await uploadBuild(ctx, files, {
     onProgress: throttle(
       (progress, total) => {
         const percentage = Math.round((progress / total) * 100);
@@ -73,22 +59,15 @@ const uploadAndWaitForSentinels = async (
   });
 
   // A TurboSnap-skipped build uploads nothing and has no sentinels to wait for.
-  if (skippedByTurboSnap || sentinelUrls.length === 0) {
-    return {
-      sentinelUrls,
-      uploadedBytes,
-      uploadedFiles,
-      skippedByTurboSnap,
-      ancestorBuild,
-      skippedBuild,
-    };
+  if (result.skippedByTurboSnap || result.sentinelUrls.length === 0) {
+    return result;
   }
 
   deps.report({ output: finalizing(ctx).output });
 
   // Dedupe sentinels, ignoring query params
   const sentinels = Object.fromEntries(
-    sentinelUrls.map((url) => {
+    result.sentinelUrls.map((url) => {
       const { host, pathname } = new URL(url);
       return [host + pathname, { name: pathname.split('/').at(-1) || '', url }];
     })
@@ -96,7 +75,7 @@ const uploadAndWaitForSentinels = async (
 
   await Promise.all(Object.values(sentinels).map((sentinel) => waitForSentinel(ctx, sentinel)));
 
-  return { sentinelUrls, uploadedBytes, uploadedFiles };
+  return result;
 };
 
 // A bypassed build halts the pipeline early (kind:'partial' sets ctx.skip). The upload frame
@@ -133,22 +112,19 @@ export async function uploadProject(
     return { kind: 'skip-self' };
   }
 
+  let output: UploadOutput;
   try {
-    const output = await uploadAndWaitForSentinels(deps, ctx, buildFileList(ctx, true));
-    if (output.skippedByTurboSnap) {
-      return skipTurboSnapped(deps, ctx, output);
-    }
-    return { kind: 'continue', output };
+    output = await uploadAndWaitForSentinels(deps, ctx, buildFileList(ctx, true));
   } catch {
     deps.log.warn(deduplicationFailed());
     // Retry without file deduplication. uploadBuild returns fresh tallies, so the failed attempt's
     // results are discarded simply by running again.
-    const output = await uploadAndWaitForSentinels(deps, ctx, buildFileList(ctx, false));
-    if (output.skippedByTurboSnap) {
-      return skipTurboSnapped(deps, ctx, output);
-    }
-    return { kind: 'continue', output };
+    output = await uploadAndWaitForSentinels(deps, ctx, buildFileList(ctx, false));
   }
+
+  return output.skippedByTurboSnap
+    ? skipTurboSnapped(deps, ctx, output)
+    : { kind: 'continue', output };
 }
 
 export const extractUploadInput = (ctx: Context): UploadInput => ({ uploadContext: ctx });

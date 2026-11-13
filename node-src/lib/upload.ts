@@ -101,7 +101,7 @@ const SkippedBuildQuery = `
   }
 `;
 
-export type SkippedBuildFields = Partial<
+type SkippedBuildFields = Partial<
   Pick<
     NonNullable<Context['build']>,
     | 'specCount'
