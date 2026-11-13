@@ -17,6 +17,7 @@ import {
   normalizeStatsName,
   stripConcatenatedModuleSuffix,
 } from '../statsPaths';
+import { storybookConfigFileKind } from '../storybookConfigFiles';
 import { TraceChangedFilesResult } from '../types';
 import { classifyChangedStorybookFilesDetail } from './classifyBailDetail';
 
@@ -134,11 +135,16 @@ export async function getDependentStoryFiles(
   const csfGlobsByName = new Set<NormalizedName>();
   const annotationFilesByName = new Set<NormalizedName>();
 
-  const isStorybookFile = (name: string) =>
+  // Any module in the config directory: these never count as CSF globs.
+  const isConfigDirectoryFile = (name: string) =>
     name &&
     name.startsWith(`${storybookDirectory}/`) &&
     !storiesEntryFiles.includes(name) &&
     !isDocumentationFile(name);
+  // Only the allowlisted config files bail, and `--untraced` never applies to them. Every other file
+  // in the config directory is traced like any other source file.
+  const isStorybookConfig = (name: string) =>
+    !!storybookConfigFileKind(stripConcatenatedModuleSuffix(name), storybookDirectory);
 
   // Distinct modules can normalize to one name: Vue/Svelte compile a component into several
   // modules (the component plus its `<style>` facets), CommonJS interop rewrites imports into
@@ -203,15 +209,26 @@ export async function getDependentStoryFiles(
       nodeModules.get(packageName)?.push(name);
     }
 
-    if (reasons.some((reason) => isGlobalRoot(reason))) {
+    const importedByEntry = reasons.some(
+      (reason) => storiesEntryFiles.some((prefix) => reason.startsWith(prefix)) // match module names that include a "+ N modules"
+    );
+    // A config dir module that is a preview entry (nothing imports it, such as Storybook 6's
+    // `<file>-generated-config-entry.js`) or that an entry loads directly (such as a
+    // `previewAnnotations` file rsbuild's config entry requires) applies to every story, so it
+    // bails like an annotation file. Webpack can concatenate such a file into the config entry, so
+    // check the concatenated members too.
+    const holdsConfigDirectoryFile = [
+      name,
+      ...members.flatMap((member) => member.modules ?? []).map((m) => normalize(m.name)),
+    ].some((file) => isConfigDirectoryFile(file));
+    if (
+      reasons.some((reason) => isGlobalRoot(reason)) ||
+      ((importedByEntry || reasons.length === 0) && holdsConfigDirectoryFile)
+    ) {
       annotationFilesByName.add(name);
     }
 
-    if (
-      !isStorybookFile(name) &&
-      !isGlobalRoot(name) &&
-      reasons.some((reason) => storiesEntryFiles.some((prefix) => reason.startsWith(prefix))) // match module names that include a "+ N modules"
-    ) {
+    if (!isConfigDirectoryFile(name) && !isGlobalRoot(name) && importedByEntry) {
       csfGlobsByName.add(name);
     }
   }
@@ -244,6 +261,9 @@ export async function getDependentStoryFiles(
   const untracedFiles: UntracedFile[] = [];
 
   function untrace(filepath: string) {
+    // Check concatenated members too, as `shouldBail` does, so a glob on the wrapper's name can't
+    // hide an allowlisted file inside it.
+    if (files(filepath).some((file) => isStorybookConfig(file))) return true;
     filepath = filepath.replace(/\s\+\s\d+\smodules?$/, ''); // strip ' + N modules' from the string before matching against `untraced`
     const matchedGlob = untraced.find((glob) => matchesFile(glob, filepath));
     if (matchedGlob) {
@@ -319,15 +339,15 @@ export async function getDependentStoryFiles(
       return true;
     }
 
-    const isAnnotationFile = annotationFilesByName.has(moduleName);
-    if (isStorybookFile(moduleName) || isAnnotationFile) {
+    // A concatenated module holding an allowlisted file bails too: webpack concatenates
+    // `preview.*` with the files it imports, so a change to one of them only reaches this module.
+    if (
+      files(moduleName).some((file) => isStorybookConfig(file)) ||
+      annotationFilesByName.has(moduleName)
+    ) {
       turboSnap.bailReason = {
         changedStorybookFiles: files(moduleName),
-        ...classifyChangedStorybookFilesDetail(moduleName, {
-          traced,
-          isAnnotationFile,
-          storybookDirectory,
-        }),
+        ...classifyChangedStorybookFilesDetail(moduleName, { traced, storybookDirectory }),
       };
       turboSnap.bailPath = buildBailPath(moduleName, tracePath);
       return true;
