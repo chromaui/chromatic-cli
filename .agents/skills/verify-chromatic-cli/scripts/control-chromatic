@@ -74,8 +74,8 @@ build_storybook() {
   local src="${1:-$REPO}" out="${2:-$SB_DIR}"
   mkdir -p "$WORK"
   echo "==> yarn build-storybook -o $out (in $src)"
-  # stdin must be a pipe or TTY: with stdin=/dev/null the repo's clack-capture
-  # Storybook plugin crashes with "process.stdin.unref is not a function".
+  # Pipe stdin: before 77249cd3, the repo's clack-capture Storybook plugin
+  # crashed with "process.stdin.unref is not a function" when stdin was /dev/null.
   (cd "$src" && : | yarn build-storybook -o "$out" > "$WORK/storybook-build.log" 2>&1) \
     || { tail -30 "$WORK/storybook-build.log"; die "storybook build failed (log: $WORK/storybook-build.log)"; }
   [[ -s "$out/preview-stats.json" ]] || die "storybook build finished but $out/preview-stats.json is missing"
