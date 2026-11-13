@@ -527,7 +527,8 @@ it('reports each distinct GraphQL error when the index returns several', async (
   const errors = [
     { ...graphqlError, message: 'First problem' },
     { ...graphqlError, message: 'First problem' },
-    { ...graphqlError, message: 'Other problem' },
+    // Validation errors have no path or locations
+    { message: 'Other problem', extensions: { code: 'GRAPHQL_VALIDATION_FAILED' } },
   ];
   const defaultFetch = fetch.getMockImplementation();
   if (!defaultFetch) throw new Error('node-fetch is not mocked');
@@ -545,7 +546,7 @@ it('reports each distinct GraphQL error when the index returns several', async (
   expect(ctx.exitCode).toBe(202); // GRAPHQL_ERROR
   const [message] = ctx.testLogger.errors;
   expect(message.match(/INTERNAL_SERVER_ERROR: First problem/g)).toHaveLength(1);
-  expect(message).toContain('INTERNAL_SERVER_ERROR: Other problem');
+  expect(message).toContain('GRAPHQL_VALIDATION_FAILED: Other problem');
 });
 
 describe('with patch builds', () => {

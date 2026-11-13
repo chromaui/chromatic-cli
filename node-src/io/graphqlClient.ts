@@ -63,9 +63,6 @@ export default class GraphQLClient {
           if (err.extensions && err.extensions.code === RETRYABLE_ERROR_CODE) throw err;
 
           err.name = err.name || 'GraphQLError';
-          err.at = `${err.path.join('.')} ${err.locations
-            .map((l) => `${l.line}:${l.column}`)
-            .join(', ')}`;
         }
         return bail(errors.length === 1 ? errors[0] : errors);
       },
