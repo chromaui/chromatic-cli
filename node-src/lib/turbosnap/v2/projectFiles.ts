@@ -151,7 +151,7 @@ function readPackageVersion(
   const requireFromDirectory = createRequire(path.join(fromDirectory, 'package.json'));
 
   try {
-    const packageJsonPath = resolvePackageJson(requireFromDirectory, fromDirectory, packageName);
+    const packageJsonPath = resolvePackageJson(requireFromDirectory, packageName);
     const { version } = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
     return version;
   } catch (error) {
@@ -170,30 +170,22 @@ function readPackageVersion(
 
 /**
  * Resolves a package's own `package.json`. When the package's `exports` map leaves it out (as
- * `@chromatic-com/vitest` did before 1.0.2), resolving the subpath fails, so this finds the package's
- * directory another way: from Yarn PnP's API, which keeps packages in zip archives, or else from
- * each `node_modules` Node searched, where the first one is the package Node found and refused.
+ * `@chromatic-com/vitest` did before 1.0.2), Node refuses the subpath, so this looks for the file in
+ * each `node_modules` Node searched. The first one there is the package Node found and refused.
  *
  * @param requireFromDirectory A `require` created for the directory to resolve from.
- * @param fromDirectory The absolute directory to resolve from.
  * @param packageName The package whose manifest to find.
  *
  * @returns The absolute path of the package's `package.json`.
  */
 function resolvePackageJson(
   requireFromDirectory: ReturnType<typeof createRequire>,
-  fromDirectory: AbsolutePath,
   packageName: string
 ): string {
   try {
     return requireFromDirectory.resolve(`${packageName}/package.json`);
   } catch (error) {
     if (error.code !== 'ERR_PACKAGE_PATH_NOT_EXPORTED') throw error;
-
-    if (process.versions.pnp) {
-      const { resolveToUnqualified } = requireFromDirectory('pnpapi');
-      return path.join(resolveToUnqualified(packageName, `${fromDirectory}/`), 'package.json');
-    }
 
     const packageJsonPath = requireFromDirectory.resolve
       .paths(packageName)
