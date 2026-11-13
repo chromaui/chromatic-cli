@@ -30,8 +30,11 @@ export interface ManifestInput {
   configDir: AbsolutePath;
   /**
    * The E2E package whose bundled Storybook the build uploads, such as `@chromatic-com/vitest`. Set
-   * only for E2E builds: their Storybook config ships inside the package, so the package's version
-   * stands in for the Storybook config and version, and `configDir` is not swept.
+   * only for E2E builds. The package ships the Storybook config and install, so the project has
+   * neither: the package's name and version stand in for `storybookVersion`, `configDir` is not
+   * swept, and `storybookConfigFiles` is the roll-up of no files. `configDir` still decides which
+   * graph files count as `preview`, and a real build still hashes the static directories its
+   * `main.*` declares, when the project has one.
    */
   e2ePackage?: string;
   /** The absolute configured static directories, or single static files. Empty when unset. */

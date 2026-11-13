@@ -37,8 +37,7 @@ function isTrustedVersion(packageName: string, version: string) {
  * been used to build the Storybook. It then walks up every ancestor `node_modules` to find the
  * first package it can resolve.
  *
- * An E2E build has no Storybook of its own, so its E2E package stands in; see
- * `resolveE2EPackageVersion`.
+ * An E2E build resolves its E2E package instead; see `resolveE2EPackageVersion`.
  *
  * @param input Where to resolve from and what to read the disk with.
  * @param input.configDir The absolute Storybook config directory to resolve from.
@@ -71,10 +70,9 @@ export function resolveStorybookVersion(
 }
 
 /**
- * Stands in for `resolveStorybookVersion` in an E2E build, which has no Storybook of its own: it
- * uploads the Storybook its E2E package ships and pins. The package's name and version stand in, so a
- * package upgrade recaptures like a Storybook upgrade does. The Index only compares the value for
- * equality.
+ * Resolves `storybookVersion` for an E2E build; see `ManifestInput.e2ePackage`. The package's name
+ * and version stand in, so a package upgrade recaptures like a Storybook upgrade does. The Index only
+ * compares the value for equality.
  *
  * @param e2ePackage The E2E package, such as `@chromatic-com/vitest`.
  * @param input Where the package is installed and what to read the disk with.

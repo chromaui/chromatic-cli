@@ -69,7 +69,7 @@ export class MissingStorybookConfigError extends Error {
  */
 export function listConfigAndStaticFiles(input: OutOfGraphInput) {
   return {
-    // An E2E build's Storybook config ships inside its package, so the project has none to sweep.
+    // An E2E build has no config directory to sweep; see `ManifestInput.e2ePackage`.
     configTree: input.e2ePackage ? [] : listConfigTree(input),
     staticTree: input.staticDirs.flatMap((directory) => input.projectFiles.listTree(directory)),
   };
@@ -117,8 +117,6 @@ function listConfigTree(input: Pick<OutOfGraphInput, 'configDir' | 'projectFiles
  * manifest path, beside the swept config and static files that were skipped instead, keyed the same
  * way with the reason. `storybookConfigFiles` always holds at least the main config, except for an
  * E2E build, where it is empty.
- *
- * @throws {MissingStorybookConfigError} When `configDir` holds no `main.*` file.
  */
 export async function hashOutOfGraphFiles(
   input: OutOfGraphInput,
