@@ -2,7 +2,14 @@ import path from 'path';
 import xxHashWasm from 'xxhash-wasm';
 
 import { Stats } from '../../../types';
-import { FileHash, FilePath, hashEntryIdentities, TurboSnapFile } from './graph';
+import {
+  collectTransitiveDependencies,
+  FileHash,
+  FilePath,
+  hasContentHash,
+  hashEntryIdentities,
+  TurboSnapFile,
+} from './graph';
 import { ManifestInput } from './manifestInput';
 import {
   hashOutOfGraphFiles,
@@ -90,7 +97,8 @@ interface ManifestFile {
  * @returns The manifest containing the file hashes, story file hashes, Storybook config file hashes,
  * and Storybook hash.
  *
- * @throws {Error} When the stats resolve to no story files; see the check below.
+ * @throws {Error} When the stats resolve to no story files, or for an E2E build, when no story file
+ * reaches a tracked file; see the checks below.
  */
 export async function buildManifest(
   stats: Stats,
@@ -119,6 +127,14 @@ export async function buildManifest(
   if (storyFiles.size === 0) {
     throw new Error(
       `Found no story files in the stats file for the project at ${input.projectRoot}. Either Storybook was built in another directory (pass --storybook-base-dir <dir> pointing at it), or its builder names its stories entry in a way TurboSnap doesn't recognize.`
+    );
+  }
+  // An E2E build's story files are generated and untracked, so a story's hash only moves through
+  // the tracked files its edges reach. Without any, as when Vitest runs without
+  // chromaticPlugin({ turboSnap: true }), every story hashes the same on every build.
+  if (input.e2ePackage && !reachesTrackedFile(files, hashes, storyFiles)) {
+    throw new Error(
+      `Found no tracked files behind the story files of this E2E build. For Vitest, make sure you've enabled chromaticPlugin({ turboSnap: true }) in your Vitest configuration before running tests.`
     );
   }
 
@@ -250,6 +266,18 @@ function serializeFiles(files: Map<FilePath, TurboSnapFile>): ManifestFile['file
     };
   }
   return serialized;
+}
+
+function reachesTrackedFile(
+  files: Map<FilePath, TurboSnapFile>,
+  hashes: Map<FilePath, FileHash>,
+  storyFiles: Set<FilePath>
+): boolean {
+  return [...storyFiles].some((storyFile) =>
+    [...collectTransitiveDependencies(files, storyFile)].some((filePath) =>
+      hasContentHash(hashes, filePath)
+    )
+  );
 }
 
 function sortByKey<Value>(record: Record<string, Value>): Record<string, Value> {

@@ -61,7 +61,9 @@ The two config entries the index requires are filled without one:
 
 There is no config-directory sweep, so `preview` is omitted and the manifest's `storybookConfigFiles` detail is empty. `staticFiles` is omitted too, because static directories come from the main config the project doesn't have; `chromatic turbosnap-manifest --vitest --static-dir <dir>` still hashes one you pass.
 
-`--playwright` and `--cypress` builds skip TurboSnap 2.0 entirely. They report no module graph, so their manifest would list no story files and hash the same on every build.
+`--playwright` and `--cypress` builds skip TurboSnap 2.0 entirely. They report no module graph, so their generated story files reach no tracked files and would hash the same on every build.
+
+A Vitest build has the same problem when the tests ran without `chromaticPlugin({ turboSnap: true })`: the package then writes no stats, and the story files import nothing. `buildManifest` refuses any E2E build where no story file reaches a tracked file, so TurboSnap 1.0 decides it instead, and 1.0 fails the build with a message that asks for `turboSnap: true`.
 
 Known gap: `@chromatic-com/vitest` numbers its `.stories.json` files in the order tests finish, so the same test can get a different key on the next run. The index compares a story's hash under the same key in both builds, so a renamed key recaptures that story. That over-captures; it never skips a change.
 
