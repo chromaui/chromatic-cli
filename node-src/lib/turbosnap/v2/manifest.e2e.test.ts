@@ -48,7 +48,7 @@ describe('buildManifest for an E2E build', () => {
     ]);
   });
 
-  it('recaptures every story when the E2E package is upgraded', async () => {
+  it('moves the Storybook hash but no story hash when the E2E package is upgraded', async () => {
     const { disk, input } = e2eFixture();
     const before = await buildManifest(stats, input);
 

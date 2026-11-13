@@ -71,8 +71,8 @@ export function resolveStorybookVersion(
 
 /**
  * Resolves `storybookVersion` for an E2E build; see `ManifestInput.e2ePackage`. The package's name
- * and version stand in, so a package upgrade recaptures like a Storybook upgrade does. The Index only
- * compares the value for equality.
+ * and version stand in, so a package upgrade changes the configuration like a Storybook upgrade does.
+ * The Index only compares the value for equality.
  *
  * @param e2ePackage The E2E package, such as `@chromatic-com/vitest`.
  * @param input Where the package is installed and what to read the disk with.
