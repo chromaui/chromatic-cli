@@ -65,6 +65,7 @@ When a mistake keeps coming back, enforce the rule with a check and record it he
 | Which release label to pick | Judgment ([Label every pull request](#label-every-pull-request)) |
 | Source files stay under 500 lines; `git.ts` and `types.ts` under 1000. Split a file instead of disabling `max-lines` | ESLint `max-lines` and `eslint-comments/no-restricted-disable` |
 | Tests call commands in-process, never through `yarn chromatic` or `dist/bin.cjs` | ESLint `no-restricted-syntax` on `*.test.*` |
+| A subcommand in `bin-src/` throws on failure instead of printing the error or exiting itself; `register.js` prints `Error: <message>` and exits 1, or a `SubcommandFailure`'s exit code | ESLint `no-restricted-properties` (`process.exit`, `process.exitCode`) and `no-restricted-syntax` (`console.error`) on `bin-src/*.ts` except `main.ts` and tests |
 | Each e2e fixture's Storybook packages match its `storybook` version, in `package.json` and the lockfile | `e2e/check-storybook-versions.mjs` in the lint-and-test workflow |
 | Every git call passes git options, so none silently falls back to the default timeout. Pass `ctx` or `{ log, options }`, or `options: {}` where there are no options | `GitDeps.options` is required (`node-src/git/execGit.ts`), so `{ log }` fails `yarn typescript:check` |
 | Forward the user's actual options rather than `{}` when they're in scope; `Options.gitTimeout` is milliseconds, the config file's is seconds | Judgment |
