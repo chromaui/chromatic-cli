@@ -1,6 +1,4 @@
-import path from 'path';
-
-import { PREVIEW_CONFIG_PATTERN } from '../../getStorybookMetadata';
+import { isPreviewConfig } from '../storybookConfigFiles';
 import {
   collectTransitiveDependencies,
   FileHash,
@@ -14,23 +12,6 @@ import {
   STORYBOOK_PREVIEW_KEY,
   StorybookFileKey,
 } from './storybookFileKeys';
-
-/**
- * Whether a canonical manifest path is the project's `<configDir>/preview.*` config file. Canonical
- * in-project keys start `./`, so a preview under node_modules (keyed elsewhere) is not mistaken for
- * the project's. Path matching is the only consistent way to find it: the config-entry import edge is
- * spelled three incompatible ways across builders (vite has no such edge at all, leaving preview a
- * detached root). `configDir` is a project setting, not always `.storybook`.
- *
- * @param filePath The canonical manifest path to test.
- * @param configDirectory The canonical manifest path of the project's Storybook config directory.
- *
- * @returns Whether the path is the project's preview config file.
- */
-function isPreviewConfig(filePath: FilePath, configDirectory: FilePath): boolean {
-  const { dir, base } = path.posix.parse(filePath);
-  return dir === configDirectory && PREVIEW_CONFIG_PATTERN.test(base);
-}
 
 /**
  * Which of the three hashing homes each real file landed in, recorded by the same pass that builds
@@ -116,6 +97,8 @@ export function collectStorybookFiles(
   // files it imports roll up here rather than falling through to globals. The roll-up leaves the
   // skipped file itself out (see `rollUpFileHashes`), and like the globals entry it is omitted when
   // nothing hashed is left, as when the preview is untraced and so has no edges to follow.
+  // The preview is found by path because the config-entry import edge is spelled three incompatible
+  // ways across builders (vite has no such edge at all, leaving preview a detached root).
   const previewSubtree = new Set<FilePath>();
   for (const filePath of files.keys()) {
     if (!hashes.has(filePath) || !isPreviewConfig(filePath, configDirectory)) continue;

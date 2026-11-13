@@ -1,8 +1,6 @@
-import path from 'path';
-
 import { AbsolutePath } from '../../../types';
-import { MAIN_CONFIG_PATTERN } from '../../getStorybookMetadata';
 import { isDocumentationFile } from '../../utilities';
+import { isMainConfigFile } from '../storybookConfigFiles';
 import { FileHash, FilePath, rollUpEntryHashes } from './graph';
 import { ManifestInput } from './manifestInput';
 import { gitRootGlobMatcher, normalizeStatsPath } from './paths';
@@ -269,12 +267,6 @@ export function rollUpOutOfGraphFiles(
     sections
       .filter(([key, files]) => key === STORYBOOK_CONFIG_KEY || files.size > 0)
       .map(([key, files]) => [key, rollUpEntryHashes([...files], h64ToString)])
-  );
-}
-
-function isMainConfigFile(filePath: string, configDirectory: string): boolean {
-  return (
-    path.dirname(filePath) === configDirectory && MAIN_CONFIG_PATTERN.test(path.basename(filePath))
   );
 }
 
