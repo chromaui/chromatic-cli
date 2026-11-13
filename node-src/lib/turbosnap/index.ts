@@ -45,7 +45,7 @@ export async function traceChangedFiles(
     return { status: 'skipped' };
   }
 
-  const collectHashes = !isHashCollectionDisabled(ctx);
+  const collectHashes = shouldCollectHashes(ctx);
   const traceWithV1 = shouldTraceWithV1(ctx);
   if (!collectHashes && !traceWithV1) {
     return { status: 'skipped' };
@@ -61,6 +61,12 @@ export async function traceChangedFiles(
   }
 
   return runTurboSnapV1(ctx, stats, statsPath, { hashBased, onTraceWithV1 });
+}
+
+// Playwright and Cypress report no module graph, so their generated story files reach no tracked
+// files and would hash the same on every build, and TurboSnap 2.0 could skip captures that changed.
+function shouldCollectHashes(ctx: Context) {
+  return !isHashCollectionDisabled(ctx) && !ctx.options.playwright && !ctx.options.cypress;
 }
 
 // The Index ignores v1's result when it applies v2, so v1 then traces without reporting progress
@@ -152,6 +158,7 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<HashBasedTurb
         gitRoot: ctx.git.rootPath,
         untraced: ctx.options.untraced ?? [],
         configDir: ctx.storybook.configDir,
+        ...(ctx.options.vitest && { e2ePackage: '@chromatic-com/vitest' }),
         staticDirs: ctx.storybook.staticDirs,
         externals: ctx.options.externals ?? [],
         projectFiles: realProjectFiles({ log: ctx.log, options: ctx.options }),

@@ -28,6 +28,15 @@ export interface ManifestInput {
   untraced: string[];
   /** The absolute Storybook config directory, as it arrives on `ctx.storybook`. */
   configDir: AbsolutePath;
+  /**
+   * The E2E package whose bundled Storybook the build uploads, such as `@chromatic-com/vitest`. Set
+   * only for E2E builds. The package ships the Storybook config and install, so the project has
+   * neither: the package's name and version stand in for `storybookVersion`, `configDir` is not
+   * swept, and `storybookConfigFiles` is the roll-up of no files. `configDir` still decides which
+   * graph files count as `preview`, and a real build still hashes the static directories its
+   * `main.*` declares, when the project has one.
+   */
+  e2ePackage?: string;
   /** The absolute configured static directories, or single static files. Empty when unset. */
   staticDirs: AbsolutePath[];
   /** The user's `--externals` globs, relative to `gitRoot`. Empty when unset. */

@@ -28,18 +28,21 @@ export const STORYBOOK_GLOBALS_KEY = 'storybookGlobals';
 /**
  * The installed Storybook version. Unlike every other entry this is a version string rather than a
  * hash, because the preview core runtime is served outside the module graph on webpack and rspack;
- * see `resolveStorybookVersion`.
+ * see `resolveStorybookVersion`. An E2E build stores its E2E package and that package's version
+ * instead, such as `@chromatic-com/vitest@1.0.2`; see `ManifestInput.e2ePackage`.
  */
 export const STORYBOOK_VERSION_KEY = 'storybookVersion';
 
 /**
  * The Storybook config directory and the static directories: Storybook inputs that are never bundler
- * inputs, so no module hash can see them change.
+ * inputs, so no module hash can see them change. The Index requires the config entry, so an E2E
+ * build, which has no config directory, stores the roll-up of no files; see `ManifestInput.e2ePackage`.
  *
  * `package.json` and lockfiles deliberately have no key here, even though they are also not modules.
  * v1 diffed them only to derive changed package *names*; v2 content-hashes the installed files that
- * are in the graph, which covers a dependency change more precisely. Hashing manifest bytes on top
- * would recapture everything on lockfile churn that v1 correctly captures nothing for.
+ * are in the graph, which covers a dependency change more precisely, except for files the stats
+ * leave out, such as assets Vite builds reference from CSS with `url()`. Hashing manifest bytes on
+ * top would recapture everything on lockfile churn that v1 correctly captures nothing for.
  */
 export const STORYBOOK_CONFIG_KEY = 'storybookConfigFiles';
 

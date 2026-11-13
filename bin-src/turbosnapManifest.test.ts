@@ -137,6 +137,15 @@ describe('turbosnap-manifest', () => {
     );
   });
 
+  it('builds a Vitest manifest from @chromatic-com/vitest with --vitest', async () => {
+    await main(['--vitest']);
+
+    expect(buildManifest).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ e2ePackage: '@chromatic-com/vitest' })
+    );
+  });
+
   it('resolves --config-dir and --stats-file against the project root', async () => {
     await main(['-c', 'config/storybook', '-s', 'dist/stats.json']);
 

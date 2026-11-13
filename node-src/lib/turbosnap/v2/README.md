@@ -44,9 +44,34 @@ A few things the tree doesn't show:
 - **A file in the graph that no story or preview reaches is treated as global.** Builders sometimes leave out the edge from their composition root, so "unreached" usually means "reached by something the stats don't show". Treating it as global over-captures instead of missing a change. Files behind an `--untraced` wall are the exception; see [Skipped files](#skipped-files).
 - **The off-disk entries exist because some inputs never appear in the module graph.** `main.ts` is Node-side config and static assets are referenced by URL, so no module hash can see them change. `preview.*` is covered twice on purpose: by its imports in `preview` and by its bytes in `storybookConfigFiles`.
 - **The Storybook version is tracked as a string** because on some builders the preview runtime is served outside the module graph, so no file hash would see an upgrade. If no version can be resolved, building the manifest fails rather than silently under-capturing.
-- **`package.json` and lockfiles have no special roll-up.** Dependency changes are normally detected through the installed files in the graph, avoiding recaptures on lockfile churn alone. A package manifest or lockfile is still hashed if it appears in the graph or an off-disk sweep, including `--externals`.
+- **`package.json` and lockfiles have no special roll-up.** Dependency changes are normally detected through the installed files in the graph, avoiding recaptures on lockfile churn alone. A package manifest or lockfile is still hashed if it appears in the graph or an off-disk sweep, including `--externals`. Known gap: Vite's stats, which `--vitest` builds use too, list a package's CSS but not the assets it references with `url()`. An upgrade that changes only such an asset moves no hash, where TurboSnap 1.0 under pnpm recaptures through the changed package name. webpack and rsbuild list those assets. Tracked in CAP-5721.
 - **A manifest needs at least one story file.** The index compares each story under its key in both builds, so a manifest with none would make every story look unchanged. Stats that resolve to no story files, usually because the project root is not where Storybook was built, fail the manifest and TurboSnap 1.0 decides the build.
-- **Categories with no files are left out** of `storybookConfigHashes`. `storybookConfigFiles` and `storybookVersion` are always present, because the index requires them.
+- **Categories with no files are left out** of `storybookConfigHashes`. `storybookConfigFiles` and `storybookVersion` are always present, because the index requires them; with no config files, `storybookConfigFiles` is the roll-up of nothing, a constant. For E2E builds, see [E2E builds](#e2e-builds).
+
+## E2E builds
+
+A `--vitest` build uploads the Storybook that `@chromatic-com/vitest` ships, so the project needs no Storybook config or Storybook install of its own. The stats come from the package's Vitest reporter: each generated `.stories.json` imports its test file, which imports the components under test. Story files live in the gitignored `.vitest` directory, so their bytes are skipped as untracked, but their edges still roll the test file and components into the story hash.
+
+The two config entries the index requires are filled without one:
+
+| Entry | Storybook project | Vitest build |
+|---|---|---|
+| `storybookVersion` | The installed Storybook version | The package and its version, e.g. `@chromatic-com/vitest@1.0.2` |
+| `storybookConfigFiles` | Roll-up of the config directory | Roll-up of no files, a constant. A package upgrade moves `storybookVersion` instead; see the known gap below |
+
+There is no config-directory sweep, so the manifest's `storybookConfigFiles` detail is empty. `preview` and `staticFiles` are usually omitted, but not always. A project that also has a Storybook, as with portable stories, can get both. A graph file under the config directory, such as `.storybook/preview.ts` imported by a Vitest setup file, counts as `preview`. A real build also hashes the static directories the project's `main.*` declares, while `chromatic turbosnap-manifest --vitest` only hashes the ones you pass with `--static-dir`. Both only add hashes, so they over-capture at worst.
+
+`--playwright` and `--cypress` builds skip TurboSnap 2.0 entirely. They report no module graph, so their generated story files reach no tracked files and would hash the same on every build.
+
+A Vitest build has the same problem when the tests ran without `chromaticPlugin({ turboSnap: true })`: the package then writes no stats, and the story files import nothing. `buildManifest` refuses any E2E build where no story file reaches a tracked file, so TurboSnap 1.0 decides it instead, and 1.0 fails the build with a message that asks for `turboSnap: true`.
+
+Known gap, as of `@chromatic-com/vitest` 1.0.x: the package numbers its `.stories.json` files in the order tests finish, so the same test can get a different key on the next run. The index compares a story's hash under the same key in both builds, so a renamed key recaptures that story. That over-captures; it never skips a change.
+
+Known gap: upgrading `@chromatic-com/vitest` recaptures nothing on its own. The new `storybookVersion` matches no ancestor's configuration, so the index bails with `NO_ANCESTOR_CONFIGURATION_MATCH` and TurboSnap 1.0 decides the build. 1.0 finds the changed dependency but no test file it affects, so it skips every snapshot. CLIs before TurboSnap 2.0 ran on Vitest builds behave the same.
+
+Known gap, as of `@chromatic-com/vitest` 1.0.x: the package adds the Vitest config file to the stats, so a change to it moves every story hash. On Vitest 5, a Vitest bug ([vitest-dev/vitest#11951](https://github.com/vitest-dev/vitest/issues/11951)) drops it when Vitest finds the config on its own, so it is only there when the tests run with `--config`. Until the package ships a fallback, pass `--externals '**/vitest.config.ts'` so a change to it recaptures every story. `--externals` globs match paths from the repository root, so a bare `vitest.config.ts` only matches a config at the root. TurboSnap 1.0 has the same gap.
+
+Known gap, as of `@chromatic-com/vitest` 1.0.x: files the Vitest config imports are never tracked, because the package adds the config without following its imports. A change there, such as to a shared Vite config, moves no hash. Add those files to `--externals` too.
 
 ## What the index does with the roll-ups
 

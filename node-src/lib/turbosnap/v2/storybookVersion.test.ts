@@ -7,7 +7,7 @@ const configDirectory = '/repo/packages/ui/.storybook';
 const projectRoot = '/repo';
 
 function input(disk: InMemoryDisk = {}) {
-  return { configDir: configDirectory, projectFiles: inMemoryProjectFiles(disk) };
+  return { configDir: configDirectory, projectRoot, projectFiles: inMemoryProjectFiles(disk) };
 }
 
 describe('resolveStorybookVersion', () => {
