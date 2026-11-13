@@ -58,7 +58,9 @@ export function runCommand(
   const timeoutPromise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => {
       subprocess.kill();
-      reject(new Error(`Command timed out after ${timeout}ms`));
+      const error = new Error(`Command timed out after ${timeout}ms`);
+      Object.assign(error, { isTimeout: true });
+      reject(error);
     }, timeout);
   });
 

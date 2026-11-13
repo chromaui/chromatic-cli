@@ -118,7 +118,9 @@ function handleBuildFailure(
     )
   );
   throw new TaskFailure(`Command failed: ${input.buildCommand}`, {
-    exitCode: exitCodes.NPM_BUILD_STORYBOOK_FAILED,
+    exitCode: err?.isTimeout
+      ? exitCodes.STORYBOOK_BUILD_TIMEOUT
+      : exitCodes.NPM_BUILD_STORYBOOK_FAILED,
     userError: true,
   });
 }
