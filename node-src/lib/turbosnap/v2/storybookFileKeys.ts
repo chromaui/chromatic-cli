@@ -28,13 +28,15 @@ export const STORYBOOK_GLOBALS_KEY = 'storybookGlobals';
 /**
  * The installed Storybook version. Unlike every other entry this is a version string rather than a
  * hash, because the preview core runtime is served outside the module graph on webpack and rspack;
- * see `resolveStorybookVersion`.
+ * see `resolveStorybookVersion`. An E2E build stores its E2E package and that package's version
+ * instead, such as `@chromatic-com/vitest@1.0.2`; see `ManifestInput.e2ePackage`.
  */
 export const STORYBOOK_VERSION_KEY = 'storybookVersion';
 
 /**
  * The Storybook config directory and the static directories: Storybook inputs that are never bundler
- * inputs, so no module hash can see them change.
+ * inputs, so no module hash can see them change. The Index requires the config entry, so an E2E
+ * build, which has no config directory, stores the roll-up of no files; see `ManifestInput.e2ePackage`.
  *
  * `package.json` and lockfiles deliberately have no key here, even though they are also not modules.
  * v1 diffed them only to derive changed package *names*; v2 content-hashes the installed files that

@@ -48,7 +48,7 @@ export async function main(argv: string[]) {
       --static-dir <dirnames>               Comma-separated static directories, relative to the Storybook project root. (default: none)
       --externals <glob>                    Glob of files that disable TurboSnap when changed, relative to the repository root. Can be specified multiple times. (default: none)
       --untraced, -u <glob>                 Glob of files to disregard, with their dependencies, when tracing dependent stories, relative to the repository root. Can be specified multiple times. (default: none)
-      --vitest                              Build the manifest of a 'chromatic --vitest' build, whose Storybook ships inside @chromatic-com/vitest. Ignores --config-dir. Run 'build-archive-storybook --stats-json=storybook-static' first: the stats Vitest writes to .vitest/chromatic have no story files. (default: false)
+      --vitest                              Build the manifest of a 'chromatic --vitest' build, whose Storybook ships inside @chromatic-com/vitest. Does not sweep --config-dir, but still counts files under it in the graph as preview. Run 'build-archive-storybook --stats-json=storybook-static' first: the stats Vitest writes to .vitest/chromatic have no story files. (default: false)
     `,
     {
       importMeta: meowImportMeta,
