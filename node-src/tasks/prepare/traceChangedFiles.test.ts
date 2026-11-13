@@ -26,6 +26,7 @@ const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
 const log = new TestLogger();
 
 const deps = () => ({ log, options: {}, report: vi.fn() }) as any;
+const dryRunDeps = () => ({ ...deps(), options: { dryRun: true, interactive: true } });
 
 const turboSnapContext = () =>
   ({
@@ -233,5 +234,61 @@ describe('traceChangedFiles', () => {
     );
     expect(d.log.warn).toHaveBeenCalledTimes(1);
     expect(d.log.warn).toHaveBeenCalledWith(expect.stringContaining('TurboSnap 2.0 disabled'));
+  });
+
+  describe('on a dry run', () => {
+    it('logs how many story files TurboSnap 1.0 found', async () => {
+      const d = dryRunDeps();
+      traceChangedFilesTurbosnap.mockResolvedValue({
+        status: 'traced',
+        // Two affected story files, one of them reached through two changed modules.
+        onlyStoryFiles: { './a.stories.js': ['./a.js', './b.js'], './c.stories.js': ['./c.js'] },
+        turboSnap: {},
+        untracedFiles: [],
+      });
+
+      await traceChangedFiles(d, { turboSnapContext: turboSnapContext() });
+
+      expect(d.log.info).toHaveBeenCalledTimes(1);
+      expect(d.log.info.mock.calls[0][0]).toContain('TurboSnap enabled (dry run)');
+      expect(d.log.info.mock.calls[0][0]).toContain(
+        'Found 2 story files affected by recent changes.'
+      );
+    });
+
+    it('explains why TurboSnap 2.0 has no affected stories to list', async () => {
+      const d = dryRunDeps();
+      traceChangedFilesTurbosnap.mockResolvedValue({
+        status: 'traced',
+        onlyStoryFiles: { './a.stories.js': ['./a.stories.js'] },
+        turboSnap: {},
+        untracedFiles: [],
+        hashBased: { bailed: false },
+      });
+
+      await traceChangedFiles(d, { turboSnapContext: turboSnapContext() });
+
+      expect(d.log.info).toHaveBeenCalledTimes(1);
+      const message = d.log.info.mock.calls[0][0];
+      expect(message).toContain('TurboSnap 2.0 enabled (dry run)');
+      expect(message).toContain('after your Storybook is published');
+      expect(message).toContain("there's nothing to compare yet");
+      // The 1.0 count would disagree with what Chromatic captures under 2.0.
+      expect(message).not.toContain('Found');
+    });
+
+    it('only warns when TurboSnap 2.0 bails', async () => {
+      const d = dryRunDeps();
+      traceChangedFilesTurbosnap.mockResolvedValue({
+        status: 'bailed',
+        turboSnap: { bailReason: { changedPackageFiles: ['./package.json'] } },
+        hashBased: { bailed: true, bailReason: 'NO_ANCESTORS' },
+      });
+
+      await traceChangedFiles(d, { turboSnapContext: turboSnapContext() });
+
+      expect(d.log.info).not.toHaveBeenCalled();
+      expect(d.log.warn).toHaveBeenCalledWith(expect.stringContaining('TurboSnap 2.0 disabled'));
+    });
   });
 });
