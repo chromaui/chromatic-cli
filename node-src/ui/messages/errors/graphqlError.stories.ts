@@ -28,7 +28,7 @@ const err: GraphQLError = {
   },
 };
 
-export const GraphqlError = () => graphqlError({ title: 'Run a job' }, [err]);
+export const GraphqlError = () => graphqlError({ title: 'Run a job' }, err);
 
 // The API returns one error per pull request it fails on
 const itemError: GraphQLError = {
@@ -38,4 +38,7 @@ const itemError: GraphQLError = {
 };
 
 export const GraphqlErrors = () =>
-  graphqlError({ title: 'Retrieve git information' }, [itemError, itemError]);
+  graphqlError(
+    { title: 'Retrieve git information' },
+    { ...itemError, errors: [itemError, itemError] }
+  );

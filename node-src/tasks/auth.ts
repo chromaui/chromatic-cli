@@ -91,8 +91,7 @@ export const runAuth: TaskFunction<AuthInput, AuthOutput, AuthDeps> = async (dep
     const token = await getToken(deps, input);
     deps.client.setAuthorization(token);
   } catch (error) {
-    // GraphQLClient throws a single error, or an array when the API returns several
-    const message = [error].flat()[0]?.message;
+    const message = error?.message;
     // Keep the exit code these failures have always had
     const failure = { exitCode: exitCodes.GRAPHQL_ERROR };
     if (message?.match('No Access')) {

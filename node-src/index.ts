@@ -338,18 +338,15 @@ async function runBuild(ctx: Context) {
       await renderSnapshot(ctx);
       await new Listr(getTasks(ctx), options).run(ctx);
       ctx.log.debug('Tasks completed');
-    } catch (error) {
-      Sentry.captureException(error);
-      // GraphQLClient throws an array when the API returns more than one error
-      const errors = [error].flat();
-      const [err] = errors;
+    } catch (err) {
+      Sentry.captureException(err);
       if (err.code === 'ECONNREFUSED' || err.name === 'StatusCodeError') {
         setExitCode(ctx, exitCodes.FETCH_ERROR);
         throw rewriteErrorMessage(err, fetchError(ctx, err));
       }
       if (err.name === 'GraphQLError') {
         setExitCode(ctx, exitCodes.GRAPHQL_ERROR);
-        throw rewriteErrorMessage(err, graphqlError(ctx, errors));
+        throw rewriteErrorMessage(err, graphqlError(ctx, err));
       }
       if (err.message.startsWith('Cannot run a build with no stories')) {
         setExitCode(ctx, exitCodes.BUILD_NO_STORIES);

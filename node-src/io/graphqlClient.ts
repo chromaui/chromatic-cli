@@ -12,6 +12,8 @@ export interface GraphQLError {
     code: string;
     exception?: { stacktrace?: string[] };
   };
+  /** Every error in the response, which `runQuery` attaches to the first one it throws. */
+  errors?: GraphQLError[];
 }
 
 /**
@@ -64,7 +66,8 @@ export default class GraphQLClient {
 
           err.name = err.name || 'GraphQLError';
         }
-        return bail(errors.length === 1 ? errors[0] : errors);
+        // Throw a single error, so callers handle it like any other, and keep the rest with it
+        return bail({ ...errors[0], errors });
       },
       { retries }
     );
