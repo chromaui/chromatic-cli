@@ -394,12 +394,11 @@ async function runBuild(ctx: Context) {
       }
     }
   } catch (error) {
-    const errors = [error].flat(); // GraphQLClient might throw an array of errors
-    const formattedError = fatalError(ctx, errors);
+    const formattedError = fatalError(ctx, error);
 
     ctx.options.experimental_onTaskError?.(ctx, {
       formattedError,
-      originalError: errors[0],
+      originalError: error,
     });
 
     if (!ctx.userError) {
