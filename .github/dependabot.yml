@@ -16,6 +16,11 @@ updates:
         patterns:
           - "storybook"
           - "@storybook/*"
+      # @vitest/* packages peer-depend on the exact vitest version; bumping one alone mixes versions.
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
     ignore:
       # yazl is pinned to 3.3.1 through a Yarn patch (.yarn/patches/), which a version bump would
       # break. Bump it by hand and regenerate or drop the patch.
