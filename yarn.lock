@@ -11547,13 +11547,12 @@ __metadata:
   linkType: hard
 
 "wrap-ansi@npm:^10.0.0":
-  version: 10.0.0
-  resolution: "wrap-ansi@npm:10.0.0"
+  version: 10.0.2
+  resolution: "wrap-ansi@npm:10.0.2"
   dependencies:
     ansi-styles: "npm:^6.2.3"
     string-width: "npm:^8.2.0"
-    strip-ansi: "npm:^7.1.2"
-  checksum: 10c0/6b163457630fe6d1c72aeed283a7410b2cc7487312df8b0ce96df3fbd64a2a7c948856ea97c25148c848627587c5c7945be474d8e723ab6011bb0756a53a9e89
+  checksum: 10c0/b9f7be64b91cf4b4e5bc74df6e280cb4e1fed438ce38ac8cc433705cf3371fe9cdcd2e4bb7f508d73f1f4cf302dbc6c7b5e8bed5ce47cb82d22bef256a79fc0b
   languageName: node
   linkType: hard
 
