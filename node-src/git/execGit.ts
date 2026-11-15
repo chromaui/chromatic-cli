@@ -22,11 +22,11 @@ export type GitDeps = Pick<Deps, 'log'> & { options: { gitTimeout?: number } };
  */
 type ExecGitOptions = Options & { logResult?: boolean };
 
-const defaultOptions: Options = {
+const defaultOptions = {
   env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
   all: true, // interleave stdout and stderr
   shell: true, // we'll deal with escaping ourselves (for now)
-};
+} satisfies Options;
 
 /**
  * Retrieve the git timeout in milliseconds.
