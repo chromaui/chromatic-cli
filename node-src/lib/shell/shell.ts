@@ -21,11 +21,12 @@ export function runCommand(
 ): ResultPromise {
   const { timeout, ...optionsWithoutTimeout } = options;
   const [cmd, ...args] = typeof command === 'string' ? parseCommandString(command) : command;
-  const subprocess = execa(
-    cmd,
-    args,
-    typeof command === 'string' ? optionsWithoutTimeout : { ...optionsWithoutTimeout, shell: false }
-  );
+  const subprocess = execa(cmd, args, {
+    // execa kills the subprocess itself on `cancelSignal`, bypassing the `.kill()` replacement below.
+    killDescendants: true,
+    ...optionsWithoutTimeout,
+    ...(typeof command === 'string' ? {} : { shell: false }),
+  });
 
   subprocess.kill = () => {
     if (!subprocess.pid) {
