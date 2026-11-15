@@ -123,6 +123,21 @@ async function getUntrackedScopes(
 }
 
 /**
+ * Git tracks no files in the repository, so it cannot tell which files are untracked: the project
+ * was never committed (`git init` and an empty commit, say) or the index is missing. The user fixes
+ * it by committing the project or restoring the index, so it is a state to report to them, not a
+ * CLI bug.
+ */
+export class NoTrackedFilesError extends Error {
+  constructor(repositoryRoot: string) {
+    super(
+      `Git tracks no files in ${repositoryRoot}, so TurboSnap 2.0 cannot tell which files are untracked. Commit the project's files, or restore the git index if it is missing.`
+    );
+    this.name = 'NoTrackedFilesError';
+  }
+}
+
+/**
  * The paths git does not track, answered by absolute path; see `getUntrackedPaths`. The match
  * is exact, as git names paths, so a caller resolves symlinks before asking.
  */
@@ -146,7 +161,7 @@ export interface UntrackedPaths {
  *
  * @returns The listing, queried by absolute path.
  *
- * @throws {Error} When git lists no tracked files, as when the index is missing.
+ * @throws {NoTrackedFilesError} When git lists no tracked files.
  */
 export async function getUntrackedPaths(
   deps: GitDeps,
@@ -154,19 +169,17 @@ export async function getUntrackedPaths(
 ): Promise<UntrackedPaths> {
   const repositoryRoot = await getRepositoryRoot(deps);
 
-  // `--others` means "not in the index", so with no index (a Docker build that copied `.git`
-  // without it, say) git lists the whole repository as untracked and still exits 0. Skipping every
-  // file would hide every change, so treat that like a git error. One tracked path proves the index
-  // is there: the loop stops at the first, which kills git before it lists the rest.
+  // `--others` means "not in the index", so with an empty index (nothing committed yet, or a Docker
+  // build that copied `.git` without its index) git lists the whole repository as untracked and
+  // still exits 0. Skipping every file would hide every change, so refuse instead. One tracked path
+  // proves the index is there: the loop stops at the first, which kills git before it lists the rest.
   let hasTrackedFile = false;
   for await (const _ of trackedFiles(deps, repositoryRoot)) {
     hasTrackedFile = true;
     break;
   }
   if (!hasTrackedFile) {
-    throw new Error(
-      'git lists no tracked files, so it cannot tell which files are untracked; is the git index missing?'
-    );
+    throw new NoTrackedFilesError(repositoryRoot);
   }
 
   const scopes = realPaths && (await getUntrackedScopes(deps, repositoryRoot, realPaths));
