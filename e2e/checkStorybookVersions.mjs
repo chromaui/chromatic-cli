@@ -50,7 +50,7 @@ function main() {
       '',
       'Update the packages above to the version of `storybook` in the same fixture, then update its lockfile.',
       'See "Changing a fixture" in e2e/README.md for how to update a lockfile.',
-      'If a package is released separately from Storybook, add it to `independentlyVersioned` in e2e/check-storybook-versions.mjs.',
+      'If a package is released separately from Storybook, add it to `independentlyVersioned` in e2e/checkStorybookVersions.mjs.',
     ].join('\n')
   );
   process.exitCode = 1;
@@ -84,7 +84,7 @@ function checkFixture(directory) {
   if (!expected) return 'does not pin `storybook` in any package.json';
 
   const mismatched = found.filter(({ version }) => version !== expected);
-  if (mismatched.length === 0) return undefined;
+  if (mismatched.length === 0) return;
 
   const lines = mismatched.map(({ name, version, source }) => `  ${name}@${version} (${source})`);
   return [
@@ -104,7 +104,12 @@ function readPins(directory) {
 
   return manifests.flatMap((manifest) => {
     const json = JSON.parse(readFileSync(path.join(directory, manifest), 'utf8'));
-    const sections = ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'];
+    const sections = [
+      'dependencies',
+      'devDependencies',
+      'optionalDependencies',
+      'peerDependencies',
+    ];
     return sections.flatMap((section) =>
       Object.entries(json[section] ?? {}).map(([name, version]) => ({
         name,

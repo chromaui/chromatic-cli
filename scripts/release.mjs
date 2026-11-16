@@ -76,4 +76,4 @@ async function build(nextVersion) {
   console.info('✅ Build with new version completed, ready for auto!');
 }
 
-main();
+await main();

@@ -19,7 +19,7 @@ jobs:
       - uses: ./.github/actions/setup
 
       - name: E2E fixture Storybook versions
-        run: node e2e/check-storybook-versions.mjs
+        run: node e2e/checkStorybookVersions.mjs
 
       # Runs before the build so it can't depend on generated output. The production run leaves out
       # tests, stories, and frames, so it fails on an export only they use.

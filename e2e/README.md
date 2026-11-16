@@ -41,7 +41,7 @@ Run `npm test` again after every change you commit, so the archives and `preview
 
 ## Fixtures
 
-Every fixture except `react-vitest` is a React and TypeScript Storybook. Its `package.json` pins the exact versions. Keep each fixture's Storybook packages on the same version as its `storybook`. In `react-rsbuild`, that includes the `@storybook/react` that `storybook-react-rsbuild` pulls in. CI checks this in every `package.json` and lockfile with `node e2e/check-storybook-versions.mjs`, skipping E2E fixtures, which depend on `@chromatic-com/vitest`, `/playwright` or `/cypress` and pin no Storybook packages of their own. `@storybook/*` packages with their own version numbers, such as `@storybook/icons`, are exempt.
+Every fixture except `react-vitest` is a React and TypeScript Storybook. Its `package.json` pins the exact versions. Keep each fixture's Storybook packages on the same version as its `storybook`. In `react-rsbuild`, that includes the `@storybook/react` that `storybook-react-rsbuild` pulls in. CI checks this in every `package.json` and lockfile with `node e2e/checkStorybookVersions.mjs`, skipping E2E fixtures, which depend on `@chromatic-com/vitest`, `/playwright` or `/cypress` and pin no Storybook packages of their own. `@storybook/*` packages with their own version numbers, such as `@storybook/icons`, are exempt.
 
 | Fixture                 | Package manager                           | Builder   | Storybook     |
 | ----------------------- | ----------------------------------------- | --------- | ------------- |

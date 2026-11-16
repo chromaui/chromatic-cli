@@ -23,6 +23,10 @@ export default [
       'coverage/**',
       'smoke-tests/**',
       'e2e/fixtures/**',
+      // Agent tooling, not CLI code. .claude/skills links to .agents/skills, and .claude/worktrees
+      // holds whole checkouts of this repository.
+      '.agents/**',
+      '.claude/**',
       // Storybook config fixtures: intentionally a mix of module formats, so linting them is noise.
       'node-src/__mocks__/storybookMainConfig/**',
     ],
