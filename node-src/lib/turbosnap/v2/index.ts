@@ -8,6 +8,7 @@ import { TraceChangedFilesResult } from '../types';
 import { buildManifest, TurboSnapManifest, writeManifest } from './manifest';
 import { ManifestInput } from './manifestInput';
 import { MissingStorybookConfigError } from './outOfGraphFiles';
+import { VersionNotFoundError } from './storybookVersion';
 import { BuildUploadHashesResponse, uploadHashes } from './uploadHashes';
 
 /**
@@ -72,7 +73,7 @@ export async function traceChangedFiles(
       input.log[input.failureLogLevel](missingStorybookConfig(error.configDirectory));
       return { status: 'fallback' };
     }
-    if (error instanceof NoTrackedFilesError) {
+    if (error instanceof NoTrackedFilesError || error instanceof VersionNotFoundError) {
       input.log[input.failureLogLevel](
         `${error.message} TurboSnap 2.0 skipped this build. When TurboSnap is enabled, the build uses TurboSnap 1.0, so your current TurboSnap behavior is unaffected.`
       );

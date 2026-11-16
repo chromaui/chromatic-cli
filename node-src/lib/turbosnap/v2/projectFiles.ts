@@ -123,6 +123,8 @@ function statFile(log: Logger, absolutePath: AbsolutePath): Stats | undefined {
   try {
     return statSync(absolutePath, { throwIfNoEntry: false });
   } catch (error) {
+    // Yarn's Plug'n'Play runtime before 3.2.2 ignores `throwIfNoEntry`, so a missing file throws.
+    if (error.code === 'ENOENT') return undefined;
     // If the file path is too long, then it's likely not a real file so we skip it.
     if (error.code === 'ENAMETOOLONG') {
       log.debug(

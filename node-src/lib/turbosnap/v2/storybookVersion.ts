@@ -1,26 +1,44 @@
 import semver from 'semver';
 
+import { viewLayers } from '../../viewLayers';
 import { ManifestInput } from './manifestInput';
 
-// The packages that own Storybook's preview runtime, most-preferred first. All report the same
-// lockstep version when present; the order is about which one a given install can resolve.
-const STORYBOOK_CORE_PACKAGES = [
-  'storybook', // the meta-package, when the project can resolve it
-  '@storybook/core', // the core package it wraps; reachable under strict installs (pnpm, PnP) where the meta-package isn't
-  // Storybook 6, which has no meta-package and can nest `@storybook/core` under the renderer. It
-  // first shipped in 6.2, so 6.0 and 6.1 installs still fail to resolve a version.
+// Storybook's own package. From 8.2 it is the core runtime and every framework and renderer lists it
+// as a peer dependency, so a working install can always resolve it.
+const STORYBOOK_PACKAGE = 'storybook';
+
+// Before 8.2, `storybook` was only the CLI and projects often left it out. These packages ship with
+// every 6.x to 8.1 install and are versioned in lockstep with it: the preview runtime (7.0 to 8.1),
+// core-common (6.x to 8.1), then the renderer and framework packages in `viewLayers`, one of which
+// every project installs. Which of them a given install can resolve from the config directory
+// depends on how it hoists.
+const LEGACY_PACKAGES = [
+  '@storybook/preview-api',
   '@storybook/core-common',
+  ...Object.keys(viewLayers),
 ];
 
-// `@storybook/core-common` also exists for Storybook 7 and 8, so on a newer install a stale hoisted
-// copy could answer with the wrong version. A wrong version silently skips recapture after an
-// upgrade, which is worse than failing, so only trust it for the Storybook 6 case it is here for.
-function isTrustedVersion(packageName: string, version: string) {
-  return packageName !== '@storybook/core-common' || semver.major(version) === 6;
+// The first version that requires `storybook`. A legacy package at this version or later means the
+// install is missing `storybook`, or holds a stale copy, so its version can't stand in for one.
+const STORYBOOK_REQUIRED_SINCE = '8.2.0';
+
+/**
+ * Thrown when no version can be resolved, which comes down to how the project is installed: nothing
+ * installed, Yarn Plug'n'Play without its runtime, or Storybook out of reach of the config
+ * directory. The user can fix it, so TurboSnap 2.0 logs it and leaves the build to TurboSnap 1.0
+ * rather than reporting it.
+ */
+export class VersionNotFoundError extends Error {
+  readonly name = 'VersionNotFoundError';
+}
+
+function isLegacyVersion(version: string) {
+  const coerced = semver.coerce(version);
+  return !!coerced && semver.lt(coerced, STORYBOOK_REQUIRED_SINCE);
 }
 
 /**
- * Reads the installed Storybook version from the resolved core package's own `package.json`.
+ * Reads the installed Storybook version from the resolved Storybook package's own `package.json`.
  *
  * This backs the `storybookVersion` manifest entry, which gates recapture on a Storybook upgrade
  * that file hashing cannot see. The view layer (e.g. `@storybook/react`) is always bundled into the
@@ -54,18 +72,23 @@ export function resolveStorybookVersion(
     return resolveE2EPackageVersion(input.e2ePackage, input);
   }
 
-  for (const packageName of STORYBOOK_CORE_PACKAGES) {
-    const version = input.projectFiles.packageVersion(input.configDir, packageName);
-    if (version && isTrustedVersion(packageName, version)) {
-      return version;
-    }
+  const version = input.projectFiles.packageVersion(input.configDir, STORYBOOK_PACKAGE);
+  if (version) return version;
+
+  // Trusted only when every one that resolves is from before 8.2: a newer one means this is an 8.2+
+  // install missing `storybook`, and an older one beside it is a stale copy from somewhere else.
+  const legacyVersions = LEGACY_PACKAGES.map((packageName) =>
+    input.projectFiles.packageVersion(input.configDir, packageName)
+  ).filter((version) => version !== undefined);
+  if (legacyVersions.length > 0 && legacyVersions.every((version) => isLegacyVersion(version))) {
+    return legacyVersions[0];
   }
 
   // Without a version there is no gate on a Storybook upgrade, so refuse to build a manifest that
   // would silently under-capture. Not finding a Storybook dependency usually means nothing is
   // installed so we'll inform the customer accordingly.
-  throw new Error(
-    `Could not resolve a Storybook version from ${input.configDir}: none of ${STORYBOOK_CORE_PACKAGES.join(', ')} could be resolved with a version. TurboSnap hashes installed dependencies, so they must be installed before running Chromatic, even for a prebuilt Storybook.`
+  throw new VersionNotFoundError(
+    `Could not resolve a Storybook version from ${input.configDir}: neither ${STORYBOOK_PACKAGE} nor, for Storybook 8.1 and earlier, its preview, core or renderer packages could be resolved with a version. TurboSnap hashes installed dependencies, so they must be installed before running Chromatic, even for a prebuilt Storybook. From Storybook 8.2, storybook must also be a dependency of this project.`
   );
 }
 
@@ -87,7 +110,7 @@ function resolveE2EPackageVersion(
 ): string {
   const version = input.projectFiles.packageVersion(input.projectRoot, e2ePackage);
   if (!version) {
-    throw new Error(
+    throw new VersionNotFoundError(
       `Could not resolve a version of ${e2ePackage} from ${input.projectRoot}. TurboSnap hashes installed dependencies, so they must be installed before running Chromatic.`
     );
   }

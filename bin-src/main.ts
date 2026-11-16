@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/node';
 
 import { run } from '../node-src';
 import { exitCodes } from '../node-src/lib/setExitCode';
+import { allowPnpRuntime } from '../node-src/lib/turbosnap/v2/pnpRuntime';
 
 /**
  * The main entrypoint for the CLI.
@@ -11,6 +12,7 @@ import { exitCodes } from '../node-src/lib/setExitCode';
  * @param argv A list of arguments passed.
  */
 export async function main(argv: string[]) {
+  allowPnpRuntime();
   try {
     const { code } = await run({ argv });
     process.exitCode = code;

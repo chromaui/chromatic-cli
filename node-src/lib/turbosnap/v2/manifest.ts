@@ -18,6 +18,7 @@ import {
   rollUpOutOfGraphFiles,
 } from './outOfGraphFiles';
 import { buildRollUpPath, normalizeStatsPath } from './paths';
+import { loadPnpRuntime } from './pnpRuntime';
 import { ProjectFiles } from './projectFiles';
 import { buildSkipRule, SkipReason } from './skippedFiles';
 import { locateOnDiskFiles, readStatsGraph } from './statsGraph';
@@ -104,9 +105,12 @@ export async function buildManifest(
   stats: Stats,
   input: ManifestInput
 ): Promise<TurboSnapManifest> {
-  // Collect the graph and sweep inputs before asking Git which files are untracked.
-  const graphFiles = locateOnDiskFiles(stats, input);
+  // Collect the graph and sweep inputs before asking Git which files are untracked. The sweep reads
+  // no dependency, so it goes first and reports a wrong config directory as such.
   const swept = listConfigAndStaticFiles(input);
+  // Before anything resolves or reads a dependency, which under Plug'n'Play only its runtime can.
+  loadPnpRuntime(stats, input);
+  const graphFiles = locateOnDiskFiles(stats, input);
   const skipRule = await buildSkipRule(input, [
     ...graphFiles.values(),
     ...swept.configTree,
