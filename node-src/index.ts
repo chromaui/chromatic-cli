@@ -458,7 +458,11 @@ export async function getGitInfo(
   const [ownerName, repoName, ...rest] = slug ? slug.split('/') : [];
   const isValidSlug = !!ownerName && !!repoName && rest.length === 0;
 
-  const uncommittedHash = (await getUncommittedHash(ctx)) || '';
+  // A failure leaves the hash empty, as in the publish path, rather than failing the whole call.
+  const uncommittedHash = await getUncommittedHash(ctx).catch((err) => {
+    ctx.log.warn('Failed to retrieve uncommitted files hash', err);
+    return '';
+  });
   const cloneDepth = await getCloneDepth(ctx);
   const cloneFilter = await getCloneFilter(ctx);
   return {

@@ -168,7 +168,11 @@ export async function gatherGitInfo(
       log.debug('Failed to retrieve Git user email', err);
       return undefined;
     }),
-    uncommittedHash: await getUncommittedHash({ log, options }).catch((err) => {
+    uncommittedHash: await getUncommittedHash({ log, options }, [
+      options.logFile,
+      options.diagnosticsFile,
+      options.storybookLogFile,
+    ]).catch((err) => {
       log.warn('Failed to retrieve uncommitted files hash', err);
       return undefined;
     }),

@@ -318,7 +318,7 @@ vi.mock('./git/git', () => ({
   getVersion: () => Promise.resolve('2.24.1'),
   getChangedFiles: () => Promise.resolve(['src/foo.stories.js']),
   getRepositoryRoot: () => Promise.resolve(process.cwd()),
-  getUncommittedHash: () => Promise.resolve('abc123'),
+  getUncommittedHash: vi.fn(() => Promise.resolve('abc123')),
   getUserEmail: () => Promise.resolve('test@test.com'),
   getRepositoryCreationDate: () => Promise.resolve(new Date('2024-11-01')),
   getStorybookCreationDate: () => Promise.resolve(new Date('2025-11-01')),
@@ -1083,6 +1083,12 @@ describe('getGitInfo', () => {
     expect(getBranch).toHaveBeenCalledWith(
       expect.objectContaining({ options: { gitTimeout: 50 } })
     );
+  });
+
+  it('returns an empty uncommitted hash when it cannot be computed', async () => {
+    vi.mocked(git.getUncommittedHash).mockRejectedValueOnce(new Error('Unable to hash nested/'));
+    const result = await getGitInfo(getContext([]));
+    expect(result).toMatchObject({ branch: 'branch', commit: 'commit', uncommittedHash: '' });
   });
 
   it('should still return getInfo if no origin url', async () => {
