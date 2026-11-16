@@ -9,7 +9,7 @@
 - `ts-onechange` traces a change in a workspace package to the one story that imports it, captures that story and copies the rest.
 - `ts-onechange-strict` exits `1` (`BUILD_HAS_CHANGES`) for a captured change without `--exit-zero-on-changes`.
 - `ts-trace-changed` prints the changed-file-to-story trace during the build (`--trace-changed`).
-- `ts-metadata` uploads metadata files to `<storybookUrl>.chromatic/` on every `--only-changed` run that publishes a build, including ones where TurboSnap was then disabled, unless `--no-upload-metadata` is set.
+- `ts-metadata` uploads metadata files to `<storybookUrl>.chromatic/` on every `--only-changed` run that applies to the current branch (a `--only-changed <glob>` must match it) and publishes a build, including ones where TurboSnap was then disabled, unless `--no-upload-metadata` is set.
 - `ts-rebuild` disables TurboSnap and runs a full build when the commit and branch match the baseline build.
 - `ts-dependency-scope` ignores a dependency that a workspace the Storybook doesn't load adds or bumps, when the Storybook's workspaces that import it declare it themselves (CAP-5305).
 
