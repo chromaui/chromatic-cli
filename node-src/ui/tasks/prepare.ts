@@ -147,7 +147,7 @@ export const hashBased = (
     : {
         status: 'updating',
         title: 'Using TurboSnap 2.0',
-        output: `Chromatic will compare file hashes to find ${testType(ctx)} files affected by recent changes`,
+        output: `Chromatic will compare file hashes to find ${testType(ctx)} files potentially affected by recent changes`,
       };
 
 export const hashing = (ctx: Pick<Context, 'options'>) => ({
