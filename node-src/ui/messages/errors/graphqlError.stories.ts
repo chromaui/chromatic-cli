@@ -29,3 +29,16 @@ const err: GraphQLError = {
 };
 
 export const GraphqlError = () => graphqlError({ title: 'Run a job' }, err);
+
+// The API returns one error per pull request it fails on
+const itemError: GraphQLError = {
+  message: 'mergeCommitSha is not available for this pull request',
+  locations: [{ line: 4, column: 7 }],
+  extensions: { code: 'INTERNAL_SERVER_ERROR' },
+};
+
+export const GraphqlErrors = () =>
+  graphqlError(
+    { title: 'Retrieve git information' },
+    { ...itemError, errors: [itemError, itemError] }
+  );
