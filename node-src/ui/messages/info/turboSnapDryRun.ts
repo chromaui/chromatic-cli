@@ -26,7 +26,7 @@ export default ({
     return dedent(chalk`
       ${success} {bold TurboSnap 2.0 enabled (dry run)}
       Chromatic decides which ${pluralize(testType({ options }))} to capture by comparing file hashes after your ${buildType({ options })} is published.
-      Dry runs skip publishing, so there's nothing to compare yet and no affected ${pluralize(testType({ options }))} to list.
+      Dry runs skip publishing, so there's nothing to compare yet and no potentially affected ${pluralize(testType({ options }))} to list.
     `);
   }
 

@@ -272,7 +272,9 @@ describe('traceChangedFiles', () => {
       const message = d.log.info.mock.calls[0][0];
       expect(message).toContain('TurboSnap 2.0 enabled (dry run)');
       expect(message).toContain('after your Storybook is published');
-      expect(message).toContain("there's nothing to compare yet");
+      expect(message).toContain(
+        "there's nothing to compare yet and no potentially affected stories to list"
+      );
       // The 1.0 count would disagree with what Chromatic captures under 2.0.
       expect(message).not.toContain('Found');
     });
