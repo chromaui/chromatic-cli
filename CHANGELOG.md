@@ -1,3 +1,31 @@
+# v18.14.5 (Mon Nov 16 2026)
+
+#### 🐛 Bug Fix
+
+- Read only stdout from git commands, so warnings never become values [#1703](https://github.com/chromaui/chromatic-cli/pull/1703) ([@codykaup](https://github.com/codykaup))
+- Correct verify-chromatic-cli recipes found stale in a live pass [#1688](https://github.com/chromaui/chromatic-cli/pull/1688) ([@codykaup](https://github.com/codykaup))
+- Show the API's real errors instead of crashing or hiding them [#1690](https://github.com/chromaui/chromatic-cli/pull/1690) ([@codykaup](https://github.com/codykaup))
+- Lint the whole repo, drop a CI check that can't fail, and require reasons after @internal [#1711](https://github.com/chromaui/chromatic-cli/pull/1711) ([@codykaup](https://github.com/codykaup))
+- Stop reporting a repository with no tracked files to Sentry [#1702](https://github.com/chromaui/chromatic-cli/pull/1702) ([@codykaup](https://github.com/codykaup))
+- Group failed git commands in Sentry by subcommand [#1671](https://github.com/chromaui/chromatic-cli/pull/1671) ([@codykaup](https://github.com/codykaup))
+- Bump execa from 9.6.1 to 10.2.1 [#1700](https://github.com/chromaui/chromatic-cli/pull/1700) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@codykaup](https://github.com/codykaup))
+- Bump boxen from 7.1.1 to 9.0.0 [#1696](https://github.com/chromaui/chromatic-cli/pull/1696) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump @clack/prompts from 1.4.0 to 1.9.0 [#1699](https://github.com/chromaui/chromatic-cli/pull/1699) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump vitest from 5.0.5 to 5.1.0 [#1697](https://github.com/chromaui/chromatic-cli/pull/1697) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@codykaup](https://github.com/codykaup))
+- Bump filesize from 11.0.29 to 11.0.30 [#1695](https://github.com/chromaui/chromatic-cli/pull/1695) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump tsdown from 0.21.10 to 0.23.7 [#1694](https://github.com/chromaui/chromatic-cli/pull/1694) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump wrap-ansi from 10.0.0 to 10.0.2 [#1692](https://github.com/chromaui/chromatic-cli/pull/1692) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump @eslint-community/eslint-plugin-eslint-comments from 4.7.1 to 4.8.1 [#1693](https://github.com/chromaui/chromatic-cli/pull/1693) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the storybook group with 4 updates [#1691](https://github.com/chromaui/chromatic-cli/pull/1691) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Cover Vitest E2E builds in the verify-chromatic-cli skill [#1678](https://github.com/chromaui/chromatic-cli/pull/1678) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- [@dependabot[bot]](https://github.com/dependabot[bot])
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.14.4 (Fri Nov 13 2026)
 
 #### 🐛 Bug Fix
