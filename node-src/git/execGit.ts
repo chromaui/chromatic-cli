@@ -74,9 +74,9 @@ export async function execGitCommand(
     const result = stdout.toString();
     if (logResult) {
       log.debug(`execGitCommand result: '${result}'`);
-    }
-    if (stderr) {
-      log.debug(`execGitCommand stderr: '${stderr.toString()}'`);
+      if (stderr) {
+        log.debug(`execGitCommand stderr: '${stderr.toString()}'`);
+      }
     }
     return result;
   } catch (error) {

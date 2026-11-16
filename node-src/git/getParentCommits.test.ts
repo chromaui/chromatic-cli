@@ -993,8 +993,10 @@ describe('getParentCommits', () => {
 });
 
 describe('getParentCommits with unusual git output', () => {
+  const originalCwd = process.cwd();
   afterEach(() => {
     vi.restoreAllMocks();
+    process.chdir(originalCwd);
   });
 
   it('returns only commits when a ref named after a commit makes git warn', async () => {
