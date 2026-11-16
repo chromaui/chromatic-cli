@@ -169,13 +169,10 @@ export async function getUncommittedHash(deps: GitDeps) {
   const listUnstagedFiles = 'git diff --name-only --no-relative --diff-filter=d';
   const listUntrackedFiles = 'git ls-files --others --exclude-standard --full-name';
 
-  // Use `all: false` so only stdout is captured and we can ignore stderr output that doesn't impact
-  // the result.
-  const stdoutOnly = { all: false };
   const [stagedOutput, unstagedOutput, untrackedOutput] = await Promise.all([
-    execGitCommand(deps, listStagedFiles, stdoutOnly),
-    execGitCommand(deps, listUnstagedFiles, stdoutOnly),
-    execGitCommand(deps, listUntrackedFiles, stdoutOnly),
+    execGitCommand(deps, listStagedFiles),
+    execGitCommand(deps, listUnstagedFiles),
+    execGitCommand(deps, listUntrackedFiles),
   ]);
 
   // Combine file listings into one path per line, stripping empty lines (including trailing
@@ -268,10 +265,8 @@ export async function commitsExist(deps: GitDeps, commits: string[]): Promise<Se
 
   let result: string;
   try {
-    // Only read stdout so stray stderr output cannot shift the line positions.
     result = await execGitCommand(deps, 'git cat-file --batch-check', {
       input: commits.map((commit) => `${commit}^{commit}`).join('\n'),
-      all: false,
     });
   } catch (error) {
     // The single call can fail where individual checks would not, e.g. by hitting the git timeout

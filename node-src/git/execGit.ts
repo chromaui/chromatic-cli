@@ -18,9 +18,10 @@ export type GitDeps = Pick<Deps, 'log'> & { options: { gitTimeout?: number } };
 
 /**
  * Execa options plus `logResult`, which is on by default. Turn it off for a command whose output is
- * unbounded, such as a full file listing, so the debug log is not flooded with it.
+ * unbounded, such as a full file listing, so the debug log is not flooded with it. `all` isn't
+ * accepted, because the result is always stdout alone.
  */
-type ExecGitOptions = Options & { logResult?: boolean };
+type ExecGitOptions = Options & { all?: never; logResult?: boolean };
 
 const defaultOptions = {
   env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
