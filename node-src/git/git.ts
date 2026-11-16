@@ -208,11 +208,15 @@ export async function getUncommittedHash(deps: GitDeps, ignoredFiles: (string | 
     .filter((listedPath) => listedPath && !ignoredPaths.has(listedPath));
   // Git also lists submodules and untracked nested repositories, which are directories, and a file
   // can be deleted after it's listed. hash-object fails on either, so only hash regular files.
+  // A large untracked tree can list many paths, so only a few are checked at a time.
+  const limitStat = pLimit(10);
   const isFile = await Promise.all(
     paths.map((listedPath) =>
-      stat(path.join(repositoryRoot, listedPath)).then(
-        (stats) => stats.isFile(),
-        () => false
+      limitStat(() =>
+        stat(path.join(repositoryRoot, listedPath)).then(
+          (stats) => stats.isFile(),
+          () => false
+        )
       )
     )
   );
