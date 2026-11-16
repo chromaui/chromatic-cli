@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/node';
 
+import { NoTrackedFilesError } from '../../../git/untrackedPaths';
 import GraphQLClient from '../../../io/graphqlClient';
 import type { AbsolutePath, HashBasedTurboSnap, Stats } from '../../../types';
 import missingStorybookConfig from '../../../ui/messages/warnings/missingStorybookConfig';
@@ -69,6 +70,12 @@ export async function traceChangedFiles(
     // A misconfigured project is the user's to fix, not a bug to report.
     if (error instanceof MissingStorybookConfigError) {
       input.log[input.failureLogLevel](missingStorybookConfig(error.configDirectory));
+      return { status: 'fallback' };
+    }
+    if (error instanceof NoTrackedFilesError) {
+      input.log[input.failureLogLevel](
+        `${error.message} TurboSnap 2.0 skipped this build. When TurboSnap is enabled, the build uses TurboSnap 1.0, so your current TurboSnap behavior is unaffected.`
+      );
       return { status: 'fallback' };
     }
     return failed(input, 'Failed to build manifest for TurboSnap 2.0', error);

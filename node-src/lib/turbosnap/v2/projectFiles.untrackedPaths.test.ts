@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, renameSync, rmSync, symlinkSync } from 'fs';
 import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { NoTrackedFilesError } from '../../../git/untrackedPaths';
 import TestLogger from '../../testLogger';
 import { repository, temporaryDirectory, track, write } from './__fixtures__/temporaryDisk';
 import { realProjectFiles } from './projectFiles';
@@ -214,6 +215,8 @@ describe('realProjectFiles untrackedPaths', () => {
     const button = track(root, 'src/Button.tsx');
     rmSync(path.join(root, '.git/index'));
 
-    await expect(untrackedAmong([button])).rejects.toThrow(/no tracked files/);
+    const listing = untrackedAmong([button]);
+    await expect(listing).rejects.toThrow(NoTrackedFilesError);
+    await expect(listing).rejects.toThrow(/Commit the project's files/);
   });
 });

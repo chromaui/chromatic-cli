@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/node';
 import { describe, expect, it, vi } from 'vitest';
 
+import { NoTrackedFilesError } from '../../../git/untrackedPaths';
 import GraphQLClient from '../../../io/graphqlClient';
 import { Stats } from '../../../types';
 import TestLogger from '../../testLogger';
@@ -119,6 +120,25 @@ describe('traceChangedFiles', () => {
     ).resolves.toEqual({ status: 'fallback' });
 
     expect(Sentry.captureException).toHaveBeenCalledWith(error);
+    expect(fixture.runQuery).not.toHaveBeenCalled();
+  });
+
+  // A repository with nothing committed is the user's to fix, not a bug to report.
+  it.each<[FailureLogLevel, FailureLogLevel]>([
+    ['error', 'debug'],
+    ['debug', 'error'],
+  ])('falls back without reporting when git tracks no files (%s)', async (level, otherLevel) => {
+    const fixture = setup();
+    const error = new NoTrackedFilesError('/repo');
+
+    await expect(
+      trace(fixture, { untrackedPaths: () => Promise.reject(error) }, level)
+    ).resolves.toEqual({ status: 'fallback' });
+
+    const advice = expect.stringContaining(`${error.message} TurboSnap 2.0 skipped this build.`);
+    expect(fixture.log[level]).toHaveBeenCalledWith(advice);
+    expect(fixture.log[otherLevel]).not.toHaveBeenCalledWith(advice);
+    expect(Sentry.captureException).not.toHaveBeenCalled();
     expect(fixture.runQuery).not.toHaveBeenCalled();
   });
 
