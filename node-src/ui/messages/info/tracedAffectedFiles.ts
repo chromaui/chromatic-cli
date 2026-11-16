@@ -51,7 +51,7 @@ export default (
 
   const changed = pluralize('changed files', changedFiles.length, true);
   const affected = pluralize(
-    `affected ${testType(ctx)} files`,
+    `potentially affected ${testType(ctx)} files`,
     Object.keys(affectedModules).length,
     true
   );
@@ -89,7 +89,7 @@ export default (
     const listing = affectedFiles.map((f) => chalk`— ${printPath(f)}`).join('\n');
     const note = submodules
       ? chalk`\nSet {bold ${flag}} to {bold 'expanded'} to reveal underlying modules.`
-      : chalk`\nSet {bold ${flag}} to reveal how these files are affected.`;
+      : chalk`\nSet {bold ${flag}} to reveal how these files are potentially affected.`;
     return `${summary}:\n${listing}${note}`;
   }
 

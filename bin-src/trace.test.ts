@@ -22,7 +22,7 @@ describe('chromatic trace', () => {
   it('returns the default output successfully', async () => {
     const output = await trace(['./node-src/ui/messages/errors/invalidReportPath.ts']);
 
-    expect(output).toContain('Traced 1 changed file to 1 affected story file');
+    expect(output).toContain('Traced 1 changed file to 1 potentially affected story file');
     expect(output).not.toContain(rootDirectoryNote);
   });
 
@@ -31,7 +31,7 @@ describe('chromatic trace', () => {
       path.join(process.cwd(), 'node-src/ui/messages/errors/invalidReportPath.ts'),
     ]);
 
-    expect(output).toContain('Traced 1 changed file to 1 affected story file');
+    expect(output).toContain('Traced 1 changed file to 1 potentially affected story file');
   });
 
   it('outputs directory info when -m expanded is passed', async () => {

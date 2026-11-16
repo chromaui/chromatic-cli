@@ -4,6 +4,7 @@ import { isTurboSnapV1Enabled } from '../../lib/turbosnap/shouldTraceWithV1';
 import { TurboSnapResult } from '../../lib/turbosnap/types';
 import { groupUntracedFilesByGlob, rewriteErrorMessage } from '../../lib/utilities';
 import { Context, Deps, HashBasedTurboSnap } from '../../types';
+import turboSnapDryRun from '../../ui/messages/info/turboSnapDryRun';
 import hashBasedBailed from '../../ui/messages/warnings/hashBasedBailed';
 import { bailed, hashBased, traced, tracing } from '../../ui/tasks/prepare';
 import { testType } from '../../ui/tasks/utilities';
@@ -121,7 +122,9 @@ function reportTraceResult(
   if (!deps.options.interactive) {
     if (!deps.options.traceChanged) {
       deps.log.info(
-        `Found affected ${testType(deps)} files:\n${Object.entries(result.onlyStoryFiles)
+        `Found potentially affected ${testType(deps)} files:\n${Object.entries(
+          result.onlyStoryFiles
+        )
           .flatMap(([id, files]) => files.map((f) => `  ${f} [${id}]`))
           .join('\n')}`
       );
@@ -135,11 +138,17 @@ function reportTraceResult(
     }
   }
   deps.report(traced({ options: deps.options, onlyStoryFiles }));
+  // A dry run skips verify, which prints the TurboSnap summary on a real build.
+  if (deps.options.dryRun) {
+    deps.log.info(turboSnapDryRun({ options: deps.options, onlyStoryFiles }));
+  }
 }
 
 function reportHashBased(deps: TraceChangedFilesDeps, hashBasedTurboSnap: HashBasedTurboSnap) {
   deps.report(hashBased({ options: deps.options, hashBasedTurboSnap }));
   if (hashBasedTurboSnap.bailed) {
     deps.log.warn(hashBasedBailed({ hashBasedTurboSnap }));
+  } else if (deps.options.dryRun) {
+    deps.log.info(turboSnapDryRun({ options: deps.options, hashBased: true }));
   }
 }

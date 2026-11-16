@@ -76,7 +76,7 @@ export const pending = (
   const matching = options.onlyStoryNames
     ? `${unit} matching ${options.onlyStoryNames.map((v) => `'${v}'`).join(', ')}`
     : '';
-  const affected = turboSnapped ? ' affected by recent changes' : '';
+  const affected = turboSnapped ? ' potentially affected by recent changes' : '';
   const skipping = build.testCount > build.actualTestCount ? ` (skipping ${skips})` : '';
   // The cursor is a 1-based "now capturing" index (`actualTestCount - inProgressCount + 1`), so it
   // reaches `actualTestCount + 1` once nothing is in progress. Clamp it so the label never exceeds 100%.
