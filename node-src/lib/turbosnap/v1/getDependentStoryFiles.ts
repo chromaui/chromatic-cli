@@ -372,7 +372,7 @@ export async function getDependentStoryFiles(
   );
 
   if (ctx.options.traceChanged) {
-    ctx.log.debug('Affected modules...');
+    ctx.log.debug('Potentially affected modules...');
     ctx.log.debug(affectedModules);
   }
 

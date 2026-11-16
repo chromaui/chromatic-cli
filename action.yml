@@ -63,7 +63,7 @@ inputs:
     description: 'Custom prefix for log messages (default: current timestamp)'
     required: false
   onlyChanged:
-    description: 'Enables TurboSnap: Only run stories affected by files changed since the baseline build'
+    description: 'Enables TurboSnap: Only run stories potentially affected by files changed since the baseline build'
     required: false
   onlyStoryNames:
     description: 'Only run a single story or a subset of stories by their name'
@@ -108,7 +108,7 @@ inputs:
     description: 'Your github token'
     required: false
   traceChanged:
-    description: 'Print dependency trace for changed files to affected story files; set to "expanded" to list individual modules'
+    description: 'Print dependency trace for changed files to potentially affected story files; set to "expanded" to list individual modules'
     required: false
   untraced:
     description: 'Disregard these files and their dependencies when tracing dependent stories for TurboSnap'
