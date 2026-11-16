@@ -68,9 +68,6 @@ function getVisibleLength(input: string): number {
  * Find URLs in text and wrap them in OSC 8 hyperlinks (truncating display text if needed) so
  * line-wrapping doesn't shatter them across lines.
  *
- * Exported only for its unit tests, which check each URL length rule on its own, before
- * `wrapTextForClack` rewraps the result.
- *
  * @param text The raw text potentially containing URLs.
  * @param options Optional width budgets.
  * @param options.maxUrlLength Maximum visible URL length before truncation.
@@ -78,7 +75,8 @@ function getVisibleLength(input: string): number {
  *
  * @returns The text with URLs replaced by OSC 8 sequences (when supported).
  *
- * @internal
+ * @internal Exported only for its unit tests, which check each URL length rule on its own, before
+ *   `wrapTextForClack` rewraps the result.
  */
 export function protectUrls(
   text: string,

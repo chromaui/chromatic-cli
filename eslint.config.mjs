@@ -208,6 +208,8 @@ export default [
     plugins: {
       jsdoc,
     },
+    // `@internal` takes free text: the reason it is exported (see jsdoc/match-description below).
+    settings: { jsdoc: { structuredTags: { internal: { name: 'text' } } } },
     rules: {
       ...jsdoc.configs['flat/recommended-typescript'].rules,
       'jsdoc/require-jsdoc': [
@@ -226,6 +228,23 @@ export default [
         },
       ],
       'jsdoc/tag-lines': ['error', 'any', { startLines: 1 }],
+      // knip --production skips `@internal` exports, so a tag needs its reason after it, such as
+      // `@internal Exported only for its unit tests, which ...`. Only that tag is checked here.
+      'jsdoc/match-description': [
+        'error',
+        {
+          contexts: ['any'],
+          mainDescription: false,
+          tags: {
+            internal: {
+              match: String.raw`/\S/u`,
+              message: 'Say after `@internal` why this is exported (see knip in AGENTS.md).',
+            },
+          },
+        },
+      ],
+      // This rule requires `@internal` to be empty, the opposite of match-description above.
+      'jsdoc/empty-tags': 'off',
     },
   },
   // sort your imports
