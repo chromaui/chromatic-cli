@@ -54,9 +54,8 @@ function isLegacyVersion(version: string) {
  * as an externalized bundle (e.g. an `storybook/internal/*` bare specifier), so it never appears as
  * a hashable file in `preview-stats.json`. The version gate covers exactly that blind spot.
  *
- * We therefore do not reuse `ctx.storybook.version`: that reports the view-layer package. It also
- * resolves relative to the working directory without walking up to a hoisted install, and can be a
- * bare semver range rather than a concrete version.
+ * We therefore do not reuse `ctx.storybook.version`: that reports the view-layer package, and can be
+ * a bare semver range rather than a concrete version.
  *
  * We resolve from the config directory, because that is the package directory that should've
  * been used to build the Storybook. It then walks up every ancestor `node_modules` to find the

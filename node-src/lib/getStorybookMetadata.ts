@@ -1,6 +1,8 @@
+import { existsSync } from 'fs';
 import { readdir } from 'fs/promises';
-import { pathExists, readJson } from 'fs-extra';
+import { pathExists } from 'fs-extra';
 import meow from 'meow';
+import { createRequire } from 'module';
 import path from 'path';
 import semver from 'semver';
 import { printConfig, readConfig } from 'storybook/internal/csf-tools';
@@ -10,11 +12,9 @@ import type { StorybookInfoDeps } from '../tasks/storybookInfo';
 import { AbsolutePath, Storybook } from '../types';
 import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
 import { builders } from './builders';
+import { readInstalledPackageVersion } from './installedPackage';
 import { meowImportMeta } from './meowImportMeta';
-import { withTimeout } from './utilities';
 import { viewLayers } from './viewLayers';
-
-const LOOKUP_TIMEOUT_MESSAGE = 'Timeout while resolving Storybook view layer package';
 
 /**
  * Reads the `-c` and `-s` flags out of the project's Storybook build script.
@@ -73,11 +73,12 @@ interface MainConfigReader {
 /**
  * Resolves the builder the main config declares, along with its installed version.
  *
+ * @param configDirectory The absolute config directory to resolve the builder's package from.
  * @param mainConfig The loaded main config, or undefined when it could not be read.
  *
  * @returns The builder name and package version, or an unknown builder without a config.
  */
-async function findBuilder(mainConfig?: MainConfigReader) {
+async function findBuilder(configDirectory: AbsolutePath, mainConfig?: MainConfigReader) {
   if (!mainConfig) {
     return { builder: { name: 'unknown', packageVersion: '0' } };
   }
@@ -88,15 +89,11 @@ async function findBuilder(mainConfig?: MainConfigReader) {
   if (typeof framework?.name === 'string') {
     const sbV7BuilderName = framework.name;
 
-    return withTimeout(
-      resolvePackageJson(sbV7BuilderName)
-        .then((json) => ({ builder: { name: sbV7BuilderName, packageVersion: json.version } }))
-        .catch(() => {
-          throw new Error(packageDoesNotExist(sbV7BuilderName));
-        }),
-      10_000,
-      LOOKUP_TIMEOUT_MESSAGE
-    );
+    return readPackageVersion(configDirectory, sbV7BuilderName)
+      .then((version) => ({ builder: { name: sbV7BuilderName, packageVersion: version } }))
+      .catch(() => {
+        throw new Error(packageDoesNotExist(sbV7BuilderName));
+      });
   }
 
   let name = 'webpack4'; // default builder in Storybook v6
@@ -107,15 +104,11 @@ async function findBuilder(mainConfig?: MainConfigReader) {
     name = builder.name;
   }
 
-  return withTimeout(
-    resolvePackageJson(builders[name])
-      .then((json) => ({ builder: { name, packageVersion: json.version } }))
-      .catch(() => {
-        throw new Error(packageDoesNotExist(builders[name]));
-      }),
-    10_000,
-    LOOKUP_TIMEOUT_MESSAGE
-  );
+  return readPackageVersion(configDirectory, builders[name])
+    .then((version) => ({ builder: { name, packageVersion: version } }))
+    .catch(() => {
+      throw new Error(packageDoesNotExist(builders[name]));
+    });
 }
 
 // TODO: Update this when we start tracking refs within the project.json file; if refs are tracked there, we can skip this logic
@@ -280,12 +273,12 @@ export async function getStorybookMetadata(
     buildScriptName: deps.options.buildScriptName,
     packageJson: deps.packageJson,
   });
-  const configDirectory = await findConfigDirectory(deps, projectRoot, buildScript.configDir);
+  const configDirectory = await findStorybookConfigDirectory(deps, projectRoot);
   const mainConfig = await readMainConfig(configDirectory, deps.log);
 
   const info = await Promise.allSettled([
-    findStorybookVersion(deps),
-    findBuilder(mainConfig),
+    findStorybookVersion(deps, configDirectory),
+    findBuilder(configDirectory, mainConfig),
     findReferences(mainConfig),
   ]);
 
@@ -305,6 +298,25 @@ export async function getStorybookMetadata(
     }
   }
   return metadata;
+}
+
+/**
+ * Resolves the absolute Storybook config directory from the options and the build script's `-c`.
+ *
+ * @param deps The dependencies holding the user's options and package.json.
+ * @param projectRoot The absolute Storybook project root.
+ *
+ * @returns The absolute config directory.
+ */
+export async function findStorybookConfigDirectory(
+  deps: StorybookInfoDeps,
+  projectRoot: AbsolutePath
+): Promise<AbsolutePath> {
+  const { configDir } = findConfigFlags({
+    buildScriptName: deps.options.buildScriptName,
+    packageJson: deps.packageJson,
+  });
+  return findConfigDirectory(deps, projectRoot, configDir);
 }
 
 /**
@@ -355,13 +367,10 @@ export async function findConfigDirectory(
   return candidates[0];
 }
 
-function resolvePackageJson(pkg: string) {
-  try {
-    const packagePath = path.resolve(`node_modules/${pkg}/package.json`);
-    return readJson(packagePath);
-  } catch (error) {
-    return Promise.reject(error);
-  }
+// Resolved from the config directory, as Storybook resolves its own packages: up to a hoisted install,
+// or through a Yarn Plug'n'Play runtime when one is active.
+async function readPackageVersion(configDirectory: AbsolutePath, pkg: string) {
+  return readInstalledPackageVersion(configDirectory, pkg);
 }
 
 function findDependency(
@@ -397,7 +406,10 @@ function getDependencyInfo(
   return { dependency, version, dependencyPackage: pkg };
 }
 
-async function findStorybookVersion({ env, log, options, packageJson }: StorybookInfoDeps) {
+async function findStorybookVersion(
+  { env, log, options, packageJson }: StorybookInfoDeps,
+  configDirectory: AbsolutePath
+) {
   // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='@storybook/react@4.0-alpha.8' for unusual cases
   if (env.CHROMATIC_STORYBOOK_VERSION) {
     const [, p, v] = env.CHROMATIC_STORYBOOK_VERSION.match(/(.+)@(.+)$/) || [];
@@ -426,16 +438,12 @@ async function findStorybookVersion({ env, log, options, packageJson }: Storyboo
       // Note that `version` can be a semver range in this case.
       return { version };
     }
-    // Verify that the viewlayer package is actually present in node_modules.
-    return withTimeout(
-      resolvePackageJson(pkg)
-        .then((json) => ({ version: json.version }))
-        .catch(() => {
-          throw new Error(packageDoesNotExist(pkg));
-        }),
-      10_000,
-      LOOKUP_TIMEOUT_MESSAGE
-    );
+    // Verify that the viewlayer package is actually installed.
+    return readPackageVersion(configDirectory, pkg)
+      .then((version) => ({ version }))
+      .catch(() => {
+        throw new Error(packageDoesNotExist(pkg));
+      });
   }
 
   if (!options.interactive) {
@@ -443,20 +451,30 @@ async function findStorybookVersion({ env, log, options, packageJson }: Storyboo
   }
 
   // We might have a transitive dependency (e.g. through `@nuxtjs/storybook` which depends on
-  // `@storybook/vue`). In this case we look for any viewlayer package present in node_modules,
-  // and return the first one we find.
-  return withTimeout(
-    Promise.any(
-      Object.entries(viewLayers).map(async ([key]) => {
-        const json = await resolvePackageJson(key);
-        return { version: json.version };
-      })
-    ).catch(() => {
-      throw new Error(packageDoesNotExist(pkg));
-    }),
-    10_000,
-    LOOKUP_TIMEOUT_MESSAGE
+  // `@storybook/vue`). In this case we look for any installed viewlayer package.
+  return findNearestViewLayer(configDirectory, pkg);
+}
+
+// A monorepo can install another project's view layer further up, such as React at the root while
+// this package uses Vue. So the nearest `node_modules` Node searches that holds a view layer
+// is tried first, judged by its links, since pnpm keeps every package in the root's store. Then, as
+// under Plug'n'Play where those directories don't matter, the first view layer that resolves wins.
+function findNearestViewLayer(configDirectory: AbsolutePath, missingPackage: string) {
+  const packages = Object.keys(viewLayers);
+  const lookupPaths =
+    createRequire(path.join(configDirectory, 'package.json')).resolve.paths(packages[0]) ?? [];
+  const scope = lookupPaths.find((directory) =>
+    packages.some((key) => existsSync(path.join(directory, key)))
   );
+  const nearest = scope ? packages.filter((key) => existsSync(path.join(scope, key))) : [];
+  for (const key of [...nearest, ...packages]) {
+    try {
+      return { version: readInstalledPackageVersion(configDirectory, key) };
+    } catch {
+      // Not installed; try the next one.
+    }
+  }
+  throw new Error(packageDoesNotExist(missingPackage));
 }
 
 /**

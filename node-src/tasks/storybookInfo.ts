@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/node';
 
 import { isE2EBuild } from '../lib/e2eUtils';
 import getStorybookInfo from '../lib/getStorybookInfo';
+import { findStorybookConfigDirectory } from '../lib/getStorybookMetadata';
 import { getStorybookProjectRoot } from '../lib/getStorybookProjectRoot';
 import { activateProjectPnpRuntime } from '../lib/pnpRuntime';
 import { describeProjectSetup, detectProjectSetup, ProjectSetup } from '../lib/projectSetup';
@@ -57,11 +58,13 @@ export const setStorybookInfo: TaskFunction<
     gitRootPath: input.gitRootPath,
   });
 
-  const storybook = await getStorybookInfo(deps, projectRoot);
   // Detected once, from the config directory, because that is where Storybook resolves its own
-  // packages from; everything that needs to know how dependencies are installed reads this.
-  const projectSetup = activateProjectPnpRuntime(detectProjectSetup(storybook.configDir), deps.log);
+  // packages from; everything that needs to know how dependencies are installed reads this. A Yarn
+  // Plug'n'Play runtime is loaded before the Storybook metadata, which resolves packages through it.
+  const configDirectory = await findStorybookConfigDirectory(deps, projectRoot);
+  const projectSetup = activateProjectPnpRuntime(detectProjectSetup(configDirectory), deps.log);
   deps.log.debug('Detected project setup:', projectSetup);
+  const storybook = await getStorybookInfo(deps, projectRoot);
   return { kind: 'continue', output: { storybook, projectSetup } };
 };
 

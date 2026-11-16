@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import storybookInfo from '../lib/getStorybookInfo';
 import { getStorybookProjectRoot } from '../lib/getStorybookProjectRoot';
+import { activateProjectPnpRuntime } from '../lib/pnpRuntime';
 import { detectProjectSetup, ProjectSetup } from '../lib/projectSetup';
 import { Storybook } from '../types';
 import { applyStorybookInfoOutput, setStorybookInfo, StorybookInfoDeps } from './storybookInfo';
@@ -13,6 +14,10 @@ vi.mock('../lib/getStorybookProjectRoot', async (importOriginal) => ({
   getStorybookProjectRoot: vi.fn(),
 }));
 vi.mock('@sentry/node', () => ({ setTag: vi.fn(), setContext: vi.fn() }));
+vi.mock('../lib/pnpRuntime', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/pnpRuntime')>();
+  return { ...actual, activateProjectPnpRuntime: vi.fn(actual.activateProjectPnpRuntime) };
+});
 vi.mock('../lib/projectSetup', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/projectSetup')>()),
   detectProjectSetup: vi.fn(),
@@ -68,7 +73,23 @@ describe('setStorybookInfo', () => {
       output: { storybook, projectSetup },
     });
     // Detected from where Storybook resolves its own packages, not from the working directory.
-    expect(detectProjectSetup).toHaveBeenCalledWith('/some/git/root/packages/sb/.storybook-custom');
+    expect(detectProjectSetup).toHaveBeenCalledWith('/some/git/root/packages/sb/.storybook');
+  });
+
+  it("loads a Plug'n'Play runtime before reading the metadata, which resolves packages through it", async () => {
+    let runtimeActive = false;
+    vi.mocked(activateProjectPnpRuntime).mockImplementationOnce((setup) => {
+      runtimeActive = true;
+      return setup;
+    });
+    getStorybookInfo.mockImplementationOnce(async () =>
+      buildStorybook({ version: runtimeActive ? '10.6.5' : undefined })
+    );
+    mockedGetStorybookProjectRoot.mockReturnValue('/repo/packages/sb');
+
+    const result = await setStorybookInfo(buildDeps(), { isReactNativeApp: false });
+
+    expect(result.kind === 'continue' && result.output.storybook.version).toBe('10.6.5');
   });
 
   it('passes gitRootPath through to getStorybookProjectRoot', async () => {

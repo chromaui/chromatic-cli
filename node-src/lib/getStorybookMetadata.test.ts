@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from 'fs';
-import { mkdtemp, rm } from 'fs/promises';
-import { readJson } from 'fs-extra';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
@@ -8,12 +7,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { findStaticDirectories, getStorybookMetadata } from './getStorybookMetadata';
 
 type MainConfigReader = NonNullable<Parameters<typeof findStaticDirectories>[0]['mainConfig']>;
-
-// Passes through to the real implementation unless a test makes a package lookup hang.
-vi.mock('fs-extra', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('fs-extra')>();
-  return { ...actual, readJson: vi.fn(actual.readJson) };
-});
 
 function makeConfig(returnValue: any): MainConfigReader {
   return { readField: vi.fn().mockReturnValue(returnValue) };
@@ -270,15 +263,13 @@ describe('getStorybookMetadata view layer lookup in node_modules', () => {
     expect(installed).toContain(metadata.version);
   });
 
-  it('reports a missing package, without waiting for the timeout, when none is installed', async () => {
+  it('reports a missing package when none is installed', async () => {
     const emptyDirectory = await mkdtemp(path.join(tmpdir(), 'no-view-layer-'));
     const cwd = vi.spyOn(process, 'cwd').mockReturnValue(emptyDirectory);
     try {
       const deps = { ...getDeps('js-cjs'), env: {} };
-      const started = Date.now();
       const metadata = await getStorybookMetadata(deps, projectRootOf('js-cjs'));
 
-      expect(Date.now() - started).toBeLessThan(5000);
       expect(metadata.version).toBeUndefined();
       const [versionLookup] = deps.log.debug.mock.calls.find(([info]) => Array.isArray(info))[0];
       expect(versionLookup.status).toBe('rejected');
@@ -288,25 +279,91 @@ describe('getStorybookMetadata view layer lookup in node_modules', () => {
       await rm(emptyDirectory, { recursive: true });
     }
   });
+});
 
-  it('gives up with a timeout error when a package lookup hangs', async () => {
-    vi.useFakeTimers({ toFake: ['setTimeout'] });
-    vi.mocked(readJson).mockImplementation(() => new Promise(() => {}));
+async function install(directory: string, pkg: string, version: string) {
+  await mkdir(path.join(directory, 'node_modules', pkg), { recursive: true });
+  await writeFile(
+    path.join(directory, 'node_modules', pkg, 'package.json'),
+    JSON.stringify({ name: pkg, version })
+  );
+}
+
+async function writeMainConfig(configDirectory: string, framework: string) {
+  await mkdir(configDirectory, { recursive: true });
+  await writeFile(
+    path.join(configDirectory, 'main.js'),
+    `module.exports = { framework: { name: '${framework}' } };`
+  );
+}
+
+function readMetadata(configDirectory: string, packageJson: Record<string, unknown>) {
+  return getStorybookMetadata(
+    {
+      log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn() },
+      options: { storybookConfigDir: configDirectory },
+      env: {},
+      packageJson,
+    } as any,
+    path.dirname(configDirectory)
+  );
+}
+
+describe('getStorybookMetadata package resolution', () => {
+  it('resolves packages from the config directory up to a hoisted install, not from the cwd', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'hoisted-'));
+    const cwd = vi
+      .spyOn(process, 'cwd')
+      .mockReturnValue(await mkdtemp(path.join(tmpdir(), 'cwd-')));
     try {
-      const deps = { ...getDeps('js-cjs'), env: {} };
-      const pending = getStorybookMetadata(deps, projectRootOf('js-cjs'));
-      await vi.waitFor(() => expect(readJson).toHaveBeenCalled());
-      await vi.advanceTimersByTimeAsync(10_000);
-      const metadata = await pending;
+      const configDirectory = path.join(root, 'packages/ui/.storybook');
+      await writeMainConfig(configDirectory, '@storybook/react-vite');
+      for (const pkg of ['@storybook/react', '@storybook/react-vite']) {
+        await install(root, pkg, '7.6.20');
+      }
 
-      expect(metadata.version).toBeUndefined();
-      const [versionLookup] = deps.log.debug.mock.calls.find(([info]) => Array.isArray(info))[0];
-      expect(versionLookup.reason.message).toBe(
-        'Timeout while resolving Storybook view layer package'
-      );
+      const metadata = await readMetadata(configDirectory, {
+        devDependencies: { '@storybook/react': '^7.6.0' },
+      });
+
+      expect(metadata.version).toBe('7.6.20');
+      expect(metadata.builder).toEqual({ name: '@storybook/react-vite', packageVersion: '7.6.20' });
     } finally {
-      vi.mocked(readJson).mockRestore();
-      vi.useRealTimers();
+      cwd.mockRestore();
+      await rm(root, { recursive: true });
+    }
+  });
+
+  it("takes the view layer linked nearest the config directory over another project's", async () => {
+    // A pnpm monorepo whose root installs React for another package, while this package uses Vue.
+    // Both live in the root's store, so only the links say which one belongs to this package.
+    const root = await mkdtemp(path.join(tmpdir(), 'mixed-'));
+    try {
+      const configDirectory = path.join(root, 'packages/ui/.storybook');
+      await writeMainConfig(configDirectory, '@storybook/vue3-vite');
+      const links: [string, string, string][] = [
+        [root, '@storybook/react', '7.6.20'],
+        [path.join(root, 'packages/ui'), '@storybook/vue3', '10.6.5'],
+        [path.join(root, 'packages/ui'), '@storybook/vue3-vite', '10.6.5'],
+      ];
+      for (const [directory, pkg, version] of links) {
+        const store = path.join(root, 'node_modules/.pnpm', `${pkg.replace('/', '+')}@${version}`);
+        await install(store, pkg, version);
+        await mkdir(path.join(directory, 'node_modules/@storybook'), { recursive: true });
+        await symlink(
+          path.join(store, 'node_modules', pkg),
+          path.join(directory, 'node_modules', pkg),
+          'junction'
+        );
+      }
+
+      const metadata = await readMetadata(configDirectory, {
+        devDependencies: { '@storybook/vue3-vite': '^10.6.0', storybook: '^10.6.0' },
+      });
+
+      expect(metadata.version).toBe('10.6.5');
+    } finally {
+      await rm(root, { recursive: true });
     }
   });
 });

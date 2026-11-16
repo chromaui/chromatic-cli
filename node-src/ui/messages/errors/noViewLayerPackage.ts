@@ -6,6 +6,6 @@ import { error } from '../../components/icons';
 export default (packageName: string) =>
   dedent(chalk`
     ${error} {bold Storybook package not installed}
-    Could not find {bold ${packageName}} in {bold node_modules}.
+    Could not find {bold ${packageName}} installed for this Storybook.
     Most likely, you forgot to run {bold npm install} or {bold yarn} before running Chromatic.
   `);
