@@ -18,13 +18,16 @@ export type GitDeps = Pick<Deps, 'log'> & { options: { gitTimeout?: number } };
 
 /**
  * Execa options plus `logResult`, which is on by default. Turn it off for a command whose output is
- * unbounded, such as a full file listing, so the debug log is not flooded with it.
+ * unbounded, such as a full file listing, so the debug log is not flooded with it. `all` isn't
+ * accepted, because the result is always stdout alone.
  */
-type ExecGitOptions = Options & { logResult?: boolean };
+type ExecGitOptions = Options & { all?: never; logResult?: boolean };
 
 const defaultOptions = {
   env: { LANG: 'C', LC_ALL: 'C' }, // make sure we're speaking English
-  all: true, // interleave stdout and stderr
+  // Only stdout is the result: git writes warnings to stderr even when it succeeds.
+  // `execGitCommand` still puts a failure's stderr in its error message.
+  all: false,
   shell: true, // we'll deal with escaping ourselves (for now)
 } satisfies Options;
 
@@ -59,18 +62,22 @@ export async function execGitCommand(
   try {
     log.debug(`execGitCommand: ${command}`);
     const timeout = getGitTimeout(depOptions);
-    const { all, stdout } = await runCommand(command, { timeout, ...defaultOptions, ...options });
-    // If the caller sets `all: false`, then `stdout` will be the output. Otherwise, `all` will
-    // contain interleaved stdout and stderr.
-    const output = all ?? stdout;
+    const { stdout, stderr } = await runCommand(command, {
+      timeout,
+      ...defaultOptions,
+      ...options,
+    });
 
-    if (output === undefined) {
+    if (stdout === undefined) {
       throw new Error(`Unexpected missing git command output for command: '${command}'`);
     }
 
-    const result = output.toString();
+    const result = stdout.toString();
     if (logResult) {
       log.debug(`execGitCommand result: '${result}'`);
+      if (stderr) {
+        log.debug(`execGitCommand stderr: '${stderr.toString()}'`);
+      }
     }
     return result;
   } catch (error) {

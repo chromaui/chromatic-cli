@@ -128,8 +128,7 @@ describe('getUncommittedHash', () => {
     await getUncommittedHash(ctx);
     expect(execGitCommand).toHaveBeenCalledWith(
       ctx,
-      'git ls-files --others --exclude-standard --full-name',
-      expect.anything()
+      'git ls-files --others --exclude-standard --full-name'
     );
   });
 });
@@ -276,7 +275,6 @@ describe('commitsExist', () => {
     expect(await commitsExist(ctx, ['bbb', 'aaa', 'ccc', 'ddd'])).toEqual(new Set(['aaa', 'ddd']));
     expect(execGitCommand).toHaveBeenCalledWith(ctx, 'git cat-file --batch-check', {
       input: 'bbb^{commit}\naaa^{commit}\nccc^{commit}\nddd^{commit}',
-      all: false,
     });
   });
 
@@ -442,8 +440,7 @@ describe('checkoutFile', () => {
     expect(execGitCommand).toHaveBeenNthCalledWith(
       1,
       ctx,
-      'git ls-tree --full-tree abc123 -- "package.json"',
-      { all: false }
+      'git ls-tree --full-tree abc123 -- "package.json"'
     );
     expect(execGitCommand).toHaveBeenLastCalledWith(
       ctx,
