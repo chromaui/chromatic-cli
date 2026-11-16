@@ -3,8 +3,9 @@ import { exec } from 'child_process';
 import process from 'process';
 import tmp from 'tmp-promise';
 import { promisify } from 'util';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import * as execGit from './execGit';
 import generateGitRepository from './generateGitRepository';
 import { getParentCommits } from './getParentCommits';
 import { getCommit } from './git';
@@ -988,5 +989,81 @@ describe('getParentCommits', () => {
       expect(visited[commitMap.B.hash].isShallowBoundary).toBe(true);
       expect(visited[commitMap.C.hash].isShallowBoundary).toBe(false);
     });
+  });
+});
+
+describe('getParentCommits with unusual git output', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns only commits when a ref named after a commit makes git warn', async () => {
+    //  A -[B]-(C)- D - F  [main], plus a branch named after B's SHA
+    const repository = repositories.simpleLoop;
+    await checkoutCommit('C', 'main', repository);
+    const sha = repository.commitMap.B.hash;
+    await repository.runGit(`git branch ${sha} ${sha}`);
+    try {
+      const client = createClient({ repository, builds: [['B', 'main']] });
+      const git = { branch: 'main', ...(await getCommit(ctx)) };
+
+      const { ancestorCommits: parentCommits } = await getParentCommits(
+        { client, log, options } as any,
+        withGit(git)
+      );
+      expectCommitsToEqualNames(parentCommits, ['B'], repository);
+    } finally {
+      await repository.runGit(`git branch -D ${sha}`);
+    }
+  });
+
+  it('never returns a line from git rev-list that is not a commit', async () => {
+    //  A -[B]-(C)- D - F  [main], with an extra line in front of every rev-list result
+    const repository = repositories.simpleLoop;
+    await checkoutCommit('C', 'main', repository);
+    const { execGitCommand } = execGit;
+    vi.spyOn(execGit, 'execGitCommand').mockImplementation(async (deps, command, options) => {
+      const output = await execGitCommand(deps, command, options);
+      return command.startsWith('git rev-list') ? `warning: something\n${output}` : output;
+    });
+    const client = createClient({ repository, builds: [['B', 'main']] });
+    const git = { branch: 'main', ...(await getCommit(ctx)) };
+
+    const { ancestorCommits: parentCommits } = await getParentCommits(
+      { client, log, options } as any,
+      withGit(git)
+    );
+    expectCommitsToEqualNames(parentCommits, ['B'], repository);
+  });
+
+  it('returns SHA-256 commits', async () => {
+    //  [A]-(B)  [main], in a repository with SHA-256 object names
+    const { path: dirname } = await tmp.dir({ unsafeCleanup: true, prefix: `chromatictest-` });
+    const runGit = makeRunGit(dirname);
+    await runGit('git init -q -b main --object-format=sha256');
+    await runGit('git -c user.email=a@b.c -c user.name=A commit -q --allow-empty -m A');
+    const { stdout } = await runGit('git rev-parse HEAD');
+    const commitA = stdout.trim();
+    await runGit('git -c user.email=a@b.c -c user.name=A commit -q --allow-empty -m B');
+    process.chdir(dirname);
+
+    const client = {
+      runQuery: async (query: string, variables: any) => {
+        if (query.includes('FirstCommittedAtQuery')) {
+          return { app: { firstBuild: { committedAt: 0 }, lastBuild: null } };
+        }
+        if (query.includes('HasBuildsWithCommitsQuery')) {
+          return { app: { hasBuildsWithCommits: variables.commits.filter((c) => c === commitA) } };
+        }
+        return { app: { mergedPullRequests: [] } };
+      },
+    };
+    const git = { branch: 'main', ...(await getCommit(ctx)) };
+
+    const { ancestorCommits: parentCommits } = await getParentCommits(
+      { client, log, options } as any,
+      withGit(git)
+    );
+    expect(parentCommits).toEqual([commitA]);
   });
 });
