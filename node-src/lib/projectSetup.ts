@@ -23,7 +23,8 @@ export type ProjectSetup =
       packageManager: 'yarn';
       installRoot: AbsolutePath;
       pnpFile: AbsolutePath;
-      pnpRuntime: 'active' | 'inactive';
+      /** `failed` when this process tried to load the runtime and could not; see `pnpRuntime.ts`. */
+      pnpRuntime: 'active' | 'inactive' | 'failed';
     }
   | { layout: 'not-installed'; packageManager?: 'yarn'; installRoot?: AbsolutePath }
   | { layout: 'unknown'; installRoot: AbsolutePath };
@@ -139,9 +140,12 @@ export class DependenciesNotInstalledError extends Error {
 export class PnpRuntimeInactiveError extends Error {
   readonly name = 'PnpRuntimeInactiveError';
 
-  constructor(readonly pnpFile: AbsolutePath) {
+  constructor(
+    readonly pnpFile: AbsolutePath,
+    readonly pnpRuntime: 'inactive' | 'failed'
+  ) {
     super(
-      `This project uses Yarn Plug'n'Play (${pnpFile}), and its runtime isn't loaded in this process, so TurboSnap can't read the installed dependencies. Run Chromatic through Yarn, such as with yarn chromatic.`
+      `This project uses Yarn Plug'n'Play (${pnpFile}), and its runtime ${pnpRuntime === 'failed' ? 'failed to load' : "isn't loaded"} in this process, so TurboSnap can't read the installed dependencies. Run Chromatic through Yarn, such as with yarn chromatic.`
     );
   }
 }
@@ -155,6 +159,6 @@ export class PnpRuntimeInactiveError extends Error {
 export function assertDependenciesReadable(setup: ProjectSetup, configDirectory: AbsolutePath) {
   if (setup.layout === 'not-installed') throw new DependenciesNotInstalledError(configDirectory);
   if (setup.layout === 'pnp' && setup.pnpRuntime !== 'active') {
-    throw new PnpRuntimeInactiveError(setup.pnpFile);
+    throw new PnpRuntimeInactiveError(setup.pnpFile, setup.pnpRuntime);
   }
 }

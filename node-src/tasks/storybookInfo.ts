@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/node';
 import { isE2EBuild } from '../lib/e2eUtils';
 import getStorybookInfo from '../lib/getStorybookInfo';
 import { getStorybookProjectRoot } from '../lib/getStorybookProjectRoot';
+import { activateProjectPnpRuntime } from '../lib/pnpRuntime';
 import { describeProjectSetup, detectProjectSetup, ProjectSetup } from '../lib/projectSetup';
 import { AbsolutePath, Context, Deps, Storybook, TaskFunction } from '../types';
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
@@ -59,7 +60,7 @@ export const setStorybookInfo: TaskFunction<
   const storybook = await getStorybookInfo(deps, projectRoot);
   // Detected once, from the config directory, because that is where Storybook resolves its own
   // packages from; everything that needs to know how dependencies are installed reads this.
-  const projectSetup = detectProjectSetup(storybook.configDir);
+  const projectSetup = activateProjectPnpRuntime(detectProjectSetup(storybook.configDir), deps.log);
   deps.log.debug('Detected project setup:', projectSetup);
   return { kind: 'continue', output: { storybook, projectSetup } };
 };

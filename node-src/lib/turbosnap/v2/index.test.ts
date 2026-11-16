@@ -356,6 +356,18 @@ describe('traceChangedFiles', () => {
       },
       'Run Chromatic through Yarn',
     ],
+    [
+      // Loading it already reported the failure; see pnpRuntime.ts.
+      "a Plug'n'Play project's runtime failed to load",
+      {
+        layout: 'pnp' as const,
+        packageManager: 'yarn' as const,
+        installRoot: '/repo',
+        pnpFile: '/repo/.pnp.cjs',
+        pnpRuntime: 'failed' as const,
+      },
+      'runtime failed to load',
+    ],
   ])('falls back without reporting when %s', async (_, projectSetup, message) => {
     for (const level of ['error', 'debug'] as const) {
       const fixture = setup();

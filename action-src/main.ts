@@ -6,6 +6,7 @@ import * as Sentry from '@sentry/node';
 import path from 'path';
 
 import { run as runNode } from '../node-src';
+import { allowProjectPnpRuntime } from '../node-src/lib/pnpRuntime';
 
 const maybe = (a: string | string[], b: any = undefined) => {
   if (!a) {
@@ -226,6 +227,7 @@ async function run() {
   }
 }
 
+allowProjectPnpRuntime();
 run()
   .catch((runError) => {
     error(runError);

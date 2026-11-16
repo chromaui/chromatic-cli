@@ -8,6 +8,7 @@ import { getRepositoryRoot } from '../node-src/git/git';
 import { getStorybookProjectRoot } from '../node-src/lib/getStorybookProjectRoot';
 import { createLogger } from '../node-src/lib/log';
 import { meowImportMeta } from '../node-src/lib/meowImportMeta';
+import { activateProjectPnpRuntime, allowProjectPnpRuntime } from '../node-src/lib/pnpRuntime';
 import { detectProjectSetup } from '../node-src/lib/projectSetup';
 import { readStatsFile } from '../node-src/tasks/readStatsFile';
 
@@ -112,13 +113,14 @@ export async function main(argv: string[]) {
   }
 
   const configDirectory = path.resolve(projectRoot, cli.flags.configDir);
+  allowProjectPnpRuntime();
   const manifest = await buildManifest(await readStatsFile(statsPath), {
     log,
     projectRoot,
     gitRoot,
     untraced: cli.flags.untraced ?? [],
     configDir: configDirectory,
-    projectSetup: detectProjectSetup(configDirectory),
+    projectSetup: activateProjectPnpRuntime(detectProjectSetup(configDirectory), log),
     ...(cli.flags.vitest && { e2ePackage: '@chromatic-com/vitest' }),
     staticDirs: (cli.flags.staticDir?.split(',') ?? []).map((directory) =>
       path.resolve(projectRoot, directory)
