@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/node';
 import { isE2EBuild } from '../lib/e2eUtils';
 import getStorybookInfo from '../lib/getStorybookInfo';
 import { getStorybookProjectRoot } from '../lib/getStorybookProjectRoot';
+import { describeProjectSetup, detectProjectSetup, ProjectSetup } from '../lib/projectSetup';
 import { AbsolutePath, Context, Deps, Storybook, TaskFunction } from '../types';
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 
@@ -21,6 +22,7 @@ export const extractStorybookInfoInput = (ctx: Context): StorybookInfoInput => (
 
 export interface StorybookInfoOutput {
   storybook: Storybook;
+  projectSetup: ProjectSetup;
 }
 
 export const setStorybookInfo: TaskFunction<
@@ -55,12 +57,22 @@ export const setStorybookInfo: TaskFunction<
   });
 
   const storybook = await getStorybookInfo(deps, projectRoot);
-  return { kind: 'continue', output: { storybook } };
+  // Detected once, from the config directory, because that is where Storybook resolves its own
+  // packages from; everything that needs to know how dependencies are installed reads this.
+  const projectSetup = detectProjectSetup(storybook.configDir);
+  deps.log.debug('Detected project setup:', projectSetup);
+  return { kind: 'continue', output: { storybook, projectSetup } };
 };
 
 // extracted so we can test it more easily
-export const applyStorybookInfoOutput = (ctx: Context, { storybook }: StorybookInfoOutput) => {
+export const applyStorybookInfoOutput = (
+  ctx: Context,
+  { storybook, projectSetup }: StorybookInfoOutput
+) => {
   ctx.storybook = storybook;
+  ctx.projectSetup = projectSetup;
+  Sentry.setTag('project_setup', describeProjectSetup(projectSetup));
+  Sentry.setContext('project_setup', projectSetup);
   if (storybook.version) {
     Sentry.setTag('storybookVersion', storybook.version);
   }

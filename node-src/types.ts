@@ -5,6 +5,7 @@ import type { AnalyticsClient } from './lib/analytics';
 import type { Configuration } from './lib/getConfiguration';
 import { Environment } from './lib/getEnvironment';
 import { Logger } from './lib/log';
+import type { ProjectSetup } from './lib/projectSetup';
 
 type FilePath = string;
 
@@ -433,6 +434,8 @@ export interface Context {
 
   git: Git;
   storybook: Storybook;
+  /** How the project's dependencies are installed, detected from the Storybook config directory. */
+  projectSetup: ProjectSetup;
   projectMetadata: ProjectMetadata;
   storybookUrl?: string;
   announcedBuild: AnnouncedBuild;

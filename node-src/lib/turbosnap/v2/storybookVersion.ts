@@ -1,5 +1,6 @@
 import semver from 'semver';
 
+import { AbsolutePath } from '../../../types';
 import { viewLayers } from '../../viewLayers';
 import { ManifestInput } from './manifestInput';
 
@@ -21,6 +22,22 @@ const LEGACY_PACKAGES = [
 // The first version that requires `storybook`. A legacy package at this version or later means the
 // install is missing `storybook`, or holds a stale copy, so its version can't stand in for one.
 const STORYBOOK_REQUIRED_SINCE = '8.2.0';
+
+/**
+ * Thrown when no version can be resolved for the Storybook, or for an E2E build's package. Typed, so
+ * Sentry groups every occurrence by what failed instead of by the path or the minified stack.
+ */
+export class VersionUnresolvedError extends Error {
+  readonly name = 'VersionUnresolvedError';
+
+  constructor(
+    readonly kind: 'storybook' | 'e2e-package',
+    readonly fromDirectory: AbsolutePath,
+    message: string
+  ) {
+    super(message);
+  }
+}
 
 function isLegacyVersion(version: string) {
   const coerced = semver.coerce(version);
@@ -75,10 +92,12 @@ export function resolveStorybookVersion(
   }
 
   // Without a version there is no gate on a Storybook upgrade, so refuse to build a manifest that
-  // would silently under-capture. Not finding a Storybook dependency usually means nothing is
-  // installed so we'll inform the customer accordingly.
-  throw new Error(
-    `Could not resolve a Storybook version from ${input.configDir}: neither ${STORYBOOK_PACKAGE} nor, for Storybook 8.1 and earlier, its preview, core or renderer packages could be resolved with a version. TurboSnap hashes installed dependencies, so they must be installed before running Chromatic, even for a prebuilt Storybook.`
+  // would silently under-capture. A project with nothing installed was refused before this lookup,
+  // so here dependencies are installed but Storybook isn't among those the config directory reaches.
+  throw new VersionUnresolvedError(
+    'storybook',
+    input.configDir,
+    `Could not resolve a Storybook version from ${input.configDir}: neither ${STORYBOOK_PACKAGE} nor, for Storybook 8.1 and earlier, its preview, core, renderer or framework packages could be resolved with a version. Check that Storybook is a dependency of the package that holds this config directory.`
   );
 }
 
@@ -100,8 +119,10 @@ function resolveE2EPackageVersion(
 ): string {
   const version = input.projectFiles.packageVersion(input.projectRoot, e2ePackage);
   if (!version) {
-    throw new Error(
-      `Could not resolve a version of ${e2ePackage} from ${input.projectRoot}. TurboSnap hashes installed dependencies, so they must be installed before running Chromatic.`
+    throw new VersionUnresolvedError(
+      'e2e-package',
+      input.projectRoot,
+      `Could not resolve a version of ${e2ePackage} from ${input.projectRoot}. Check that it is a dependency of the project.`
     );
   }
   return `${e2ePackage}@${version}`;

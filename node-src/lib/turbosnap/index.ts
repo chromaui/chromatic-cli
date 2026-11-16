@@ -161,6 +161,7 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<HashBasedTurb
         ...(ctx.options.vitest && { e2ePackage: '@chromatic-com/vitest' }),
         staticDirs: ctx.storybook.staticDirs,
         externals: ctx.options.externals ?? [],
+        projectSetup: ctx.projectSetup,
         projectFiles: realProjectFiles({ log: ctx.log, options: ctx.options }),
       });
       return result.status === 'fallback' ? result.hashBased : undefined;

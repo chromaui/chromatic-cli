@@ -2,6 +2,7 @@ import path from 'path';
 import xxHashWasm from 'xxhash-wasm';
 
 import { Stats } from '../../../types';
+import { assertDependenciesReadable } from '../../projectSetup';
 import {
   collectTransitiveDependencies,
   FileHash,
@@ -173,7 +174,10 @@ export async function buildManifest(
   // upgrade there. Track the version instead; it is a plain string, not a hash. A Storybook project
   // resolves it from the config directory, so it runs after the sweep above has confirmed that
   // directory holds a main config: a wrong config directory is then reported as such instead of as
-  // missing dependencies. An E2E build resolves its package from the project root instead.
+  // missing dependencies. An E2E build resolves its package from the project root instead. A setup
+  // whose dependency files can't be read is refused first: the graph above silently leaves out every
+  // file it can't stat, so a version alone would yield a manifest blind to dependency upgrades.
+  assertDependenciesReadable(input.projectSetup, input.configDir);
   storybookConfigHashes.set(STORYBOOK_VERSION_KEY, resolveStorybookVersion(input));
 
   for (const [key, hash] of rollUpOutOfGraphFiles(outOfGraphFiles, h64ToString)) {

@@ -7,6 +7,7 @@ import TestLogger from '../../testLogger';
 import { traceChangedFiles } from './index';
 import { ProjectFiles } from './projectFiles';
 import { InMemoryDisk, inMemoryProjectFiles } from './projectFiles.fake';
+import { VersionUnresolvedError } from './storybookVersion';
 
 type FailureLogLevel = Parameters<typeof traceChangedFiles>[0]['failureLogLevel'];
 
@@ -142,7 +143,7 @@ describe('traceChangedFiles', () => {
     'surfaces the install advice at the %s level when Storybook cannot be resolved',
     async (level) => {
       const fixture = setup();
-      // A checkout with nothing installed: the version lookup is the first thing to notice.
+      // Dependencies are installed, but none of them is Storybook.
       fixture.disk.packageVersions = {};
 
       await expect(trace(fixture, {}, level)).resolves.toEqual({ status: 'fallback' });
@@ -150,7 +151,7 @@ describe('traceChangedFiles', () => {
       expect(fixture.log[level]).toHaveBeenCalledWith(
         'Failed to build manifest for TurboSnap 2.0',
         expect.objectContaining({
-          message: expect.stringContaining('must be installed before running Chromatic'),
+          message: expect.stringContaining('Check that Storybook is a dependency'),
         })
       );
     }
@@ -309,6 +310,68 @@ describe('traceChangedFiles', () => {
     }
   );
 
+  it('groups an unresolved Storybook version by layout, whatever the path or message', async () => {
+    const reports: unknown[][] = [];
+    for (const otherConfigDirectory of [configDirectory, `${projectRoot}/config/storybook`]) {
+      vi.mocked(Sentry.captureException).mockClear();
+      const fixture = setup();
+      fixture.disk.packageVersions = {};
+      fixture.disk.directories = { [otherConfigDirectory]: ['main.ts'] };
+
+      await expect(
+        trace(fixture, {}, 'error', { configDir: otherConfigDirectory })
+      ).resolves.toEqual({
+        status: 'fallback',
+      });
+
+      expect(Sentry.captureException).toHaveBeenCalledOnce();
+      const [error, hint] = vi.mocked(Sentry.captureException).mock.calls[0];
+      // The original error goes out unchanged, path and all; only the grouping ignores it.
+      expect(error).toBeInstanceOf(VersionUnresolvedError);
+      expect((error as Error).message).toContain(otherConfigDirectory);
+      reports.push([(hint as any).fingerprint, (hint as any).tags]);
+    }
+
+    const expected = [
+      ['turbosnap-v2', 'storybook-version-unresolved', 'node_modules'],
+      { turbosnap_failure: 'storybook-version-unresolved' },
+    ];
+    expect(reports).toEqual([expected, expected]);
+  });
+
+  it.each([
+    [
+      'nothing is installed',
+      { layout: 'not-installed' as const },
+      'Found no installed dependencies',
+    ],
+    [
+      "a Plug'n'Play project's runtime isn't active",
+      {
+        layout: 'pnp' as const,
+        packageManager: 'yarn' as const,
+        installRoot: '/repo',
+        pnpFile: '/repo/.pnp.cjs',
+        pnpRuntime: 'inactive' as const,
+      },
+      'Run Chromatic through Yarn',
+    ],
+  ])('falls back without reporting when %s', async (_, projectSetup, message) => {
+    for (const level of ['error', 'debug'] as const) {
+      const fixture = setup();
+
+      await expect(trace(fixture, {}, level, { projectSetup })).resolves.toEqual({
+        status: 'fallback',
+      });
+
+      expect(fixture.log[level]).toHaveBeenCalledWith(expect.stringContaining(message));
+      expect(fixture.runQuery).not.toHaveBeenCalled();
+      expect(writtenManifest(fixture)).toBeUndefined();
+    }
+    // The user can fix this, so it is not a CLI bug to report.
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
   it('names the refusal even when the Index sends an error without a message', async () => {
     const fixture = setup();
     fixture.runQuery.mockResolvedValue({ buildUploadHashes: { errors: [{}] } });
@@ -330,7 +393,12 @@ function trace(
   { log, projectFiles, runQuery }: Fixture,
   patchFiles: Partial<ProjectFiles> = {},
   failureLogLevel: FailureLogLevel = 'error',
-  overrides: { gitRoot?: string; externals?: string[]; onlyChanged?: boolean } = {}
+  overrides: Partial<
+    Pick<
+      Parameters<typeof traceChangedFiles>[0],
+      'gitRoot' | 'externals' | 'onlyChanged' | 'configDir' | 'projectSetup'
+    >
+  > = {}
 ) {
   return traceChangedFiles({
     log,
@@ -346,6 +414,7 @@ function trace(
     configDir: configDirectory,
     staticDirs: [`${configDirectory}/static`],
     externals: [],
+    projectSetup: { layout: 'node_modules', packageManager: 'npm', installRoot: '/repo' },
     projectFiles: { ...projectFiles, ...patchFiles },
     ...overrides,
   });

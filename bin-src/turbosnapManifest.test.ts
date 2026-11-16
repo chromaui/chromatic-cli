@@ -4,6 +4,7 @@ import { existsSync } from 'fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getRepositoryRoot } from '../node-src/git/git';
+import { detectProjectSetup } from '../node-src/lib/projectSetup';
 import TestLogger from '../node-src/lib/testLogger';
 import { readStatsFile } from '../node-src/tasks/readStatsFile';
 import { main } from './turbosnapManifest';
@@ -12,6 +13,7 @@ const testLogger = new TestLogger();
 const manifest = { storybookHash: 'abc' };
 const serialized = { storybookHash: 'abc', storyFiles: {} };
 const projectFiles = { readFile: vi.fn() };
+const projectSetup = { layout: 'node_modules', packageManager: 'npm', installRoot: '/repo' };
 
 vi.mock('fs', async (importOriginal) => ({
   ...(await importOriginal<typeof import('fs')>()),
@@ -33,6 +35,10 @@ vi.mock('../node-src/git/git', () => ({
 
 vi.mock('../node-src/tasks/readStatsFile', () => ({
   readStatsFile: vi.fn(() => ({ modules: [] })),
+}));
+
+vi.mock('../node-src/lib/projectSetup', () => ({
+  detectProjectSetup: vi.fn(() => projectSetup),
 }));
 
 vi.mock('../node-src/lib/log', () => ({
@@ -61,11 +67,13 @@ describe('turbosnap-manifest', () => {
         gitRoot: '/repo',
         untraced: [],
         configDir: '/repo/.storybook',
+        projectSetup,
         staticDirs: [],
         externals: [],
         projectFiles,
       }
     );
+    expect(detectProjectSetup).toHaveBeenCalledWith('/repo/.storybook');
     expect(realProjectFiles).toHaveBeenCalled();
   });
 

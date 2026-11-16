@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import storybookInfo from '../lib/getStorybookInfo';
 import { getStorybookProjectRoot } from '../lib/getStorybookProjectRoot';
+import { detectProjectSetup, ProjectSetup } from '../lib/projectSetup';
 import { Storybook } from '../types';
 import { applyStorybookInfoOutput, setStorybookInfo, StorybookInfoDeps } from './storybookInfo';
 
@@ -12,6 +13,17 @@ vi.mock('../lib/getStorybookProjectRoot', async (importOriginal) => ({
   getStorybookProjectRoot: vi.fn(),
 }));
 vi.mock('@sentry/node', () => ({ setTag: vi.fn(), setContext: vi.fn() }));
+vi.mock('../lib/projectSetup', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/projectSetup')>()),
+  detectProjectSetup: vi.fn(),
+}));
+
+const projectSetup: ProjectSetup = {
+  layout: 'node_modules',
+  packageManager: 'pnpm',
+  installRoot: '/repo',
+};
+vi.mocked(detectProjectSetup).mockReturnValue(projectSetup);
 
 const getStorybookInfo = vi.mocked(storybookInfo);
 const mockedGetStorybookProjectRoot = vi.mocked(getStorybookProjectRoot);
@@ -53,8 +65,10 @@ describe('setStorybookInfo', () => {
 
     expect(result).toEqual({
       kind: 'continue',
-      output: { storybook },
+      output: { storybook, projectSetup },
     });
+    // Detected from where Storybook resolves its own packages, not from the working directory.
+    expect(detectProjectSetup).toHaveBeenCalledWith('/some/git/root/packages/sb/.storybook-custom');
   });
 
   it('passes gitRootPath through to getStorybookProjectRoot', async () => {
@@ -88,7 +102,7 @@ describe('setStorybookInfo', () => {
       isReactNativeApp: false,
     });
 
-    expect(result).toEqual({ kind: 'continue', output: { storybook } });
+    expect(result).toEqual({ kind: 'continue', output: { storybook, projectSetup } });
   });
 
   it('skips the build script check for react-native apps', async () => {
@@ -121,14 +135,25 @@ describe('applyStorybookInfoOutput', () => {
     const ctx = {} as any;
     const storybook = buildStorybook();
 
-    applyStorybookInfoOutput(ctx, { storybook });
+    applyStorybookInfoOutput(ctx, { storybook, projectSetup });
 
     expect(ctx.storybook).toBe(storybook);
+    expect(ctx.projectSetup).toBe(projectSetup);
+  });
+
+  it('tags the Sentry scope with the project setup', () => {
+    applyStorybookInfoOutput({} as any, { storybook: buildStorybook(), projectSetup });
+
+    expect(mockedSentrySetTag).toHaveBeenCalledWith('project_setup', 'pnpm-node_modules');
+    expect(mockedSentrySetContext).toHaveBeenCalledWith('project_setup', projectSetup);
   });
 
   it('tags the Sentry scope with the Storybook version', () => {
     mockedSentrySetTag.mockClear();
-    applyStorybookInfoOutput({} as any, { storybook: buildStorybook({ version: '7.6.1' }) });
+    applyStorybookInfoOutput({} as any, {
+      storybook: buildStorybook({ version: '7.6.1' }),
+      projectSetup,
+    });
 
     expect(mockedSentrySetTag).toHaveBeenCalledWith('storybookVersion', '7.6.1');
   });
@@ -137,16 +162,17 @@ describe('applyStorybookInfoOutput', () => {
     mockedSentrySetTag.mockClear();
     applyStorybookInfoOutput({} as any, {
       storybook: buildStorybook({ version: undefined }),
+      projectSetup,
     });
 
-    expect(mockedSentrySetTag).not.toHaveBeenCalled();
+    expect(mockedSentrySetTag).not.toHaveBeenCalledWith('storybookVersion', expect.anything());
   });
 
   it('attaches Storybook metadata without absolute paths as Sentry context', () => {
     mockedSentrySetContext.mockClear();
     const storybook = buildStorybook();
 
-    applyStorybookInfoOutput({} as any, { storybook });
+    applyStorybookInfoOutput({} as any, { storybook, projectSetup });
 
     expect(mockedSentrySetContext).toHaveBeenCalledWith('storybook', {
       version: '1.0.0',

@@ -3,10 +3,13 @@ import * as Sentry from '@sentry/node';
 import GraphQLClient from '../../../io/graphqlClient';
 import type { AbsolutePath, HashBasedTurboSnap, Stats } from '../../../types';
 import missingStorybookConfig from '../../../ui/messages/warnings/missingStorybookConfig';
+import { DependenciesNotInstalledError, PnpRuntimeInactiveError } from '../../projectSetup';
 import { TraceChangedFilesResult } from '../types';
+import { captureTurboSnapFailure } from './captureFailure';
 import { buildManifest, TurboSnapManifest, writeManifest } from './manifest';
 import { ManifestInput } from './manifestInput';
 import { MissingStorybookConfigError } from './outOfGraphFiles';
+import { VersionUnresolvedError } from './storybookVersion';
 import { BuildUploadHashesResponse, uploadHashes } from './uploadHashes';
 
 /**
@@ -69,6 +72,15 @@ export async function traceChangedFiles(
     // A misconfigured project is the user's to fix, not a bug to report.
     if (error instanceof MissingStorybookConfigError) {
       input.log[input.failureLogLevel](missingStorybookConfig(error.configDirectory));
+      return { status: 'fallback' };
+    }
+    if (
+      error instanceof DependenciesNotInstalledError ||
+      error instanceof PnpRuntimeInactiveError
+    ) {
+      input.log[input.failureLogLevel](
+        `${error.message} TurboSnap 2.0 skipped this build. When TurboSnap is enabled, the build uses TurboSnap 1.0, so your current TurboSnap behavior is unaffected.`
+      );
       return { status: 'fallback' };
     }
     return failed(input, 'Failed to build manifest for TurboSnap 2.0', error);
@@ -140,11 +152,23 @@ function requireGitRoot(gitRoot: AbsolutePath | undefined): AbsolutePath {
 }
 
 function failed(
-  input: Pick<TraceChangedFilesInput, 'log' | 'failureLogLevel'>,
+  input: Pick<TraceChangedFilesInput, 'log' | 'failureLogLevel' | 'projectSetup'>,
   message: string,
   error: unknown
 ): TraceChangedFilesV2Result {
   input.log[input.failureLogLevel](message, error);
-  Sentry.captureException(error);
+  if (error instanceof VersionUnresolvedError) {
+    // Split by layout: a lookup that fails under Plug'n'Play and one that fails in node_modules are
+    // different bugs.
+    captureTurboSnapFailure(
+      error,
+      [`${error.kind}-version-unresolved`, input.projectSetup.layout],
+      {
+        version_lookup: { kind: error.kind, fromDirectory: error.fromDirectory },
+      }
+    );
+  } else {
+    Sentry.captureException(error);
+  }
   return { status: 'fallback' };
 }

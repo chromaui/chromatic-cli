@@ -43,6 +43,7 @@ export function createFixture(overrides: InMemoryDisk = {}): ManifestFixture {
       configDir: `${projectRoot}/.storybook`,
       staticDirs: [`${projectRoot}/.storybook/static`],
       externals: [],
+      projectSetup: { layout: 'node_modules', packageManager: 'npm', installRoot: '/repo' },
       projectFiles: inMemoryProjectFiles(disk),
     },
   };

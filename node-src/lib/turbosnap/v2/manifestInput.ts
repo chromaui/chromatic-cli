@@ -1,5 +1,6 @@
 import { AbsolutePath } from '../../../types';
 import { Logger } from '../../log';
+import { ProjectSetup } from '../../projectSetup';
 import { ProjectFiles } from './projectFiles';
 
 /**
@@ -41,6 +42,11 @@ export interface ManifestInput {
   staticDirs: AbsolutePath[];
   /** The user's `--externals` globs, relative to `gitRoot`. Empty when unset. */
   externals: string[];
+  /**
+   * How the project's dependencies are installed, detected once from the config directory. A setup
+   * whose dependency files can't be read refuses to build a manifest; see `assertDependenciesReadable`.
+   */
+  projectSetup: ProjectSetup;
   /** How to read the disk; required, so no caller can silently get the real one. */
   projectFiles: ProjectFiles;
 }
