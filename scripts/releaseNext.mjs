@@ -39,4 +39,4 @@ async function build() {
   console.info('✅ Build with new version completed, ready for push to action-next!');
 }
 
-main();
+await main();

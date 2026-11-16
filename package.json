@@ -76,7 +76,7 @@
     "chromatic-staging": "CHROMATIC_INDEX_URL=https://www.staging-chromatic.com ./dist/bin.cjs",
     "chromatic-verbose": "cross-env LOG_LEVEL=verbose ./dist/bin.cjs",
     "knip": "knip",
-    "lint": "yarn lint:js bin-src node-src ./isChromatic.js ./isChromatic.mjs",
+    "lint": "yarn lint:js .",
     "lint:js": "cross-env NODE_ENV=production eslint --cache --cache-location=.cache/eslint --report-unused-disable-directives",
     "lint:package": "sort-package-json",
     "release": "./scripts/release.mjs",

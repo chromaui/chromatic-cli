@@ -121,7 +121,7 @@ async function run() {
     const onlyChanged = getInput('onlyChanged');
     const onlyStoryFiles = getMultilineInput('onlyStoryFiles');
     const onlyStoryNames = getMultilineInput('onlyStoryNames');
-    const outputDir = getInput('outputDir');
+    const outputDirectory = getInput('outputDir');
     const playwright = getInput('playwright');
     const preserveMissing = getInput('preserveMissing');
     const projectToken = getInput('projectToken');
@@ -129,15 +129,15 @@ async function run() {
     const shaInput = getInput('chromaticSha');
     const skip = getInput('skip');
     const skipUpdateCheck = getInput('skipUpdateCheck');
-    const storybookBaseDir = getInput('storybookBaseDir');
-    const storybookBuildDir = getInput('storybookBuildDir');
-    const storybookConfigDir = getInput('storybookConfigDir');
+    const storybookBaseDirectory = getInput('storybookBaseDir');
+    const storybookBuildDirectory = getInput('storybookBuildDir');
+    const storybookConfigDirectory = getInput('storybookConfigDir');
     const storybookLogFile = getInput('storybookLogFile');
     const traceChanged = getInput('traceChanged');
     const untraced = getMultilineInput('untraced');
     const uploadMetadata = getInput('uploadMetadata');
     const vitest = getInput('vitest');
-    const workingDir = getInput('workingDir') || getInput('workingDirectory');
+    const workingDirectory = getInput('workingDir') || getInput('workingDirectory');
     const zip = getInput('zip');
     const junitReport = getInput('junitReport');
 
@@ -153,7 +153,7 @@ async function run() {
       process.env.CHROMATIC_PULL_REQUEST_SHA = mergeCommit;
     }
 
-    process.chdir(path.resolve(process.cwd(), workingDir || ''));
+    process.chdir(path.resolve(process.cwd(), workingDirectory || ''));
 
     const isMergeQueueBuild = context.eventName === 'merge_group';
     if (isMergeQueueBuild && exitZeroOnChanges === 'true') {
@@ -189,16 +189,16 @@ async function run() {
         onlyChanged: maybe(onlyChanged),
         onlyStoryFiles: maybe(onlyStoryFiles),
         onlyStoryNames: maybe(onlyStoryNames),
-        outputDir: maybe(outputDir),
+        outputDir: maybe(outputDirectory),
         playwright: maybe(playwright),
         preserveMissing: maybe(preserveMissing),
         projectToken: maybe(projectToken),
         repositorySlug: maybe(repositorySlug),
         skip: maybe(skip),
         skipUpdateCheck: maybe(skipUpdateCheck, false),
-        storybookBaseDir: maybe(storybookBaseDir),
-        storybookBuildDir: maybe(storybookBuildDir),
-        storybookConfigDir: maybe(storybookConfigDir),
+        storybookBaseDir: maybe(storybookBaseDirectory),
+        storybookBuildDir: maybe(storybookBuildDirectory),
+        storybookConfigDir: maybe(storybookConfigDirectory),
         storybookLogFile: maybe(storybookLogFile),
         traceChanged: maybe(traceChanged),
         untraced: maybe(untraced),
@@ -232,4 +232,6 @@ run()
     setFailed(runError.message);
     Sentry.captureException(runError);
   })
+  // The Action is bundled as CommonJS (action/register.cjs), which has no top-level await.
+  // eslint-disable-next-line unicorn/prefer-top-level-await
   .finally(() => Sentry.flush(2500).finally(() => process.exit()));
