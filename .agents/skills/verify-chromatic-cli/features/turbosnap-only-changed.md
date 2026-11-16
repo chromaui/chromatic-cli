@@ -35,7 +35,7 @@ Preconditions:
 - **No relevant change.** Change only the package nothing imports. Run `sed -i 's/Hello/Hi/' "$F/packages/backend/src/index.ts" && $S commit "$F" "backend only"`. Run `$S run ts-nochange --cwd "$UI" -- "${A[@]}" --trace-changed --exit-zero-on-changes --diagnostics-file "$EVIDENCE/ts-nochange/d.json" --log-file "$EVIDENCE/ts-nochange/chromatic.log"`. Exit code `0`. stdout shows:
   - `Found 1 changed files:` listing `packages/backend/src/index.ts`
   - `found 1 parent build and 1 changed file`
-  - `ℹ Traced 1 changed file to 0 affected story files:`
+  - `ℹ Traced 1 changed file to 0 potentially affected story files:`
   - `Bypassed 2 snapshots because no frontend files were changed.`
   - `✔ This build was skipped and will not be displayed in Chromatic.`
   - `ℹ View ancestor build details at …&number=<ancestor>`
@@ -44,9 +44,9 @@ Preconditions:
   In `d.json`, `.skip` is `true`, `.announcedBuild.status` is `ANNOUNCED`, and `.build.number` is the ancestor's. Nothing is uploaded: there is no `Uploading … metadata files` line.
 - **One relevant change.** Change the workspace package that `Button` imports. Run `sed -i 's/slice(1)/slice(1).trim()/' "$F/packages/shared/src/index.ts" && $S commit "$F" "shared change"`. Run `$S run ts-onechange --cwd "$UI" -- "${A[@]}" --trace-changed --exit-zero-on-changes --diagnostics-file "$EVIDENCE/ts-onechange/d.json" --log-file "$EVIDENCE/ts-onechange/chromatic.log"`. Exit code `0`. stdout shows:
   - `Running command: pnpm run build-storybook --output-dir=<tmp> --stats-json=<tmp>`, because the fixture script leaves the stats flag out
-  - `ℹ Traced <n> changed files to 1 affected story file:` with the tree `packages/shared/src/index.ts [changed]` → `packages/ui/src/Button.tsx` → `packages/ui/src/Button.stories.tsx` → `[story index]`. `<n>` counts every file changed since the baseline commit, so it can include the backend file from `ts-nochange`.
+  - `ℹ Traced <n> changed files to 1 potentially affected story file:` with the tree `packages/shared/src/index.ts [changed]` → `packages/ui/src/Button.tsx` → `packages/ui/src/Button.stories.tsx` → `[story index]`. `<n>` counts every file changed since the baseline commit, so it can include the backend file from `ts-nochange`.
   - `Capturing 1 snapshot; copying 1 snapshot with TurboSnap.`
-  - `Running 1 test affected by recent changes (skipping 1 test)`
+  - `Running 1 test potentially affected by recent changes (skipping 1 test)`
 
   In `d.json`, `.build.actualCaptureCount` is `1`, `.build.inheritedCaptureCount` is `1`, and `.onlyStoryFiles | length` is `1`.
 - **Metadata upload.** In the same run, stdout ends with `Uploading metadata files automatically because TurboSnap was enabled` and `ℹ Uploading <n> metadata files to <storybookUrl>.chromatic/`. The list that follows includes `build-storybook.log`, `chromatic.log`, `d.json` (your `--diagnostics-file` basename), `main.ts`, `preview.ts`, `preview-stats.trimmed.json`, `turbosnap-manifest.json` and `index.html`.
@@ -67,7 +67,7 @@ To check a change to the repo's own stories instead, use `$S checkout` and `$S c
 - Change counts include inherited pending changes. A build that captures 1 snapshot can report a higher `changeCount`, and `ts-onechange-strict` can report more visual changes than it captured, when an earlier build still has unreviewed changes. Assert on `actualCaptureCount` and the trace, not `changeCount`.
 - `--exit-zero-on-changes` prints `✔ Build <N> completed` for a `PENDING` build with changes. Read `.build.status` and `.build.changeCount` rather than the summary line.
 - A skipped build (`ts-nochange`) prints `Publishing your built Storybook` before the skip message, then `Publish skipped` after it. Assert on `Publish skipped`.
-- Changed files that reach no story, such as `packages/backend/`, still count in the summary (`Found <n> changed files`, `Traced <n> changed file to 0 affected story files`), but the trace tree below it lists only files that reach a story.
+- Changed files that reach no story, such as `packages/backend/`, still count in the summary (`Found <n> changed files`, `Traced <n> changed file to 0 potentially affected story files`), but the trace tree below it lists only files that reach a story.
 - Dependency changes are traced by package name, not by the version a story loads. A dependency that brings in a second version of a package the Storybook already uses (for example `is-odd`, which depends on `is-number@^6`) marks every copy of that name changed and can bail on `.storybook/preview.*`. Use dependency-free packages such as `left-pad` for dependency journeys.
 - Install output is not checked by `$S commit`. npm rejects an `overrides` entry that conflicts with a direct dependency (`EOVERRIDE`) and leaves the lockfile alone, so check `git show --stat` for the lockfile before driving.
 - The 1.0 trace lines assume the project uses TurboSnap 1.0, where `.hashBasedTurboSnap` in `d.json` is `null`. When the index handles a build with TurboSnap 2.0, stdout shows `Using TurboSnap 2.0` and `TurboSnap 2.0 enabled`, or `TurboSnap 2.0 disabled` and plain `TurboSnap enabled` after a 2.0 bail, and the 1.0 `Traced …` and `Found <n> changed dependencies` lines drop to debug level. Read them from `--log-file` instead of stdout. With `CHROMATIC_TURBOSNAP_DISABLE_V1=true`, 1.0 doesn't run at all on those builds, so the lines are missing from the log file too. The index ignores the 1.0 result on those builds, so the 1.0 trace is only diagnostic there: check `.hashBasedTurboSnap` for the 2.0 decision and `.build.actualCaptureCount` for how many snapshots were captured, which doesn't say which stories they were.

@@ -22,7 +22,7 @@ import { Context } from '../node-src/types';
  *   npx chromatic trace -s ./path/to/preview-stats.json ./src/button.js ./src/header.js
  *
  * Example output:
- *   ℹ Traced 2 changed files to 1 affected story file:
+ *   ℹ Traced 2 changed files to 1 potentially affected story file:
  *   — src/button.js [changed]
  *     ∟ src/button.stories.tsx
  *       ∟ [story index]

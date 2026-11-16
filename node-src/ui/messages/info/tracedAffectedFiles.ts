@@ -51,7 +51,7 @@ export default (
 
   const changed = pluralize('changed files', changedFiles.length, true);
   const affected = pluralize(
-    `affected ${testType(ctx)} files`,
+    `potentially affected ${testType(ctx)} files`,
     Object.keys(affectedModules).length,
     true
   );

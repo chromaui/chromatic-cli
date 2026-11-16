@@ -22,8 +22,8 @@ function cases(storybookText: string, e2eText: string, files = ['a', 'b']) {
 describe('TurboSnap terminology', () => {
   it.each(
     cases(
-      'Retrieving story files affected by recent changes',
-      'Retrieving test files affected by recent changes'
+      'Retrieving story files potentially affected by recent changes',
+      'Retrieving test files potentially affected by recent changes'
     )
   )('tracing uses $name terminology', ({ options, files, output }) => {
     expect(tracing({ options, git: { changedFiles: files } } as Context).title).toBe(output);
@@ -31,13 +31,13 @@ describe('TurboSnap terminology', () => {
 
   it.each([
     ...cases(
-      'Found 1 story file affected by recent changes',
-      'Found 1 test file affected by recent changes',
+      'Found 1 story file potentially affected by recent changes',
+      'Found 1 test file potentially affected by recent changes',
       ['a']
     ),
     ...cases(
-      'Found 2 story files affected by recent changes',
-      'Found 2 test files affected by recent changes'
+      'Found 2 story files potentially affected by recent changes',
+      'Found 2 test files potentially affected by recent changes'
     ),
   ])('traced uses $name terminology: $output', ({ options, files, output }) => {
     expect(traced({ options, onlyStoryFiles: files } as Context).output).toBe(output);
@@ -45,13 +45,13 @@ describe('TurboSnap terminology', () => {
 
   it.each([
     ...cases(
-      'Snapshots will be limited to 1 story file affected by recent changes',
-      'Snapshots will be limited to 1 test file affected by recent changes',
+      'Snapshots will be limited to 1 story file potentially affected by recent changes',
+      'Snapshots will be limited to 1 test file potentially affected by recent changes',
       ['a']
     ),
     ...cases(
-      'Snapshots will be limited to 2 story files affected by recent changes',
-      'Snapshots will be limited to 2 test files affected by recent changes'
+      'Snapshots will be limited to 2 story files potentially affected by recent changes',
+      'Snapshots will be limited to 2 test files potentially affected by recent changes'
     ),
   ])('runOnlyFiles uses $name terminology: $output', ({ options, files, output }) => {
     expect(runOnlyFiles({ options, onlyStoryFiles: files } as Context).output).toBe(output);
@@ -106,7 +106,7 @@ describe('TurboSnap terminology', () => {
   it.each([
     {
       hashBasedTurboSnap: { bailed: false },
-      title: 'Running 2 tests affected by recent changes',
+      title: 'Running 2 tests potentially affected by recent changes',
     },
     { hashBasedTurboSnap: { bailed: true }, title: 'Running 2 tests' },
   ])('snapshot pending follows TurboSnap 2.0: $title', ({ hashBasedTurboSnap, title }) => {
@@ -119,8 +119,8 @@ describe('TurboSnap terminology', () => {
 
   it.each([
     ...cases(
-      'Traced 1 changed file to 1 affected story file',
-      'Traced 1 changed file to 1 affected test file'
+      'Traced 1 changed file to 1 potentially affected story file',
+      'Traced 1 changed file to 1 potentially affected test file'
     ),
     ...cases('∟ [story index]', '∟ [test index]'),
   ])('tracedAffectedFiles uses $name terminology: $output', ({ options, output }) => {

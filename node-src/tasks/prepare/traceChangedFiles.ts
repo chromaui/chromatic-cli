@@ -122,7 +122,9 @@ function reportTraceResult(
   if (!deps.options.interactive) {
     if (!deps.options.traceChanged) {
       deps.log.info(
-        `Found affected ${testType(deps)} files:\n${Object.entries(result.onlyStoryFiles)
+        `Found potentially affected ${testType(deps)} files:\n${Object.entries(
+          result.onlyStoryFiles
+        )
           .flatMap(([id, files]) => files.map((f) => `  ${f} [${id}]`))
           .join('\n')}`
       );
