@@ -33,6 +33,6 @@ export default ({
   const files = pluralize(`${testType({ options })} file`, onlyStoryFiles.length, true);
   return dedent(chalk`
     ${success} {bold TurboSnap enabled (dry run)}
-    Found ${files} affected by recent changes.
+    Found ${files} potentially affected by recent changes.
   `);
 };

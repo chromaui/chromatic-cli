@@ -252,7 +252,7 @@ describe('traceChangedFiles', () => {
       expect(d.log.info).toHaveBeenCalledTimes(1);
       expect(d.log.info.mock.calls[0][0]).toContain('TurboSnap enabled (dry run)');
       expect(d.log.info.mock.calls[0][0]).toContain(
-        'Found 2 story files affected by recent changes.'
+        'Found 2 story files potentially affected by recent changes.'
       );
     });
 
