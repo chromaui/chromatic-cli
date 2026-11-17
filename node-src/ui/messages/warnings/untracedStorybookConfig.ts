@@ -31,7 +31,7 @@ export default ({ matches }: { matches: UntracedFile[] }) => {
   return dedent(chalk`
     ${warning} {bold TurboSnap can miss changes to untraced Storybook config files}
     ${matched}
-    Changing your Storybook's {bold main}, {bold preview}, {bold preview-head.html}, or {bold preview-body.html} file can affect every story. TurboSnap ignores changes to untraced files, so it may not retest the stories a change to one of these files affects.
+    Changing your Storybook's {bold main}, {bold preview}, {bold preview-head.html}, or {bold preview-body.html} file can affect every story. TurboSnap ignores changes to untraced files and to files only they import, so it may not retest the stories those changes affect.
     ${info} Read more at ${link(docsUrl)}
   `);
 };
