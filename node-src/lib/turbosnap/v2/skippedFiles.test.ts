@@ -14,7 +14,21 @@ function context(disk: InMemoryDisk, untraced: string[] = []): SkipContext {
   return {
     gitRoot: '/repo',
     untraced,
+    configDir: configDirectory,
     projectFiles: inMemoryProjectFiles(disk),
+  };
+}
+
+// A context whose config directory is a symlink to the real one under `projectRoot`.
+function linkedContext(disk: InMemoryDisk, untraced: string[] = []): SkipContext {
+  const base = context(disk, untraced);
+  return {
+    ...base,
+    configDir: '/repo/apps/web/.storybook',
+    projectFiles: {
+      ...base.projectFiles,
+      realPath: (file: string) => file.replace('/repo/apps/web', projectRoot),
+    },
   };
 }
 
@@ -150,6 +164,39 @@ describe('buildSkipRule', () => {
     );
 
     expect(result).toEqual([[decorator, 'untraced']]);
+  });
+
+  it('skips the allowlisted config files an --untraced glob matches, except the main config', async () => {
+    const [main, ...others] = [
+      'main.ts',
+      'preview.ts',
+      'preview-head.html',
+      'preview-body.html',
+    ].map((fileName) => `${configDirectory}/${fileName}`);
+    const mocks = `${configDirectory}/mocks.json`;
+
+    const result = await skipped(
+      [main, ...others, mocks],
+      context({}, ['packages/ui/.storybook/**'])
+    );
+
+    expect(result).toEqual([...others, mocks].map((file) => [file, 'untraced']));
+  });
+
+  it('never skips the main config a bundler names behind a symlinked config directory', async () => {
+    const realMain = `${configDirectory}/main.ts`;
+
+    expect(await skipped([realMain], linkedContext({}, ['packages/ui/.storybook/**']))).toEqual([]);
+    expect(await skipped([realMain], linkedContext({ isUntracked: () => true }))).toEqual([]);
+  });
+
+  it('skips an untracked allowlisted config file, except the main config', async () => {
+    const main = `${configDirectory}/main.ts`;
+    const previewHead = `${configDirectory}/preview-head.html`;
+
+    const result = await skipped([main, previewHead], context({ isUntracked: () => true }));
+
+    expect(result).toEqual([[previewHead, 'untracked']]);
   });
 
   it("records a file both untraced and untracked as untraced, since that is the user's own say", async () => {

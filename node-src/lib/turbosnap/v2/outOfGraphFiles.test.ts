@@ -53,36 +53,40 @@ async function rollUp(input: OutOfGraphInput) {
 }
 
 describe('hashOutOfGraphFiles', () => {
-  it('hashes every config file recursively, keyed by canonical git-root-relative path', async () => {
+  it('hashes only the allowlisted config files, keyed by canonical path, and skips none of the rest', async () => {
     const disk: InMemoryDisk = {
       directories: {
-        '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts', 'nested'],
-        '/repo/packages/ui/.storybook/nested': ['helper.ts'],
+        '/repo/packages/ui/.storybook': [
+          'main.ts',
+          'preview.ts',
+          'preview-head.html',
+          'preview-body.html',
+          'manager.ts',
+          'manager-head.html',
+          'vitest.setup.ts',
+          'mocks.json',
+          'nested',
+        ],
+        '/repo/packages/ui/.storybook/nested': ['helper.ts', 'preview.ts'],
       },
     };
 
-    const { storybookConfigFiles } = await sweep(makeInput(disk));
+    const { files, skippedFiles } = await hashSweep(makeInput(disk), (filePath) =>
+      filePath.endsWith('mocks.json') ? 'untracked' : undefined
+    );
 
-    expect([...storybookConfigFiles.keys()]).toEqual([
+    expect([...files.storybookConfigFiles.keys()].sort()).toEqual([
       './.storybook/main.ts',
-      './.storybook/nested/helper.ts',
+      './.storybook/preview-body.html',
+      './.storybook/preview-head.html',
       './.storybook/preview.ts',
     ]);
+    // The rest aren't config files, so they aren't skipped either; the graph pass hashes them if a
+    // story or the preview imports them.
+    expect(skippedFiles.size).toBe(0);
   });
 
-  it('hashes preview.* alongside the rest of the config dir, so its bytes are covered too', async () => {
-    const disk: InMemoryDisk = {
-      directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] },
-    };
-
-    const { storybookConfigFiles } = await sweep(makeInput(disk));
-
-    // The graph-rolled `.storybook/preview.ts` entry covers its *imports*; this covers its bytes,
-    // which is what closes the empty-preview.ts case where the builder elides the module entirely.
-    expect(storybookConfigFiles.has('./.storybook/preview.ts')).toBe(true);
-  });
-
-  it('gives static files their own section, and keeps them in the config sweep when nested in the config dir', async () => {
+  it('gives static files their own section, even when nested in the config dir', async () => {
     const disk: InMemoryDisk = {
       directories: {
         '/repo/packages/ui/.storybook': ['main.ts', 'static'],
@@ -92,10 +96,7 @@ describe('hashOutOfGraphFiles', () => {
 
     const { storybookConfigFiles, staticFiles } = await sweep(makeInput(disk));
 
-    expect([...storybookConfigFiles.keys()]).toEqual([
-      './.storybook/main.ts',
-      './.storybook/static/mockServiceWorker.js',
-    ]);
+    expect([...storybookConfigFiles.keys()]).toEqual(['./.storybook/main.ts']);
     expect([...staticFiles.keys()]).toEqual(['./.storybook/static/mockServiceWorker.js']);
   });
 
@@ -148,22 +149,6 @@ describe('hashOutOfGraphFiles', () => {
     );
   });
 
-  it('skips documentation files anywhere in the config dir', async () => {
-    const disk: InMemoryDisk = {
-      directories: {
-        '/repo/packages/ui/.storybook': ['main.ts', 'README.md', 'NOTES.TXT', 'nested'],
-        '/repo/packages/ui/.storybook/nested': ['guide.md'],
-      },
-    };
-
-    const { storybookConfigFiles } = await sweep(makeInput(disk));
-
-    // Docs in the config dir shouldn't affect the built Storybook, so they stay out of the roll-up
-    // hash.
-    expect([...storybookConfigFiles.keys()]).toEqual(['./.storybook/main.ts']);
-  });
-
-  // This matches the behavior of v1 which only ignores docs in the config dir.
   it('keeps documentation files in a static dir', async () => {
     const disk: InMemoryDisk = {
       directories: {
@@ -225,23 +210,22 @@ describe('hashOutOfGraphFiles skipped files', () => {
   it('drops a config file the rule skips from the config section and records it', async () => {
     const disk: InMemoryDisk = {
       directories: {
-        '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts', 'decorators'],
-        '/repo/packages/ui/.storybook/decorators': ['withTheme.ts'],
+        '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts', 'preview-head.html'],
       },
     };
 
     const { files, skippedFiles } = await hashSweep(makeInput(disk), (candidate) =>
-      candidate.includes('/decorators/') ? 'untraced' : undefined
+      candidate.endsWith('preview-head.html') ? 'untracked' : undefined
     );
 
     expect([...files.storybookConfigFiles.keys()]).toEqual([
       './.storybook/main.ts',
       './.storybook/preview.ts',
     ]);
-    expect([...skippedFiles]).toEqual([['./.storybook/decorators/withTheme.ts', 'untraced']]);
+    expect([...skippedFiles]).toEqual([['./.storybook/preview-head.html', 'untracked']]);
   });
 
-  it('drops a skipped file from both sections when a static dir sits inside the config dir', async () => {
+  it('drops a skipped static file that sits inside the config dir', async () => {
     const disk: InMemoryDisk = {
       directories: {
         '/repo/packages/ui/.storybook': ['main.ts', 'static'],
@@ -253,25 +237,9 @@ describe('hashOutOfGraphFiles skipped files', () => {
       candidate.endsWith('bundle.css') ? 'untraced' : undefined
     );
 
-    expect([...files.storybookConfigFiles.keys()]).toEqual([
-      './.storybook/main.ts',
-      './.storybook/static/logo.svg',
-    ]);
+    expect([...files.storybookConfigFiles.keys()]).toEqual(['./.storybook/main.ts']);
     expect([...files.staticFiles.keys()]).toEqual(['./.storybook/static/logo.svg']);
     expect([...skippedFiles]).toEqual([['./.storybook/static/bundle.css', 'untraced']]);
-  });
-
-  it('hashes the main config even when the rule skips it, and logs that it did', async () => {
-    const log = new TestLogger();
-    const disk: InMemoryDisk = {
-      directories: { '/repo/packages/ui/.storybook': ['main.ts', 'preview.ts'] },
-    };
-
-    const { files, skippedFiles } = await hashSweep(makeInput(disk, { log }), () => 'untraced');
-
-    expect([...files.storybookConfigFiles.keys()]).toEqual(['./.storybook/main.ts']);
-    expect([...skippedFiles]).toEqual([['./.storybook/preview.ts', 'untraced']]);
-    expect(log.debug).toHaveBeenCalledWith(expect.stringContaining('/.storybook/main.ts'));
   });
 });
 

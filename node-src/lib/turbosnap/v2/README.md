@@ -24,7 +24,7 @@ storybookHash
 ├── storybookConfigHashes      one entry per Storybook-wide category
 │   ├── preview                = <configDir>/preview.* found in the graph and their imports
 │   ├── storybookGlobals       = global graph inputs, plus unreached graph files and their imports
-│   ├── storybookConfigFiles   = files in <configDir>, except .md and .txt, read off disk
+│   ├── storybookConfigFiles   = <configDir>/main.*, preview.*, preview-head.html and preview-body.html, read off disk
 │   ├── staticFiles            = configured static files and directory contents, read off disk
 │   ├── externals              = every git-tracked file matching --externals, read off disk
 │   └── storybookVersion       = the installed Storybook version string, not a hash
