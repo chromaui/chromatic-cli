@@ -1,5 +1,5 @@
 import { AbsolutePath } from '../../../types';
-import { storybookConfigFileKind } from '../storybookConfigFiles';
+import { isMainConfigFile } from '../storybookConfigFiles';
 import { ManifestInput } from './manifestInput';
 import { gitRootGlobMatcher, isInstalledPackagePath } from './paths';
 
@@ -65,12 +65,14 @@ export function partitionSkipped(
  * `gitRootGlobMatcher`), so the one flag means the same thing in both. A file both untraced
  * and untracked is recorded as untraced, since that is the user's own say.
  *
- * Some files are out of the rule's reach. The allowlisted Storybook config files (`main.*`,
- * `preview.*`, `preview-head.html` and `preview-body.html`) are never untraced, as in v1, because
- * changing them can affect every story; an untraced `preview.*` would otherwise also drop out of the
- * `preview` roll-up. They can still be untracked, except the main config, which is never skipped at
- * all: it is the file that makes the directory a config directory, so the config section always has
- * it. An external is out of reach too, as v1 checks it before it applies `--untraced`; see
+ * The allowlisted Storybook config files `preview.*`, `preview-head.html` and `preview-body.html`
+ * are untraced like any other file, as in v1, though changing them can affect
+ * every story; the CLI warns when a glob matches one.
+ *
+ * Two files are out of the rule's reach. The main config is never skipped: it is the file that makes
+ * the directory a config directory, so the config section always has it, and an `--untraced` glob
+ * wide enough to catch it, or a main config not yet added to git, is more likely an accident than a
+ * request. An external is out of reach too, as v1 checks it before it applies `--untraced`; see
  * `hashOutOfGraphFiles`.
  *
  * Every check is judged on the file a path leads to. A bundler may name a file through a symlinked
@@ -98,16 +100,15 @@ export async function buildSkipRule(
   const isUntraced = gitRootGlobMatcher(context.gitRoot, context.untraced);
   const reasons = new Map<AbsolutePath, SkipReason | undefined>();
   const gitCandidates = new Map<AbsolutePath, AbsolutePath>();
-  // The sweep names config files under the configured directory, but a bundler may name the real
-  // file behind a symlinked config directory, so either form is a config file.
+  // The sweep names the main config under the configured directory, but a bundler may name the real
+  // file behind a symlinked config directory, so either form is the main config.
   const realConfigDirectory = context.projectFiles.realPath(context.configDir);
   for (const file of new Set(paths)) {
     const realPath = context.projectFiles.realPath(file);
-    const configFileKind =
-      storybookConfigFileKind(file, context.configDir) ??
-      storybookConfigFileKind(realPath, realConfigDirectory);
-    if (configFileKind === 'mainConfig') reasons.set(file, undefined);
-    else if (!configFileKind && isUntraced(realPath)) reasons.set(file, 'untraced');
+    const isMainConfig =
+      isMainConfigFile(file, context.configDir) || isMainConfigFile(realPath, realConfigDirectory);
+    if (isMainConfig) reasons.set(file, undefined);
+    else if (isUntraced(realPath)) reasons.set(file, 'untraced');
     else if (isInstalledPackagePath(realPath)) reasons.set(file, undefined);
     else gitCandidates.set(file, realPath);
   }

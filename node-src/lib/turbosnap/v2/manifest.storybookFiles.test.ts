@@ -156,22 +156,18 @@ describe('buildManifest storybookFiles', () => {
     expect(after.storybookHash).toBe(before.storybookHash);
   });
 
-  it('keeps an untraced preview in the preview roll-up, since --untraced never applies to it', async () => {
-    const { disk, input } = createFixture({ fileHashes: { ...baseHashes } });
-    const untracedInput = { ...input, untraced: ['**/.storybook/preview.ts'] };
+  it('omits the preview entry when the untraced preview has nothing hashed beneath it', async () => {
+    // An untraced file is a wall, so its subtree is just itself and there is nothing to roll up.
+    const { input } = createFixture({ fileHashes: { ...baseHashes } });
 
-    const traced = await buildManifest(makeStats(), input);
-    const before = await buildManifest(makeStats(), untracedInput);
-    disk.fileHashes = { ...baseHashes, [previewHelper]: 'PT2' };
-    const after = await buildManifest(makeStats(), untracedInput);
+    const manifest = await buildManifest(makeStats(), {
+      ...input,
+      untraced: ['**/.storybook/preview.ts'],
+    });
 
-    expect([...before.skippedFiles]).toEqual([]);
-    expect(before.storybookConfigHashes.get(previewKey)).toBe(
-      traced.storybookConfigHashes.get(previewKey)
-    );
-    expect(after.storybookConfigHashes.get(previewKey)).not.toBe(
-      before.storybookConfigHashes.get(previewKey)
-    );
+    expect([...manifest.skippedFiles]).toEqual([['./.storybook/preview.ts', 'untraced']]);
+    expect(manifest.storybookConfigHashes.has(previewKey)).toBe(false);
+    expect(manifest.attribution.previewSubtree.size).toBe(0);
   });
 
   describe('a config dir file off the allowlist', () => {

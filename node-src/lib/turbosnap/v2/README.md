@@ -99,7 +99,7 @@ The globs for `--untraced` and `--externals` are relative to the git root. Skip 
 Exceptions:
 
 - Installed packages under `node_modules` are hashed even though they are gitignored, since a dependency upgrade is a real change. They can still be excluded with `--untraced`. Generated directories under `node_modules`, such as `.federation`, are not exempt from the untracked rule.
-- The allowlisted config files (`<configDir>/main.*`, `preview.*`, `preview-head.html` and `preview-body.html`) are never untraced, matching TurboSnap 1.0. They can still be untracked, except the main config, which is always hashed into `storybookConfigFiles`.
+- The main config (`<configDir>/main.*`) is always hashed into `storybookConfigFiles`, whatever the skip rule says.
 - Externals ignore the skip rule. A file that is both untraced and external still moves the `externals` entry.
 - Uncommitted edits do not make a tracked file untracked; it is still hashed unless explicitly untraced.
 
