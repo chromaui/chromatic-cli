@@ -7,6 +7,10 @@ import { ManifestInput } from './manifestInput';
 // as a peer dependency, so a working install can always resolve it.
 const STORYBOOK_PACKAGE = 'storybook';
 
+// The core package `storybook` wraps from 8.2 to 8.6, reachable under strict installs where
+// `storybook` isn't. Storybook 6 also has one, at its own version.
+const STORYBOOK_CORE_PACKAGE = '@storybook/core';
+
 // Before 8.2, `storybook` was only the CLI and projects often left it out. These packages ship with
 // every 6.x to 8.1 install and are versioned in lockstep with it: the preview runtime (7.0 to 8.1),
 // core-common (6.x to 8.1), then the renderer and framework packages in `viewLayers`, one of which
@@ -72,7 +76,9 @@ export function resolveStorybookVersion(
     return resolveE2EPackageVersion(input.e2ePackage, input);
   }
 
-  const version = input.projectFiles.packageVersion(input.configDir, STORYBOOK_PACKAGE);
+  const version =
+    input.projectFiles.packageVersion(input.configDir, STORYBOOK_PACKAGE) ??
+    input.projectFiles.packageVersion(input.configDir, STORYBOOK_CORE_PACKAGE);
   if (version) return version;
 
   // Trusted only when every one that resolves is from before 8.2: a newer one means this is an 8.2+
@@ -88,7 +94,7 @@ export function resolveStorybookVersion(
   // would silently under-capture. Not finding a Storybook dependency usually means nothing is
   // installed so we'll inform the customer accordingly.
   throw new VersionNotFoundError(
-    `Could not resolve a Storybook version from ${input.configDir}: neither ${STORYBOOK_PACKAGE} nor, for Storybook 8.1 and earlier, its preview, core or renderer packages could be resolved with a version. TurboSnap hashes installed dependencies, so they must be installed before running Chromatic, even for a prebuilt Storybook. From Storybook 8.2, storybook must also be a dependency of this project.`
+    `Could not resolve a Storybook version from ${input.configDir}: neither ${STORYBOOK_PACKAGE}, ${STORYBOOK_CORE_PACKAGE} nor, for Storybook 8.1 and earlier, its preview, core or renderer packages could be resolved with a version. TurboSnap hashes installed dependencies, so they must be installed before running Chromatic, even for a prebuilt Storybook. From Storybook 8.2, storybook must also be a dependency of this project.`
   );
 }
 

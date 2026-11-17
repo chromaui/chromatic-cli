@@ -17,6 +17,12 @@ describe('resolveStorybookVersion', () => {
     expect(resolveStorybookVersion(input(disk))).toBe('7.6.20');
   });
 
+  it('falls back to `@storybook/core` when `storybook` cannot be resolved', () => {
+    const disk = { packageVersions: { '@storybook/core': '8.6.18' } };
+
+    expect(resolveStorybookVersion(input(disk))).toBe('8.6.18');
+  });
+
   it('resolves from the config directory, not the project root', () => {
     // A workspace where `storybook` is installed only under the package that owns `.storybook`, and
     // the project root resolves a different one. Only the config directory's install is Storybook's.
