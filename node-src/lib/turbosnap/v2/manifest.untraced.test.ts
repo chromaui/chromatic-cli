@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Stats } from '../../../types';
 import { createFixture, syntheticAbsent } from './__fixtures__/manifestFixtures';
 import { buildManifest } from './manifest';
+import { SkipReason } from './skippedFiles';
 
 // These suites pin the two `--untraced` recipes the docs give: untracing a barrel, and untracing a
 // global decorator. Both rely on an untraced file being a wall, as it is in v1, rather than a file
@@ -159,10 +160,16 @@ describe('buildManifest with an untraced global decorator', () => {
     expect(after.storybookHash).toBe(before.storybookHash);
   });
 
-  it('still moves the storybook hash when the main config changes under a glob that untraces the whole config dir', async () => {
+  // An untraced main config is the user's say, and an untracked one is invisible to v1's git diff;
+  // either way an edit to it moves nothing, as for the other allowlisted config files.
+  it.each<[string, SkipReason, string[]]>([
+    ['under a glob that untraces the whole config dir', 'untraced', ['**/.storybook/**']],
+    ['while git does not track it', 'untracked', []],
+  ])('leaves every hash alone when the main config changes %s', async (_, reason, untraced) => {
     const main = '/repo/packages/ui/.storybook/main.ts';
     const { disk, input: fixtureInput } = decoratorFixture();
-    const input = { ...fixtureInput, untraced: ['**/.storybook/**'] };
+    const input = { ...fixtureInput, untraced: [...fixtureInput.untraced, ...untraced] };
+    disk.isUntracked = (candidate) => reason === 'untracked' && candidate === main;
     disk.fileHashes = {
       [story]: 'S',
       [preview]: 'P',
@@ -181,7 +188,9 @@ describe('buildManifest with an untraced global decorator', () => {
     };
     const after = await buildManifest(stats, input);
 
-    expect(after.storybookHash).not.toBe(before.storybookHash);
-    expect(after.skippedFiles.has('./.storybook/main.ts')).toBe(false);
+    expect(after.storybookConfigHashes).toEqual(before.storybookConfigHashes);
+    expect(after.storybookHash).toBe(before.storybookHash);
+    expect(after.skippedFiles.get('./.storybook/main.ts')).toBe(reason);
+    expect(after.outOfGraphFiles.storybookConfigFiles.has('./.storybook/main.ts')).toBe(false);
   });
 });

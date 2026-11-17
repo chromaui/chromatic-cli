@@ -14,21 +14,7 @@ function context(disk: InMemoryDisk, untraced: string[] = []): SkipContext {
   return {
     gitRoot: '/repo',
     untraced,
-    configDir: configDirectory,
     projectFiles: inMemoryProjectFiles(disk),
-  };
-}
-
-// A context whose config directory is a symlink to the real one under `projectRoot`.
-function linkedContext(disk: InMemoryDisk, untraced: string[] = []): SkipContext {
-  const base = context(disk, untraced);
-  return {
-    ...base,
-    configDir: '/repo/apps/web/.storybook',
-    projectFiles: {
-      ...base.projectFiles,
-      realPath: (file: string) => file.replace('/repo/apps/web', projectRoot),
-    },
   };
 }
 
@@ -166,37 +152,29 @@ describe('buildSkipRule', () => {
     expect(result).toEqual([[decorator, 'untraced']]);
   });
 
-  it('skips the allowlisted config files an --untraced glob matches, except the main config', async () => {
-    const [main, ...others] = [
-      'main.ts',
-      'preview.ts',
-      'preview-head.html',
-      'preview-body.html',
-    ].map((fileName) => `${configDirectory}/${fileName}`);
+  it('skips the allowlisted config files an --untraced glob matches, the main config included', async () => {
+    const configFiles = ['main.ts', 'preview.ts', 'preview-head.html', 'preview-body.html'].map(
+      (fileName) => `${configDirectory}/${fileName}`
+    );
     const mocks = `${configDirectory}/mocks.json`;
 
     const result = await skipped(
-      [main, ...others, mocks],
+      [...configFiles, mocks, source],
       context({}, ['packages/ui/.storybook/**'])
     );
 
-    expect(result).toEqual([...others, mocks].map((file) => [file, 'untraced']));
+    expect(result).toEqual([...configFiles, mocks].map((file) => [file, 'untraced']));
   });
 
-  it('never skips the main config a bundler names behind a symlinked config directory', async () => {
-    const realMain = `${configDirectory}/main.ts`;
-
-    expect(await skipped([realMain], linkedContext({}, ['packages/ui/.storybook/**']))).toEqual([]);
-    expect(await skipped([realMain], linkedContext({ isUntracked: () => true }))).toEqual([]);
-  });
-
-  it('skips an untracked allowlisted config file, except the main config', async () => {
+  it('skips an untracked main config, as v1 never sees it in git diff', async () => {
     const main = `${configDirectory}/main.ts`;
-    const previewHead = `${configDirectory}/preview-head.html`;
 
-    const result = await skipped([main, previewHead], context({ isUntracked: () => true }));
+    const result = await skipped(
+      [main, preview],
+      context({ isUntracked: (candidate) => candidate === main })
+    );
 
-    expect(result).toEqual([[previewHead, 'untracked']]);
+    expect(result).toEqual([[main, 'untracked']]);
   });
 
   it("records a file both untraced and untracked as untraced, since that is the user's own say", async () => {

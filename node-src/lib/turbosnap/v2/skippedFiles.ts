@@ -1,5 +1,4 @@
 import { AbsolutePath } from '../../../types';
-import { isMainConfigFile } from '../storybookConfigFiles';
 import { ManifestInput } from './manifestInput';
 import { gitRootGlobMatcher, isInstalledPackagePath } from './paths';
 
@@ -7,10 +6,7 @@ import { gitRootGlobMatcher, isInstalledPackagePath } from './paths';
  * The part of `ManifestInput` the skip rule reads: where the repository is, what the user
  * untraced, and how to ask git and the disk.
  */
-export type SkipContext = Pick<
-  ManifestInput,
-  'gitRoot' | 'untraced' | 'configDir' | 'projectFiles'
->;
+export type SkipContext = Pick<ManifestInput, 'gitRoot' | 'untraced' | 'projectFiles'>;
 
 /**
  * Why v2 skipped hashing a file. A skipped file's own bytes feed no roll-up either way; the reasons
@@ -65,14 +61,13 @@ export function partitionSkipped(
  * `gitRootGlobMatcher`), so the one flag means the same thing in both. A file both untraced
  * and untracked is recorded as untraced, since that is the user's own say.
  *
- * The allowlisted Storybook config files `preview.*`, `preview-head.html` and `preview-body.html`
- * are untraced like any other file, as in v1, though changing them can affect
- * every story; the CLI warns when a glob matches one.
+ * The allowlisted Storybook config files (`main.*`, `preview.*`, `preview-head.html` and
+ * `preview-body.html`) are untraced and untracked like any other file, as in v1, though changing
+ * them can affect every story; the CLI warns when an `--untraced` glob matches one. Skipping the
+ * main config leaves the config section without it, or empty, as for an E2E build; see
+ * `rollUpOutOfGraphFiles`.
  *
- * Two files are out of the rule's reach. The main config is never skipped: it is the file that makes
- * the directory a config directory, so the config section always has it, and an `--untraced` glob
- * wide enough to catch it, or a main config not yet added to git, is more likely an accident than a
- * request. An external is out of reach too, as v1 checks it before it applies `--untraced`; see
+ * An external is out of the rule's reach, as v1 checks it before it applies `--untraced`; see
  * `hashOutOfGraphFiles`.
  *
  * Every check is judged on the file a path leads to. A bundler may name a file through a symlinked
@@ -87,8 +82,7 @@ export function partitionSkipped(
  * Why v2 follows Git here, and what that costs, is in this directory's README under "Why untracked
  * files are skipped".
  *
- * @param context Where the repository and Storybook config are, what is untraced, and how to ask git
- * and the disk.
+ * @param context Where the repository is, what is untraced, and how to ask git and the disk.
  * @param paths All disk paths the graph and sweeps will check.
  *
  * @returns The rule, by the path as given.
@@ -100,15 +94,9 @@ export async function buildSkipRule(
   const isUntraced = gitRootGlobMatcher(context.gitRoot, context.untraced);
   const reasons = new Map<AbsolutePath, SkipReason | undefined>();
   const gitCandidates = new Map<AbsolutePath, AbsolutePath>();
-  // The sweep names the main config under the configured directory, but a bundler may name the real
-  // file behind a symlinked config directory, so either form is the main config.
-  const realConfigDirectory = context.projectFiles.realPath(context.configDir);
   for (const file of new Set(paths)) {
     const realPath = context.projectFiles.realPath(file);
-    const isMainConfig =
-      isMainConfigFile(file, context.configDir) || isMainConfigFile(realPath, realConfigDirectory);
-    if (isMainConfig) reasons.set(file, undefined);
-    else if (isUntraced(realPath)) reasons.set(file, 'untraced');
+    if (isUntraced(realPath)) reasons.set(file, 'untraced');
     else if (isInstalledPackagePath(realPath)) reasons.set(file, undefined);
     else gitCandidates.set(file, realPath);
   }

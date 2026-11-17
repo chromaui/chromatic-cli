@@ -62,8 +62,9 @@ export class MissingStorybookConfigError extends Error {
  *
  * @returns The paths in each sweep.
  *
- * @throws {MissingStorybookConfigError} When `configDir` holds no `main.*` file, unless the build is
- * an E2E build.
+ * @throws {MissingStorybookConfigError} When `configDir` holds no `main.*` file on disk, unless the
+ * build is an E2E build. A main config the skip rule later skips, untraced or untracked, still
+ * counts: the directory is still a config directory.
  */
 export function listConfigAndStaticFiles(input: OutOfGraphInput) {
   return {
@@ -121,8 +122,8 @@ function listConfigTree(input: Pick<OutOfGraphInput, 'configDir' | 'projectFiles
  *
  * @returns The content hash of every config file, static file and external file, keyed by canonical
  * manifest path, beside the swept config and static files that were skipped instead, keyed the same
- * way with the reason. `storybookConfigFiles` always holds at least the main config, which
- * `buildSkipRule` never skips, except for an E2E build, where it is empty.
+ * way with the reason. `storybookConfigFiles` is empty for an E2E build, and lacks any config file
+ * the skip rule skips, the main config included.
  */
 export async function hashOutOfGraphFiles(
   input: OutOfGraphInput,
@@ -214,11 +215,11 @@ async function listExternalFiles(
  *
  * The static and externals sections contribute no entry when they have no files, matching how the
  * `storybookGlobals` roll-up is omitted when empty. The config section always contributes one,
- * because the Index requires `storybookConfigFiles`. For a Storybook project it is never empty:
- * `listConfigAndStaticFiles` refuses to sweep without the main config, `buildSkipRule` never skips
- * the main config, and `hashOutOfGraphFiles` never drops it into another section. An E2E build has
- * no config directory, so its entry is the roll-up of nothing, a constant; a package upgrade moves
- * `storybookVersion` instead.
+ * because the Index requires `storybookConfigFiles`. With no files it is the roll-up of nothing, a
+ * constant. An E2E build gets there because it has no config directory; a package upgrade moves
+ * `storybookVersion` instead. A Storybook project gets there when the skip rule skips every config
+ * file, such as with `--untraced '.storybook/**'`; `listConfigAndStaticFiles` still refuses a config
+ * directory with no main config on disk.
  *
  * The roll-ups are path-sensitive, as the graph-rolled entries now are too: a static asset is served
  * at its path and a config file is loaded by name, so a byte-preserving rename changes what Storybook

@@ -94,12 +94,13 @@ Some on-disk files are deliberately not content-hashed. There are two reasons, r
 
 A skipped file contributes neither its own content hash nor its path to a subtree roll-up. Its path is excluded because generated files are often renamed on every build, so even their path would move the roll-up each time. The file stays in the graph so the edges through an untracked file still connect a story to the tracked files behind it. A skipped story file still has an entry in `storyFiles`, and adding, removing, or renaming that key still moves `storybookHash`. For an untracked story file, its tracked dependencies can move its hash. An untraced story file has its edges cut, so its hash never moves.
 
+The allowlisted config files, `main.*` included, follow the same rules. A config file that is untraced or untracked drops out of `storybookConfigFiles`; with all of them skipped, as with `--untraced '.storybook/**'`, that entry is the roll-up of nothing, as for an E2E build. A config directory with no `main.*` on disk still fails the manifest.
+
 The globs for `--untraced` and `--externals` are relative to the git root. Skip rules follow symlinks to the real file, so a linked workspace package's generated output is still untracked. An external glob on that untracked output does not help: use its tracked source to detect changes Storybook-wide. Files outside the repository are not classified as untracked by this repository's git listing.
 
 Exceptions:
 
 - Installed packages under `node_modules` are hashed even though they are gitignored, since a dependency upgrade is a real change. They can still be excluded with `--untraced`. Generated directories under `node_modules`, such as `.federation`, are not exempt from the untracked rule.
-- The main config (`<configDir>/main.*`) is always hashed into `storybookConfigFiles`, whatever the skip rule says.
 - Externals ignore the skip rule. A file that is both untraced and external still moves the `externals` entry.
 - Uncommitted edits do not make a tracked file untracked; it is still hashed unless explicitly untraced.
 
