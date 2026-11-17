@@ -11,7 +11,11 @@ import { MAIN_CONFIG_PATTERN, PREVIEW_CONFIG_PATTERN } from '../getStorybookMeta
  * Which allowlisted Storybook config file a path is. The names double as the `changedStorybookFiles`
  * bail subreasons sent to the index.
  */
-type StorybookConfigFileKind = 'mainConfig' | 'previewConfig' | 'previewHead' | 'previewBody';
+export type StorybookConfigFileKind =
+  | 'mainConfig'
+  | 'previewConfig'
+  | 'previewHead'
+  | 'previewBody';
 
 /**
  * Finds which allowlisted Storybook config file a path is, if any: `main.*`, `preview.*`,
@@ -23,7 +27,7 @@ type StorybookConfigFileKind = 'mainConfig' | 'previewConfig' | 'previewHead' | 
  *
  * @returns The kind of config file, or `undefined` when the path isn't on the allowlist.
  */
-function storybookConfigFileKind(
+export function storybookConfigFileKind(
   filePath: string,
   configDirectory: string
 ): StorybookConfigFileKind | undefined {

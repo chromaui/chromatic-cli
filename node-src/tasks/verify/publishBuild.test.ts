@@ -55,4 +55,22 @@ describe('publishBuild', () => {
       { headers: { Authorization: `Bearer report-token` }, retries: 3 }
     );
   });
+
+  it('sends whether the stats file had the preview config, even when TurboSnap did not bail', async () => {
+    const announcedBuild = { number: 1, status: 'ANNOUNCED', reportToken: 'report-token' };
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockReturnValue({ publishBuild: { status: 'PUBLISHED' } });
+
+    await publishBuild(buildDeps(client), {
+      announcedBuild,
+      options: {},
+      turboSnap: { previewConfigInStats: false },
+    } as any);
+
+    expect(client.runQuery).toHaveBeenCalledWith(
+      expect.stringMatching(/PublishBuildMutation/),
+      { input: { turboSnapPreviewConfigInStats: false, turboSnapStatus: 'APPLIED' } },
+      expect.anything()
+    );
+  });
 });
