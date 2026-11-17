@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import { dedent } from 'ts-dedent';
 
 import { UntracedFile } from '../../../types';
-import { info } from '../../components/icons';
+import { info, warning } from '../../components/icons';
 import link from '../../components/link';
 
 const docsUrl = 'https://www.chromatic.com/docs/turbosnap';
@@ -11,7 +11,8 @@ const describeMatch = ({ filepath, glob }: UntracedFile) =>
   chalk`{bold ${filepath}} (via {bold ${glob}})`;
 
 /**
- * Explains that `--untraced` doesn't apply to the Storybook config files TurboSnap always traces.
+ * Warns that `--untraced` matches Storybook config files whose changes can affect every story, so
+ * TurboSnap can miss stories that changed.
  *
  * @param input The config files an `--untraced` glob matches.
  * @param input.matches Each matched config file, repository-relative, with the glob that matched it.
@@ -28,9 +29,9 @@ export default ({ matches }: { matches: UntracedFile[] }) => {
         ].join('\n');
 
   return dedent(chalk`
-    ${info} {bold Some untraced files are always traced}
+    ${warning} {bold TurboSnap can miss changes to untraced Storybook config files}
     ${matched}
-    TurboSnap always traces your Storybook's {bold main}, {bold preview}, {bold preview-head.html}, and {bold preview-body.html} files, even when an {bold --untraced} glob matches them, because changing them can affect every story.
-    Read more at ${link(docsUrl)}
+    Changing your Storybook's {bold main}, {bold preview}, {bold preview-head.html}, or {bold preview-body.html} file can affect every story. TurboSnap ignores changes to untraced files, so it may not retest the stories a change to one of these files affects.
+    ${info} Read more at ${link(docsUrl)}
   `);
 };

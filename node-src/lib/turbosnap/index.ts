@@ -1,11 +1,11 @@
 import * as Sentry from '@sentry/node';
-import { readdir } from 'fs/promises';
+import { readdir, realpath } from 'fs/promises';
 import semver from 'semver';
 
 import { readStatsFile } from '../../tasks/readStatsFile';
 import { Context, HashBasedTurboSnap, Stats, UntracedFile } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
-import untracedStorybookConfig from '../../ui/messages/info/untracedStorybookConfig';
+import untracedStorybookConfig from '../../ui/messages/warnings/untracedStorybookConfig';
 import { relativeTo } from '../getStorybookProjectRoot';
 import { matchesFile } from '../utilities';
 import { isHashCollectionDisabled } from './isHashCollectionDisabled';
@@ -115,9 +115,13 @@ function shouldSkipV1(ctx: Context, hashBased: HashBasedTurboSnap | undefined) {
   return !!hashBased;
 }
 
-// `--untraced` doesn't apply to the allowlisted Storybook config files in either TurboSnap version.
-// When a glob matches one on disk, say so once per build, whether or not it changed. It's shown with
-// `--only-changed`, and only logged at debug level when TurboSnap 2.0 runs silently without it.
+const realPathOrSelf = (absolutePath: string) => realpath(absolutePath).catch(() => absolutePath);
+
+// `--untraced` applies to the allowlisted Storybook config files too, though changing them can affect
+// every story. When a glob matches one on disk, warn once per build, whether or not it changed. The
+// warning is only logged at debug level when this build doesn't use TurboSnap, such as when
+// `--only-changed` names a branch glob the build's branch doesn't match.
+// Globs are matched against real paths, as TurboSnap 2.0 does, so they cover a symlinked config dir.
 async function logUntracedStorybookConfig(ctx: Context) {
   const untraced = (ctx.options.untraced ?? []).filter(Boolean);
   const { rootPath } = ctx.git;
@@ -125,8 +129,8 @@ async function logUntracedStorybookConfig(ctx: Context) {
     return;
   }
 
-  const configDirectory = ctx.storybook.configDir;
-  const storybookDirectory = relativeTo(rootPath, configDirectory);
+  const configDirectory = await realPathOrSelf(ctx.storybook.configDir);
+  const storybookDirectory = relativeTo(await realPathOrSelf(rootPath), configDirectory);
   const fileNames = await readdir(configDirectory).catch((): string[] => []);
   const matches = fileNames.flatMap((fileName): UntracedFile[] => {
     const filepath = `${storybookDirectory}/${fileName}`;
@@ -136,7 +140,7 @@ async function logUntracedStorybookConfig(ctx: Context) {
   });
 
   if (matches.length > 0) {
-    ctx.log[ctx.turboSnap ? 'info' : 'debug'](untracedStorybookConfig({ matches }));
+    ctx.log[ctx.turboSnap ? 'warn' : 'debug'](untracedStorybookConfig({ matches }));
   }
 }
 
