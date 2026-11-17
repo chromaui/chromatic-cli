@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Stats } from '../../../types';
 import { createFixture, projectRoot, syntheticAbsent } from './__fixtures__/manifestFixtures';
 import { buildManifest } from './manifest';
+import { VersionNotFoundError } from './storybookVersion';
 
 // A Vitest build, shaped like the stats `build-archive-storybook` writes: the stories entry imports
 // one generated `.stories.json` per test file, which imports that test, which imports the component.
@@ -134,5 +135,7 @@ describe('buildManifest for an E2E build', () => {
     await expect(buildManifest(stats, input)).rejects.toThrow(
       `Could not resolve a version of @chromatic-com/vitest from ${projectRoot}`
     );
+    // Typed, so TurboSnap 2.0 logs it instead of reporting it to Sentry.
+    await expect(buildManifest(stats, input)).rejects.toThrow(VersionNotFoundError);
   });
 });

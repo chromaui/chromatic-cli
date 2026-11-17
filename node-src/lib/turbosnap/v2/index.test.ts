@@ -168,11 +168,10 @@ describe('traceChangedFiles', () => {
       await expect(trace(fixture, {}, level)).resolves.toEqual({ status: 'fallback' });
 
       expect(fixture.log[level]).toHaveBeenCalledWith(
-        'Failed to build manifest for TurboSnap 2.0',
-        expect.objectContaining({
-          message: expect.stringContaining('must be installed before running Chromatic'),
-        })
+        expect.stringContaining('must be installed before running Chromatic')
       );
+      // How the project is installed is the user's to fix, not a bug to report.
+      expect(Sentry.captureException).not.toHaveBeenCalled();
     }
   );
 
