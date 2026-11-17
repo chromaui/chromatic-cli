@@ -141,6 +141,70 @@ describe('traceChangedFiles', () => {
     expect(fixture.runQuery).not.toHaveBeenCalled();
   });
 
+  // Storybook built from the repository root names its stories from there, so they resolve nowhere
+  // from the project root. That is the user's to fix with --storybook-base-dir, not a bug to report.
+  it.each<[FailureLogLevel, FailureLogLevel]>([
+    ['error', 'debug'],
+    ['debug', 'error'],
+  ])(
+    'falls back without reporting when the stories the entry imports are not on disk (%s)',
+    async (level, otherLevel) => {
+      const fixture = setup();
+      const isSynthetic = fixture.disk.isAbsent;
+      fixture.disk.isAbsent = (candidate) =>
+        candidate.startsWith(`${projectRoot}/packages/`) || !!isSynthetic?.(candidate);
+      // Reached through the config entry's require-context rather than the stories entry, so the
+      // entry is recognized only through the context.
+      const context = String.raw`./packages/ui/src|lazy|/^\.\/.*\.stories\.tsx$/`;
+      const builtFromRepositoryRoot: Stats = {
+        modules: [
+          { id: 1, name: context, reasons: [{ moduleName: CONFIG_ENTRY }] },
+          {
+            id: 2,
+            name: './packages/ui/src/Button.stories.tsx',
+            reasons: [{ moduleName: context }],
+          },
+        ],
+      };
+
+      await expect(trace(fixture, {}, level, { stats: builtFromRepositoryRoot })).resolves.toEqual({
+        status: 'fallback',
+      });
+
+      const advice = expect.stringContaining('could not find your story files');
+      expect(fixture.log[level]).toHaveBeenCalledWith(advice);
+      expect(fixture.log[level]).toHaveBeenCalledWith(expect.stringContaining(projectRoot));
+      expect(fixture.log[otherLevel]).not.toHaveBeenCalledWith(advice);
+      expect(Sentry.captureException).not.toHaveBeenCalled();
+      expect(fixture.runQuery).not.toHaveBeenCalled();
+    }
+  );
+
+  // A builder whose stories entry we don't recognize is ours to support, so it is reported, and
+  // without the project root in the message so every project groups into one issue.
+  it('reports stats with no stories entry it recognizes, without the project root in the message', async () => {
+    const fixture = setup();
+    const unknownBuilder: Stats = {
+      modules: [{ id: 1, name: STORY, reasons: [{ moduleName: './unknown-builder-stories.js' }] }],
+    };
+
+    await expect(trace(fixture, {}, 'error', { stats: unknownBuilder })).resolves.toEqual({
+      status: 'fallback',
+    });
+
+    expect(Sentry.captureException).toHaveBeenCalledOnce();
+    const [reported] = vi.mocked(Sentry.captureException).mock.calls[0];
+    expect(reported).toEqual(
+      expect.objectContaining({ message: expect.stringContaining('Found no stories entry') })
+    );
+    expect((reported as Error).message).not.toContain(projectRoot);
+    expect(fixture.log.error).toHaveBeenCalledWith(
+      'Failed to build manifest for TurboSnap 2.0',
+      reported
+    );
+    expect(fixture.runQuery).not.toHaveBeenCalled();
+  });
+
   // The gitInfo task always sets the root, so its absence is a bug to report, not a state to handle.
   it('reports a missing git root as a failure and falls back without uploading', async () => {
     const fixture = setup();
@@ -348,7 +412,12 @@ function trace(
   { log, projectFiles, runQuery }: Fixture,
   patchFiles: Partial<ProjectFiles> = {},
   failureLogLevel: FailureLogLevel = 'error',
-  overrides: { gitRoot?: string; externals?: string[]; onlyChanged?: boolean } = {}
+  overrides: {
+    gitRoot?: string;
+    externals?: string[];
+    onlyChanged?: boolean;
+    stats?: Stats;
+  } = {}
 ) {
   return traceChangedFiles({
     log,

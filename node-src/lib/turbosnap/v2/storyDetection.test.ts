@@ -23,7 +23,7 @@ function detect(stats: Stats, onDiskFiles: string[]) {
       onDiskFiles: new Set(onDiskFiles),
     },
     stats
-  );
+  ).storyFiles;
 }
 
 describe('detectStoryFiles through a require-context', () => {
