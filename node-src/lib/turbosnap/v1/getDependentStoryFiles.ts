@@ -141,10 +141,14 @@ export async function getDependentStoryFiles(
     name.startsWith(`${storybookDirectory}/`) &&
     !storiesEntryFiles.includes(name) &&
     !isDocumentationFile(name);
-  // Only the allowlisted config files bail, and `--untraced` never applies to them. Every other file
-  // in the config directory is traced like any other source file.
+  // Only the allowlisted config files bail, unless `--untraced` matches them. Every other file in the
+  // config directory is traced like any other source file.
   const isStorybookConfig = (name: string) =>
     !!storybookConfigFileKind(stripConcatenatedModuleSuffix(name), storybookDirectory);
+  // Checks a concatenated module's members on their own, since webpack names the module after a
+  // config entry outside the config directory that an `--untraced` glob on the directory misses.
+  const isUntraced = (name: string) =>
+    untraced.some((glob) => matchesFile(glob, stripConcatenatedModuleSuffix(name)));
 
   // Distinct modules can normalize to one name: Vue/Svelte compile a component into several
   // modules (the component plus its `<style>` facets), CommonJS interop rewrites imports into
@@ -220,7 +224,7 @@ export async function getDependentStoryFiles(
     const holdsConfigDirectoryFile = [
       name,
       ...members.flatMap((member) => member.modules ?? []).map((m) => normalize(m.name)),
-    ].some((file) => isConfigDirectoryFile(file));
+    ].some((file) => isConfigDirectoryFile(file) && !isUntraced(file));
     if (
       reasons.some((reason) => isGlobalRoot(reason)) ||
       ((importedByEntry || reasons.length === 0) && holdsConfigDirectoryFile)
@@ -261,9 +265,6 @@ export async function getDependentStoryFiles(
   const untracedFiles: UntracedFile[] = [];
 
   function untrace(filepath: string) {
-    // Check concatenated members too, as `shouldBail` does, so a glob on the wrapper's name can't
-    // hide an allowlisted file inside it.
-    if (files(filepath).some((file) => isStorybookConfig(file))) return true;
     filepath = filepath.replace(/\s\+\s\d+\smodules?$/, ''); // strip ' + N modules' from the string before matching against `untraced`
     const matchedGlob = untraced.find((glob) => matchesFile(glob, filepath));
     if (matchedGlob) {
@@ -342,7 +343,7 @@ export async function getDependentStoryFiles(
     // A concatenated module holding an allowlisted file bails too: webpack concatenates
     // `preview.*` with the files it imports, so a change to one of them only reaches this module.
     if (
-      files(moduleName).some((file) => isStorybookConfig(file)) ||
+      files(moduleName).some((file) => isStorybookConfig(file) && !isUntraced(file)) ||
       annotationFilesByName.has(moduleName)
     ) {
       turboSnap.bailReason = {

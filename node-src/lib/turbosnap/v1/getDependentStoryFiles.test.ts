@@ -1126,20 +1126,22 @@ describe('getDependentStoryFiles', () => {
         changedFiles
       );
 
-    it('still bails on a changed preview config', async () => {
+    it('does not bail on a changed preview config', async () => {
       const result = await trace(['path/to/storybook-config/preview.js']);
-      expect(result.turboSnap.bailReason).toEqual({
-        changedStorybookFiles: ['path/to/storybook-config/preview.js'],
-        bailSubreason: 'previewConfig',
+      expect(result).toMatchObject({
+        status: 'traced',
+        onlyStoryFiles: {},
+        untracedFiles: [
+          { filepath: 'path/to/storybook-config/preview.js', glob: 'path/to/storybook-config/**' },
+        ],
       });
-      expect(result.turboSnap.tracedFiles).toEqual(['path/to/storybook-config/preview.js']);
+      expect(result.turboSnap.bailReason).toBeUndefined();
     });
 
-    it('still bails on a changed file the preview config imports', async () => {
+    it('does not bail on a changed file only the preview config imports', async () => {
       const result = await trace(['src/theme.js']);
-      expect(result.turboSnap.bailReason).toMatchObject({
-        bailSubreason: 'importsOfPreviewConfig',
-      });
+      expect(result.turboSnap.bailReason).toBeUndefined();
+      expect(result).toMatchObject({ status: 'traced', onlyStoryFiles: {} });
     });
 
     it('reports other config dir files as untraced', async () => {
@@ -1153,7 +1155,7 @@ describe('getDependentStoryFiles', () => {
       });
     });
 
-    it('still bails on a changed file a concatenated module holding the preview config imports', async () => {
+    it('does not bail on a changed file a concatenated module holding the preview config imports', async () => {
       const entry = './path/to/storybook-config/preview.js-generated-config-entry.js + 1 modules';
       const result = await getDependentStoryFiles(
         getContext({
@@ -1169,6 +1171,75 @@ describe('getDependentStoryFiles', () => {
               modules: [
                 { name: './path/to/storybook-config/preview.js-generated-config-entry.js' },
                 { name: './path/to/storybook-config/preview.js' },
+              ],
+              reasons: [],
+            },
+            buildModule('./src/foo.stories.js', CSF_GLOB),
+            buildModule(CSF_GLOB, './path/to/storybook-config/generated-stories-entry.js'),
+          ],
+        },
+        statsPath,
+        ['src/theme.js']
+      );
+      expect(result.turboSnap.bailReason).toBeUndefined();
+    });
+
+    // Webpack 5 names the concatenation after the config entry, outside the config directory, so
+    // the glob matches only its preview member. Rsbuild names it after the preview, so the glob
+    // matches the module only once its ` + N modules` suffix is stripped.
+    it.each([
+      ['./storybook-config-entry.js', './storybook-config-entry.js + 2 modules'],
+      [
+        './path/to/storybook-config/preview.js',
+        './path/to/storybook-config/preview.js + 2 modules',
+      ],
+    ])(
+      'does not bail on a changed file concatenated with the preview config into %s',
+      async (id, name) => {
+        const result = await getDependentStoryFiles(
+          getContext({
+            configDir: 'path/to/storybook-config',
+            untraced: ['path/to/storybook-config/preview.js'],
+          }),
+          {
+            modules: [
+              {
+                id,
+                name,
+                modules: [
+                  { name: './storybook-config-entry.js' },
+                  { name: './path/to/storybook-config/preview.js' },
+                  { name: './src/theme.js' },
+                ],
+                reasons: [],
+              },
+              buildModule('./src/foo.stories.js', CSF_GLOB),
+              buildModule(CSF_GLOB, './path/to/storybook-config/generated-stories-entry.js'),
+            ],
+          },
+          statsPath,
+          ['src/theme.js']
+        );
+        expect(result.turboSnap.bailReason).toBeUndefined();
+        expect(result).toMatchObject({ status: 'traced', onlyStoryFiles: {} });
+      }
+    );
+
+    it('still bails on a concatenated preview config the glob does not match', async () => {
+      const result = await getDependentStoryFiles(
+        getContext({
+          configDir: 'path/to/storybook-config',
+          untraced: ['path/to/storybook-config/mocks/**'],
+        }),
+        {
+          modules: [
+            {
+              id: './storybook-config-entry.js',
+              name: './storybook-config-entry.js + 2 modules',
+              modules: [
+                { name: './storybook-config-entry.js' },
+                { name: './path/to/storybook-config/preview.js' },
+                { name: './src/theme.js' },
               ],
               reasons: [],
             },
