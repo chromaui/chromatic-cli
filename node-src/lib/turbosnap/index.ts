@@ -1,11 +1,16 @@
 import * as Sentry from '@sentry/node';
+import { readdir, realpath } from 'fs/promises';
 import semver from 'semver';
 
 import { readStatsFile } from '../../tasks/readStatsFile';
-import { Context, HashBasedTurboSnap, Stats } from '../../types';
+import { Context, HashBasedTurboSnap, Stats, UntracedFile } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
+import untracedStorybookConfig from '../../ui/messages/warnings/untracedStorybookConfig';
+import { relativeTo } from '../getStorybookProjectRoot';
+import { matchesFile } from '../utilities';
 import { isHashCollectionDisabled } from './isHashCollectionDisabled';
 import { isTurboSnapV1Enabled, shouldTraceWithV1 } from './shouldTraceWithV1';
+import { storybookConfigFileKind } from './storybookConfigFiles';
 import { TurboSnapResult } from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
@@ -50,6 +55,8 @@ export async function traceChangedFiles(
   if (!collectHashes && !traceWithV1) {
     return { status: 'skipped' };
   }
+
+  await logUntracedStorybookConfig(ctx);
 
   const statsPath = ctx.fileInfo.statsPath;
   const stats = await readStatsFile(statsPath);
@@ -106,6 +113,35 @@ function shouldSkipV1(ctx: Context, hashBased: HashBasedTurboSnap | undefined) {
       : 'CHROMATIC_TURBOSNAP_DISABLE_V1 is set, but Chromatic did not apply TurboSnap 2.0 to this build; tracing with TurboSnap 1.0'
   );
   return !!hashBased;
+}
+
+const realPathOrSelf = (absolutePath: string) => realpath(absolutePath).catch(() => absolutePath);
+
+// `--untraced` applies to the allowlisted Storybook config files too, though changing them can affect
+// every story. When a glob matches one on disk, warn once per build, whether or not it changed. The
+// warning is only logged at debug level when this build doesn't use TurboSnap, such as when
+// `--only-changed` names a branch glob the build's branch doesn't match.
+// Globs are matched against real paths, as TurboSnap 2.0 does, so they cover a symlinked config dir.
+async function logUntracedStorybookConfig(ctx: Context) {
+  const untraced = (ctx.options.untraced ?? []).filter(Boolean);
+  const { rootPath } = ctx.git;
+  if (untraced.length === 0 || !rootPath) {
+    return;
+  }
+
+  const configDirectory = await realPathOrSelf(ctx.storybook.configDir);
+  const storybookDirectory = relativeTo(await realPathOrSelf(rootPath), configDirectory);
+  const fileNames = await readdir(configDirectory).catch((): string[] => []);
+  const matches = fileNames.flatMap((fileName): UntracedFile[] => {
+    const filepath = `${storybookDirectory}/${fileName}`;
+    if (!storybookConfigFileKind(filepath, storybookDirectory)) return [];
+    const glob = untraced.find((pattern) => matchesFile(pattern, filepath));
+    return glob ? [{ filepath, glob }] : [];
+  });
+
+  if (matches.length > 0) {
+    ctx.log[ctx.turboSnap ? 'warn' : 'debug'](untracedStorybookConfig({ matches }));
+  }
 }
 
 function missingStatsFileError(ctx: Context) {
