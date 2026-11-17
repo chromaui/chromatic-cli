@@ -1,3 +1,20 @@
+# v18.14.6 (Tue Nov 17 2026)
+
+#### 🐛 Bug Fix
+
+- Fix TurboSnap 2.0 Storybook version lookup, load Yarn Plug'n'Play, and stop reporting install problems [#1706](https://github.com/chromaui/chromatic-cli/pull/1706) ([@codykaup](https://github.com/codykaup))
+- Don't print an undefined test count on --only-changed dry runs [#1712](https://github.com/chromaui/chromatic-cli/pull/1712) ([@codykaup](https://github.com/codykaup))
+- Share the Storybook config allowlist between TurboSnap 1.0 and 2.0 [#1659](https://github.com/chromaui/chromatic-cli/pull/1659) ([@codykaup](https://github.com/codykaup))
+- Show the TurboSnap result when a dry run finishes [#1689](https://github.com/chromaui/chromatic-cli/pull/1689) ([@codykaup](https://github.com/codykaup))
+- Keep the CLI's own files and nested repositories out of the uncommitted hash [#1704](https://github.com/chromaui/chromatic-cli/pull/1704) ([@codykaup](https://github.com/codykaup))
+- Remove unused lint:package script and sort-package-json [#1701](https://github.com/chromaui/chromatic-cli/pull/1701) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.14.5 (Mon Nov 16 2026)
 
 #### 🐛 Bug Fix
