@@ -1,3 +1,22 @@
+# v18.15.0 (Wed Nov 18 2026)
+
+#### 🚀 Enhancement
+
+- Honor --untraced on the main config in TurboSnap 2.0 [#1714](https://github.com/chromaui/chromatic-cli/pull/1714) ([@codykaup](https://github.com/codykaup))
+- Explain when --untraced matches a config file TurboSnap always traces [#1663](https://github.com/chromaui/chromatic-cli/pull/1663) ([@codykaup](https://github.com/codykaup))
+- Hash only allowlisted Storybook config files in TurboSnap 2.0 [#1662](https://github.com/chromaui/chromatic-cli/pull/1662) ([@codykaup](https://github.com/codykaup))
+- Bail TurboSnap 1.0 only on allowlisted Storybook config files [#1661](https://github.com/chromaui/chromatic-cli/pull/1661) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Report why TurboSnap bailed on a Storybook config change [#1660](https://github.com/chromaui/chromatic-cli/pull/1660) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.14.6 (Tue Nov 17 2026)
 
 #### 🐛 Bug Fix
