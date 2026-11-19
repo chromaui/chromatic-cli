@@ -6,15 +6,23 @@ import { getRepositoryRoot } from '../git/git';
 import { Context, Stats } from '../types';
 import { invalidStorybookBaseDirectory } from '../ui/messages/errors/invalidStorybookBaseDirectory';
 import { turboSnapDisabledVitest } from '../ui/messages/errors/turboSnapDisabledVitest';
-import { exitCodes, setExitCode } from './setExitCode';
+import { exitCodes, TaskFailure } from './setExitCode';
+
+const invalidOptions = { exitCode: exitCodes.INVALID_OPTIONS, userError: true };
 
 /**
  * Ensure the base directory for Storybook is setup correctly before running TurboSnap.
  *
- * @param ctx The context set when executing the CLI.
+ * @param ctx The logger and options.
  * @param stats The stats file information from the project's builder (Webpack, for example).
+ *
+ * @throws {TaskFailure} With `INVALID_OPTIONS`, when the Vitest run produced no source modules or
+ * none of the source modules exist under the Storybook base directory.
  */
-export async function checkStorybookBaseDirectory(ctx: Context, stats: Stats) {
+export async function checkStorybookBaseDirectory(
+  ctx: Pick<Context, 'log' | 'options'>,
+  stats: Stats
+) {
   const repositoryRoot = await getRepositoryRoot(ctx);
 
   if (!repositoryRoot) {
@@ -36,8 +44,7 @@ export async function checkStorybookBaseDirectory(ctx: Context, stats: Stats) {
   // This can happen if `vitest run` is run without the chromaticPlugin({ turboSnap: true })
   // and `chromatic --vitest --only-changed` is run afterwards.
   if (ctx.options.vitest && sourceModuleFiles.length === 0) {
-    setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
-    throw new Error(turboSnapDisabledVitest());
+    throw new TaskFailure(turboSnapDisabledVitest(), invalidOptions);
   }
 
   // GitHub Actions seems to have a default ulimit of 1024, so we limit concurrency to stay under
@@ -64,7 +71,6 @@ export async function checkStorybookBaseDirectory(ctx: Context, stats: Stats) {
     );
   } catch {
     ctx.log.debug(`Invalid storybookBaseDir: ${storybookBaseDirectory}`);
-    setExitCode(ctx, exitCodes.INVALID_OPTIONS, true);
-    throw new Error(invalidStorybookBaseDirectory());
+    throw new TaskFailure(invalidStorybookBaseDirectory(), invalidOptions);
   }
 }

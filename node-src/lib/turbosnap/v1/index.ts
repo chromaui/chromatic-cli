@@ -1,7 +1,7 @@
-import { ChangedPackageFilesBailReason, Context, Stats, TurboSnap } from '../../../types';
+import { ChangedPackageFilesBailReason, Stats, TurboSnap } from '../../../types';
 import bailFile from '../../../ui/messages/warnings/bailFile';
 import { checkStorybookBaseDirectory } from '../../checkStorybookBaseDirectory';
-import { TraceChangedFilesResult } from '../types';
+import { TraceChangedFilesResult, TurboSnapV1Input } from '../types';
 import { captureBailException } from './captureBailException';
 import { classifyChangedPackageFilesDetail } from './classifyBailDetail';
 import { classifyTagsFromError } from './classifyBailRootCause';
@@ -22,7 +22,7 @@ import { isPreviewConfigInStats } from './previewConfigInStats';
  */
 // eslint-disable-next-line complexity
 export async function traceChangedFiles(
-  ctx: Context,
+  ctx: TurboSnapV1Input,
   stats: Stats,
   statsPath: string
 ): Promise<TraceChangedFilesResult> {

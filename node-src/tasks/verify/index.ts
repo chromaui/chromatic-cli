@@ -11,7 +11,7 @@ export interface VerifyInput {
   onlyStoryFiles?: string[];
   matchesBranch?: Context['git']['matchesBranch'];
   turboSnap?: Context['turboSnap'];
-  hashBasedTurboSnap?: Context['hashBasedTurboSnap'];
+  turboSnapOutcome?: Context['turboSnapOutcome'];
   isReactNativeApp?: boolean;
 }
 
@@ -58,7 +58,7 @@ export async function verifyProject(
     onlyStoryFiles: input.onlyStoryFiles,
     matchesBranch: input.matchesBranch,
     turboSnap: input.turboSnap,
-    hashBasedTurboSnap: input.hashBasedTurboSnap,
+    turboSnapOutcome: input.turboSnapOutcome,
     isReactNativeApp: input.isReactNativeApp,
   });
 
@@ -76,7 +76,7 @@ export const extractVerifyInput = (ctx: Context): VerifyInput => ({
   onlyStoryFiles: ctx.onlyStoryFiles,
   matchesBranch: ctx.git.matchesBranch,
   turboSnap: ctx.turboSnap,
-  hashBasedTurboSnap: ctx.hashBasedTurboSnap,
+  turboSnapOutcome: ctx.turboSnapOutcome,
   isReactNativeApp: ctx.isReactNativeApp,
 });
 

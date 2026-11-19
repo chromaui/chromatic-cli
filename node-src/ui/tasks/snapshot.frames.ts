@@ -50,7 +50,11 @@ export const Pending = () =>
 
 export const PendingOnlyChanged = () =>
   progressFrame(
-    { ...ctx, build: { ...build, actualTestCount: 8 }, onlyStoryFiles: [] } as Context,
+    {
+      ...ctx,
+      build: { ...build, actualTestCount: 8 },
+      turboSnapOutcome: { mechanism: 'v1', bailed: false },
+    } as Context,
     6
   );
 
