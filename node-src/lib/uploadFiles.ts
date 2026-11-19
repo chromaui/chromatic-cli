@@ -9,14 +9,14 @@ import { FileReaderBlob } from './fileReaderBlob';
 /**
  * Upload Storybook build files to Chromatic.
  *
- * @param ctx The context set when executing the CLI.
+ * @param ctx The logger, HTTP client, environment, and options (for the abort signal).
  * @param targets The list of files to upload.
  * @param onProgress A callback to report progress on the upload.
  
  * @returns A promise that resolves when all files are uploaded.
  */
 export async function uploadFiles(
-  ctx: Context,
+  ctx: Pick<Context, 'log' | 'http' | 'env' | 'options'>,
   targets: (FileDesc & TargetInfo)[],
   onProgress?: (progress: number) => void
 ) {

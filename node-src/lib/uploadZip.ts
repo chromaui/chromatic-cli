@@ -8,14 +8,14 @@ import { FileReaderBlob } from './fileReaderBlob';
 /**
  * Upload a zip to Chromatic instead of individual files.
  *
- * @param ctx The context set when executing the CLI.
+ * @param ctx The logger, HTTP client, environment, and options (for the abort signal).
  * @param target The zip information to upload.
  * @param onProgress A callback to report progress on the upload.
  *
  * @returns A promise that resolves when the zip is uploaded.
  */
 export async function uploadZip(
-  ctx: Context,
+  ctx: Pick<Context, 'log' | 'http' | 'env' | 'options'>,
   target: TargetInfo & { contentLength: number; localPath: string },
   onProgress: (progress: number) => void
 ) {

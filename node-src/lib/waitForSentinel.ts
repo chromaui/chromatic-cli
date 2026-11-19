@@ -11,14 +11,17 @@ const SENTINEL_SUCCESS_VALUE = 'OK';
  * Wait for a sentinel file to appear within the provided URL by checking for its existence on a
  * loop.
  *
- * @param ctx The context set when executing the CLI.
+ * @param ctx The logger, HTTP client, and options (for the abort signal).
  * @param file The file information for locating the file.
  * @param file.name The name of the sentinel file in question.
  * @param file.url The url of the sentinel file in question.
  *
  * @returns A promise that resolves when the sentinel file is found.
  */
-export async function waitForSentinel(ctx: Context, { name, url }: { name: string; url: string }) {
+export async function waitForSentinel(
+  ctx: Pick<Context, 'log' | 'http' | 'options'>,
+  { name, url }: { name: string; url: string }
+) {
   const { experimental_abortSignal: signal } = ctx.options;
 
   ctx.log.debug(`Waiting for '${name}' sentinel file to appear at ${url}`);

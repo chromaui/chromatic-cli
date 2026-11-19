@@ -116,7 +116,7 @@ export interface VerifyBuildInput {
   onlyStoryFiles?: string[];
   matchesBranch?: Context['git']['matchesBranch'];
   turboSnap?: Context['turboSnap'];
-  hashBasedTurboSnap?: Context['hashBasedTurboSnap'];
+  turboSnapOutcome?: Context['turboSnapOutcome'];
   isReactNativeApp?: boolean;
 }
 
@@ -136,13 +136,13 @@ export const verifyBuild = async (
   input: VerifyBuildInput
 ): Promise<VerifyBuildResult> => {
   const { client, env, log, report } = deps;
-  const { announcedBuild, storybookUrl, turboSnap, hashBasedTurboSnap, matchesBranch } = input;
+  const { announcedBuild, storybookUrl, turboSnap, turboSnapOutcome, matchesBranch } = input;
   const { list, onlyStoryNames, onlyStoryFiles = input.onlyStoryFiles } = input.options;
 
   // It's not possible to set both --only-changed and --only-story-files and/or --only-story-names
   // onlyStoryFiles may be passed directly, or calculated via --only-changed. TurboSnap 2.0 ignores the
   // calculated ones, so they don't limit what is captured.
-  if (onlyStoryFiles && !hashBasedTurboSnap) {
+  if (onlyStoryFiles && turboSnapOutcome?.mechanism !== 'v2') {
     report(runOnlyFiles(input));
   }
   if (onlyStoryNames) {
@@ -212,7 +212,7 @@ export const verifyBuild = async (
     if (turboSnap.unavailable) {
       log.warn(turboSnapUnavailable({ build }));
     } else if (build.turboSnapEnabled) {
-      log.info(turboSnapEnabled({ build, options: input.options, hashBasedTurboSnap }));
+      log.info(turboSnapEnabled({ build, options: input.options, turboSnapOutcome }));
     }
   }
 

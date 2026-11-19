@@ -25,18 +25,21 @@ const accessMock = vi.mocked(access);
 const environment = { CHROMATIC_RETRIES: 2, CHROMATIC_OUTPUT_INTERVAL: 0 };
 const log = new TestLogger();
 
-const deps = () => ({ log, options: {}, report: vi.fn() }) as any;
+const deps = () => ({ log, env: environment, options: {}, report: vi.fn() }) as any;
 const dryRunDeps = () => ({ ...deps(), options: { dryRun: true, interactive: true } });
 
-const turboSnapContext = () =>
+const input = () =>
   ({
-    env: environment,
-    log,
-    options: {},
-    fileInfo: { statsPath: '/static/preview-stats.json' },
+    buildId: 'build-id',
+    sourceDir: '/static',
+    statsPath: '/static/preview-stats.json',
     git: { changedFiles: ['./example.js'] },
+    storybook: {},
     turboSnap: {},
   }) as any;
+
+const v1Traced = { mechanism: 'v1', bailed: false } as const;
+const v1Bailed = { mechanism: 'v1', bailed: true } as const;
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -55,9 +58,10 @@ describe('traceChangedFiles', () => {
       onlyStoryFiles: traced,
       turboSnap: {},
       untracedFiles: [],
+      outcome: v1Traced,
     });
 
-    const result = await traceChangedFiles(deps(), { turboSnapContext: turboSnapContext() });
+    const result = await traceChangedFiles(deps(), input());
 
     expect(result.onlyStoryFiles).toStrictEqual(Object.keys(traced));
   });
@@ -77,9 +81,10 @@ describe('traceChangedFiles', () => {
       onlyStoryFiles: traced,
       turboSnap: {},
       untracedFiles: [],
+      outcome: v1Traced,
     });
 
-    const result = await traceChangedFiles(deps(), { turboSnapContext: turboSnapContext() });
+    const result = await traceChangedFiles(deps(), input());
 
     expect(result.onlyStoryFiles).toStrictEqual([
       String.raw`./\$example-new.stories.js`,
@@ -90,98 +95,98 @@ describe('traceChangedFiles', () => {
     ]);
   });
 
-  it('applies the trace result to the context', async () => {
-    const ctx = turboSnapContext();
+  it('returns the trace result', async () => {
     traceChangedFilesTurbosnap.mockResolvedValue({
       status: 'traced',
       onlyStoryFiles: { 123: ['./example.stories.js'] },
       turboSnap: { rootPath: '/repo' },
       changedDependencyNames: ['moment'],
       untracedFiles: [{ filepath: './skipped.js', glob: '*.js' }],
+      outcome: v1Traced,
     });
 
-    await traceChangedFiles(deps(), { turboSnapContext: ctx });
+    const result = await traceChangedFiles(deps(), input());
 
-    expect(ctx.turboSnap).toEqual({ rootPath: '/repo' });
-    expect(ctx.git.changedDependencyNames).toEqual(['moment']);
-    expect(ctx.untracedFiles).toEqual([{ filepath: './skipped.js', glob: '*.js' }]);
+    expect(result).toStrictEqual({
+      turboSnapOutcome: v1Traced,
+      turboSnap: { rootPath: '/repo' },
+      onlyStoryFiles: ['123'],
+      changedDependencyNames: ['moment'],
+      untracedFiles: [{ filepath: './skipped.js', glob: '*.js' }],
+    });
   });
 
-  it('applies a bailed result to the context and reports the bail', async () => {
-    const ctx = turboSnapContext();
+  it('returns a bailed result and reports the bail', async () => {
     const d = deps();
     const turboSnap = { bailReason: { changedPackageFiles: ['./package.json'] } };
-    traceChangedFilesTurbosnap.mockResolvedValue({ status: 'bailed', turboSnap });
+    traceChangedFilesTurbosnap.mockResolvedValue({
+      status: 'bailed',
+      turboSnap,
+      outcome: v1Bailed,
+    });
 
-    const result = await traceChangedFiles(d, { turboSnapContext: ctx });
+    const result = await traceChangedFiles(d, input());
 
-    expect(result).toEqual({});
-    expect(ctx.turboSnap).toEqual(turboSnap);
+    expect(result).toStrictEqual({ turboSnapOutcome: v1Bailed, turboSnap });
     expect(d.report).toHaveBeenCalledWith(expect.objectContaining({ title: 'TurboSnap disabled' }));
   });
 
-  it('wraps the missing stats file error without recording a bail reason', async () => {
-    const ctx = turboSnapContext();
+  it('wraps the missing stats file error', async () => {
     const missingStatsError = new Error('stats file not found');
     traceChangedFilesTurbosnap.mockRejectedValue(missingStatsError);
 
     let err;
     try {
-      await traceChangedFiles(deps(), { turboSnapContext: ctx });
+      await traceChangedFiles(deps(), input());
     } catch (error) {
       err = error;
     }
 
-    expect(ctx.turboSnap.bailReason).toBeUndefined();
     expect(err.message).toBe('Could not retrieve dependent story files.\nstats file not found');
   });
 
   it('swallows the error for a user who did not ask for TurboSnap', async () => {
-    const ctx = { ...turboSnapContext(), turboSnap: undefined };
     const d = deps();
     traceChangedFilesTurbosnap.mockRejectedValue(new Error('stats file is unreadable'));
 
     let err;
     let result;
     try {
-      result = await traceChangedFiles(d, { turboSnapContext: ctx });
+      result = await traceChangedFiles(d, { ...input(), turboSnap: undefined });
     } catch (error) {
       err = error;
     }
 
     expect(err).toBeUndefined();
-    expect(result).toStrictEqual({});
+    expect(result).toStrictEqual({ turboSnapOutcome: { mechanism: 'none' } });
     expect(d.log.info).not.toHaveBeenCalled();
     expect(d.report).not.toHaveBeenCalled();
   });
 
-  it('wraps the missing stats file error without recording a bail reason in Vitest run', async () => {
-    const ctx = turboSnapContext();
-    ctx.options.vitest = true;
+  it('wraps the missing stats file error in Vitest run', async () => {
     const missingStatsError = new Error('stats file not found');
     traceChangedFilesTurbosnap.mockRejectedValue(missingStatsError);
 
     let err;
     try {
-      await traceChangedFiles({ ...deps(), options: { vitest: true } }, { turboSnapContext: ctx });
+      await traceChangedFiles({ ...deps(), options: { vitest: true } }, input());
     } catch (error) {
       err = error;
     }
 
-    expect(ctx.turboSnap.bailReason).toBeUndefined();
     expect(err.message).toBe('Could not retrieve dependent test files.\nstats file not found');
   });
 
   it('reports tracing with the changed-file count when tracing will run', async () => {
     const d = deps();
-    traceChangedFilesTurbosnap.mockImplementation(async (_ctx, hooks) => {
+    traceChangedFilesTurbosnap.mockImplementation(async (_input, hooks) => {
       hooks?.onTraceWithV1?.();
-      return { status: 'skipped' };
+      return { status: 'skipped', outcome: v1Bailed };
     });
 
-    const result = await traceChangedFiles(d, { turboSnapContext: turboSnapContext() });
+    const result = await traceChangedFiles(d, input());
 
-    expect(result).toStrictEqual({});
+    expect(result).toStrictEqual({ turboSnapOutcome: v1Bailed });
     expect(d.report).toHaveBeenCalledWith(
       expect.objectContaining({
         output: expect.stringContaining(
@@ -192,21 +197,22 @@ describe('traceChangedFiles', () => {
   });
 
   it('reports TurboSnap 2.0 instead of the 1.0 trace when the Index applies it', async () => {
-    const ctx = { ...turboSnapContext(), options: { interactive: false } };
     const d = { ...deps(), options: { interactive: false } };
     traceChangedFilesTurbosnap.mockResolvedValue({
       status: 'traced',
       onlyStoryFiles: { './a.stories.js': ['./a.stories.js'] },
       turboSnap: {},
       untracedFiles: [{ filepath: './skipped.js', glob: '*.js' }],
-      hashBased: { bailed: false },
+      outcome: { mechanism: 'v2', bailed: false },
     });
 
-    const result = await traceChangedFiles(d, { turboSnapContext: ctx });
+    const result = await traceChangedFiles(d, input());
 
     // The 1.0 story files are still sent with the build.
-    expect(result).toStrictEqual({ onlyStoryFiles: ['./a.stories.js'] });
-    expect(ctx.hashBasedTurboSnap).toEqual({ bailed: false });
+    expect(result).toMatchObject({
+      turboSnapOutcome: { mechanism: 'v2', bailed: false },
+      onlyStoryFiles: ['./a.stories.js'],
+    });
     expect(d.report).toHaveBeenCalledTimes(1);
     expect(d.report).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Using TurboSnap 2.0' })
@@ -215,15 +221,14 @@ describe('traceChangedFiles', () => {
   });
 
   it('warns why TurboSnap 2.0 bailed instead of reporting the 1.0 bail', async () => {
-    const ctx = turboSnapContext();
     const d = deps();
     traceChangedFilesTurbosnap.mockResolvedValue({
       status: 'bailed',
       turboSnap: { bailReason: { changedPackageFiles: ['./package.json'] } },
-      hashBased: { bailed: true, bailReason: 'NO_ANCESTORS' },
+      outcome: { mechanism: 'v2', bailed: true, bailReason: 'NO_ANCESTORS' },
     });
 
-    await traceChangedFiles(d, { turboSnapContext: ctx });
+    await traceChangedFiles(d, input());
 
     expect(d.report).toHaveBeenCalledTimes(1);
     expect(d.report).toHaveBeenCalledWith(
@@ -245,9 +250,10 @@ describe('traceChangedFiles', () => {
         onlyStoryFiles: { './a.stories.js': ['./a.js', './b.js'], './c.stories.js': ['./c.js'] },
         turboSnap: {},
         untracedFiles: [],
+        outcome: v1Traced,
       });
 
-      await traceChangedFiles(d, { turboSnapContext: turboSnapContext() });
+      await traceChangedFiles(d, input());
 
       expect(d.log.info).toHaveBeenCalledTimes(1);
       expect(d.log.info.mock.calls[0][0]).toContain('TurboSnap enabled (dry run)');
@@ -263,10 +269,10 @@ describe('traceChangedFiles', () => {
         onlyStoryFiles: { './a.stories.js': ['./a.stories.js'] },
         turboSnap: {},
         untracedFiles: [],
-        hashBased: { bailed: false },
+        outcome: { mechanism: 'v2', bailed: false },
       });
 
-      await traceChangedFiles(d, { turboSnapContext: turboSnapContext() });
+      await traceChangedFiles(d, input());
 
       expect(d.log.info).toHaveBeenCalledTimes(1);
       const message = d.log.info.mock.calls[0][0];
@@ -284,10 +290,10 @@ describe('traceChangedFiles', () => {
       traceChangedFilesTurbosnap.mockResolvedValue({
         status: 'bailed',
         turboSnap: { bailReason: { changedPackageFiles: ['./package.json'] } },
-        hashBased: { bailed: true, bailReason: 'NO_ANCESTORS' },
+        outcome: { mechanism: 'v2', bailed: true, bailReason: 'NO_ANCESTORS' },
       });
 
-      await traceChangedFiles(d, { turboSnapContext: turboSnapContext() });
+      await traceChangedFiles(d, input());
 
       expect(d.log.info).not.toHaveBeenCalled();
       expect(d.log.warn).toHaveBeenCalledWith(expect.stringContaining('TurboSnap 2.0 disabled'));

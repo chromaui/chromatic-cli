@@ -8,9 +8,9 @@ import {
 } from 'snyk-nodejs-lockfile-parser';
 import { inspect } from 'snyk-nodejs-plugin';
 
-import { Context } from '../../../types';
 import { posix } from '../../posix';
 import { PNPM_LOCK_FILE } from '../../utilities';
+import { TurboSnapV1Input } from '../types';
 import { LockFileParseFailedError, LockFileSizeExceededError } from './errors';
 
 const MAX_LOCK_FILE_SIZE = 10_485_760; // 10 MB
@@ -37,7 +37,7 @@ const PNPM_PARSE_OPTIONS = {
  * @returns The dependency graph.
  */
 export const getDependencies = async (
-  ctx: Context,
+  ctx: TurboSnapV1Input,
   {
     rootPath,
     manifestPath,
@@ -139,7 +139,7 @@ async function inspectLockfile(absoluteManifestPath: string, absoluteLockfilePat
   return result.scannedProjects[0].depGraph;
 }
 
-function ensureLockFileSize(ctx: Context, fullPath: string) {
+function ensureLockFileSize(ctx: TurboSnapV1Input, fullPath: string) {
   const maxLockFileSize =
     Number.parseInt(process.env.MAX_LOCK_FILE_SIZE ?? '') || MAX_LOCK_FILE_SIZE;
 

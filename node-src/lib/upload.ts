@@ -221,10 +221,25 @@ export interface UploadBuildResult {
   skippedBuild?: SkippedBuildFields;
 }
 
+/** What `uploadBuild` reads: the announced build, the TurboSnap result it sends, and clients. */
+export interface UploadBuildContext extends Pick<
+  Context,
+  | 'log'
+  | 'client'
+  | 'http'
+  | 'env'
+  | 'options'
+  | 'isReactNativeApp'
+  | 'turboSnap'
+  | 'onlyStoryFiles'
+> {
+  announcedBuild: Pick<Context['announcedBuild'], 'id' | 'number' | 'reportToken' | 'browsers'>;
+}
+
 /**
  * Upload build files to Chromatic.
  *
- * @param ctx The context set when executing the CLI.
+ * @param ctx The announced build, the TurboSnap result it sends, and the clients to upload with.
  * @param files The list of files to upload.
  * @param options A collection of callbacks for each stage of the upload.
  * @param options.onProgress A callback to track progress of the upload.
@@ -235,7 +250,7 @@ export interface UploadBuildResult {
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements
 export async function uploadBuild(
-  ctx: Context,
+  ctx: UploadBuildContext,
   files: FileDesc[],
   options: {
     onProgress?: (progress: number, total: number) => void;

@@ -80,15 +80,13 @@ describe('checkStorybookBaseDir', () => {
       ],
     };
 
-    const ctxWithBaseDirectory = getContext('wrong');
-    await expect(() => checkStorybookBaseDirectory(ctxWithBaseDirectory, stats)).rejects.toThrow();
-    expect(ctxWithBaseDirectory.exitCode).toBe(exitCodes.INVALID_OPTIONS);
-
-    const ctxWithoutBaseDirectory = getContext();
-    await expect(() =>
-      checkStorybookBaseDirectory(ctxWithoutBaseDirectory, stats)
-    ).rejects.toThrow();
-    expect(ctxWithoutBaseDirectory.exitCode).toBe(exitCodes.INVALID_OPTIONS);
+    const invalidOptions = { exitCode: exitCodes.INVALID_OPTIONS, userError: true };
+    await expect(checkStorybookBaseDirectory(getContext('wrong'), stats)).rejects.toMatchObject(
+      invalidOptions
+    );
+    await expect(checkStorybookBaseDirectory(getContext(), stats)).rejects.toMatchObject(
+      invalidOptions
+    );
   });
 
   it('should not consider modules in node_modules as valid files to match', async () => {
@@ -131,9 +129,13 @@ describe('checkStorybookBaseDir', () => {
       modules: [{ id: null, name: './storybook-stories.js' }], // builder-webpack5 virtual file
     };
 
+    await expect(checkStorybookBaseDirectory(ctx, stats)).rejects.toMatchObject({
+      exitCode: exitCodes.INVALID_OPTIONS,
+      userError: true,
+    });
     await expect(() => checkStorybookBaseDirectory(ctx, stats)).rejects
       .toThrowErrorMatchingInlineSnapshot(`
-      [Error: ✖ TurboSnap failed
+      [TaskFailure: ✖ TurboSnap failed
       Vitest run did not produce source file information for TurboSnap.
       Make sure you've enabled chromaticPlugin({ turboSnap: true }) in your test Vitest configuration before running tests.
       ℹ Read more at https://www.chromatic.com/docs/vitest/turbosnap]

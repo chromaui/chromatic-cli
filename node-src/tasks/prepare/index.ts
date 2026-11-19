@@ -1,6 +1,6 @@
 import { Context, Deps, TaskResult } from '../../types';
 import { calculateFileHashes } from './calculateFileHashes';
-import { traceChangedFiles } from './traceChangedFiles';
+import { traceChangedFiles, TraceChangedFilesOutput } from './traceChangedFiles';
 import { validateAndroidArtifact } from './validateAndroidArtifact';
 import { validateFiles } from './validateFiles';
 
@@ -8,16 +8,16 @@ export interface PrepareInput {
   isReactNativeApp: boolean;
   sourceDir: string;
   buildLogFile?: string;
-  browsers?: string[];
-  // Context threaded for the TurboSnap subsystem, which reads it; trace results are applied back
-  // onto it in ./traceChangedFiles.
-  turboSnapContext: Context;
+  // Unset when sharing a Storybook, which announces no build.
+  announcedBuild?: Pick<Context['announcedBuild'], 'id' | 'browsers'>;
+  git: Context['git'];
+  storybook: Context['storybook'];
+  turboSnap?: Context['turboSnap'];
 }
 
-export interface PrepareOutput {
+export interface PrepareOutput extends TraceChangedFilesOutput {
   fileInfo: NonNullable<Context['fileInfo']>;
   sourceDir: string;
-  onlyStoryFiles?: string[];
 }
 
 /**
@@ -27,7 +27,7 @@ export interface PrepareOutput {
  * @param deps Narrow set of cross-cutting dependencies the task needs.
  * @param input Per-pipeline-run input extracted from Context at the seam.
  *
- * @returns A TaskResult conveying the validated file info, source directory and affected specs.
+ * @returns A TaskResult conveying the validated file info, source directory, and TurboSnap results.
  */
 export async function prepareProject(
   deps: Deps,
@@ -37,16 +37,19 @@ export async function prepareProject(
     isReactNativeApp: input.isReactNativeApp,
     sourceDir: input.sourceDir,
     buildLogFile: input.buildLogFile,
-    browsers: input.browsers,
+    browsers: input.announcedBuild?.browsers,
   });
 
-  await validateAndroidArtifact({ sourceDir, browsers: input.browsers });
+  await validateAndroidArtifact({ sourceDir, browsers: input.announcedBuild?.browsers });
 
   // TurboSnap reads the freshly validated paths; validateFiles may have corrected the directory.
-  input.turboSnapContext.fileInfo = fileInfo;
-  input.turboSnapContext.sourceDir = sourceDir;
-  const { onlyStoryFiles } = await traceChangedFiles(deps, {
-    turboSnapContext: input.turboSnapContext,
+  const traceOutput = await traceChangedFiles(deps, {
+    buildId: input.announcedBuild?.id,
+    git: input.git,
+    storybook: input.storybook,
+    turboSnap: input.turboSnap,
+    sourceDir,
+    statsPath: fileInfo.statsPath,
   });
 
   const { hashes } = await calculateFileHashes(deps, { fileInfo, sourceDir });
@@ -54,21 +57,33 @@ export async function prepareProject(
     fileInfo.hashes = hashes;
   }
 
-  return { kind: 'continue', output: { fileInfo, sourceDir, onlyStoryFiles } };
+  return { kind: 'continue', output: { ...traceOutput, fileInfo, sourceDir } };
 }
 
 export const extractPrepareInput = (ctx: Context): PrepareInput => ({
   isReactNativeApp: !!ctx.isReactNativeApp,
   sourceDir: ctx.sourceDir,
   buildLogFile: ctx.buildLogFile,
-  browsers: ctx.announcedBuild?.browsers,
-  turboSnapContext: ctx,
+  announcedBuild: ctx.announcedBuild,
+  git: ctx.git,
+  storybook: ctx.storybook,
+  turboSnap: ctx.turboSnap,
 });
 
 export const applyPrepareOutput = (ctx: Context, output: PrepareOutput) => {
   ctx.fileInfo = output.fileInfo;
   ctx.sourceDir = output.sourceDir;
+  ctx.turboSnapOutcome = output.turboSnapOutcome;
+  if (output.turboSnap) {
+    ctx.turboSnap = output.turboSnap;
+  }
   if (output.onlyStoryFiles) {
     ctx.onlyStoryFiles = output.onlyStoryFiles;
+  }
+  if (output.untracedFiles) {
+    ctx.untracedFiles = output.untracedFiles;
+  }
+  if (output.changedDependencyNames) {
+    ctx.git.changedDependencyNames = output.changedDependencyNames;
   }
 };
