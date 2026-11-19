@@ -356,6 +356,9 @@ describe('findChangedDependencies', () => {
       'packages/c/package.json',
       'packages/c/yarn.lock',
       'packages/c/package-lock.json',
+      // A nested workspace root's lockfile wins over the root one for the packages below it.
+      'packages/d/yarn.lock',
+      'packages/d/packages/e/package.json',
     ]);
     inspect.mockResolvedValue({ scannedProjects: [{ depGraph: { getDepPkgs: () => [] } }] } as any);
     mockChangedPackagesGraph([]);
@@ -370,6 +373,7 @@ describe('findChangedDependencies', () => {
           { changedFiles: ['packages/a/package.json'], commit: 'a' },
           { changedFiles: ['packages/ab/package.json'], commit: 'ab' },
           { changedFiles: ['packages/c/package.json'], commit: 'c' },
+          { changedFiles: ['packages/d/packages/e/package.json'], commit: 'e' },
         ],
       },
     });
@@ -388,6 +392,7 @@ describe('findChangedDependencies', () => {
       a: ['packages/a/package.json', 'yarn.lock'],
       ab: ['packages/ab/package.json', 'packages/ab/yarn.lock'],
       c: ['packages/c/package-lock.json', 'packages/c/package.json'],
+      e: ['packages/d/packages/e/package.json', 'packages/d/yarn.lock'],
     });
   });
 
@@ -476,6 +481,32 @@ describe('findChangedDependencies', () => {
     // HEAD and baseline for both the root and the nested package.
     expect(importers.toSorted()).toEqual(['.', '.', 'packages/ui', 'packages/ui']);
     expect(inspect).not.toHaveBeenCalled();
+  });
+
+  it('pairs workspace manifests with the lockfile of a workspace root below the repository root', async () => {
+    // The repository root has no manifest or lockfile; the pnpm workspace lives in `web/`.
+    mockTrackedFiles(['web/package.json', 'web/pnpm-lock.yaml', 'web/packages/ui/package.json']);
+    pnpmLockfileParser.mockReturnValue({ importers: { '.': {}, 'packages/ui': {} } } as any);
+    const importers: string[] = [];
+    pnpmWorkspaceProject.mockImplementation(async (_manifest, _lockfile, _options, importer) => {
+      importers.push(importer);
+      return { getDepPkgs: () => [] } as any;
+    });
+    mockChangedPackagesGraph(['moment@2.31.0']);
+
+    const context = getContext({
+      git: {
+        packageMetadataChanges: [
+          { changedFiles: ['web/packages/ui/package.json', 'web/pnpm-lock.yaml'], commit: 'A' },
+        ],
+      },
+    });
+
+    await expect(findChangedDependencies(context, noStats)).resolves.toEqual(['moment']);
+
+    // Importers are relative to the lockfile's directory, not the repository root.
+    expect(importers.toSorted()).toEqual(['.', '.', 'packages/ui', 'packages/ui']);
+    expect(checkoutFile).toHaveBeenCalledWith(expect.anything(), 'A', 'web/pnpm-lock.yaml', tmpdir);
   });
 });
 
