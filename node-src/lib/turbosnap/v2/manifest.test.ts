@@ -4,13 +4,13 @@ import path from 'path';
 import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
+import { VersionNotFoundError } from '../../installedPackages';
 import {
   createFixture,
   manifestWithPreview,
   syntheticAbsent,
 } from './__fixtures__/manifestFixtures';
 import { buildManifest, getManifestPath, serializeManifest, writeManifest } from './manifest';
-import { VersionNotFoundError } from './storybookVersion';
 
 describe('serializeManifest', () => {
   it('converts the manifest maps and sets into JSON-safe objects and arrays', async () => {
