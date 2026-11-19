@@ -593,6 +593,6 @@ describe('applySnapshotOutput', () => {
     applySnapshotOutput(ctx, output);
 
     expect(ctx.exitCode).toBe(0);
-    expect(ctx.log.info).toHaveBeenCalledWith(expect.stringContaining('Build 1 completed'));
+    expect(ctx.log.info).toHaveBeenCalledWith(expect.stringContaining('View Build 1: https://x'));
   });
 });

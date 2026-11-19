@@ -1,4 +1,5 @@
 import { Context } from '../../../types';
+import { buildTests } from '../../components/__fixtures__/buildTests';
 import buildSummary from './buildSummary';
 
 export default {
@@ -52,18 +53,22 @@ export const BuildPassedViaExitZeroWithAcceptedChanges = story({
 
 export const BuildCompletedViaExitZeroWithPendingChanges = story({
   status: 'PENDING',
-  pendingCount: 2,
+  pendingCount: 3,
+  pendingTests: buildTests('Form', 3),
 });
 
 export const BuildCompletedViaExitZeroWithDeniedChanges = story({
   status: 'DENIED',
-  deniedCount: 1,
+  deniedCount: 3,
+  deniedTests: buildTests('Button', 3),
 });
 
-export const BuildCompletedViaExitZeroWithPendingAccessibilityChanges = story({
+export const BuildCompletedViaExitZeroWithPendingChangesAndIgnoredTests = story({
   status: 'PENDING',
-  pendingCount: 2,
-  features: { ...features, accessibilityTests: { enabled: true } },
+  pendingCount: 3,
+  pendingTests: buildTests('Form', 3),
+  ignoredCount: 1,
+  ignoredTests: buildTests('AnimatedGif', 1),
 });
 
 export const BuildPassedWithIgnoredTests = story({ ignoredCount: 3 });
