@@ -10,6 +10,7 @@ import * as Sentry from '@sentry/node';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { delay, throttle } from '../lib/utilities';
 import { Context, Deps, TaskResult } from '../types';
+import { testLabel } from '../ui/components/testLabel';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';
 import buildSummaryMessage from '../ui/messages/info/buildSummary';
@@ -111,13 +112,7 @@ export async function snapshotProject(
   }
 
   const testLabels =
-    options.interactive &&
-    testCount === actualTestCount &&
-    tests?.map(({ spec, parameters, mode }) => {
-      const testSuffixName = mode.name || `[${parameters.viewport}px]`;
-      const suffix = parameters.viewportIsDefault ? '' : testSuffixName;
-      return `${spec.component.displayName} › ${spec.name} ${suffix}`;
-    });
+    options.interactive && testCount === actualTestCount && tests?.map((test) => testLabel(test));
 
   const updateProgress = throttle(
     ({ cursor, label }) => {

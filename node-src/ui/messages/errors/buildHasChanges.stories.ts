@@ -1,3 +1,4 @@
+import { buildTest, buildTests } from '../../components/__fixtures__/buildTests';
 import buildHasChanges from './buildHasChanges';
 
 export default {
@@ -8,9 +9,10 @@ const context = {
   build: {
     number: 42,
     status: 'PENDING',
-    pendingCount: 2,
+    pendingCount: 3,
+    pendingTests: buildTests('Form', 3),
     ignoredCount: 1,
-    features: { uiTests: true, uiReview: false, isReactNativeApp: false },
+    ignoredTests: buildTests('AnimatedGif', 1),
     webUrl: 'https://www.chromatic.com/build?appId=59c59bd0183bd100364e1d57&number=42',
     app: {
       setupUrl: 'https://www.chromatic.com/setup?appId=59c59bd0183bd100364e1d57',
@@ -20,22 +22,59 @@ const context = {
   isOnboarding: false,
 };
 
-export const BuildHasChangesNotOnboarding = () => buildHasChanges(context);
+const story =
+  (build: Record<string, unknown>, isOnboarding = false) =>
+  () =>
+    buildHasChanges({ ...context, isOnboarding, build: { ...context.build, ...build } });
 
-export const BuildHasChangesWithAccessibility = () =>
-  buildHasChanges({
-    ...context,
-    build: {
-      ...context.build,
-      features: { ...context.build.features, accessibilityTests: { enabled: true } },
-    },
-  });
+export const BuildHasChangesNotOnboarding = story({});
 
-export const BuildHasChangesDenied = () =>
-  buildHasChanges({ ...context, build: { ...context.build, status: 'DENIED', deniedCount: 1 } });
+export const BuildHasChangesWithoutIgnoredTests = story({ ignoredCount: 0, ignoredTests: [] });
 
-export const BuildHasChangesWithoutIgnoredTests = () =>
-  buildHasChanges({ ...context, build: { ...context.build, ignoredCount: 0 } });
+export const BuildHasChangesWithModes = story({
+  pendingTests: [
+    buildTest('Form', 'Playground'),
+    buildTest('Form', 'Playground', 'Dark'),
+    buildTest('Form', 'Playground', 'Mobile'),
+  ],
+});
 
-export const BuildHasChangesIsOnboarding = () =>
-  buildHasChanges({ ...context, isOnboarding: true });
+// The index returns at most 50 tests per section; the CLI counts the rest.
+export const BuildHasChangesWithMoreThanFiftyChanges = story({
+  pendingCount: 57,
+  pendingTests: buildTests('Form', 50),
+});
+
+export const BuildHasChangesDenied = story({
+  status: 'DENIED',
+  pendingCount: 0,
+  pendingTests: [],
+  deniedCount: 3,
+  deniedTests: buildTests('Button', 3),
+});
+
+export const BuildHasChangesDeniedAndPending = story({
+  status: 'DENIED',
+  deniedCount: 3,
+  deniedTests: buildTests('Button', 3),
+});
+
+export const BuildHasChangesDeniedWithMoreThanFiftyDeniedTests = story({
+  status: 'DENIED',
+  pendingCount: 0,
+  pendingTests: [],
+  deniedCount: 57,
+  deniedTests: buildTests('Button', 50),
+});
+
+// A reviewer accepted the changes while the CLI waited for the build.
+export const BuildHasChangesAccepted = story({
+  status: 'ACCEPTED',
+  pendingCount: 0,
+  pendingTests: [],
+  acceptedCount: 2,
+  ignoredCount: 0,
+  ignoredTests: [],
+});
+
+export const BuildHasChangesIsOnboarding = story({}, true);

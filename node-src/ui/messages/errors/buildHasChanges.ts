@@ -1,23 +1,18 @@
 import chalk from 'chalk';
 import { dedent } from 'ts-dedent';
 
-import { changeStatus } from '../../components/changeStatus';
+import { buildResults } from '../../components/buildResults';
 import { error, info } from '../../components/icons';
-import ignoredTests from '../../components/ignoredTests';
-import link from '../../components/link';
 
 export default ({ build, exitCode, isOnboarding }) => {
-  const url = isOnboarding ? build.app.setupUrl : build.webUrl;
-  // Falls back when the count for the build status is missing or zero.
-  const summary = changeStatus(build) ?? 'This build has changes';
-  const changesLine = chalk`${error} {bold ${summary}.} Review at ${link(url)}`;
-  const ignoredLine = ignoredTests({ ignoredCount: build.ignoredCount, url, isOnboarding });
+  // --auto-accept-changes is left out on purpose: a coding agent reading the log would pass it
+  // and accept the changes without the person who must review them.
+  const exitZeroHint =
+    (build.pendingCount ?? 0) > 0 &&
+    dedent(chalk`
+      ${info} This command exits ${exitCode} while a build has unreviewed changes. To let CI pass and leave the review
+        to the UI Tests status, run with {bold --exit-zero-on-changes}.
+    `);
 
-  return dedent(chalk`
-    ${[changesLine, ignoredLine].filter(Boolean).join('\n\n')}
-
-    ${info} For CI/CD use cases, this command failed with exit code ${exitCode}
-    Pass {bold --exit-zero-on-changes} to succeed this command regardless of changes.
-    Pass {bold --auto-accept-changes} to succeed and automatically accept any changes.
-  `);
+  return [buildResults(build, isOnboarding, error), exitZeroHint].filter(Boolean).join('\n\n');
 };
