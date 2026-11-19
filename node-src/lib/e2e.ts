@@ -46,15 +46,19 @@ export async function getE2EBuildCommand(
 
   if (deps.options.inAction) {
     // Try resolving the binary from working directory first, then fallback to package manager.
-    try {
-      const projectRequire = createRequire(path.join(process.cwd(), 'package.json'));
-      return [
-        'node',
-        projectRequire.resolve(`${dependencyName}/bin/${buildBinName}`),
-        ...buildCommandOptions,
-      ].join(' ');
-    } catch {
-      // Ignore error and fallback to package manager
+    // Under an active Yarn Plug'n'Play runtime it resolves into a zip archive, which a plain `node`
+    // child process can't read, so it runs through the package manager instead.
+    if (!process.versions.pnp) {
+      try {
+        const projectRequire = createRequire(path.join(process.cwd(), 'package.json'));
+        return [
+          'node',
+          projectRequire.resolve(`${dependencyName}/bin/${buildBinName}`),
+          ...buildCommandOptions,
+        ].join(' ');
+      } catch {
+        // Ignore error and fallback to package manager
+      }
     }
 
     // The action cannot "peer depend" on or import anything. So instead, we must attempt to exec the binary directly.
