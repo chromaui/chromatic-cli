@@ -34,7 +34,15 @@ export class VersionNotFoundError extends Error {
   readonly name = 'VersionNotFoundError';
 }
 
-function isLegacyVersion(version: string) {
+/**
+ * Whether a version is from before Storybook 8.2, when `storybook` became the core every framework
+ * and renderer depends on.
+ *
+ * @param version The version to check.
+ *
+ * @returns Whether the version is earlier than 8.2.
+ */
+export function isLegacyVersion(version: string) {
   const coerced = semver.coerce(version);
   return !!coerced && semver.lt(coerced, STORYBOOK_REQUIRED_SINCE);
 }
@@ -42,10 +50,10 @@ function isLegacyVersion(version: string) {
 /**
  * Reads the installed Storybook version from the resolved Storybook package's own `package.json`.
  *
- * We resolve from the config directory, because that is the package directory that should've
- * been used to build the Storybook.
+ * We resolve from the directory the build loads Storybook from: the config directory, or the
+ * directory of the framework the main config names.
  *
- * @param configDirectory The absolute Storybook config directory to resolve from.
+ * @param configDirectory The absolute directory to resolve from.
  * @param readVersion Reads a package's installed version, resolved from a directory, or returns
  * undefined when it can't.
  *

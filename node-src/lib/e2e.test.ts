@@ -71,6 +71,19 @@ describe('getE2EBuildCommand', () => {
       expect(command).toBe(`node /path/to/playwright-bin --output-dir=./source-dir/`);
     });
 
+    it("runs the E2E package through the package manager under a Plug'n'Play runtime", async () => {
+      // The binary resolves into a zip archive there, which a plain `node` child can't read.
+      onTestFinished(patchModulePath(PLAYWRIGHT_BUILD_ARCHIVE_BINARY, '/cache/pkg.zip/bin'));
+      process.versions.pnp = '3';
+      onTestFinished(() => {
+        delete process.versions.pnp;
+      });
+
+      const command = await getE2EBuildCommand(deps, 'playwright', ['--output-dir=./source-dir/']);
+
+      expect(command).toBe('npm exec -- build-archive-storybook --output-dir=./source-dir/');
+    });
+
     it("fallbacks to invoke E2E package via package manager when it's not installed", async () => {
       const command = await getE2EBuildCommand(deps, 'playwright', ['--output-dir=./source-dir/']);
 
