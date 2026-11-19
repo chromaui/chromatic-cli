@@ -11,8 +11,14 @@ function input(disk: InMemoryDisk = {}) {
 }
 
 describe('resolveStorybookVersion', () => {
-  it('reads the version from `storybook` before any Storybook 8.1-and-earlier package', () => {
-    const disk = { packageVersions: { storybook: '7.6.20', '@storybook/preview-api': '7.6.19' } };
+  it('reads the version from `storybook` before `@storybook/core` or any Storybook 8.1-and-earlier package', () => {
+    const disk = {
+      packageVersions: {
+        storybook: '7.6.20',
+        '@storybook/core': '7.6.18',
+        '@storybook/preview-api': '7.6.19',
+      },
+    };
 
     expect(resolveStorybookVersion(input(disk))).toBe('7.6.20');
   });

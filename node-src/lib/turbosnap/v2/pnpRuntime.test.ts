@@ -4,9 +4,9 @@ import { tmpdir } from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { allowPnpRuntime, VersionNotFoundError } from '../../installedPackages';
 import TestLogger from '../../testLogger';
-import { allowPnpRuntime, loadPnpRuntime } from './pnpRuntime';
-import { VersionNotFoundError } from './storybookVersion';
+import { loadPnpRuntime } from './pnpRuntime';
 
 vi.mock('@sentry/node');
 
