@@ -45,6 +45,7 @@ jobs:
           - monorepo-npm
           - monorepo-pnpm
           - monorepo-yarn
+          - monorepo-yarn-pnp
           - monorepo-yarn-classic
     steps:
       - uses: actions/checkout@v7
