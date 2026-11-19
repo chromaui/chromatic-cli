@@ -1,36 +1,43 @@
 import path from 'path';
 
-import { uploadBuild, UploadBuildResult } from '../lib/upload';
+import { uploadBuild, UploadBuildContext, UploadBuildResult } from '../lib/upload';
 import { throttle } from '../lib/utilities';
 import { waitForSentinel } from '../lib/waitForSentinel';
 import { Context, Deps, FileDesc, TaskResult } from '../types';
 import buildFullyTurboSnapped from '../ui/messages/info/buildFullyTurboSnapped';
-import turboSnapEnabled from '../ui/messages/info/turboSnapEnabled';
+import { turboSnapBypassed } from '../ui/messages/info/turboSnapEnabled';
 import deduplicationFailed from '../ui/messages/warnings/deduplicationFailed';
 import { failed, finalizing, invalid, uploading } from '../ui/tasks/upload';
 
-export interface UploadInput {
-  // `uploadBuild`, `waitForSentinel`, and `buildFileList` all reach deep into Context, and that
-  // subtree (uploadFiles/uploadZip/compress) is too large to refactor proportionately. So we thread
-  // the live Context through `input` Refactoring this library to not rely on Context is a larger project.
-  uploadContext: Context;
+export interface UploadInput extends Pick<
+  Context,
+  | 'fileInfo'
+  | 'sourceDir'
+  | 'buildLogFile'
+  | 'isReactNativeApp'
+  | 'turboSnap'
+  | 'onlyStoryFiles'
+  | 'turboSnapOutcome'
+> {
+  announcedBuild: UploadBuildContext['announcedBuild'];
 }
 
 export type UploadOutput = UploadBuildResult;
 
-const buildFileList = (ctx: Context, withHashes: boolean): FileDesc[] => {
+const buildFileList = (deps: Deps, input: UploadInput, withHashes: boolean): FileDesc[] => {
+  const { fileInfo, sourceDir } = input;
   const lengthsByPath = new Map(
-    ctx.fileInfo?.lengths.map(({ knownAs, contentLength }) => [knownAs, contentLength])
+    fileInfo?.lengths.map(({ knownAs, contentLength }) => [knownAs, contentLength])
   );
-  const files = ctx.fileInfo?.paths.map<FileDesc>((filePath) => ({
-    ...(withHashes && ctx.fileInfo?.hashes && { contentHash: ctx.fileInfo.hashes[filePath] }),
+  const files = fileInfo?.paths.map<FileDesc>((filePath) => ({
+    ...(withHashes && fileInfo.hashes && { contentHash: fileInfo.hashes[filePath] }),
     contentLength: lengthsByPath.get(filePath) ?? -1,
-    localPath: path.join(ctx.sourceDir, filePath),
+    localPath: path.join(sourceDir, filePath),
     targetPath: filePath,
   }));
 
   if (!files) {
-    throw new Error(invalid(ctx).output);
+    throw new Error(invalid({ ...input, options: deps.options }).output);
   }
 
   return files;
@@ -38,23 +45,24 @@ const buildFileList = (ctx: Context, withHashes: boolean): FileDesc[] => {
 
 const uploadAndWaitForSentinels = async (
   deps: Deps,
-  ctx: Context,
+  input: UploadInput,
   files: FileDesc[]
 ): Promise<UploadOutput> => {
-  const result = await uploadBuild(ctx, files, {
+  const { log, client, http, env, options } = deps;
+  const result = await uploadBuild({ ...input, log, client, http, env, options }, files, {
     onProgress: throttle(
       (progress, total) => {
         const percentage = Math.round((progress / total) * 100);
         deps.report({
-          output: uploading(ctx, { percentage }).output,
+          output: uploading(deps, { percentage }).output,
           progress: { progress, total, unit: 'bytes' },
         });
       },
       // Avoid spamming the logs with progress updates in non-interactive mode
-      ctx.options.interactive ? 100 : ctx.env.CHROMATIC_OUTPUT_INTERVAL
+      options.interactive ? 100 : env.CHROMATIC_OUTPUT_INTERVAL
     ),
     onError: (error: Error, path?: string) => {
-      throw path === error.message ? new Error(failed(ctx, { path }).output) : error;
+      throw path === error.message ? new Error(failed(deps, { path }).output) : error;
     },
   });
 
@@ -63,7 +71,7 @@ const uploadAndWaitForSentinels = async (
     return result;
   }
 
-  deps.report({ output: finalizing(ctx).output });
+  deps.report({ output: finalizing(deps).output });
 
   // Dedupe sentinels, ignoring query params
   const sentinels = Object.fromEntries(
@@ -73,7 +81,7 @@ const uploadAndWaitForSentinels = async (
     })
   );
 
-  await Promise.all(Object.values(sentinels).map((sentinel) => waitForSentinel(ctx, sentinel)));
+  await Promise.all(Object.values(sentinels).map((sentinel) => waitForSentinel(deps, sentinel)));
 
   return result;
 };
@@ -85,11 +93,11 @@ const uploadAndWaitForSentinels = async (
 // verify never runs to populate them.
 const skipTurboSnapped = (
   deps: Deps,
-  ctx: Context,
+  input: UploadInput,
   output: UploadOutput
 ): TaskResult<UploadOutput, UploadOutput> => {
   const { ancestorBuild } = output;
-  deps.log.info(turboSnapEnabled({ ...ctx, skip: true, ancestorBuild }));
+  deps.log.info(turboSnapBypassed({ ancestorBuild, turboSnapOutcome: input.turboSnapOutcome }));
   deps.log.info(buildFullyTurboSnapped({ ancestorBuild }));
   return { kind: 'partial', output };
 };
@@ -106,28 +114,35 @@ export async function uploadProject(
   deps: Deps,
   input: UploadInput
 ): Promise<TaskResult<UploadOutput, UploadOutput>> {
-  const ctx = input.uploadContext;
-
-  if (ctx.options.dryRun) {
+  if (deps.options.dryRun) {
     return { kind: 'skip-self' };
   }
 
   let output: UploadOutput;
   try {
-    output = await uploadAndWaitForSentinels(deps, ctx, buildFileList(ctx, true));
+    output = await uploadAndWaitForSentinels(deps, input, buildFileList(deps, input, true));
   } catch {
     deps.log.warn(deduplicationFailed());
     // Retry without file deduplication. uploadBuild returns fresh tallies, so the failed attempt's
     // results are discarded simply by running again.
-    output = await uploadAndWaitForSentinels(deps, ctx, buildFileList(ctx, false));
+    output = await uploadAndWaitForSentinels(deps, input, buildFileList(deps, input, false));
   }
 
   return output.skippedByTurboSnap
-    ? skipTurboSnapped(deps, ctx, output)
+    ? skipTurboSnapped(deps, input, output)
     : { kind: 'continue', output };
 }
 
-export const extractUploadInput = (ctx: Context): UploadInput => ({ uploadContext: ctx });
+export const extractUploadInput = (ctx: Context): UploadInput => ({
+  fileInfo: ctx.fileInfo,
+  sourceDir: ctx.sourceDir,
+  buildLogFile: ctx.buildLogFile,
+  isReactNativeApp: ctx.isReactNativeApp,
+  announcedBuild: ctx.announcedBuild,
+  turboSnap: ctx.turboSnap,
+  onlyStoryFiles: ctx.onlyStoryFiles,
+  turboSnapOutcome: ctx.turboSnapOutcome,
+});
 
 export const applyUploadOutput = (ctx: Context, output: UploadOutput) => {
   ctx.sentinelUrls = output.sentinelUrls;

@@ -1,5 +1,5 @@
 import buildFullyTurboSnapped from './buildFullyTurboSnapped';
-import turboSnapEnabled from './turboSnapEnabled';
+import { turboSnapBypassed } from './turboSnapEnabled';
 
 export default {
   title: 'CLI/Messages/Info/Build Skipped',
@@ -11,12 +11,9 @@ const ancestorBuild = {
   snapshotCount: 54,
 };
 
-// When a build is skipped, the CLI logs turboSnapEnabled() and buildFullyTurboSnapped() back-to-back
+// When a build is skipped, the CLI logs turboSnapBypassed() and buildFullyTurboSnapped() back-to-back
 // (see `skipTurboSnapped` in tasks/upload.ts), so we render them together here.
-const buildSkipped = (ctx: any) => {
-  const skipContext = { ...ctx, skip: true };
-  return `${turboSnapEnabled(skipContext)}\n\n${buildFullyTurboSnapped(skipContext)}`;
-};
+const buildSkipped = (ctx: any) => `${turboSnapBypassed(ctx)}\n\n${buildFullyTurboSnapped(ctx)}`;
 
 export const BuildSkippedAncestorPending = () => buildSkipped({ ancestorBuild });
 
