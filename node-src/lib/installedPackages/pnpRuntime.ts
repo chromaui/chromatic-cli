@@ -57,7 +57,7 @@ export function ensurePnpRuntime(fromDirectory: string, log: Logger): PnpRuntime
     // wording, so a new kind opens its own issue while repeats of a known one group together.
     const { code, name } = (error ?? {}) as { code?: unknown; name?: unknown };
     const kind = [code, name].find((value) => typeof value === 'string') ?? 'unknown';
-    Sentry.captureException(error, { fingerprint: ['turbosnap-v2', 'pnp-runtime', kind] });
+    Sentry.captureException(error, { fingerprint: ['pnp-runtime', kind] });
     log.debug(`Failed to load the Yarn Plug'n'Play runtime from ${pnpFile}`, error);
     return { status: 'failed', pnpFile };
   }

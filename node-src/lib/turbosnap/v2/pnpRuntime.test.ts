@@ -98,7 +98,7 @@ describe('loadPnpRuntime', () => {
     expect(() => load()).toThrow(VersionNotFoundError);
     expect(Sentry.captureException).toHaveBeenCalledTimes(1);
     expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {
-      fingerprint: ['turbosnap-v2', 'pnp-runtime', 'EBROKEN'],
+      fingerprint: ['pnp-runtime', 'EBROKEN'],
     });
   });
 });
