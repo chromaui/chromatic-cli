@@ -11,14 +11,16 @@ export default ({
   skip,
   skipSnapshots,
   ancestorBuild,
-  hashBasedTurboSnap,
+  turboSnapOutcome,
 }: Pick<
   Context,
-  'build' | 'options' | 'skip' | 'skipSnapshots' | 'ancestorBuild' | 'hashBasedTurboSnap'
+  'build' | 'options' | 'skip' | 'skipSnapshots' | 'ancestorBuild' | 'turboSnapOutcome'
 >) => {
   // After a 2.0 bail, the Index can still bypass the build with the 1.0 list, so don't credit 2.0.
   const turboSnap =
-    hashBasedTurboSnap && !hashBasedTurboSnap.bailed ? 'TurboSnap 2.0' : 'TurboSnap';
+    turboSnapOutcome?.mechanism === 'v2' && !turboSnapOutcome.bailed
+      ? 'TurboSnap 2.0'
+      : 'TurboSnap';
   if (skip) {
     const skipped = ancestorBuild
       ? pluralize('snapshot', ancestorBuild.snapshotCount, true)

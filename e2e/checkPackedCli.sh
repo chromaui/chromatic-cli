@@ -143,14 +143,15 @@ change_button 'Change Button for TurboSnap 2.0'
 CHROMATIC_TURBOSNAP_DISABLE_V1=true build turbosnap-2
 expect_output turbosnap-2 'TurboSnap 2.0 enabled'
 expect_output turbosnap-2 'Capturing 1 snapshot; copying 1 snapshot with TurboSnap.'
-expect_diagnostics turbosnap-2 '.hashBasedTurboSnap.bailed == false'
+expect_diagnostics turbosnap-2 '.turboSnapOutcome.mechanism == "v2" and .turboSnapOutcome.bailed == false'
 
 change_button 'Change Button for TurboSnap 1.0'
 CHROMATIC_TURBOSNAP_DISABLE_HASHES=true build turbosnap-1
 expect_output turbosnap-1 'TurboSnap enabled'
 expect_output turbosnap-1 'Capturing 1 snapshot; copying 1 snapshot with TurboSnap.'
 expect_diagnostics turbosnap-1 \
-  '.hashBasedTurboSnap == null and (.onlyStoryFiles | length > 0 and all(test("button"; "i")))'
+  '.turboSnapOutcome.mechanism == "v1" and .turboSnapOutcome.bailed == false and
+   (.onlyStoryFiles | length > 0 and all(test("button"; "i")))'
 
 storybook_static="$out/turbosnap-1-storybook"
 run_cli trace 0 trace -m compact -b "$storybook" -s "$storybook_static/preview-stats.json" "$change"

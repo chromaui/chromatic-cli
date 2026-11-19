@@ -48,17 +48,19 @@ const v1Result = {
   turboSnap: {},
   untracedFiles: [],
 };
+const v1Traced = { ...v1Result, outcome: { mechanism: 'v1', bailed: false } };
+const notUsed = { status: 'skipped', outcome: { mechanism: 'none' } };
 
-function makeContext() {
+function makeInput() {
   return {
     log: new TestLogger(),
     turboSnap: {},
     options: { untraced: ['**/*.md'] },
     env: {},
     git: { changedFiles: ['./src/Button.tsx'], rootPath: '/repo' },
-    fileInfo: { statsPath: '/repo/packages/ui/storybook-static/preview-stats.json' },
+    statsPath: '/repo/packages/ui/storybook-static/preview-stats.json',
     client: { runQuery: vi.fn() },
-    announcedBuild: { id: 'head-build' },
+    buildId: 'head-build',
     sourceDir: '/repo/packages/ui/storybook-static',
     storybook: {
       projectRoot: '/repo/packages/ui',
@@ -77,9 +79,9 @@ beforeEach(() => {
 
 describe('traceChangedFiles', () => {
   it('collects hashes but skips v1 when TurboSnap is unavailable', async () => {
-    const ctx = { ...makeContext(), turboSnap: { unavailable: true } };
+    const input = { ...makeInput(), turboSnap: { unavailable: true } };
 
-    await expect(traceChangedFiles(ctx)).resolves.toStrictEqual({ status: 'skipped' });
+    await expect(traceChangedFiles(input)).resolves.toStrictEqual(notUsed);
 
     expect(readStatsFile).toHaveBeenCalledOnce();
     expect(traceChangedFilesV2).toHaveBeenCalledOnce();
@@ -87,9 +89,9 @@ describe('traceChangedFiles', () => {
   });
 
   it('stays silent for a prebuilt Storybook when TurboSnap is not requested', async () => {
-    const ctx = { ...makeContext(), turboSnap: undefined, fileInfo: undefined };
+    const input = { ...makeInput(), turboSnap: undefined, statsPath: undefined };
 
-    await expect(traceChangedFiles(ctx)).resolves.toStrictEqual({ status: 'skipped' });
+    await expect(traceChangedFiles(input)).resolves.toStrictEqual(notUsed);
 
     expect(readStatsFile).not.toHaveBeenCalled();
     expect(traceChangedFilesV2).not.toHaveBeenCalled();
@@ -99,27 +101,36 @@ describe('traceChangedFiles', () => {
   it.each(['noAncestorBuild', 'rebuild', 'invalidChangedFiles', 'changedExternalFiles'])(
     'collects hashes for v2 even when v1 recorded the bail reason %s',
     async (bailReason) => {
-      const ctx = { ...makeContext(), turboSnap: { [bailReason]: true } };
+      const input = { ...makeInput(), turboSnap: { [bailReason]: true } };
 
-      await traceChangedFiles(ctx);
+      await traceChangedFiles(input);
 
       expect(traceChangedFilesV2).toHaveBeenCalledOnce();
     }
   );
 
-  it('does not collect hashes when the off switch is set', async () => {
-    const ctx = { ...makeContext(), env: { CHROMATIC_TURBOSNAP_DISABLE_HASHES: true } };
+  it('does not collect hashes when sharing a Storybook, which announces no build', async () => {
+    const input = { ...makeInput(), turboSnap: undefined, buildId: undefined };
 
-    await traceChangedFiles(ctx);
+    await expect(traceChangedFiles(input)).resolves.toStrictEqual(notUsed);
+
+    expect(readStatsFile).not.toHaveBeenCalled();
+    expect(traceChangedFilesV2).not.toHaveBeenCalled();
+  });
+
+  it('does not collect hashes when the off switch is set', async () => {
+    const input = { ...makeInput(), env: { CHROMATIC_TURBOSNAP_DISABLE_HASHES: true } };
+
+    await traceChangedFiles(input);
 
     expect(traceChangedFilesV2).not.toHaveBeenCalled();
     expect(traceChangedFilesV1).toHaveBeenCalledOnce();
   });
 
   it('does not read the stats file or collect hashes when onlyChanged is explicitly false', async () => {
-    const ctx = { ...makeContext(), turboSnap: undefined, options: { onlyChanged: false } };
+    const input = { ...makeInput(), turboSnap: undefined, options: { onlyChanged: false } };
 
-    await traceChangedFiles(ctx);
+    await traceChangedFiles(input);
 
     expect(readStatsFile).not.toHaveBeenCalled();
     expect(traceChangedFilesV2).not.toHaveBeenCalled();
@@ -127,9 +138,13 @@ describe('traceChangedFiles', () => {
   });
 
   it('returns skipped and only runs TurboSnap v2 when changed files are unknown', async () => {
-    const ctx = { ...makeContext(), git: { changedFiles: undefined, rootPath: '/repo' } };
+    const input = { ...makeInput(), git: { changedFiles: undefined, rootPath: '/repo' } };
 
-    await expect(traceChangedFiles(ctx)).resolves.toStrictEqual({ status: 'skipped' });
+    // gitInfo already bailed out of v1, so v1 decides the build with a full one.
+    await expect(traceChangedFiles(input)).resolves.toStrictEqual({
+      status: 'skipped',
+      outcome: { mechanism: 'v1', bailed: true },
+    });
 
     expect(readStatsFile).toHaveBeenCalled();
     expect(traceChangedFilesV2).toHaveBeenCalled();
@@ -139,18 +154,18 @@ describe('traceChangedFiles', () => {
   // An empty list means nothing changed, so v1 must run and trace zero story files. Skipping here
   // would leave `onlyStoryFiles` unset and capture every story instead of copying them all.
   it('runs TurboSnap v1 when the changed files list is empty', async () => {
-    const ctx = { ...makeContext(), git: { changedFiles: [], rootPath: '/repo' } };
+    const input = { ...makeInput(), git: { changedFiles: [], rootPath: '/repo' } };
 
-    await expect(traceChangedFiles(ctx)).resolves.toStrictEqual(v1Result);
+    await expect(traceChangedFiles(input)).resolves.toStrictEqual(v1Traced);
 
     expect(traceChangedFilesV2).toHaveBeenCalled();
     expect(traceChangedFilesV1).toHaveBeenCalledOnce();
   });
 
   it('throws if the stats file is not found and the user asked for TurboSnap', async () => {
-    const ctx = { ...makeContext(), fileInfo: undefined };
+    const input = { ...makeInput(), statsPath: undefined };
 
-    await expect(traceChangedFiles(ctx)).rejects.toThrow('TurboSnap requires a stats file');
+    await expect(traceChangedFiles(input)).rejects.toThrow('TurboSnap requires a stats file');
 
     expect(readStatsFile).not.toHaveBeenCalled();
     expect(traceChangedFilesV2).not.toHaveBeenCalled();
@@ -158,11 +173,11 @@ describe('traceChangedFiles', () => {
   });
 
   it('keeps an unreadable stats file terminal for both generations', async () => {
-    const ctx = makeContext();
+    const input = makeInput();
     const error = new Error('stats file is unreadable');
     vi.mocked(readStatsFile).mockRejectedValue(error);
 
-    await expect(traceChangedFiles(ctx)).rejects.toBe(error);
+    await expect(traceChangedFiles(input)).rejects.toBe(error);
 
     expect(readStatsFile).toHaveBeenCalledOnce();
     expect(traceChangedFilesV2).not.toHaveBeenCalled();
@@ -170,37 +185,37 @@ describe('traceChangedFiles', () => {
   });
 
   it('reads the stats once and gives the same graph and Storybook paths to both generations', async () => {
-    const ctx = makeContext();
+    const input = makeInput();
 
-    await traceChangedFiles(ctx);
+    await traceChangedFiles(input);
 
     expect(readStatsFile).toHaveBeenCalledOnce();
-    expect(readStatsFile).toHaveBeenCalledWith(ctx.fileInfo.statsPath);
+    expect(readStatsFile).toHaveBeenCalledWith(input.statsPath);
     // The adapter runs git, so it needs the options the git timeout is read from, not just the log.
-    expect(realProjectFiles).toHaveBeenCalledWith({ log: ctx.log, options: ctx.options });
+    expect(realProjectFiles).toHaveBeenCalledWith({ log: input.log, options: input.options });
     expect(traceChangedFilesV2).toHaveBeenCalledWith({
-      log: ctx.log,
+      log: input.log,
       failureLogLevel: 'error',
       onlyChanged: true,
-      graphqlClient: ctx.client,
+      graphqlClient: input.client,
       buildId: 'head-build',
       stats,
       manifestPath: '/repo/packages/ui/storybook-static/.chromatic/turbosnap-manifest.json',
-      projectRoot: ctx.storybook.projectRoot,
+      projectRoot: input.storybook.projectRoot,
       gitRoot: '/repo',
       untraced: ['**/*.md'],
-      configDir: ctx.storybook.configDir,
-      staticDirs: ctx.storybook.staticDirs,
+      configDir: input.storybook.configDir,
+      staticDirs: input.storybook.staticDirs,
       externals: [],
       projectFiles,
     });
-    expect(traceChangedFilesV1).toHaveBeenCalledWith(ctx, stats, ctx.fileInfo.statsPath);
+    expect(traceChangedFilesV1).toHaveBeenCalledWith(input, stats, input.statsPath);
   });
 
   it('gives v2 the E2E package of a Vitest build, whose Storybook ships inside it', async () => {
-    const ctx = { ...makeContext(), options: { vitest: true } };
+    const input = { ...makeInput(), options: { vitest: true } };
 
-    await traceChangedFiles(ctx);
+    await traceChangedFiles(input);
 
     expect(traceChangedFilesV2).toHaveBeenCalledWith(
       expect.objectContaining({ e2ePackage: '@chromatic-com/vitest' })
@@ -210,9 +225,9 @@ describe('traceChangedFiles', () => {
   it.each(['playwright', 'cypress'])(
     'does not collect hashes for a %s build, which reports no module graph',
     async (flag) => {
-      const ctx = { ...makeContext(), options: { [flag]: true } };
+      const input = { ...makeInput(), options: { [flag]: true } };
 
-      await traceChangedFiles(ctx);
+      await traceChangedFiles(input);
 
       expect(traceChangedFilesV2).not.toHaveBeenCalled();
       expect(traceChangedFilesV1).toHaveBeenCalledOnce();
@@ -220,9 +235,9 @@ describe('traceChangedFiles', () => {
   );
 
   it('gives v2 the --externals globs so it can hash the files they name', async () => {
-    const ctx = { ...makeContext(), options: { externals: ['tailwind.config.js'] } };
+    const input = { ...makeInput(), options: { externals: ['tailwind.config.js'] } };
 
-    await traceChangedFiles(ctx);
+    await traceChangedFiles(input);
 
     expect(traceChangedFilesV2).toHaveBeenCalledWith(
       expect.objectContaining({ externals: ['tailwind.config.js'] })
@@ -232,7 +247,7 @@ describe('traceChangedFiles', () => {
   // The Index ignores the 1.0 result when it applies 2.0, so 1.0's output would contradict what
   // gets captured. The result itself is still returned so it is sent with the build.
   it('traces quietly with v1 and returns the v2 decision when the Index applies v2', async () => {
-    const ctx = makeContext();
+    const input = makeInput();
     const hashBased = { bailed: true, bailReason: 'NO_ANCESTORS' };
     vi.mocked(traceChangedFilesV2).mockResolvedValue({ status: 'fallback', hashBased });
     vi.mocked(traceChangedFilesV1).mockImplementation(async (v1Context) => {
@@ -242,47 +257,61 @@ describe('traceChangedFiles', () => {
     });
     const onTraceWithV1 = vi.fn();
 
-    await expect(traceChangedFiles(ctx, { onTraceWithV1 })).resolves.toStrictEqual({
+    await expect(traceChangedFiles(input, { onTraceWithV1 })).resolves.toStrictEqual({
       ...v1Result,
-      hashBased,
+      outcome: { mechanism: 'v2', ...hashBased },
     });
 
     expect(onTraceWithV1).not.toHaveBeenCalled();
-    expect(ctx.log.warn).not.toHaveBeenCalled();
-    expect(ctx.log.info).not.toHaveBeenCalled();
-    expect(ctx.log.debug).toHaveBeenCalledWith('TurboSnap disabled due to file change');
+    expect(input.log.warn).not.toHaveBeenCalled();
+    expect(input.log.info).not.toHaveBeenCalled();
+    expect(input.log.debug).toHaveBeenCalledWith('TurboSnap disabled due to file change');
   });
 
   it('skips v1 when the user disabled it and the Index applies v2', async () => {
-    const ctx = { ...makeContext(), env: { CHROMATIC_TURBOSNAP_DISABLE_V1: true } };
+    const input = { ...makeInput(), env: { CHROMATIC_TURBOSNAP_DISABLE_V1: true } };
     const hashBased = { bailed: false };
     vi.mocked(traceChangedFilesV2).mockResolvedValue({ status: 'fallback', hashBased });
 
-    await expect(traceChangedFiles(ctx)).resolves.toStrictEqual({ status: 'skipped', hashBased });
+    await expect(traceChangedFiles(input)).resolves.toStrictEqual({
+      status: 'skipped',
+      outcome: { mechanism: 'v2', bailed: false },
+    });
 
     expect(traceChangedFilesV1).not.toHaveBeenCalled();
-    expect(ctx.log.debug).toHaveBeenCalledWith(expect.stringContaining('skipping TurboSnap 1.0'));
+    expect(input.log.debug).toHaveBeenCalledWith(expect.stringContaining('skipping TurboSnap 1.0'));
   });
 
   // Without v2 the Index decides the build with v1's result, so the off switch must not apply.
   it('still traces with v1 when the user disabled it but the Index does not apply v2', async () => {
-    const ctx = { ...makeContext(), env: { CHROMATIC_TURBOSNAP_DISABLE_V1: true } };
+    const input = { ...makeInput(), env: { CHROMATIC_TURBOSNAP_DISABLE_V1: true } };
 
-    await expect(traceChangedFiles(ctx)).resolves.toBe(v1Result);
+    await expect(traceChangedFiles(input)).resolves.toStrictEqual(v1Traced);
 
-    expect(ctx.log.debug).toHaveBeenCalledWith(
+    expect(input.log.debug).toHaveBeenCalledWith(
       expect.stringContaining('did not apply TurboSnap 2.0')
     );
   });
 
   it('runs v2 before v1 and returns only the v1 result', async () => {
-    const ctx = makeContext();
+    const input = makeInput();
 
-    await expect(traceChangedFiles(ctx)).resolves.toBe(v1Result);
+    await expect(traceChangedFiles(input)).resolves.toStrictEqual(v1Traced);
 
     expect(vi.mocked(traceChangedFilesV2).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(traceChangedFilesV1).mock.invocationCallOrder[0]
     );
+  });
+
+  it('reports a v1 bail as a full build decided by v1', async () => {
+    const turboSnap = { bailReason: { changedPackageFiles: ['package.json'] } };
+    vi.mocked(traceChangedFilesV1).mockResolvedValue({ status: 'bailed', turboSnap });
+
+    await expect(traceChangedFiles(makeInput())).resolves.toStrictEqual({
+      status: 'bailed',
+      turboSnap,
+      outcome: { mechanism: 'v1', bailed: true },
+    });
   });
 
   // An error that escaped v2's own handling takes the same level as one it handled, so a user who
@@ -293,28 +322,26 @@ describe('traceChangedFiles', () => {
   ])(
     'reports an unexpected v2 rejection at %s and still returns the v1 result',
     async (level, turboSnap) => {
-      const ctx = { ...makeContext(), turboSnap };
+      const input = { ...makeInput(), turboSnap };
       const error = new Error('v2 escaped its own error handling');
       vi.mocked(traceChangedFilesV2).mockRejectedValue(error);
 
-      await expect(traceChangedFiles(ctx)).resolves.toEqual(
-        turboSnap ? v1Result : { status: 'skipped' }
-      );
+      await expect(traceChangedFiles(input)).resolves.toEqual(turboSnap ? v1Traced : notUsed);
 
-      expect(ctx.log[level]).toHaveBeenCalledWith(expect.any(String), error);
+      expect(input.log[level]).toHaveBeenCalledWith(expect.any(String), error);
       expect(Sentry.captureException).toHaveBeenCalledWith(error);
     }
   );
 
   it('does not report an exception when v2 succeeds', async () => {
-    await traceChangedFiles(makeContext());
+    await traceChangedFiles(makeInput());
 
     expect(traceChangedFilesV2).toHaveBeenCalledOnce();
     expect(Sentry.captureException).not.toHaveBeenCalled();
   });
 
   it('tags the v2 run so its Sentry events can be isolated', async () => {
-    await traceChangedFiles(makeContext());
+    await traceChangedFiles(makeInput());
 
     expect(Sentry.withScope).toHaveBeenCalledOnce();
     expect(scopeSetTag).toHaveBeenCalledWith('turbosnap', 'v2');
@@ -326,10 +353,10 @@ describe('traceChangedFiles', () => {
     ['/repo/packages/ui/storybook-static', 'true'],
     [undefined, 'false'],
   ])('records where the run looked when storybookBuildDir is %s', async (buildDirectory, tag) => {
-    const ctx = makeContext();
-    ctx.options.storybookBuildDir = buildDirectory;
+    const input = makeInput();
+    input.options.storybookBuildDir = buildDirectory;
 
-    await traceChangedFiles(ctx);
+    await traceChangedFiles(input);
 
     expect(scopeSetTag).toHaveBeenCalledWith('storybook_build_dir', tag);
     expect(scopeSetContext).toHaveBeenCalledWith('turbosnap_v2', {
@@ -349,9 +376,9 @@ describe('traceChangedFiles', () => {
   ])(
     'gives v2 the %s log level and onlyChanged, and tags the run, when turboSnap is %o',
     async (failureLogLevel, turboSnap, tag, onlyChanged) => {
-      const ctx = { ...makeContext(), turboSnap };
+      const input = { ...makeInput(), turboSnap };
 
-      await traceChangedFiles(ctx);
+      await traceChangedFiles(input);
 
       expect(traceChangedFilesV2).toHaveBeenCalledWith(
         expect.objectContaining({ failureLogLevel, onlyChanged })
@@ -388,7 +415,7 @@ describe('traceChangedFiles', () => {
       turboSnap?: object,
       storybookConfigDirectory = configDirectory
     ) => {
-      const context = makeContext();
+      const context = makeInput();
       return {
         ...context,
         turboSnap,
@@ -399,12 +426,12 @@ describe('traceChangedFiles', () => {
     };
 
     it('warns once that it can miss changes to them, even when nothing changed', async () => {
-      const ctx = contextWith(['packages/ui/config/sb/**'], {});
+      const input = contextWith(['packages/ui/config/sb/**'], {});
 
-      await traceChangedFiles(ctx);
+      await traceChangedFiles(input);
 
-      expect(ctx.log.warn).toHaveBeenCalledOnce();
-      const [message] = vi.mocked(ctx.log.warn).mock.calls[0];
+      expect(input.log.warn).toHaveBeenCalledOnce();
+      const [message] = vi.mocked(input.log.warn).mock.calls[0];
       expect(message).toContain('TurboSnap can miss changes to untraced Storybook config files');
       expect(message).toContain('packages/ui/config/sb/main.ts');
       expect(message).toContain('packages/ui/config/sb/preview.tsx');
@@ -418,33 +445,33 @@ describe('traceChangedFiles', () => {
     it('matches the real path of a symlinked config directory, as TurboSnap 2.0 does', async () => {
       const linkedDirectory = path.join(rootPath, 'packages/ui/.storybook');
       await symlink(configDirectory, linkedDirectory);
-      const ctx = contextWith(['packages/ui/config/sb/preview.*'], {}, linkedDirectory);
+      const input = contextWith(['packages/ui/config/sb/preview.*'], {}, linkedDirectory);
 
-      await traceChangedFiles(ctx);
+      await traceChangedFiles(input);
 
-      expect(ctx.log.warn).toHaveBeenCalledOnce();
-      expect(vi.mocked(ctx.log.warn).mock.calls[0][0]).toContain(
+      expect(input.log.warn).toHaveBeenCalledOnce();
+      expect(vi.mocked(input.log.warn).mock.calls[0][0]).toContain(
         'packages/ui/config/sb/preview.tsx'
       );
     });
 
     it('stays quiet when the globs match only files off the allowlist', async () => {
-      const ctx = contextWith(['packages/ui/config/sb/*.json', '**/manager.ts'], {});
+      const input = contextWith(['packages/ui/config/sb/*.json', '**/manager.ts'], {});
 
-      await traceChangedFiles(ctx);
+      await traceChangedFiles(input);
 
-      expect(ctx.log.warn).not.toHaveBeenCalled();
-      expect(ctx.log.debug).not.toHaveBeenCalledWith(expect.stringContaining('--untraced'));
+      expect(input.log.warn).not.toHaveBeenCalled();
+      expect(input.log.debug).not.toHaveBeenCalledWith(expect.stringContaining('--untraced'));
     });
 
     it('only logs it at debug level when TurboSnap was not requested', async () => {
-      const ctx = contextWith(['**/preview.*']);
+      const input = contextWith(['**/preview.*']);
 
-      await traceChangedFiles(ctx);
+      await traceChangedFiles(input);
 
-      expect(ctx.log.warn).not.toHaveBeenCalled();
+      expect(input.log.warn).not.toHaveBeenCalled();
       const debugWarnings = vi
-        .mocked(ctx.log.debug)
+        .mocked(input.log.debug)
         .mock.calls.filter(([message]) => String(message).includes('preview.tsx'));
       expect(debugWarnings).toHaveLength(1);
     });

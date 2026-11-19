@@ -29,7 +29,7 @@ const traceSuggestions = `If you are having trouble with tracing, please check t
 `;
 
 export default (
-  ctx: Context,
+  ctx: Pick<Context, 'log' | 'options' | 'turboSnap' | 'untracedFiles'>,
   {
     changedFiles,
     affectedModules,

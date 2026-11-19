@@ -45,12 +45,11 @@ export const stats = ({
 // TODO: refactor this function
 /* eslint-disable complexity */
 export const pending = (
-  ctx: Pick<Context, 'build' | 'options' | 'onlyStoryFiles' | 'hashBasedTurboSnap'>,
+  ctx: Pick<Context, 'build' | 'options' | 'turboSnapOutcome'>,
   { cursor = 0, label = '' } = {}
 ) => {
-  const { build, options, onlyStoryFiles, hashBasedTurboSnap } = ctx;
-  // TurboSnap 2.0 ignores the 1.0 story files, so only its own decision says whether it applied.
-  const turboSnapped = hashBasedTurboSnap ? !hashBasedTurboSnap.bailed : !!onlyStoryFiles;
+  const { build, options, turboSnapOutcome = { mechanism: 'none' } } = ctx;
+  const turboSnapped = turboSnapOutcome.mechanism !== 'none' && !turboSnapOutcome.bailed;
   // `runTask` renders this pending state before the task body runs, so it must survive `--dry-run`,
   // where verify never stores a tested build. `ctx.build` is then undefined or, with
   // `--only-changed`, gitInfo's baseline build, which has no test counts.

@@ -1,9 +1,9 @@
-import { ChangedPackageFilesBailReason, Context, Stats, TurboSnap } from '../../../types';
+import { ChangedPackageFilesBailReason, Stats, TurboSnap } from '../../../types';
 import bailE2EPackage from '../../../ui/messages/warnings/bailE2EPackage';
 import bailFile from '../../../ui/messages/warnings/bailFile';
 import { checkStorybookBaseDirectory } from '../../checkStorybookBaseDirectory';
 import { getE2EPackage } from '../e2ePackage';
-import { TraceChangedFilesResult } from '../types';
+import { TraceChangedFilesResult, TurboSnapV1Input } from '../types';
 import { captureBailException } from './captureBailException';
 import { classifyChangedPackageFilesDetail } from './classifyBailDetail';
 import { classifyTagsFromError } from './classifyBailRootCause';
@@ -24,7 +24,7 @@ import { isPreviewConfigInStats } from './previewConfigInStats';
  */
 // eslint-disable-next-line complexity
 export async function traceChangedFiles(
-  ctx: Context,
+  ctx: TurboSnapV1Input,
   stats: Stats,
   statsPath: string
 ): Promise<TraceChangedFilesResult> {

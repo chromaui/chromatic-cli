@@ -72,7 +72,7 @@ export function normalizeStatsName(
  *
  * @returns The absolute project root.
  */
-export const getStatsProjectRoot = (ctx: Context): AbsolutePath =>
+export const getStatsProjectRoot = (ctx: Pick<Context, 'storybook'>): AbsolutePath =>
   ctx.storybook?.projectRoot ?? process.cwd();
 
 /**
