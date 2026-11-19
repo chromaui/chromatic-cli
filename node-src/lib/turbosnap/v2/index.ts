@@ -5,6 +5,7 @@ import GraphQLClient from '../../../io/graphqlClient';
 import type { AbsolutePath, HashBasedTurboSnap, Stats } from '../../../types';
 import missingStorybookConfig from '../../../ui/messages/warnings/missingStorybookConfig';
 import storyFilesNotFound from '../../../ui/messages/warnings/storyFilesNotFound';
+import { VersionNotFoundError } from '../../installedPackages';
 import { TraceChangedFilesResult } from '../types';
 import {
   buildManifest,
@@ -14,7 +15,6 @@ import {
 } from './manifest';
 import { ManifestInput } from './manifestInput';
 import { MissingStorybookConfigError } from './outOfGraphFiles';
-import { VersionNotFoundError } from './storybookVersion';
 import { BuildUploadHashesResponse, uploadHashes } from './uploadHashes';
 
 /**
@@ -83,6 +83,7 @@ export async function traceChangedFiles(
       input.log[input.failureLogLevel](storyFilesNotFound(error.projectRoot));
       return { status: 'fallback' };
     }
+    // Install problems the user can fix, so they're logged and left to TurboSnap 1.0, not reported.
     if (error instanceof NoTrackedFilesError || error instanceof VersionNotFoundError) {
       input.log[input.failureLogLevel](
         `${error.message} TurboSnap 2.0 skipped this build. When TurboSnap is enabled, the build uses TurboSnap 1.0, so your current TurboSnap behavior is unaffected.`
