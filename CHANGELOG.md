@@ -1,3 +1,17 @@
+# v18.15.1 (Thu Nov 19 2026)
+
+#### 🐛 Bug Fix
+
+- Pair workspace manifests with the nearest lockfile above them [#1718](https://github.com/chromaui/chromatic-cli/pull/1718) ([@codykaup](https://github.com/codykaup))
+- Replace the README recording with a current CLI run [#1715](https://github.com/chromaui/chromatic-cli/pull/1715) ([@winkerVSbecks](https://github.com/winkerVSbecks))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Varun Vachhar ([@winkerVSbecks](https://github.com/winkerVSbecks))
+
+---
+
 # v18.15.0 (Wed Nov 18 2026)
 
 #### 🚀 Enhancement
