@@ -9,12 +9,12 @@ import { Context, FileDesc } from '../types';
 /**
  * Make a zip file with a list of files (usually used to zip build files to upload to Chromatic).
  *
- * @param ctx The context set when executing the CLI.
+ * @param ctx The logger.
  * @param files The list of files to add to the zip.
  *
  * @returns A promise that resolves with details of the created zip.
  */
-export default async function makeZipFile(ctx: Context, files: FileDesc[]) {
+export default async function makeZipFile(ctx: Pick<Context, 'log'>, files: FileDesc[]) {
   const zipFile = new ZipFile();
   const temporary = await temporaryFile({ postfix: '.zip' });
   // Passing a fd will cause `createWriteStream` to ignore the path (first) argument
