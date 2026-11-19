@@ -54,6 +54,8 @@ export interface StatsGraph {
   untracedSubtrees: Set<FilePath>;
   /** The canonical paths the builder's entries identify as story files. */
   storyFiles: Set<FilePath>;
+  /** Whether a stories entry we recognize imports any module; see `detectStoryFiles`. */
+  foundStoriesEntry: boolean;
   /**
    * Known builder-generated modules that load preview annotations for every story. The paths are
    * canonical and include only roots present in this graph; see `detectGlobalRoots`.
@@ -105,7 +107,7 @@ export async function readStatsGraph(
 
   // Story detection sees every file on disk, skipped or not: a generated story file is still a
   // story file, so its stories keep a hash that moves with the tracked files they import.
-  const storyFiles = detectStoryFiles({ ...roots, onDiskFiles }, stats);
+  const { storyFiles, foundStoriesEntry } = detectStoryFiles({ ...roots, onDiskFiles }, stats);
 
   const files = new Map<FilePath, TurboSnapFile>();
   for (const module of stats.modules) {
@@ -134,6 +136,7 @@ export async function readStatsGraph(
     files,
     hashes,
     storyFiles,
+    foundStoriesEntry,
     globalRoots: detectGlobalRoots(files, roots),
     skippedFiles,
     untracedSubtrees,

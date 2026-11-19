@@ -88,6 +88,21 @@ interface ManifestFile {
 }
 
 /**
+ * Thrown when a stories entry we recognize imports modules, but none of them is a story file on disk
+ * relative to the project root. This usually means Storybook was built in another directory than the
+ * one the CLI resolves the stats paths from, which the user fixes with `--storybook-base-dir`, so it
+ * is not reported as a CLI bug.
+ */
+export class StoryFilesNotFoundError extends Error {
+  constructor(public readonly projectRoot: string) {
+    super(
+      `Found no story files in the stats file for the project at ${projectRoot}. A stories entry imports modules, but none of them is a story file on disk under that directory. If Storybook was built in another directory, pass --storybook-base-dir <dir> pointing at it.`
+    );
+    this.name = 'StoryFilesNotFoundError';
+  }
+}
+
+/**
  * Rolls the graph a stats file describes up into a TurboSnap manifest: the per-story hashes, the
  * Storybook-wide hashes and the whole-Storybook gate. Reading the stats file is
  * `readStatsGraph`'s job; everything here works in canonical paths.
@@ -98,8 +113,10 @@ interface ManifestFile {
  * @returns The manifest containing the file hashes, story file hashes, Storybook config file hashes,
  * and Storybook hash.
  *
- * @throws {Error} When the stats resolve to no story files, or for an E2E build, when no story file
- * reaches a tracked file; see the checks below.
+ * @throws {StoryFilesNotFoundError} When a stories entry we recognize imports modules, but none of
+ * them is a story file on disk.
+ * @throws {Error} When no stories entry we recognize imports anything, or for an E2E build, when no
+ * story file reaches a tracked file; see the checks below.
  */
 export async function buildManifest(
   stats: Stats,
@@ -120,18 +137,24 @@ export async function buildManifest(
     files,
     hashes,
     storyFiles,
+    foundStoriesEntry,
     globalRoots,
     skippedFiles: skippedGraphFiles,
     untracedSubtrees,
   } = await readStatsGraph(stats, input, skipRule, graphFiles);
   input.log.debug(`Found ${storyFiles.size} story files from preview-stats.json`);
   // The Index compares each story by its key in both builds, so a manifest without story files would
-  // look unchanged for every story and recapture nothing. This happens when the stats paths don't
-  // resolve from the project root, or when a builder names its stories entry in a way we don't know.
+  // look unchanged for every story and recapture nothing.
   if (storyFiles.size === 0) {
-    throw new Error(
-      `Found no story files in the stats file for the project at ${input.projectRoot}. Either Storybook was built in another directory (pass --storybook-base-dir <dir> pointing at it), or its builder names its stories entry in a way TurboSnap doesn't recognize.`
-    );
+    // Without a stories entry we recognize, the builder may name its entry in a way we don't know yet,
+    // which is ours to fix. The message leaves out the project root so all projects share one Sentry
+    // issue; the root is in the scope's context instead.
+    if (!foundStoriesEntry) {
+      throw new Error(
+        `Found no stories entry TurboSnap recognizes in the stats file, so it cannot tell which modules are story files.`
+      );
+    }
+    throw new StoryFilesNotFoundError(input.projectRoot);
   }
   // An E2E build's story files are generated and usually gitignored, so a story's hash only moves through
   // the tracked files its edges reach. Without any, as when Vitest runs without

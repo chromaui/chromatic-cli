@@ -38,7 +38,7 @@ Preconditions:
 
 ## Gotchas
 
-- The stats under `.vitest/chromatic/preview-stats.json` list test files but no story-entry module, so `turbosnap-manifest --vitest -s .vitest/chromatic/preview-stats.json` exits `1` with `Error: Found no story files in the stats file …`. Use the stats `build-archive-storybook --stats-json` writes, which the CLI does itself on a real build.
+- The stats under `.vitest/chromatic/preview-stats.json` list test files but no story-entry module, so `turbosnap-manifest --vitest -s .vitest/chromatic/preview-stats.json` exits `1` with `Error: Found no stories entry TurboSnap recognizes in the stats file …`. Use the stats `build-archive-storybook --stats-json` writes, which the CLI does itself on a real build.
 - `@chromatic-com/vitest` numbers `.stories.json` files in the order tests finish, so the same test can be `src-badge-1` on one run and `src-badge-2` on the next. TurboSnap 2.0 then sees a different story key and recaptures it. Do not report that as a CLI bug.
 - `--storybook-base-dir` must be the directory the tests ran in, because the reporter names paths relative to it. Anywhere else, TurboSnap 2.0 finds no story files and uploads nothing (see `tsm-no-stories` in `turbosnap-manifest`).
 - `NODE_PATH` is scoped to E2E drives on purpose. It is a fallback for every `require`, in the bundle and the processes it spawns, so setting it everywhere could hide a real bug where the CLI can't find a package the project installs. A project-local `npx chromatic --vitest` finds `@chromatic-com/vitest` without it; the helper only needs it because it runs this checkout's bundle from outside the project.
