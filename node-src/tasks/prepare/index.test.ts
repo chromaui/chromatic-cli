@@ -5,14 +5,17 @@ import { calculateFileHashes } from './calculateFileHashes';
 import { traceChangedFiles } from './traceChangedFiles';
 import { validateAndroidArtifact } from './validateAndroidArtifact';
 import { validateFiles } from './validateFiles';
+import { validateIosArtifact } from './validateIosArtifact';
 
 vi.mock('./calculateFileHashes');
 vi.mock('./traceChangedFiles');
 vi.mock('./validateAndroidArtifact');
+vi.mock('./validateIosArtifact');
 vi.mock('./validateFiles');
 
 beforeEach(() => {
   vi.mocked(validateAndroidArtifact).mockResolvedValue(undefined);
+  vi.mocked(validateIosArtifact).mockResolvedValue(undefined);
   vi.mocked(calculateFileHashes).mockResolvedValue({});
 });
 

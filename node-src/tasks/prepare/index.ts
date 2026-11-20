@@ -3,6 +3,7 @@ import { calculateFileHashes } from './calculateFileHashes';
 import { traceChangedFiles } from './traceChangedFiles';
 import { validateAndroidArtifact } from './validateAndroidArtifact';
 import { validateFiles } from './validateFiles';
+import { validateIosArtifact } from './validateIosArtifact';
 
 export interface PrepareInput {
   isReactNativeApp: boolean;
@@ -41,6 +42,7 @@ export async function prepareProject(
   });
 
   await validateAndroidArtifact({ sourceDir, browsers: input.browsers });
+  await validateIosArtifact({ sourceDir, browsers: input.browsers });
 
   // TurboSnap reads the freshly validated paths; validateFiles may have corrected the directory.
   input.turboSnapContext.fileInfo = fileInfo;

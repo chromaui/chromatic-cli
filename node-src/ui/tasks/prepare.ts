@@ -38,6 +38,15 @@ export const invalidAndroidArtifact = (_ctx?: Context) => ({
     'Your storybook.apk contains native libraries but does not include x86_64 support. Chromatic only supports x86_64.',
 });
 
+export const invalidIosArtifact = (reason: { platform: string } | { families: string }) => ({
+  status: 'error',
+  title: 'Preparing your built React Native Storybook',
+  output:
+    'platform' in reason
+      ? `Your storybook.app was built for ${reason.platform}, not the iOS simulator. Chromatic only supports iOS simulator builds.`
+      : `Your storybook.app supports ${reason.families} but not iPhone. Chromatic captures iOS stories on iPhone simulators, so add iPhone to the app's targeted device families.`,
+});
+
 export const invalidReactNative = (
   ctx: Pick<Context, 'sourceDir'>,
   missingFiles: string[] = []

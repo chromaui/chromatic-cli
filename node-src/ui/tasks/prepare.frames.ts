@@ -6,6 +6,7 @@ import {
   hashing,
   invalid,
   invalidAndroidArtifact,
+  invalidIosArtifact,
   invalidReactNative,
   success,
   traced,
@@ -37,6 +38,12 @@ export const Invalid = () =>
   failure(invalid({ ...ctx, sourceDir: sourceDirectory, buildLogFile }).output);
 
 export const InvalidAndroidArtifact = () => rnFailure(invalidAndroidArtifact().output);
+
+export const InvalidIosArtifactDeviceBuild = () =>
+  rnFailure(invalidIosArtifact({ platform: 'iPhoneOS' }).output);
+
+export const InvalidIosArtifactIPadOnly = () =>
+  rnFailure(invalidIosArtifact({ families: 'iPad' }).output);
 
 export const InvalidReactNativeAndroidMissing = () =>
   rnFailure(invalidReactNative({ sourceDir: sourceDirectory }, ['storybook.apk']).output);
