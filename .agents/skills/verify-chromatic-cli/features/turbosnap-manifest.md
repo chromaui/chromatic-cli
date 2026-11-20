@@ -15,7 +15,7 @@
 ## How to get to it (user POV)
 
 - Run `chromatic turbosnap-manifest` from the Storybook project root after `storybook build --stats-json`.
-- Run `chromatic turbosnap-manifest -s <stats> [--externals <glob>] [--static-dir a,b] [-u <glob>]` to customize it. `--vitest` builds the manifest of a `chromatic --vitest` build; see `e2e-vitest`.
+- Run `chromatic turbosnap-manifest -s <stats> [--externals <glob>] [--static-dir a,b] [-u <glob>]` to customize it. `--vitest` builds the manifest of a `chromatic --vitest` build; see `e2e-vitest`. A real build also hashes the `staticDirs` that `main.*` declares, while this command hashes only `--static-dir` directories, so pass the same directories when comparing.
 
 ## Driving it with control-chromatic
 
