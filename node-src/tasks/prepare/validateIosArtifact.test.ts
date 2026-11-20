@@ -95,6 +95,15 @@ describe('validateIosArtifact', () => {
     ).rejects.toThrow(deviceBuildError);
   });
 
+  it('names a DTPlatformName that is also an object property as written', async () => {
+    const sourceDirectory = sourceDirectoryWith(
+      xmlPlist('<key>DTPlatformName</key><string>constructor</string>')
+    );
+    await expect(
+      validateIosArtifact({ sourceDir: sourceDirectory, browsers: ['ios'] })
+    ).rejects.toThrow('Your storybook.app was built for constructor, not the iOS simulator.');
+  });
+
   it('names an unknown device family by its number', async () => {
     const sourceDirectory = sourceDirectoryWith(
       xmlPlist(
@@ -121,6 +130,16 @@ describe('validateIosArtifact', () => {
     ['garbage', 'not a plist'],
     ['malformed XML', '<?xml version="1.0"?><plist><dict><key>'],
     ['a truncated binary plist', Buffer.from('bplist00\u00D1\u0001\u0002')],
+    [
+      'a binary plist with a null root',
+      Buffer.from('YnBsaXN0MDAACAAAAAAAAAEBAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAJ', 'base64'),
+    ],
+    [
+      'device families that are not numbers',
+      xmlPlist(
+        `${simulatorPlatform}<key>UIDeviceFamily</key><array><false/><string></string></array>`
+      ),
+    ],
     [
       'mistyped keys',
       xmlPlist(

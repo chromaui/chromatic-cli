@@ -56,7 +56,8 @@ function devicePlatform(plist: InfoPlist) {
     ? plist.CFBundleSupportedPlatforms.filter((platform) => typeof platform === 'string')
     : [];
   if (platforms.length === 0 && typeof plist.DTPlatformName === 'string' && plist.DTPlatformName) {
-    platforms = [PLATFORM_NAMES[plist.DTPlatformName] ?? plist.DTPlatformName];
+    const name = plist.DTPlatformName;
+    platforms = [Object.hasOwn(PLATFORM_NAMES, name) ? PLATFORM_NAMES[name] : name];
   }
   if (platforms.length === 0) return undefined;
   if (platforms.some((platform) => platform.toLowerCase() === SIMULATOR_PLATFORM.toLowerCase())) {
@@ -75,7 +76,12 @@ function devicePlatform(plist: InfoPlist) {
  */
 function nonIPhoneFamilies(plist: InfoPlist) {
   const families = Array.isArray(plist.UIDeviceFamily)
-    ? plist.UIDeviceFamily.map(Number).filter((family) => Number.isInteger(family))
+    ? plist.UIDeviceFamily.filter(
+        (family) =>
+          typeof family === 'number' || (typeof family === 'string' && family.trim() !== '')
+      )
+        .map(Number)
+        .filter((family) => Number.isInteger(family))
     : [];
   if (families.length === 0 || families.includes(IPHONE_FAMILY)) return undefined;
   return families.map((family) => FAMILY_NAMES[family] ?? `device family ${family}`).join(', ');
@@ -92,13 +98,17 @@ function nonIPhoneFamilies(plist: InfoPlist) {
 export async function validateIosArtifact(input: ValidateIosArtifactInput) {
   if (!input.browsers?.includes('ios')) return;
 
-  let plist: InfoPlist;
+  let plist: InfoPlist | null;
   try {
-    plist = readFileSync<InfoPlist>(path.join(input.sourceDir, 'storybook.app', 'Info.plist'));
+    plist = readFileSync<InfoPlist | null>(
+      path.join(input.sourceDir, 'storybook.app', 'Info.plist')
+    );
   } catch {
     // A missing or unreadable Info.plist is left to the install to report.
     return;
   }
+  // A binary plist can hold null as its root.
+  if (!plist) return;
 
   const platform = devicePlatform(plist);
   if (platform) {
