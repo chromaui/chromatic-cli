@@ -5,6 +5,7 @@ import 'dotenv/config';
 import { SubcommandFailure } from './subcommandFailure';
 
 const commands = {
+  auth: () => import('./auth').then(({ main }) => main(process.argv.slice(3))),
   'generate-manifest': () =>
     import('./generateManifest').then(({ main }) => main(process.argv.slice(3))),
   doctor: () => import('./doctor').then(({ main }) => main(process.argv.slice(3))),

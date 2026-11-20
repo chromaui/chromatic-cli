@@ -5,9 +5,9 @@ description: Drive the locally built Chromatic CLI (`chromatic` / `dist/bin.cjs`
 
 # Verify the Chromatic CLI
 
-The product is a Node CLI (`chromatic`, published as the `chromatic` npm package). Users run it in their own JS project. It builds or reads a Storybook, authenticates against the Chromatic backend (`https://index.chromatic.com/graphql`, or `CHROMATIC_INDEX_URL`), uploads, and waits for visual tests. It also ships offline utility subcommands. Here you drive `dist/bin.cjs`, the same bundle npm ships. You never drive `node-src/` directly.
+The product is a Node CLI (`chromatic`, published as the `chromatic` npm package). Users run it in their own JS project. It builds or reads a Storybook, authenticates against the Chromatic backend (`https://index.chromatic.com/graphql`, or `CHROMATIC_INDEX_URL`), uploads, and waits for visual tests. It also ships utility subcommands, most of them offline. Here you drive `dist/bin.cjs`, the same bundle npm ships. You never drive `node-src/` directly.
 
-Other surfaces in this repo are not covered here yet: the GitHub Action (`action-src/`, `action.yml`), the React Native commands (`generate-manifest`, `react-native-build`; they need an RN/Expo project), `chromatic init` (it rewrites `package.json` and runs a package install), and the repo's own Storybook (`yarn storybook`, which shows CLI terminal output as stories and is a dev harness, not a user surface).
+Other surfaces in this repo are not covered here yet: the GitHub Action (`action-src/`, `action.yml`), the React Native commands (`generate-manifest`, `react-native-build`; they need an RN/Expo project), `chromatic init` (it rewrites `package.json` and runs a package install), `chromatic auth` and init's browser sign-in (drive them against a local mock OAuth server with `CHROMATIC_INDEX_URL` and a `BROWSER` script that follows the redirect; the mock keeps tokens fake, but the session still lands in the real OS keyring or config file, so run `auth logout` afterwards; init defaults to pasting a token over SSH, or on Linux without `DISPLAY` or `WAYLAND_DISPLAY`), and the repo's own Storybook (`yarn storybook`, which shows CLI terminal output as stories and is a dev harness, not a user surface).
 
 Everything goes through one helper, `scripts/control-chromatic`, which is executable. Invoke it by path from the repo root:
 

@@ -40,14 +40,16 @@ const HELP = `
     Usage
       $ chromatic init [options]
 
-    Sets up Chromatic in this repository: finds your Storybook or E2E tests, checks your project
-    token, writes chromatic.config.json, adds the chromatic package and script, sets up CI, and
+    Sets up Chromatic in this repository: finds your Storybook or E2E tests, links it to a
+    Chromatic project (sign in with your browser, or paste a project token), writes
+    chromatic.config.json, adds the chromatic package and script, sets up CI, and
     checks the result with chromatic doctor.
 
     Options
       --project <dir>                  Package to set up, when the repository has several.
       --framework, -f <name>           storybook, playwright, cypress or vitest, when detection is wrong.
       --project-token, -t <token>      Use this token instead of asking. Or set CHROMATIC_PROJECT_TOKEN.
+      --no-browser                     Paste a project token instead of signing in with your browser.
       --ci <provider>                  The CI that runs on every push: ${CI_PROVIDERS.map((p) => p.id).join(', ')}, other.
       --skip-ci                        Don't set up CI.
       --skip-install                   Edit package.json but don't run the install.
@@ -128,9 +130,13 @@ function configStep(session: Session, project: Project) {
   // TurboSnap works with Storybook and Vitest, not with Playwright or Cypress (see the docs FAQ).
   const turboSnap = !['playwright', 'cypress'].includes(project.framework);
   if (next.onlyChanged === undefined && turboSnap) next.onlyChanged = true;
+  // Not a secret: it names the project, as the Visual Tests addon writes it.
+  if (session.projectId) next.projectId = session.projectId;
   if (project.framework !== 'storybook') next[project.framework] = true;
   const changed = writer.write(file, formatJson(next, previous));
-  const added = Object.keys(next).filter((key) => key !== '$schema' && !(key in existing));
+  const added = Object.keys(next).filter(
+    (key) => key !== '$schema' && JSON.stringify(next[key]) !== JSON.stringify(existing[key])
+  );
   clack.log.success(
     changed
       ? `${writer.say(previous ? 'Updated' : 'Wrote', previous ? 'update' : 'write')} ${writer.display(file)} ${color.muted(`(${added.map((k) => `${k}: ${JSON.stringify(next[k])}`).join(', ')})`)}`
@@ -301,6 +307,56 @@ async function ciStep(
 }
 
 /**
+ * Sets the project token as a GitHub Actions secret with the user's own `gh`, so the token is
+ * never shown, copied or written to a file. Only for a token read through sign-in, and only after
+ * asking: it changes the repository's settings on GitHub.
+ *
+ * @param session The init session.
+ * @param providers The CI providers set up.
+ *
+ * @returns Whether the secret was set.
+ */
+async function githubSecretStep(session: Session, providers: { id: string }[]) {
+  const { linkedToken, secretName, interactive, flags, gitRoot } = session;
+  if (!linkedToken || !interactive || flags.dryRun) return false;
+  if (!providers.some((p) => p.id === 'github')) return false;
+  let repository: string;
+  try {
+    // Name the repository in the question: gh picks it from the git remotes, which may surprise.
+    // Its URL keeps the host, so a GitHub Enterprise repository isn't read as one on github.com.
+    const { stdout } = await execa('gh', ['repo', 'view', '--json', 'url', '-q', '.url'], {
+      cwd: gitRoot,
+      stdin: 'ignore',
+    });
+    repository = stdout.trim().replace(/^https?:\/\//, '');
+  } catch {
+    return false;
+  }
+  const yes = answered(
+    await clack.confirm({
+      message: `Set the ${secretName} secret on ${color.bold(repository)} with ${color.cta('gh secret set')}?`,
+      initialValue: true,
+    })
+  );
+  if (!yes) return false;
+  try {
+    // The secret goes over stdin, never in argv where `ps` and shell history show it.
+    // --repo: with several remotes, gh refuses to guess, and the prompt already named this one.
+    await execa('gh', ['secret', 'set', secretName, '--repo', repository], {
+      cwd: gitRoot,
+      input: linkedToken,
+    });
+    clack.log.success(`Set the ${secretName} secret on ${repository}`);
+    return true;
+  } catch (err) {
+    clack.log.warn(
+      `gh secret set failed: ${String(err.stderr || err.shortMessage || err).split('\n')[0]}`
+    );
+    return false;
+  }
+}
+
+/**
  * The main entrypoint for `chromatic init`: a step-by-step setup modeled on `storybook init`.
  *
  * @param argv A list of arguments passed.
@@ -318,6 +374,7 @@ export async function main(argv: string[]) {
         choices: ['storybook', 'playwright', 'cypress', 'vitest'],
       },
       projectToken: { type: 'string', shortFlag: 't' },
+      browser: { type: 'boolean', default: true },
       ci: { type: 'string', choices: [...CI_PROVIDERS.map((p) => p.id), 'other'] },
       skipCi: { type: 'boolean' },
       skipInstall: { type: 'boolean' },
@@ -376,8 +433,11 @@ export async function main(argv: string[]) {
   const needsInstall = await packageStep(session, project, project.framework);
   if (needsInstall) await installStep(session, project, packageManager);
 
-  // 6. CI
-  const providers = await ciStep(session, project, packageManager);
+  // 6. CI, and the token secret when sign-in gave us the token
+  let providers = await ciStep(session, project, packageManager);
+  if (await githubSecretStep(session, providers)) {
+    providers = providers.filter((p) => p.id !== 'github');
+  }
 
   // 7. .gitignore
   const gitignore = gitignoreAdditions(gitRoot, GITIGNORE_ENTRIES);

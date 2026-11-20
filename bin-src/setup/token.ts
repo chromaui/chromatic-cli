@@ -3,9 +3,11 @@ import path from 'node:path';
 
 import * as clack from '@clack/prompts';
 
+import { canSignInWithBrowser } from '../../node-src/lib/oauth/flow';
 import { SubcommandFailure } from '../subcommandFailure';
 import type { Project } from './detect';
-import { answered, color, FileWriter, gitignoreAdditions, relativeOrDot } from './shared';
+import { answered, color, FileWriter, gitignoreAdditions, readJson, relativeOrDot } from './shared';
+import { linkProject } from './signIn';
 
 /** State shared by init's steps. */
 export interface Session {
@@ -15,6 +17,10 @@ export interface Session {
   flags: Record<string, any>;
   /** The CI secret for this project's token, set once the project is picked. */
   secretName: string;
+  /** The project picked after browser sign-in, written to chromatic.config.json. */
+  projectId?: string;
+  /** The token read through sign-in, which nobody has pasted, so init can set the CI secret. */
+  linkedToken?: string;
 }
 
 async function verifyToken(token: string) {
@@ -89,6 +95,24 @@ async function rejected(token: string) {
   return false;
 }
 
+async function chooseSignIn() {
+  // Over SSH the browser runs on another machine and can't reach this one's 127.0.0.1 redirect.
+  const local = canSignInWithBrowser();
+  return answered(
+    await clack.select({
+      message: 'How should init find your Chromatic project?',
+      initialValue: local,
+      options: [
+        {
+          value: true,
+          label: `Sign in with your browser ${color.muted(local ? '· pick a project, no token to copy' : "· needs a browser on this machine, which this session doesn't seem to have")}`,
+        },
+        { value: false, label: 'Paste a project token' },
+      ],
+    })
+  );
+}
+
 /**
  * Gets the project token, checks it with Chromatic, and offers to save a typed one in .env.
  * In a terminal, a token Chromatic rejects is asked for again; otherwise it stops the run.
@@ -103,7 +127,23 @@ export async function tokenStep(session: Session, project: Project) {
   // True when the token came from a flag or the environment, so there's nothing new to save.
   let given = false;
   let token: string;
-  if (flags.projectToken) {
+  const currentProjectId = readJson(
+    path.join(project.directory, 'chromatic.config.json')
+  )?.projectId;
+  // Offer browser sign-in only at a terminal and when no token was passed.
+  const linked =
+    interactive && !flags.projectToken && flags.browser && (await chooseSignIn())
+      ? await linkProject({
+          framework: project.framework,
+          currentProjectId,
+          save: !flags.dryRun,
+        })
+      : undefined;
+  if (linked) {
+    session.projectId = linked.projectId;
+    session.linkedToken = linked.projectToken;
+    token = linked.projectToken;
+  } else if (flags.projectToken) {
     clack.log.info('Using the project token from --project-token.');
     token = flags.projectToken;
     given = true;
@@ -129,9 +169,9 @@ export async function tokenStep(session: Session, project: Project) {
     clack.log.warn('No project token. Set CHROMATIC_PROJECT_TOKEN before running Chromatic.');
     return;
   }
-  // Nobody can correct a token passed as a flag or read without a terminal, so stop.
-  // The interactive prompt already checked its token.
-  const checked = interactive && !flags.projectToken;
+  // Nobody can correct a token passed as a flag or read without a terminal, so stop. The
+  // interactive prompt already checked its token, and sign-in read it from Chromatic.
+  const checked = !!linked || (interactive && !flags.projectToken);
   if (!checked && (await rejected(token))) {
     throw new SubcommandFailure('Invalid project token', { exitCode: 1 });
   }
