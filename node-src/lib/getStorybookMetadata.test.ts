@@ -1,7 +1,4 @@
-import { existsSync, readFileSync } from 'fs';
-import { mkdtemp, rm } from 'fs/promises';
-import { readJson } from 'fs-extra';
-import { tmpdir } from 'os';
+import { readFileSync } from 'fs';
 import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -9,14 +6,8 @@ import { findStaticDirectories, getStorybookMetadata } from './getStorybookMetad
 
 type MainConfigReader = NonNullable<Parameters<typeof findStaticDirectories>[0]['mainConfig']>;
 
-// Passes through to the real implementation unless a test makes a package lookup hang.
-vi.mock('fs-extra', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('fs-extra')>();
-  return { ...actual, readJson: vi.fn(actual.readJson) };
-});
-
 function makeConfig(returnValue: any): MainConfigReader {
-  return { readField: vi.fn().mockReturnValue(returnValue) };
+  return { readField: vi.fn().mockReturnValue(returnValue), readName: vi.fn() };
 }
 
 // The fixtures below represent a project at `/project` whose config lives in
@@ -124,7 +115,7 @@ function getDeps(
   return {
     log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn() },
     options: { storybookConfigDir: `${FIXTURES}/${project}/.storybook`, ...options },
-    // Pinned so the viewlayer lookup can't reach into this repo's own node_modules.
+    // Pinned so the version lookup can't reach into this repo's own node_modules.
     env: { CHROMATIC_STORYBOOK_VERSION: '@storybook/react@8.0.0' },
     packageJson,
   } as any;
@@ -253,61 +244,18 @@ describe('getStorybookMetadata absolute directories', () => {
   });
 });
 
-describe('getStorybookMetadata view layer lookup in node_modules', () => {
-  // With no view layer pinned or listed in package.json, the version comes from whichever view
-  // layer package is installed. This repo's own node_modules has some of them, but not all.
-  it('reports the version of an installed view layer even though others are missing', async () => {
-    const installed = ['@storybook/react', '@storybook/react-vite', '@storybook/html']
-      .filter((pkg) => existsSync(`node_modules/${pkg}/package.json`))
-      .map((pkg) => JSON.parse(readFileSync(`node_modules/${pkg}/package.json`, 'utf8')).version);
-    expect(installed).not.toHaveLength(0);
+describe('getStorybookMetadata framework wrapped in getAbsolutePath', () => {
+  const htmlVite = JSON.parse(
+    readFileSync('node_modules/@storybook/html-vite/package.json', 'utf8')
+  ).version;
 
-    const metadata = await getStorybookMetadata(
-      { ...getDeps('js-cjs'), env: {} },
-      projectRootOf('js-cjs')
-    );
+  it.each([
+    { project: 'framework-absolute-path-cjs', shape: 'an evaluated main.js' },
+    { project: 'framework-absolute-path-ts', shape: 'a parsed main.ts' },
+  ])('reports the package name from $shape', async ({ project }) => {
+    const metadata = await getStorybookMetadata(getDeps(project), projectRootOf(project));
 
-    expect(installed).toContain(metadata.version);
-  });
-
-  it('reports a missing package, without waiting for the timeout, when none is installed', async () => {
-    const emptyDirectory = await mkdtemp(path.join(tmpdir(), 'no-view-layer-'));
-    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(emptyDirectory);
-    try {
-      const deps = { ...getDeps('js-cjs'), env: {} };
-      const started = Date.now();
-      const metadata = await getStorybookMetadata(deps, projectRootOf('js-cjs'));
-
-      expect(Date.now() - started).toBeLessThan(5000);
-      expect(metadata.version).toBeUndefined();
-      const [versionLookup] = deps.log.debug.mock.calls.find(([info]) => Array.isArray(info))[0];
-      expect(versionLookup.status).toBe('rejected');
-      expect(versionLookup.reason.message).toContain('Storybook package not installed');
-    } finally {
-      cwd.mockRestore();
-      await rm(emptyDirectory, { recursive: true });
-    }
-  });
-
-  it('gives up with a timeout error when a package lookup hangs', async () => {
-    vi.useFakeTimers({ toFake: ['setTimeout'] });
-    vi.mocked(readJson).mockImplementation(() => new Promise(() => {}));
-    try {
-      const deps = { ...getDeps('js-cjs'), env: {} };
-      const pending = getStorybookMetadata(deps, projectRootOf('js-cjs'));
-      await vi.waitFor(() => expect(readJson).toHaveBeenCalled());
-      await vi.advanceTimersByTimeAsync(10_000);
-      const metadata = await pending;
-
-      expect(metadata.version).toBeUndefined();
-      const [versionLookup] = deps.log.debug.mock.calls.find(([info]) => Array.isArray(info))[0];
-      expect(versionLookup.reason.message).toBe(
-        'Timeout while resolving Storybook view layer package'
-      );
-    } finally {
-      vi.mocked(readJson).mockRestore();
-      vi.useRealTimers();
-    }
+    expect(metadata.builder).toEqual({ name: '@storybook/html-vite', packageVersion: htmlVite });
   });
 });
 
