@@ -57,6 +57,7 @@ const getBuildInfo = (event: typeof context) => {
         slug: repository?.full_name,
       };
     }
+    case 'deployment_status':
     case 'workflow_dispatch':
     case 'issue_comment': {
       return {
