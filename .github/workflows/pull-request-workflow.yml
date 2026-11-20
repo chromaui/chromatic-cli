@@ -82,13 +82,22 @@ jobs:
     secrets:
       SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
 
+  # The packed CLI against the e2e fixtures. It publishes 32 snapshots, so it runs once per change
+  # in the merge queue rather than on every push to a PR.
+  e2e-fixtures:
+    needs: changes
+    if: github.event_name == 'merge_group' && needs.changes.outputs.code == 'true'
+    uses: ./.github/workflows/e2e-fixtures.yml
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
+
   # The single required check for branch protection. Skipped jobs count as passing, so this
   # passes when tests were skipped for docs-only changes and fails if any job failed. It runs
   # with always() and fails on cancelled jobs so that a cancelled run reports a failure here
   # instead of a skipped (and therefore passing) required check.
   ci-required:
     if: always()
-    needs: [changes, lint-and-test, smoke-test-action, smoke-test]
+    needs: [changes, lint-and-test, smoke-test-action, smoke-test, e2e-fixtures]
     runs-on: ubuntu-latest
     steps:
       - name: Check required jobs
