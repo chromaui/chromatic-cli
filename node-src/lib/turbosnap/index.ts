@@ -8,6 +8,7 @@ import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import untracedStorybookConfig from '../../ui/messages/warnings/untracedStorybookConfig';
 import { relativeTo } from '../getStorybookProjectRoot';
 import { matchesFile } from '../utilities';
+import { getE2EPackage } from './e2ePackage';
 import { isHashCollectionDisabled } from './isHashCollectionDisabled';
 import { isTurboSnapV1Enabled, shouldTraceWithV1 } from './shouldTraceWithV1';
 import { storybookConfigFileKind } from './storybookConfigFiles';
@@ -194,7 +195,7 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<HashBasedTurb
         gitRoot: ctx.git.rootPath,
         untraced: ctx.options.untraced ?? [],
         configDir: ctx.storybook.configDir,
-        ...(ctx.options.vitest && { e2ePackage: '@chromatic-com/vitest' }),
+        e2ePackage: getE2EPackage(ctx.options),
         staticDirs: ctx.storybook.staticDirs,
         externals: ctx.options.externals ?? [],
         projectFiles: realProjectFiles({ log: ctx.log, options: ctx.options }),

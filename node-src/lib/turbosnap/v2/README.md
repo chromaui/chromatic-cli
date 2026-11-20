@@ -57,21 +57,23 @@ The two config entries the index requires are filled without one:
 | Entry | Storybook project | Vitest build |
 |---|---|---|
 | `storybookVersion` | The installed Storybook version | The package and its version, e.g. `@chromatic-com/vitest@1.0.2` |
-| `storybookConfigFiles` | Roll-up of the config directory | Roll-up of no files, a constant. A package upgrade moves `storybookVersion` instead; see the known gap below |
+| `storybookConfigFiles` | Roll-up of the config directory | Roll-up of no files, a constant. A package upgrade moves `storybookVersion` instead; see [E2E package upgrades](#e2e-package-upgrades) |
 
 There is no config-directory sweep, so the manifest's `storybookConfigFiles` detail is empty. `preview` and `staticFiles` are usually omitted, but not always. A project that also has a Storybook, as with portable stories, can get both. A graph file under the config directory, such as `.storybook/preview.ts` imported by a Vitest setup file, counts as `preview`. A real build also hashes the static directories the project's `main.*` declares, while `chromatic turbosnap-manifest --vitest` only hashes the ones you pass with `--static-dir`. Both only add hashes, so they over-capture at worst.
 
 `--playwright` and `--cypress` builds skip TurboSnap 2.0 entirely. They report no module graph, so their generated story files reach no tracked files and would hash the same on every build.
 
-A Vitest build has the same problem when the tests ran without `chromaticPlugin({ turboSnap: true })`: the package then writes no stats, and the story files import nothing. `buildManifest` refuses any E2E build where no story file reaches a tracked file, so TurboSnap 1.0 decides it instead, and 1.0 fails the build with a message that asks for `turboSnap: true`.
+A Vitest build has the same problem when the tests ran without `chromaticPlugin({ turboSnap: true })`: the package then writes no stats, and the story files import nothing. `buildManifest` refuses any E2E build where no story file reaches a tracked file, so TurboSnap 1.0 decides it instead, and 1.0 fails the build with a message that asks for `turboSnap: true`, unless the package itself changed (see [E2E package upgrades](#e2e-package-upgrades)).
 
 Known gap, as of `@chromatic-com/vitest` 1.0.x: the package numbers its `.stories.json` files in the order tests finish, so the same test can get a different key on the next run. The index compares a story's hash under the same key in both builds, so a renamed key recaptures that story. That over-captures; it never skips a change.
-
-Known gap: upgrading `@chromatic-com/vitest` recaptures nothing on its own. The new `storybookVersion` matches no ancestor's configuration, so the index bails with `NO_ANCESTOR_CONFIGURATION_MATCH` and TurboSnap 1.0 decides the build. 1.0 finds the changed dependency but no test file it affects, so it skips every snapshot. CLIs before TurboSnap 2.0 ran on Vitest builds behave the same.
 
 Known gap, as of `@chromatic-com/vitest` 1.0.x: the package adds the Vitest config file to the stats, so a change to it moves every story hash. On Vitest 5, a Vitest bug ([vitest-dev/vitest#11951](https://github.com/vitest-dev/vitest/issues/11951)) drops it when Vitest finds the config on its own, so it is only there when the tests run with `--config`. Until the package ships a fallback, pass `--externals '**/vitest.config.ts'` so a change to it recaptures every story. `--externals` globs match paths from the repository root, so a bare `vitest.config.ts` only matches a config at the root. TurboSnap 1.0 has the same gap.
 
 Known gap, as of `@chromatic-com/vitest` 1.0.x: files the Vitest config imports are never tracked, because the package adds the config without following its imports. A change there, such as to a shared Vite config, moves no hash. Add those files to `--externals` too.
+
+### E2E package upgrades
+
+The stats hold no file from the E2E package, so tracing would find no test an upgrade affects. TurboSnap 1.0 instead bails, recapturing every snapshot, when its dependency analysis reports the build's own package (`@chromatic-com/vitest`, `@chromatic-com/playwright` or `@chromatic-com/cypress`) as changed. That bail comes before tracing, so it also covers a Vitest build without `turboSnap: true`. For Vitest, the upgrade also moves `storybookVersion`, which matches no ancestor's configuration, so the index bails with `NO_ANCESTOR_CONFIGURATION_MATCH` and lets 1.0 decide the build. Playwright and Cypress builds skip 2.0, so 1.0 decides them anyway.
 
 ## What the index does with the roll-ups
 

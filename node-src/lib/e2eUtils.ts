@@ -7,6 +7,6 @@ import { Options } from '../types';
  *
  * @returns true if the build is an E2E build.
  */
-export function isE2EBuild(options: Options) {
+export function isE2EBuild(options: Partial<Pick<Options, 'playwright' | 'cypress' | 'vitest'>>) {
   return options.playwright || options.cypress || options.vitest;
 }
