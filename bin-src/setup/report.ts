@@ -1,5 +1,4 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
 import { stripVTControlCharacters } from 'node:util';
 
 import * as clack from '@clack/prompts';
@@ -44,6 +43,17 @@ function wrap(text: string, width: number) {
 }
 
 /**
+ * Length as shown in the terminal, without color codes.
+ *
+ * @param text
+ *
+ * @returns
+ */
+const visible = (text: string) => stripVTControlCharacters(text).length;
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/**
  * Prints each section as its own titled box, with one line per check and its details indented
  * below, so it's clear which section a check belongs to.
  *
@@ -52,7 +62,6 @@ function wrap(text: string, width: number) {
 export function printChecks(checks: Check[]) {
   // Room for the frame, the box borders and the indent.
   const width = Math.max(40, Math.min(100, (process.stdout.columns || 100) - 14));
-  const visible = (text: string) => stripVTControlCharacters(text).length;
   const sections = (Object.keys(GROUP_TITLES) as Group[]).flatMap((group) => {
     const inGroup = checks.filter((c) => c.group === group);
     if (inGroup.length === 0) return [];
@@ -68,7 +77,10 @@ export function printChecks(checks: Check[]) {
 
   // Pad every box to the widest one, so the sections line up.
   const widest = Math.max(
-    ...sections.flatMap(({ title, lines }) => [visible(title) + 2, ...lines.map(visible)])
+    ...sections.flatMap(({ title, lines }) => [
+      visible(title) + 2,
+      ...lines.map((line) => visible(line)),
+    ])
   );
   for (const { title, lines } of sections) {
     const padded = [...lines];
@@ -78,9 +90,15 @@ export function printChecks(checks: Check[]) {
   }
 }
 
+/**
+ * One line of counts, such as "4 passed · 2 warnings", leaving out zeros.
+ *
+ * @param checks The checks to count.
+ *
+ * @returns The colored summary.
+ */
 export function summarize(checks: Check[]) {
   const count = (status: Check['status']) => checks.filter((c) => c.status === status).length;
-  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
   const parts = [
     count('pass') > 0 && color.success(`${count('pass')} passed`),
     count('warn') > 0 && color.warning(plural(count('warn'), 'warning')),
@@ -97,6 +115,7 @@ export function summarize(checks: Check[]) {
  *
  * @returns
  */
+// eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
 function lineDiff(before: string, after: string) {
   const a = before.split('\n');
   const b = after.split('\n');
@@ -168,8 +187,4 @@ export async function applyFixes(
     for (const { file, content } of fix.edits) writeFileSync(file, content);
     clack.log.success(`Applied: ${fix.summary}`);
   }
-}
-
-export function displayPath(cwd: string, file: string) {
-  return relativeOrDot(cwd, path.resolve(cwd, file));
 }

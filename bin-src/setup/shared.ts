@@ -32,6 +32,14 @@ export function answered<T>(value: T | symbol): T {
   return value;
 }
 
+/**
+ * Runs git and returns its trimmed output.
+ *
+ * @param args Git arguments.
+ * @param cwd Where to run it.
+ *
+ * @returns The output, or undefined when git fails.
+ */
 export function git(args: string[], cwd: string) {
   try {
     return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
@@ -54,10 +62,25 @@ export function listRepoFiles(gitRoot: string) {
   return output ? output.split('\n').filter(Boolean) : [];
 }
 
+/**
+ * A relative path, or "." when the two are the same.
+ *
+ * @param from The base path.
+ * @param to The target path.
+ *
+ * @returns The relative path.
+ */
 export function relativeOrDot(from: string, to: string) {
   return path.relative(from, to).split(path.sep).join('/') || '.';
 }
 
+/**
+ * Reads a JSON file, or returns undefined when it's missing or invalid.
+ *
+ * @param filePath The file to read.
+ *
+ * @returns The parsed JSON.
+ */
 export function readJson(filePath: string): Record<string, any> | undefined {
   try {
     return JSON.parse(readFileSync(filePath, 'utf8'));

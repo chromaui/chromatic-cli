@@ -27,6 +27,7 @@ export function packageJsonEdit(file: string, change: (json: Record<string, any>
  *
  * @returns The new text, or undefined when there's no checkout step it can change.
  */
+// eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
 export function githubFetchDepth(text: string) {
   const lines = text.split('\n');
   // Go bottom up, so inserting lines doesn't move the steps still to do.
@@ -67,6 +68,7 @@ export function githubFetchDepth(text: string) {
  *
  * @returns The new text, or undefined when no job runs Chromatic.
  */
+// eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
 export function gitlabGitDepth(text: string) {
   const lines = text.split('\n');
   const tops = lines.flatMap((line, index) =>

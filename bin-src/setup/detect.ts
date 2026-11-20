@@ -6,7 +6,7 @@ import { readJson, relativeOrDot } from './shared';
 
 export type Framework = 'storybook' | 'playwright' | 'cypress' | 'vitest';
 
-export const FRAMEWORK_NAMES: Record<Framework, string> = {
+const FRAMEWORK_NAMES: Record<Framework, string> = {
   storybook: 'Storybook',
   playwright: 'Playwright',
   cypress: 'Cypress',
@@ -16,7 +16,7 @@ export const FRAMEWORK_NAMES: Record<Framework, string> = {
 export interface Project {
   framework: Framework;
   /** Absolute directory Chromatic should run from: the package that owns the tests. */
-  dir: string;
+  directory: string;
   /** Path from the repository root, for display. */
   relative: string;
   packageName?: string;
@@ -30,8 +30,9 @@ export interface Project {
 const STORYBOOK_MAIN = /(^|\/)\.storybook\/main\.[cm]?[jt]sx?$/;
 const E2E_CONFIG = /(^|\/)(playwright|cypress|vitest)\.config\.[cm]?[jt]s$/;
 
-function versionOf(dir: string, gitRoot: string, name: string) {
-  for (let current = dir; current.startsWith(gitRoot); current = path.dirname(current)) {
+// eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
+function versionOf(directory: string, gitRoot: string, name: string) {
+  for (let current = directory; current.startsWith(gitRoot); current = path.dirname(current)) {
     const installed = readJson(path.join(current, 'node_modules', name, 'package.json'));
     if (installed?.version) return installed.version as string;
     const pkg = readJson(path.join(current, 'package.json'));
@@ -54,15 +55,15 @@ export function findProjects(gitRoot: string, files: string[]): Project[] {
   const projects: Project[] = [];
 
   for (const file of files.filter((f) => STORYBOOK_MAIN.test(f))) {
-    const dir = path.join(gitRoot, path.dirname(path.dirname(file)));
+    const directory = path.join(gitRoot, path.dirname(path.dirname(file)));
     const main = readFileSync(path.join(gitRoot, file), 'utf8');
     const framework = main.match(/framework\s*:\s*(?:\{\s*name\s*:\s*)?['"]([^'"]+)['"]/)?.[1];
     projects.push({
       framework: 'storybook',
-      dir,
-      relative: relativeOrDot(gitRoot, dir),
-      packageName: readJson(path.join(dir, 'package.json'))?.name,
-      storybookVersion: versionOf(dir, gitRoot, 'storybook'),
+      directory,
+      relative: relativeOrDot(gitRoot, directory),
+      packageName: readJson(path.join(directory, 'package.json'))?.name,
+      storybookVersion: versionOf(directory, gitRoot, 'storybook'),
       storybookFramework: framework?.replace(/^@storybook\//, ''),
       evidence: file,
     });
@@ -70,14 +71,14 @@ export function findProjects(gitRoot: string, files: string[]): Project[] {
 
   for (const file of files.filter((f) => E2E_CONFIG.test(f))) {
     const framework = file.match(E2E_CONFIG)?.[2] as Framework;
-    const dir = path.join(gitRoot, path.dirname(file));
+    const directory = path.join(gitRoot, path.dirname(file));
     // A vitest.config next to a Storybook is usually the Storybook's own test setup.
-    if (framework === 'vitest' && projects.some((p) => p.dir === dir)) continue;
+    if (framework === 'vitest' && projects.some((p) => p.directory === directory)) continue;
     projects.push({
       framework,
-      dir,
-      relative: relativeOrDot(gitRoot, dir),
-      packageName: readJson(path.join(dir, 'package.json'))?.name,
+      directory,
+      relative: relativeOrDot(gitRoot, directory),
+      packageName: readJson(path.join(directory, 'package.json'))?.name,
       evidence: file,
     });
   }
@@ -85,6 +86,13 @@ export function findProjects(gitRoot: string, files: string[]): Project[] {
   return projects;
 }
 
+/**
+ * Describes a project for prompts and headings, such as "Storybook 10.6 (react-vite)".
+ *
+ * @param project The detected project.
+ *
+ * @returns The description.
+ */
 export function describeProject(project: Project) {
   if (project.framework !== 'storybook') return `${FRAMEWORK_NAMES[project.framework]} tests`;
   const version = project.storybookVersion?.match(/^\d+\.\d+/)?.[0];
@@ -108,6 +116,13 @@ const ROOT_LOCKFILES: [string, string][] = [
   ['package-lock.json', 'npm'],
 ];
 
+/**
+ * Reads the package manager from the root packageManager field, then from root lockfiles.
+ *
+ * @param gitRoot The repository root.
+ *
+ * @returns The package manager, npm when nothing says otherwise.
+ */
 export async function detectPackageManager(gitRoot: string): Promise<PackageManager> {
   const declared = readJson(path.join(gitRoot, 'package.json'))?.packageManager as
     | string
@@ -243,6 +258,14 @@ export interface DetectedCi {
 
 const RUNS_CHROMATIC = /chromaui\/action|\bchromatic\b(?!\.config)/i;
 
+/**
+ * Finds each documented CI provider's config files, and which of them run Chromatic.
+ *
+ * @param gitRoot The repository root.
+ * @param files Repository files relative to the git root.
+ *
+ * @returns The providers whose config files exist.
+ */
 export function detectCi(gitRoot: string, files: string[]): DetectedCi[] {
   return CI_PROVIDERS.map((provider) => {
     const found = files.filter((file) => provider.patterns.some((p) => p.test(file)));
@@ -260,12 +283,16 @@ export function detectCi(gitRoot: string, files: string[]): DetectedCi[] {
  *
  * @param detected Results from detectCi.
  * @param gitRoot Absolute repository root.
- * @param packageDir The package's path from the repository root, or '.'.
+ * @param packageDirectory The package's path from the repository root, or '.'.
  *
  * @returns Each matching file with its provider.
  */
-export function chromaticRunsFor(detected: DetectedCi[], gitRoot: string, packageDir: string) {
-  const normalized = packageDir.replace(/^\.\//, '').replace(/\/$/, '');
+export function chromaticRunsFor(
+  detected: DetectedCi[],
+  gitRoot: string,
+  packageDirectory: string
+) {
+  const normalized = packageDirectory.replace(/^\.\//, '').replace(/\/$/, '');
   return detected.flatMap(({ provider, chromaticFiles }) =>
     chromaticFiles
       .filter((file) => {

@@ -11,10 +11,10 @@ import { githubFetchDepth, gitlabGitDepth, packageJsonEdit } from './fixes';
 import { formatJson, gitignoreAdditions, readJson, relativeOrDot } from './shared';
 import { valueChecks } from './valueChecks';
 
-export type Status = 'pass' | 'warn' | 'fail';
+type Status = 'pass' | 'warn' | 'fail';
 export type Group = 'Loading' | 'Values' | 'Environment';
 
-export interface Fix {
+interface Fix {
   /** What --fix will do, in one line. */
   summary: string;
   /** The file it changes and its new content. */
@@ -61,13 +61,19 @@ export interface DoctorInput {
   packageJson?: Record<string, any>;
 }
 
+/** Rewrites a provider's CI file to clone full history, for providers where that's safe. */
+const CLONE_DEPTH_FIXES: Partial<Record<string, (text: string) => string | undefined>> = {
+  github: githubFetchDepth,
+  gitlab: gitlabGitDepth,
+};
+
 const MAIN_FILE = /^main\.[cm]?[jt]sx?$/;
 
 function nearestPackageJson(cwd: string, stopAt?: string) {
-  for (let dir = cwd; ; dir = path.dirname(dir)) {
-    const file = path.join(dir, 'package.json');
+  for (let directory = cwd; ; directory = path.dirname(directory)) {
+    const file = path.join(directory, 'package.json');
     if (existsSync(file)) return file;
-    if (dir === stopAt || dir === path.dirname(dir)) return undefined;
+    if (directory === stopAt || directory === path.dirname(directory)) return undefined;
   }
 }
 
@@ -140,6 +146,7 @@ export function storybookConfigCandidates({ cwd, gitRoot, options }: DoctorInput
   return [...new Set([path.resolve(projectRoot, value), path.resolve(cwd, value)])];
 }
 
+// eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
 function loadingChecks(input: DoctorInput, configError?: string): Check[] {
   const { cwd, options, packageJson, packageJsonPath } = input;
   const checks: Check[] = [];
@@ -201,13 +208,17 @@ function loadingChecks(input: DoctorInput, configError?: string): Check[] {
   if (isE2E) return checks;
 
   // Look where the build looks (findConfigDirectory): the project root, then the working directory.
-  const configDir = storybookConfigCandidates(input).find((dir) => existsSync(dir));
-  const main = configDir ? readdirSync(configDir).find((f) => MAIN_FILE.test(f)) : undefined;
-  if (main && configDir) {
+  const configDirectory = storybookConfigCandidates(input).find((directory) =>
+    existsSync(directory)
+  );
+  const main = configDirectory
+    ? readdirSync(configDirectory).find((f) => MAIN_FILE.test(f))
+    : undefined;
+  if (main && configDirectory) {
     checks.push({
       group: 'Loading',
       status: 'pass',
-      title: `Found Storybook at ${at(path.join(configDir, main))}`,
+      title: `Found Storybook at ${at(path.join(configDirectory, main))}`,
     });
   } else if (options.storybookConfigDir === undefined) {
     checks.push({
@@ -291,6 +302,7 @@ function buildScriptCheck(
   };
 }
 
+// eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
 function environmentChecks(input: DoctorInput): Check[] {
   const { gitRoot, files } = input;
   const checks: Check[] = [];
@@ -361,12 +373,7 @@ function environmentChecks(input: DoctorInput): Check[] {
         problems.push('runs on pull_request, which tests a merge commit instead of your branch');
       if (provider.id === 'gitlab' && !/GIT_DEPTH:\s*["']?0/.test(text))
         problems.push('no GIT_DEPTH: 0, so the clone is shallow');
-      const fixed =
-        provider.id === 'github'
-          ? githubFetchDepth(raw)
-          : (provider.id === 'gitlab'
-            ? gitlabGitDepth(raw)
-            : undefined);
+      const fixed = CLONE_DEPTH_FIXES[provider.id]?.(raw);
       // Only the clone depth has a safe automatic fix; which events trigger a build is a choice.
       const shallowProblem = problems.some((problem) => problem.includes('shallow'));
       checks.push(
@@ -439,7 +446,7 @@ export function configEdit(input: DoctorInput, change: (json: Record<string, any
  *
  * @returns
  */
-export function envTokenEdits(input: DoctorInput, token: string) {
+export function environmentTokenEdits(input: DoctorInput, token: string) {
   const environmentFile = path.join(input.cwd, '.env');
   const text = existsSync(environmentFile) ? readFileSync(environmentFile, 'utf8') : '';
   const line = `CHROMATIC_PROJECT_TOKEN=${token}`;
@@ -458,6 +465,14 @@ export function envTokenEdits(input: DoctorInput, token: string) {
   return edits;
 }
 
+/**
+ * Counts the repository files a glob matches, the way TurboSnap matches them.
+ *
+ * @param files Repository files relative to the git root.
+ * @param glob The glob from untraced or externals.
+ *
+ * @returns How many files match.
+ */
 export function countMatches(files: string[], glob: string) {
   return files.filter((file) => matchesFile(glob, file)).length;
 }

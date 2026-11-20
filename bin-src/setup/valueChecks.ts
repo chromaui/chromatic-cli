@@ -5,12 +5,13 @@ import type { Check, DoctorInput } from './checks';
 import {
   configEdit,
   countMatches,
-  envTokenEdits as environmentTokenEdits,
+  environmentTokenEdits,
   matchesBranch,
   storybookConfigCandidates,
 } from './checks';
 import { relativeOrDot } from './shared';
 
+// eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
 function onlyChangedChecks(input: DoctorInput): Check[] {
   const { onlyChanged, playwright, cypress } = input.options;
   if (playwright || cypress) {
@@ -82,7 +83,8 @@ function onlyChangedChecks(input: DoctorInput): Check[] {
   return [{ group: 'Values', status: 'pass', title: 'TurboSnap is on' }];
 }
 
-function configDirChecks(input: DoctorInput): Check[] {
+// eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
+function configDirectoryChecks(input: DoctorInput): Check[] {
   const { cwd, gitRoot, options, configKeys } = input;
   const value = options.storybookConfigDir;
   if (value === undefined) return [];
@@ -105,7 +107,7 @@ function configDirChecks(input: DoctorInput): Check[] {
       },
     ];
   }
-  if (storybookConfigCandidates(input).some((dir) => existsSync(dir))) {
+  if (storybookConfigCandidates(input).some((directory) => existsSync(directory))) {
     return [{ group: 'Values', status: 'pass', title: `storybookConfigDir ${value} exists` }];
   }
 
@@ -116,6 +118,19 @@ function configDirChecks(input: DoctorInput): Check[] {
       ? normalized.slice(prefix.length + 1)
       : undefined;
   const rebasedExists = rebased !== undefined && existsSync(path.join(cwd, rebased));
+  let fix: Check['fix'];
+  if (fromFile && rebasedExists) {
+    fix =
+      rebased === '.storybook'
+        ? {
+            summary: 'Remove storybookConfigDir (the default is right)',
+            edits: [configEdit(input, (json) => delete json.storybookConfigDir)],
+          }
+        : {
+            summary: `Set storybookConfigDir to ${rebased}`,
+            edits: [configEdit(input, (json) => (json.storybookConfigDir = rebased))],
+          };
+  }
   return [
     {
       group: 'Values',
@@ -124,23 +139,12 @@ function configDirChecks(input: DoctorInput): Check[] {
       detail: rebasedExists
         ? `It's relative to the repository root, but Chromatic reads it from ${prefix}. Here it's ${rebased}.`
         : `Chromatic looks for it at ${relativeOrDot(cwd, path.resolve(cwd, value))}, relative to where it runs.`,
-      fix:
-        fromFile && rebasedExists
-          ? rebased === '.storybook'
-            ? {
-                summary: 'Remove storybookConfigDir (the default is right)',
-                edits: [configEdit(input, (json) => delete json.storybookConfigDir)],
-              }
-            : {
-                summary: `Set storybookConfigDir to ${rebased}`,
-                edits: [configEdit(input, (json) => (json.storybookConfigDir = rebased))],
-              }
-          : undefined,
+      fix,
     },
   ];
 }
 
-function baseDirChecks(input: DoctorInput): Check[] {
+function baseDirectoryChecks(input: DoctorInput): Check[] {
   const { cwd, gitRoot, options, configKeys } = input;
   const value = options.storybookBaseDir;
   if (value === undefined || !gitRoot) return [];
@@ -175,7 +179,7 @@ function baseDirChecks(input: DoctorInput): Check[] {
   return [{ group: 'Values', status: 'pass', title: `storybookBaseDir ${value} exists` }];
 }
 
-function buildDirChecks(input: DoctorInput): Check[] {
+function buildDirectoryChecks(input: DoctorInput): Check[] {
   const { options, packageJson, configKeys } = input;
   if (!options.storybookBuildDir) return [];
   const scriptName = options.buildScriptName ?? 'build-storybook';
@@ -197,6 +201,7 @@ function buildDirChecks(input: DoctorInput): Check[] {
   ];
 }
 
+// eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
 function globChecks(input: DoctorInput): Check[] {
   const { files, options, cwd, gitRoot } = input;
   const checks: Check[] = [];
@@ -271,9 +276,9 @@ function tokenInConfigChecks(input: DoctorInput): Check[] {
 export function valueChecks(input: DoctorInput): Check[] {
   return [
     ...onlyChangedChecks(input),
-    ...configDirChecks(input),
-    ...baseDirChecks(input),
-    ...buildDirChecks(input),
+    ...configDirectoryChecks(input),
+    ...baseDirectoryChecks(input),
+    ...buildDirectoryChecks(input),
     ...globChecks(input),
     ...tokenInConfigChecks(input),
   ];

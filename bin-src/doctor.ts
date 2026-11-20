@@ -13,8 +13,8 @@ import { color, git, listRepoFiles, relativeOrDot } from './setup/shared';
 import { SubcommandFailure } from './subcommandFailure';
 
 const CONFIG_FILES = ['chromatic.config.json', 'chromatic.config.jsonc', 'chromatic.config.json5'];
-const hasConfigFile = (dir: string) =>
-  CONFIG_FILES.some((file) => existsSync(path.join(dir, file)));
+const hasConfigFile = (directory: string) =>
+  CONFIG_FILES.some((file) => existsSync(path.join(directory, file)));
 
 /**
  * Loads the config the way a build does and runs every check, without starting a build.
@@ -45,11 +45,6 @@ export async function collectChecks(cwd: string, flags: CheckedOptions = {}, con
   }
 }
 
-interface Target {
-  dir: string;
-  label: string;
-}
-
 /**
  * Decides what to check. From a project (a config file or .storybook here, or path flags), check
  * it. From anywhere else, check every project in the repository that has Chromatic set up, like
@@ -60,18 +55,19 @@ interface Target {
  *
  * @returns
  */
+// eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
 function chooseTargets(cwd: string, flags: Record<string, any>) {
   const gitRoot = git(['rev-parse', '--show-toplevel'], cwd);
-  const here = (dir: string) => ({
-    targets: [{ dir, label: gitRoot ? relativeOrDot(gitRoot, dir) : '.' }],
+  const here = (directory: string) => ({
+    targets: [{ directory, label: gitRoot ? relativeOrDot(gitRoot, directory) : '.' }],
     notSetUp: [] as Project[],
   });
 
   if (flags.project) {
-    const dir = path.resolve(cwd, flags.project);
-    if (!existsSync(dir))
+    const directory = path.resolve(cwd, flags.project);
+    if (!existsSync(directory))
       throw new SubcommandFailure(`No directory at ${flags.project}`, { exitCode: 1 });
-    return here(dir);
+    return here(directory);
   }
   const explicit =
     flags.configFile ||
@@ -84,23 +80,26 @@ function chooseTargets(cwd: string, flags: Record<string, any>) {
 
   const files = listRepoFiles(gitRoot);
   const projects = findProjects(gitRoot, files).filter(
-    (p, index, all) => all.findIndex((other) => other.dir === p.dir) === index
+    (p, index, all) => all.findIndex((other) => other.directory === p.directory) === index
   );
   // Inside a project's subfolder, such as packages/ui/src: check that project.
   const containing = projects
-    .filter((p) => cwd.startsWith(`${p.dir}${path.sep}`))
-    .sort((a, b) => b.dir.length - a.dir.length)[0];
-  if (containing) return here(containing.dir);
+    .filter((p) => cwd.startsWith(`${p.directory}${path.sep}`))
+    .sort((a, b) => b.directory.length - a.directory.length)
+    .at(0);
+  if (containing) return here(containing.directory);
   if (projects.length === 0) return here(cwd);
 
   const ci = detectCi(gitRoot, files);
   const isSetUp = (p: Project) =>
-    hasConfigFile(p.dir) || chromaticRunsFor(ci, gitRoot, p.relative).length > 0;
+    hasConfigFile(p.directory) || chromaticRunsFor(ci, gitRoot, p.relative).length > 0;
   return {
-    targets: projects.filter(isSetUp).map((p) => ({
-      dir: p.dir,
-      label: `${p.relative} ${color.muted(`· ${describeProject(p)}`)}`,
-    })),
+    targets: projects
+      .filter((p) => isSetUp(p))
+      .map((p) => ({
+        directory: p.directory,
+        label: `${p.relative} ${color.muted(`· ${describeProject(p)}`)}`,
+      })),
     notSetUp: projects.filter((p) => !isSetUp(p)),
   };
 }
@@ -110,6 +109,7 @@ function chooseTargets(cwd: string, flags: Record<string, any>) {
  *
  * @param argv A list of arguments passed.
  */
+// eslint-disable-next-line complexity, max-statements -- prototype; split into smaller steps if this ships
 export async function main(argv: string[]) {
   const { flags } = meow(
     `
@@ -186,14 +186,18 @@ export async function main(argv: string[]) {
   for (const target of targets) {
     if (multi) clack.log.step(color.bold(color.cta(`Project ${target.label}`)));
     const check = () =>
-      collectChecks(target.dir, options, target.dir === cwd ? flags.configFile : undefined);
+      collectChecks(
+        target.directory,
+        options,
+        target.directory === cwd ? flags.configFile : undefined
+      );
     let checks = await check();
     printChecks(checks);
 
     if (flags.fix && checks.some((c) => c.fix)) {
       if (flags.yes || interactive) {
         clack.log.step(color.bold('Fixes'));
-        checks = await applyFixes(check, { cwd: target.dir, yes: !!flags.yes });
+        checks = await applyFixes(check, { cwd: target.directory, yes: !!flags.yes });
         clack.log.step(color.bold('After fixes'));
         printChecks(checks);
       } else {
