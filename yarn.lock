@@ -4520,6 +4520,7 @@ __metadata:
     prompts: "npm:^2.4.2"
     read-package-up: "npm:^12.0.0"
     semver: "npm:^7.3.5"
+    simple-plist: "npm:^1.4.0"
     snyk-nodejs-lockfile-parser: "npm:2.10.4"
     snyk-nodejs-plugin: "npm:2.2.1"
     storybook: "npm:^10.6.5"
@@ -9798,7 +9799,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"simple-plist@npm:^1.1.0":
+"simple-plist@npm:^1.1.0, simple-plist@npm:^1.4.0":
   version: 1.4.0
   resolution: "simple-plist@npm:1.4.0"
   dependencies:
