@@ -279,8 +279,11 @@ describe('traceChangedFiles', () => {
         expect(getDependentStoryFiles).not.toHaveBeenCalled();
       });
 
-      it('traces a Storybook build', async () => {
-        const result = await traceChangedFiles(e2eContext({}));
+      it.each([
+        ['a Storybook build', {}],
+        ["another framework's build", { [framework === 'vitest' ? 'playwright' : 'vitest']: true }],
+      ])('traces %s', async (_name, options) => {
+        const result = await traceChangedFiles(e2eContext(options));
 
         expect(result).toMatchObject({ status: 'traced' });
         expect(getDependentStoryFiles).toHaveBeenCalled();
