@@ -1,6 +1,8 @@
+import path from 'node:path';
 import { PassThrough, Transform } from 'node:stream';
 
 import { execa as execaDefault } from 'execa';
+import tmp from 'tmp-promise';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as shell from '../lib/shell/shell';
@@ -31,9 +33,11 @@ beforeEach(() => {
 });
 
 describe('execGitCommand', () => {
-  it('returns execa output if it works', async () => {
+  it('returns stdout without the warnings git writes to stderr', async () => {
     execa.mockResolvedValue({
-      all: Buffer.from('some output'),
+      stdout: Buffer.from('some output'),
+      stderr: Buffer.from('warning: some warning'),
+      all: Buffer.from('warning: some warning\nsome output'),
     } as any);
 
     expect(await execGitCommand(ctx, 'some command')).toEqual('some output');
@@ -41,18 +45,24 @@ describe('execGitCommand', () => {
 
   it('errors if there is no output', async () => {
     execa.mockResolvedValue({
-      all: undefined,
+      stdout: undefined,
     } as any);
 
     await expect(execGitCommand(ctx, 'some command')).rejects.toThrow(/Unexpected missing git/);
   });
 
-  it('handles missing git error', async () => {
-    execa.mockRejectedValue(new Error('not a git repository'));
+  it('reports the error git writes to stderr when a command fails', async () => {
+    const { execa: realExeca } = await vi.importActual<{ execa: typeof execa }>('execa');
+    execa.mockImplementationOnce(realExeca);
+    const { path: directory } = await tmp.dir({ unsafeCleanup: true });
+    const command = 'git rev-parse --show-toplevel';
 
-    await expect(execGitCommand(ctx, 'some command')).rejects.toThrow(
-      gitNotInitialized({ command: 'some command' })
-    );
+    await expect(
+      execGitCommand(ctx, command, {
+        cwd: directory,
+        env: { LANG: 'C', LC_ALL: 'C', GIT_CEILING_DIRECTORIES: path.dirname(directory) },
+      })
+    ).rejects.toThrow(gitNotInitialized({ command }));
   });
 
   it('handles git not found error', async () => {
@@ -79,7 +89,7 @@ describe('execGitCommand', () => {
   it('uses a default timeout of 20 seconds when none is specified', async () => {
     const runCommand = vi
       .spyOn(shell, 'runCommand')
-      .mockReturnValue(Promise.resolve({ all: Buffer.from('output') }) as any);
+      .mockReturnValue(Promise.resolve({ stdout: Buffer.from('output') }) as any);
 
     await execGitCommand(ctx, 'some command');
 
@@ -92,7 +102,7 @@ describe('execGitCommand', () => {
   it('overrides the default timeout when a custom one is provided', async () => {
     const runCommand = vi
       .spyOn(shell, 'runCommand')
-      .mockReturnValue(Promise.resolve({ all: Buffer.from('output') }) as any);
+      .mockReturnValue(Promise.resolve({ stdout: Buffer.from('output') }) as any);
 
     await execGitCommand(ctx, 'some command', { timeout: 60_000 });
 

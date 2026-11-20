@@ -1,8 +1,13 @@
-import { mkdir, readFile } from 'fs/promises';
+import { mkdir, readFile, stat } from 'fs/promises';
 import { EOL } from 'os';
 import pLimit from 'p-limit';
 import path from 'path';
 
+import {
+  DEFAULT_DIAGNOSTICS_FILE,
+  DEFAULT_LOG_FILE,
+  DEFAULT_STORYBOOK_LOG_FILE,
+} from '../lib/getOptions';
 import {
   AncestorMissingError,
   BaselineCheckoutFailedError,
@@ -156,34 +161,66 @@ export async function getBranch(deps: GitDeps) {
 }
 
 /**
- * Retrieve the hash of all uncommitted files, which includes staged, unstaged, and untracked files,
- * excluding deleted files (which can't be hashed) and ignored files. There is no one single Git
- * command to reliably get this information, so we use a combination of commands grouped together.
+ * Retrieve the hash of all uncommitted files, which includes staged, unstaged, and untracked files.
+ * It leaves out deleted files, gitignored files, anything that isn't a regular file (such as a
+ * submodule or a nested repository), and the files the CLI writes itself, which change on every
+ * run. There is no one single Git command to reliably get this information, so we use a
+ * combination of commands grouped together.
  *
  * @param deps Function dependencies.
+ * @param ignoredFiles More files the CLI writes, such as a configured log file, in addition to the
+ * default ones. Paths are absolute or relative to the current directory.
  *
  * @returns The uncommited hash, if available.
  */
-export async function getUncommittedHash(deps: GitDeps) {
-  const listStagedFiles = 'git diff --name-only --no-relative --diff-filter=d --cached';
-  const listUnstagedFiles = 'git diff --name-only --no-relative --diff-filter=d';
-  const listUntrackedFiles = 'git ls-files --others --exclude-standard --full-name';
+export async function getUncommittedHash(deps: GitDeps, ignoredFiles: (string | undefined)[] = []) {
+  // Without `core.quotePath=false`, git quotes names with non-ASCII characters, which `stat` can't
+  // find. Names with quotes, backslashes or control characters are still quoted and left out.
+  const listStagedFiles =
+    'git -c core.quotePath=false diff --name-only --no-relative --diff-filter=d --cached';
+  const listUnstagedFiles =
+    'git -c core.quotePath=false diff --name-only --no-relative --diff-filter=d';
+  const listUntrackedFiles =
+    'git -c core.quotePath=false ls-files --others --exclude-standard --full-name';
 
-  // Use `all: false` so only stdout is captured and we can ignore stderr output that doesn't impact
-  // the result.
-  const stdoutOnly = { all: false };
-  const [stagedOutput, unstagedOutput, untrackedOutput] = await Promise.all([
-    execGitCommand(deps, listStagedFiles, stdoutOnly),
-    execGitCommand(deps, listUnstagedFiles, stdoutOnly),
-    execGitCommand(deps, listUntrackedFiles, stdoutOnly),
+  const [stagedOutput, unstagedOutput, untrackedOutput, repositoryRoot] = await Promise.all([
+    execGitCommand(deps, listStagedFiles),
+    execGitCommand(deps, listUnstagedFiles),
+    execGitCommand(deps, listUntrackedFiles),
+    getRepositoryRoot(deps),
   ]);
 
+  // Git lists paths relative to the repository root, with forward slashes.
+  const ignoredPaths = new Set(
+    [
+      DEFAULT_LOG_FILE,
+      DEFAULT_DIAGNOSTICS_FILE,
+      DEFAULT_STORYBOOK_LOG_FILE,
+      ...ignoredFiles,
+    ].flatMap((file) =>
+      file ? [path.relative(repositoryRoot, path.resolve(file)).split(path.sep).join('/')] : []
+    )
+  );
   // Combine file listings into one path per line, stripping empty lines (including trailing
   // newlines from each output).
-  const files = [stagedOutput, unstagedOutput, untrackedOutput]
+  const paths = [stagedOutput, unstagedOutput, untrackedOutput]
     .flatMap((output) => output.split(newline))
-    .filter(Boolean)
-    .join('\n');
+    .filter((listedPath) => listedPath && !ignoredPaths.has(listedPath));
+  // Git also lists submodules and untracked nested repositories, which are directories, and a file
+  // can be deleted after it's listed. hash-object fails on either, so only hash regular files.
+  // A large untracked tree can list many paths, so only a few are checked at a time.
+  const limitStat = pLimit(10);
+  const isFile = await Promise.all(
+    paths.map((listedPath) =>
+      limitStat(() =>
+        stat(path.join(repositoryRoot, listedPath)).then(
+          (stats) => stats.isFile(),
+          () => false
+        )
+      )
+    )
+  );
+  const files = paths.filter((_, index) => isFile[index]).join('\n');
 
   if (!files) {
     return '';
@@ -268,10 +305,8 @@ export async function commitsExist(deps: GitDeps, commits: string[]): Promise<Se
 
   let result: string;
   try {
-    // Only read stdout so stray stderr output cannot shift the line positions.
     result = await execGitCommand(deps, 'git cat-file --batch-check', {
       input: commits.map((commit) => `${commit}^{commit}`).join('\n'),
-      all: false,
     });
   } catch (error) {
     // The single call can fail where individual checks would not, e.g. by hitting the git timeout

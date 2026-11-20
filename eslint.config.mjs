@@ -23,6 +23,11 @@ export default [
       'coverage/**',
       'smoke-tests/**',
       'e2e/fixtures/**',
+      // Agent tooling, not CLI code. .claude/skills links to .agents/skills, .claude/worktrees
+      // holds whole checkouts of this repository, and .amp holds an Amp orb's scratch files.
+      '.agents/**',
+      '.amp/**',
+      '.claude/**',
       // Storybook config fixtures: intentionally a mix of module formats, so linting them is noise.
       'node-src/__mocks__/storybookMainConfig/**',
     ],
@@ -204,6 +209,8 @@ export default [
     plugins: {
       jsdoc,
     },
+    // `@internal` takes free text: the reason it is exported (see jsdoc/match-description below).
+    settings: { jsdoc: { structuredTags: { internal: { name: 'text' } } } },
     rules: {
       ...jsdoc.configs['flat/recommended-typescript'].rules,
       'jsdoc/require-jsdoc': [
@@ -222,6 +229,23 @@ export default [
         },
       ],
       'jsdoc/tag-lines': ['error', 'any', { startLines: 1 }],
+      // knip --production skips `@internal` exports, so a tag needs its reason after it, such as
+      // `@internal Exported only for its unit tests, which ...`. Only that tag is checked here.
+      'jsdoc/match-description': [
+        'error',
+        {
+          contexts: ['any'],
+          mainDescription: false,
+          tags: {
+            internal: {
+              match: String.raw`/\S/u`,
+              message: 'Say after `@internal` why this is exported (see knip in AGENTS.md).',
+            },
+          },
+        },
+      ],
+      // This rule requires `@internal` to be empty, the opposite of match-description above.
+      'jsdoc/empty-tags': 'off',
     },
   },
   // sort your imports

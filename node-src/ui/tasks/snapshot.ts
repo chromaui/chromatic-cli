@@ -51,9 +51,10 @@ export const pending = (
   const { build, options, onlyStoryFiles, hashBasedTurboSnap } = ctx;
   // TurboSnap 2.0 ignores the 1.0 story files, so only its own decision says whether it applied.
   const turboSnapped = hashBasedTurboSnap ? !hashBasedTurboSnap.bailed : !!onlyStoryFiles;
-  // `runTask` renders this pending state before the task body runs, so it must survive skip paths
-  // that have no build yet — notably `--dry-run`, where `ctx.build` is undefined.
-  if (!build) {
+  // `runTask` renders this pending state before the task body runs, so it must survive `--dry-run`,
+  // where verify never stores a tested build. `ctx.build` is then undefined or, with
+  // `--only-changed`, gitInfo's baseline build, which has no test counts.
+  if (!build || options.dryRun) {
     return {
       status: 'pending',
       title: `Test your ${suiteType({ options })}`,
@@ -76,7 +77,7 @@ export const pending = (
   const matching = options.onlyStoryNames
     ? `${unit} matching ${options.onlyStoryNames.map((v) => `'${v}'`).join(', ')}`
     : '';
-  const affected = turboSnapped ? ' affected by recent changes' : '';
+  const affected = turboSnapped ? ' potentially affected by recent changes' : '';
   const skipping = build.testCount > build.actualTestCount ? ` (skipping ${skips})` : '';
   // The cursor is a 1-based "now capturing" index (`actualTestCount - inProgressCount + 1`), so it
   // reaches `actualTestCount + 1` once nothing is in progress. Clamp it so the label never exceeds 100%.

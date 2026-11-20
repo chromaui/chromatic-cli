@@ -20,8 +20,7 @@ describe('pathExistsAtReference', () => {
     await expect(pathExistsAtReference(ctx, 'abc123', 'packages/ui')).resolves.toBe(expected);
     expect(execGitCommand).toHaveBeenCalledWith(
       ctx,
-      'git ls-tree --full-tree abc123 -- "packages/ui"',
-      { all: false }
+      'git ls-tree --full-tree abc123 -- "packages/ui"'
     );
   });
 });

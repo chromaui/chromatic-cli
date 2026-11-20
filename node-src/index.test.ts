@@ -318,7 +318,7 @@ vi.mock('./git/git', () => ({
   getVersion: () => Promise.resolve('2.24.1'),
   getChangedFiles: () => Promise.resolve(['src/foo.stories.js']),
   getRepositoryRoot: () => Promise.resolve(process.cwd()),
-  getUncommittedHash: () => Promise.resolve('abc123'),
+  getUncommittedHash: vi.fn(() => Promise.resolve('abc123')),
   getUserEmail: () => Promise.resolve('test@test.com'),
   getRepositoryCreationDate: () => Promise.resolve(new Date('2024-11-01')),
   getStorybookCreationDate: () => Promise.resolve(new Date('2025-11-01')),
@@ -516,6 +516,37 @@ it('runs in simple situations', async () => {
     committerName: 'tester',
     storybookUrl: 'https://5d67dc0374b2e300209c41e7-pfkaemtlit.chromatic.com/',
   });
+});
+
+it('reports each distinct GraphQL error when the index returns several', async () => {
+  const graphqlError = {
+    path: ['announceBuild'],
+    locations: [{ line: 2, column: 3 }],
+    extensions: { code: 'INTERNAL_SERVER_ERROR' },
+  };
+  const errors = [
+    { ...graphqlError, message: 'First problem' },
+    { ...graphqlError, message: 'First problem' },
+    // Validation errors have no path or locations
+    { message: 'Other problem', extensions: { code: 'GRAPHQL_VALIDATION_FAILED' } },
+  ];
+  const defaultFetch = fetch.getMockImplementation();
+  if (!defaultFetch) throw new Error('node-fetch is not mocked');
+  fetch.mockImplementation(async (url, init) => {
+    if (!String(init?.body).includes('AnnounceBuildMutation')) return defaultFetch(url, init);
+    return { ok: true, json: async () => ({ errors }) } as any;
+  });
+  onTestFinished(() => {
+    fetch.mockImplementation(defaultFetch);
+  });
+
+  const ctx = getContext(['--project-token=asdf1234']);
+  await runAll(ctx);
+
+  expect(ctx.exitCode).toBe(202); // GRAPHQL_ERROR
+  const [message] = ctx.testLogger.errors;
+  expect(message.match(/INTERNAL_SERVER_ERROR: First problem/g)).toHaveLength(1);
+  expect(message).toContain('GRAPHQL_VALIDATION_FAILED: Other problem');
 });
 
 describe('with patch builds', () => {
@@ -1052,6 +1083,12 @@ describe('getGitInfo', () => {
     expect(getBranch).toHaveBeenCalledWith(
       expect.objectContaining({ options: { gitTimeout: 50 } })
     );
+  });
+
+  it('returns an empty uncommitted hash when it cannot be computed', async () => {
+    vi.mocked(git.getUncommittedHash).mockRejectedValueOnce(new Error('Unable to hash nested/'));
+    const result = await getGitInfo(getContext([]));
+    expect(result).toMatchObject({ branch: 'branch', commit: 'commit', uncommittedHash: '' });
   });
 
   it('should still return getInfo if no origin url', async () => {

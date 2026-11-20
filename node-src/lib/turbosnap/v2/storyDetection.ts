@@ -62,29 +62,36 @@ const EXTERNAL_MODULE = /^external "/;
  * @param context The context required for story detection. See `StoryDetectionContext`.
  * @param stats The stats file to parse.
  *
- * @returns The canonical paths of the story files.
+ * @returns The canonical paths of the story files, and whether a stories entry we recognize imports
+ * any module, on disk or not, directly or through a require-context. The caller uses it to tell stats whose story imports don't resolve to
+ * files from stats with no entry we recognize.
  */
-export function detectStoryFiles(context: StoryDetectionContext, stats: Stats): Set<FilePath> {
+export function detectStoryFiles(
+  context: StoryDetectionContext,
+  stats: Stats
+): { storyFiles: Set<FilePath>; foundStoriesEntry: boolean } {
   const modules = processModules(context, stats);
   const { storyImporters, contextsExcludingNodeModules } = collectStoryImporters(context, modules);
 
   const storyFiles = new Set<FilePath>();
+  let foundStoriesEntry = false;
   for (const module of modules) {
+    const matchedStoryImporters = module.importers.filter((importer) =>
+      storyImporters.has(importer)
+    );
+    foundStoriesEntry ||= matchedStoryImporters.length > 0;
+
     // Story files must live on disk
     if (!module.onDisk) {
       continue;
     }
-
-    const matchedStoryImporters = module.importers.filter((importer) =>
-      storyImporters.has(importer)
-    );
 
     if (isStoryFile(module.filePath, matchedStoryImporters, contextsExcludingNodeModules)) {
       storyFiles.add(module.filePath);
     }
   }
 
-  return storyFiles;
+  return { storyFiles, foundStoriesEntry };
 }
 
 /**

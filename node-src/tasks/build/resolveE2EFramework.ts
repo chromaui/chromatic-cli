@@ -7,7 +7,9 @@ import { Context } from '../../types';
  *
  * @returns The E2E framework name.
  */
-export function resolveE2EFramework(options: Context['options']) {
+export function resolveE2EFramework(
+  options: Partial<Pick<Context['options'], 'playwright' | 'vitest'>>
+) {
   if (options.playwright) {
     return 'playwright';
   }

@@ -38,7 +38,7 @@ export default function parseArguments(argv: string[]) {
       --exit-zero-on-changes [branch]           If all tests render successfully but visual changes are found, exit with code 0 rather than the usual exit code 1. Only for [branch], if specified. Globs are supported via picomatch.
       --externals <filepath>                    Disable TurboSnap when any of these files have changed since the baseline build. Globs are supported via picomatch. This flag can be specified multiple times. Requires --only-changed.
       --ignore-last-build-on-branch <branch>    Do not use the last build on this branch as a baseline if it is no longer in history (i.e. branch was rebased). Globs are supported via picomatch.
-      --only-changed [branch]                   Enables TurboSnap: Only run stories affected by files changed since the baseline build. Only for [branch], if specified. Globs are supported via picomatch. For all other snapshots, TurboSnap will copy the baselines from the previous commit.
+      --only-changed [branch]                   Enables TurboSnap: Only run stories potentially affected by files changed since the baseline build. Only for [branch], if specified. Globs are supported via picomatch. For all other snapshots, TurboSnap will copy the baselines from the previous commit.
       --only-story-files <filepath>             Only run a single story or a subset of stories by their filename(s). Specify the full path to the story file relative to the root of your Storybook project. Globs are supported via picomatch. This flag can be specified multiple times.
       --only-story-names <storypath>            Only run a single story or a subset of stories. Story paths typically look like "Path/To/Story". Globs are supported via picomatch. This flag can be specified multiple times.
       --patch-build <headbranch...basebranch>   Create a patch build to fix a missing PR comparison.
@@ -63,7 +63,7 @@ export default function parseArguments(argv: string[]) {
       --no-file-hashing                Disable file hashing. This will cause all files to be uploaded on every build.
       --no-interactive                 Don't ask interactive questions about your setup and don't overwrite output. Always true in non-TTY environments.
       --storybook-log-file [filepath]  Write Storybook build output to a file. Disable via --no-storybook-log-file. [storybook-build.log]
-      --trace-changed [mode]           Print dependency trace for changed files to affected story files. Set to "expanded" to list individual modules. Requires --only-changed.
+      --trace-changed [mode]           Print dependency trace for changed files to potentially affected story files. Set to "expanded" to list individual modules. Requires --only-changed.
       --upload-metadata                Upload Chromatic metadata files as part of the published Storybook. Includes diagnostics and log files, among others. This option enables --diagnostics-file, --log-file and --storybook-log-file, unless explicitly disabled via the 'no-' prefix. Defaults to enabled when running with TurboSnap.
 
     Deprecated options

@@ -1,3 +1,81 @@
+# v18.15.1 (Thu Nov 19 2026)
+
+#### 🐛 Bug Fix
+
+- Pair workspace manifests with the nearest lockfile above them [#1718](https://github.com/chromaui/chromatic-cli/pull/1718) ([@codykaup](https://github.com/codykaup))
+- Replace the README recording with a current CLI run [#1715](https://github.com/chromaui/chromatic-cli/pull/1715) ([@winkerVSbecks](https://github.com/winkerVSbecks))
+
+#### Authors: 2
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- Varun Vachhar ([@winkerVSbecks](https://github.com/winkerVSbecks))
+
+---
+
+# v18.15.0 (Wed Nov 18 2026)
+
+#### 🚀 Enhancement
+
+- Honor --untraced on the main config in TurboSnap 2.0 [#1714](https://github.com/chromaui/chromatic-cli/pull/1714) ([@codykaup](https://github.com/codykaup))
+- Explain when --untraced matches a config file TurboSnap always traces [#1663](https://github.com/chromaui/chromatic-cli/pull/1663) ([@codykaup](https://github.com/codykaup))
+- Hash only allowlisted Storybook config files in TurboSnap 2.0 [#1662](https://github.com/chromaui/chromatic-cli/pull/1662) ([@codykaup](https://github.com/codykaup))
+- Bail TurboSnap 1.0 only on allowlisted Storybook config files [#1661](https://github.com/chromaui/chromatic-cli/pull/1661) ([@codykaup](https://github.com/codykaup))
+
+#### 🐛 Bug Fix
+
+- Report why TurboSnap bailed on a Storybook config change [#1660](https://github.com/chromaui/chromatic-cli/pull/1660) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v18.14.6 (Tue Nov 17 2026)
+
+#### 🐛 Bug Fix
+
+- Fix TurboSnap 2.0 Storybook version lookup, load Yarn Plug'n'Play, and stop reporting install problems [#1706](https://github.com/chromaui/chromatic-cli/pull/1706) ([@codykaup](https://github.com/codykaup))
+- Don't print an undefined test count on --only-changed dry runs [#1712](https://github.com/chromaui/chromatic-cli/pull/1712) ([@codykaup](https://github.com/codykaup))
+- Share the Storybook config allowlist between TurboSnap 1.0 and 2.0 [#1659](https://github.com/chromaui/chromatic-cli/pull/1659) ([@codykaup](https://github.com/codykaup))
+- Show the TurboSnap result when a dry run finishes [#1689](https://github.com/chromaui/chromatic-cli/pull/1689) ([@codykaup](https://github.com/codykaup))
+- Keep the CLI's own files and nested repositories out of the uncommitted hash [#1704](https://github.com/chromaui/chromatic-cli/pull/1704) ([@codykaup](https://github.com/codykaup))
+- Remove unused lint:package script and sort-package-json [#1701](https://github.com/chromaui/chromatic-cli/pull/1701) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 1
+
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
+# v18.14.5 (Mon Nov 16 2026)
+
+#### 🐛 Bug Fix
+
+- Read only stdout from git commands, so warnings never become values [#1703](https://github.com/chromaui/chromatic-cli/pull/1703) ([@codykaup](https://github.com/codykaup))
+- Correct verify-chromatic-cli recipes found stale in a live pass [#1688](https://github.com/chromaui/chromatic-cli/pull/1688) ([@codykaup](https://github.com/codykaup))
+- Show the API's real errors instead of crashing or hiding them [#1690](https://github.com/chromaui/chromatic-cli/pull/1690) ([@codykaup](https://github.com/codykaup))
+- Lint the whole repo, drop a CI check that can't fail, and require reasons after @internal [#1711](https://github.com/chromaui/chromatic-cli/pull/1711) ([@codykaup](https://github.com/codykaup))
+- Stop reporting a repository with no tracked files to Sentry [#1702](https://github.com/chromaui/chromatic-cli/pull/1702) ([@codykaup](https://github.com/codykaup))
+- Group failed git commands in Sentry by subcommand [#1671](https://github.com/chromaui/chromatic-cli/pull/1671) ([@codykaup](https://github.com/codykaup))
+- Bump execa from 9.6.1 to 10.2.1 [#1700](https://github.com/chromaui/chromatic-cli/pull/1700) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@codykaup](https://github.com/codykaup))
+- Bump boxen from 7.1.1 to 9.0.0 [#1696](https://github.com/chromaui/chromatic-cli/pull/1696) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump @clack/prompts from 1.4.0 to 1.9.0 [#1699](https://github.com/chromaui/chromatic-cli/pull/1699) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump vitest from 5.0.5 to 5.1.0 [#1697](https://github.com/chromaui/chromatic-cli/pull/1697) ([@dependabot[bot]](https://github.com/dependabot[bot]) [@codykaup](https://github.com/codykaup))
+- Bump filesize from 11.0.29 to 11.0.30 [#1695](https://github.com/chromaui/chromatic-cli/pull/1695) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump tsdown from 0.21.10 to 0.23.7 [#1694](https://github.com/chromaui/chromatic-cli/pull/1694) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump wrap-ansi from 10.0.0 to 10.0.2 [#1692](https://github.com/chromaui/chromatic-cli/pull/1692) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump @eslint-community/eslint-plugin-eslint-comments from 4.7.1 to 4.8.1 [#1693](https://github.com/chromaui/chromatic-cli/pull/1693) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the storybook group with 4 updates [#1691](https://github.com/chromaui/chromatic-cli/pull/1691) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Cover Vitest E2E builds in the verify-chromatic-cli skill [#1678](https://github.com/chromaui/chromatic-cli/pull/1678) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 2
+
+- [@dependabot[bot]](https://github.com/dependabot[bot])
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+
+---
+
 # v18.14.4 (Fri Nov 13 2026)
 
 #### 🐛 Bug Fix

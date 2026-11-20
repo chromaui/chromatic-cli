@@ -152,6 +152,31 @@ describe('buildSkipRule', () => {
     expect(result).toEqual([[decorator, 'untraced']]);
   });
 
+  it('skips the allowlisted config files an --untraced glob matches, the main config included', async () => {
+    const configFiles = ['main.ts', 'preview.ts', 'preview-head.html', 'preview-body.html'].map(
+      (fileName) => `${configDirectory}/${fileName}`
+    );
+    const mocks = `${configDirectory}/mocks.json`;
+
+    const result = await skipped(
+      [...configFiles, mocks, source],
+      context({}, ['packages/ui/.storybook/**'])
+    );
+
+    expect(result).toEqual([...configFiles, mocks].map((file) => [file, 'untraced']));
+  });
+
+  it('skips an untracked main config, as v1 never sees it in git diff', async () => {
+    const main = `${configDirectory}/main.ts`;
+
+    const result = await skipped(
+      [main, preview],
+      context({ isUntracked: (candidate) => candidate === main })
+    );
+
+    expect(result).toEqual([[main, 'untracked']]);
+  });
+
   it("records a file both untraced and untracked as untraced, since that is the user's own say", async () => {
     const result = await skipped(
       [generated],

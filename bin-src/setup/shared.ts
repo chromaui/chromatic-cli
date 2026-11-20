@@ -24,12 +24,13 @@ export const color = {
  *
  * @returns The answer, when the prompt was not cancelled.
  */
-export function answered<T>(value: T | symbol): T {
+export function answered<T>(value: T): Exclude<T, symbol> {
   if (clack.isCancel(value)) {
     clack.cancel('Setup cancelled. Nothing else was changed.');
     throw new SubcommandFailure('Cancelled', { exitCode: 130 });
   }
-  return value;
+  // Prompts only return a symbol to cancel, which isCancel caught above.
+  return value as Exclude<T, symbol>;
 }
 
 /**

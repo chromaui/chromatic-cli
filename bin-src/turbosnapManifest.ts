@@ -1,4 +1,6 @@
+import { getE2EPackage } from '@cli/turbosnap/e2ePackage';
 import { buildManifest, serializeManifest } from '@cli/turbosnap/v2/manifest';
+import { allowPnpRuntime } from '@cli/turbosnap/v2/pnpRuntime';
 import { realProjectFiles } from '@cli/turbosnap/v2/projectFiles';
 import { existsSync } from 'fs';
 import meow from 'meow';
@@ -36,6 +38,7 @@ const { STORYBOOK_BASE_DIR } = process.env;
  * @returns Nothing
  */
 export async function main(argv: string[]) {
+  allowPnpRuntime();
   const cli = meow(
     `
     Usage
@@ -116,7 +119,7 @@ export async function main(argv: string[]) {
     gitRoot,
     untraced: cli.flags.untraced ?? [],
     configDir: path.resolve(projectRoot, cli.flags.configDir),
-    ...(cli.flags.vitest && { e2ePackage: '@chromatic-com/vitest' }),
+    e2ePackage: getE2EPackage({ vitest: cli.flags.vitest }),
     staticDirs: (cli.flags.staticDir?.split(',') ?? []).map((directory) =>
       path.resolve(projectRoot, directory)
     ),

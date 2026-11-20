@@ -1,12 +1,20 @@
 import * as Sentry from '@sentry/node';
 
+import { NoTrackedFilesError } from '../../../git/untrackedPaths';
 import GraphQLClient from '../../../io/graphqlClient';
 import type { AbsolutePath, HashBasedTurboSnap, Stats } from '../../../types';
 import missingStorybookConfig from '../../../ui/messages/warnings/missingStorybookConfig';
+import storyFilesNotFound from '../../../ui/messages/warnings/storyFilesNotFound';
 import { TraceChangedFilesResult } from '../types';
-import { buildManifest, TurboSnapManifest, writeManifest } from './manifest';
+import {
+  buildManifest,
+  StoryFilesNotFoundError,
+  TurboSnapManifest,
+  writeManifest,
+} from './manifest';
 import { ManifestInput } from './manifestInput';
 import { MissingStorybookConfigError } from './outOfGraphFiles';
+import { VersionNotFoundError } from './storybookVersion';
 import { BuildUploadHashesResponse, uploadHashes } from './uploadHashes';
 
 /**
@@ -69,6 +77,16 @@ export async function traceChangedFiles(
     // A misconfigured project is the user's to fix, not a bug to report.
     if (error instanceof MissingStorybookConfigError) {
       input.log[input.failureLogLevel](missingStorybookConfig(error.configDirectory));
+      return { status: 'fallback' };
+    }
+    if (error instanceof StoryFilesNotFoundError) {
+      input.log[input.failureLogLevel](storyFilesNotFound(error.projectRoot));
+      return { status: 'fallback' };
+    }
+    if (error instanceof NoTrackedFilesError || error instanceof VersionNotFoundError) {
+      input.log[input.failureLogLevel](
+        `${error.message} TurboSnap 2.0 skipped this build. When TurboSnap is enabled, the build uses TurboSnap 1.0, so your current TurboSnap behavior is unaffected.`
+      );
       return { status: 'fallback' };
     }
     return failed(input, 'Failed to build manifest for TurboSnap 2.0', error);

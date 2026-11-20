@@ -59,9 +59,16 @@ export function partitionSkipped(
  * package, and inside the Storybook config directory, since the documented recipe untraces the
  * global decorators kept there. The glob is matched as v1 matches it (see
  * `gitRootGlobMatcher`), so the one flag means the same thing in both. A file both untraced
- * and untracked is recorded as untraced, since that is the user's own say. Two files are out of the
- * rule's reach: an external, which v1 checks before it applies `--untraced`, and the main Storybook
- * config, which the config sweep hashes regardless; see `hashOutOfGraphFiles`.
+ * and untracked is recorded as untraced, since that is the user's own say.
+ *
+ * The allowlisted Storybook config files (`main.*`, `preview.*`, `preview-head.html` and
+ * `preview-body.html`) are untraced and untracked like any other file, as in v1, though changing
+ * them can affect every story; the CLI warns when an `--untraced` glob matches one. Skipping the
+ * main config leaves the config section without it, or empty, as for an E2E build; see
+ * `rollUpOutOfGraphFiles`.
+ *
+ * An external is out of the rule's reach, as v1 checks it before it applies `--untraced`; see
+ * `hashOutOfGraphFiles`.
  *
  * Every check is judged on the file a path leads to. A bundler may name a file through a symlinked
  * `node_modules` link, but git names the real file, and so does v1 when it matches `--untraced`,

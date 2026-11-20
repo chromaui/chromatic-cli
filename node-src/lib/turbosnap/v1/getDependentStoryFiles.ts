@@ -11,8 +11,15 @@ import {
   isPackageManifestFile,
   matchesFile,
 } from '../../utilities';
-import { getPackageName, getStatsProjectRoot, normalizeStatsName } from '../statsPaths';
+import {
+  getPackageName,
+  getStatsProjectRoot,
+  normalizeStatsName,
+  stripConcatenatedModuleSuffix,
+} from '../statsPaths';
+import { storybookConfigFileKind } from '../storybookConfigFiles';
 import { TraceChangedFilesResult } from '../types';
+import { classifyChangedStorybookFilesDetail } from './classifyBailDetail';
 
 type FilePath = string;
 type NormalizedName = string;
@@ -128,11 +135,20 @@ export async function getDependentStoryFiles(
   const csfGlobsByName = new Set<NormalizedName>();
   const annotationFilesByName = new Set<NormalizedName>();
 
-  const isStorybookFile = (name: string) =>
+  // Any module in the config directory: these never count as CSF globs.
+  const isConfigDirectoryFile = (name: string) =>
     name &&
     name.startsWith(`${storybookDirectory}/`) &&
     !storiesEntryFiles.includes(name) &&
     !isDocumentationFile(name);
+  // Only the allowlisted config files bail, unless `--untraced` matches them. Every other file in the
+  // config directory is traced like any other source file.
+  const isStorybookConfig = (name: string) =>
+    !!storybookConfigFileKind(stripConcatenatedModuleSuffix(name), storybookDirectory);
+  // Checks a concatenated module's members on their own, since webpack names the module after a
+  // config entry outside the config directory that an `--untraced` glob on the directory misses.
+  const isUntraced = (name: string) =>
+    untraced.some((glob) => matchesFile(glob, stripConcatenatedModuleSuffix(name)));
 
   // Distinct modules can normalize to one name: Vue/Svelte compile a component into several
   // modules (the component plus its `<style>` facets), CommonJS interop rewrites imports into
@@ -197,15 +213,26 @@ export async function getDependentStoryFiles(
       nodeModules.get(packageName)?.push(name);
     }
 
-    if (reasons.some((reason) => isGlobalRoot(reason))) {
+    const importedByEntry = reasons.some(
+      (reason) => storiesEntryFiles.some((prefix) => reason.startsWith(prefix)) // match module names that include a "+ N modules"
+    );
+    // A config dir module that is a preview entry (nothing imports it, such as Storybook 6's
+    // `<file>-generated-config-entry.js`) or that an entry loads directly (such as a
+    // `previewAnnotations` file rsbuild's config entry requires) applies to every story, so it
+    // bails like an annotation file. Webpack can concatenate such a file into the config entry, so
+    // check the concatenated members too.
+    const holdsConfigDirectoryFile = [
+      name,
+      ...members.flatMap((member) => member.modules ?? []).map((m) => normalize(m.name)),
+    ].some((file) => isConfigDirectoryFile(file) && !isUntraced(file));
+    if (
+      reasons.some((reason) => isGlobalRoot(reason)) ||
+      ((importedByEntry || reasons.length === 0) && holdsConfigDirectoryFile)
+    ) {
       annotationFilesByName.add(name);
     }
 
-    if (
-      !isStorybookFile(name) &&
-      !isGlobalRoot(name) &&
-      reasons.some((reason) => storiesEntryFiles.some((prefix) => reason.startsWith(prefix))) // match module names that include a "+ N modules"
-    ) {
+    if (!isConfigDirectoryFile(name) && !isGlobalRoot(name) && importedByEntry) {
       csfGlobsByName.add(name);
     }
   }
@@ -301,7 +328,9 @@ export async function getDependentStoryFiles(
     return [...tracedNames, moduleName];
   }
 
-  function shouldBail(moduleName: string, tracePath: string[] = []) {
+  // `traced` says whether the trace reached `moduleName` from a different changed file, which the
+  // trace path alone misses when a changed file is concatenated into the module it bails on.
+  function shouldBail(moduleName: string, tracePath: string[] = [], traced = tracePath.length > 0) {
     // Check staticDirs before the Storybook config dir so static assets
     // nested under `.storybook/` (e.g. an MSW-generated mockServiceWorker.js
     // inside a configured staticDir) aren't mis-categorized as config changes.
@@ -311,8 +340,16 @@ export async function getDependentStoryFiles(
       return true;
     }
 
-    if (isStorybookFile(moduleName) || annotationFilesByName.has(moduleName)) {
-      turboSnap.bailReason = { changedStorybookFiles: files(moduleName) };
+    // A concatenated module holding an allowlisted file bails too: webpack concatenates
+    // `preview.*` with the files it imports, so a change to one of them only reaches this module.
+    if (
+      files(moduleName).some((file) => isStorybookConfig(file) && !isUntraced(file)) ||
+      annotationFilesByName.has(moduleName)
+    ) {
+      turboSnap.bailReason = {
+        changedStorybookFiles: files(moduleName),
+        ...classifyChangedStorybookFilesDetail(moduleName, { traced, storybookDirectory }),
+      };
       turboSnap.bailPath = buildBailPath(moduleName, tracePath);
       return true;
     }
@@ -328,7 +365,11 @@ export async function getDependentStoryFiles(
     // eslint-disable-next-line unicorn/no-null
     const normalizedName = namesById.get(id || null);
     if (!normalizedName) return;
-    if (shouldBail(normalizedName, tracePath)) return;
+    const reachedFromInnerModule =
+      stripConcatenatedModuleSuffix(normalizedName) !== stripConcatenatedModuleSuffix(name);
+    if (shouldBail(normalizedName, tracePath, tracePath.length > 0 || reachedFromInnerModule)) {
+      return;
+    }
 
     if (!id || !reasonsById.get(id) || checkedIds[id]) return;
     // Queue this id for tracing
@@ -372,7 +413,7 @@ export async function getDependentStoryFiles(
   );
 
   if (ctx.options.traceChanged) {
-    ctx.log.debug('Affected modules...');
+    ctx.log.debug('Potentially affected modules...');
     ctx.log.debug(affectedModules);
   }
 

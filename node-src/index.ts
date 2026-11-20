@@ -394,12 +394,11 @@ async function runBuild(ctx: Context) {
       }
     }
   } catch (error) {
-    const errors = [error].flat(); // GraphQLClient might throw an array of errors
-    const formattedError = fatalError(ctx, errors);
+    const formattedError = fatalError(ctx, error);
 
     ctx.options.experimental_onTaskError?.(ctx, {
       formattedError,
-      originalError: errors[0],
+      originalError: error,
     });
 
     if (!ctx.userError) {
@@ -459,7 +458,11 @@ export async function getGitInfo(
   const [ownerName, repoName, ...rest] = slug ? slug.split('/') : [];
   const isValidSlug = !!ownerName && !!repoName && rest.length === 0;
 
-  const uncommittedHash = (await getUncommittedHash(ctx)) || '';
+  // A failure leaves the hash empty, as in the publish path, rather than failing the whole call.
+  const uncommittedHash = await getUncommittedHash(ctx).catch((err) => {
+    ctx.log.warn('Failed to retrieve uncommitted files hash', err);
+    return '';
+  });
   const cloneDepth = await getCloneDepth(ctx);
   const cloneFilter = await getCloneFilter(ctx);
   return {

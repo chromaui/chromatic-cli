@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import path from 'path';
 import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
@@ -7,6 +10,7 @@ import {
   syntheticAbsent,
 } from './__fixtures__/manifestFixtures';
 import { buildManifest, getManifestPath, serializeManifest, writeManifest } from './manifest';
+import { VersionNotFoundError } from './storybookVersion';
 
 describe('serializeManifest', () => {
   it('converts the manifest maps and sets into JSON-safe objects and arrays', async () => {
@@ -87,6 +91,25 @@ describe('serializeManifest', () => {
     };
 
     await expect(buildManifest(stats, input)).rejects.toThrow('Found no story files');
+  });
+
+  it("asks for the Yarn Plug'n'Play runtime when the stats list files in its archives", async () => {
+    // A project with a `.pnp.cjs`, built by a process that isn't allowed to load it, as through
+    // `chromatic/node`. The refusal shows the manifest asked for the runtime.
+    const root = mkdtempSync(path.join(tmpdir(), 'pnp-'));
+    try {
+      writeFileSync(path.join(root, '.pnp.cjs'), '');
+      const configDirectory = path.join(root, '.storybook');
+      const { input } = createFixture({ directories: { [configDirectory]: ['main.ts'] } });
+      const zipped = './.yarn/cache/react-npm-19.0.0-1.zip/node_modules/react/index.js';
+      const stats: Stats = { modules: [{ id: zipped, name: zipped }] };
+
+      const manifest = buildManifest(stats, { ...input, configDir: configDirectory });
+      await expect(manifest).rejects.toThrow(VersionNotFoundError);
+      await expect(manifest).rejects.toThrow("runtime isn't loaded");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('skips a gitignored file in a static dir inside the config dir from both sections, recorded once', async () => {

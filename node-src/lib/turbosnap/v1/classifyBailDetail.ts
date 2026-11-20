@@ -1,7 +1,13 @@
 import path from 'path';
 
-import { ChangedPackageFilesBailReason, InvalidChangedFilesBailReason } from '../../../types';
+import {
+  ChangedPackageFilesBailReason,
+  ChangedStorybookFilesBailReason,
+  InvalidChangedFilesBailReason,
+} from '../../../types';
 import { SUPPORTED_LOCK_FILES } from '../../utilities';
+import { stripConcatenatedModuleSuffix } from '../statsPaths';
+import { storybookConfigFileKind } from '../storybookConfigFiles';
 import {
   AncestorMissingError,
   BaselineCheckoutFailedError,
@@ -72,4 +78,27 @@ export function classifyInvalidChangedFilesDetail(
   if (err instanceof ReplacementFailedError) return { bailSubreason: 'replacementFailed' };
   if (err instanceof GitCommandError) return { bailSubreason: 'gitCommandFailed' };
   return {};
+}
+
+/**
+ * Pick the `changedStorybookFiles` bail subreason for the module a trace bailed on. The allowlist
+ * check is the shared one, so a subreason names an allowlisted file exactly when TurboSnap 2.0
+ * treats that file as config.
+ *
+ * @param bailFile The repository-relative name of the module the trace bailed on: an allowlisted
+ * config file, a concatenated module holding one, or a preview annotation file.
+ * @param options Where the bail happened.
+ * @param options.traced Whether the trace reached `bailFile` from a different changed file.
+ * @param options.storybookDirectory The repository-relative Storybook config directory.
+ *
+ * @returns The subreason to merge into the bail reason.
+ */
+export function classifyChangedStorybookFilesDetail(
+  bailFile: string,
+  { traced, storybookDirectory }: { traced: boolean; storybookDirectory: string }
+): Pick<ChangedStorybookFilesBailReason, 'bailSubreason'> {
+  // Only modules holding an allowlisted config file and preview annotation files bail.
+  const kind = storybookConfigFileKind(stripConcatenatedModuleSuffix(bailFile), storybookDirectory);
+  if (kind && !(kind === 'previewConfig' && traced)) return { bailSubreason: kind };
+  return { bailSubreason: 'importsOfPreviewConfig' };
 }

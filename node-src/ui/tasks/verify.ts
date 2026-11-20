@@ -37,7 +37,7 @@ export const runOnlyFiles = (ctx: Pick<Context, 'options' | 'onlyStoryFiles'>) =
         `${testType(ctx)} files`,
         ctx.onlyStoryFiles?.length,
         true
-      )} affected by recent changes`,
+      )} potentially affected by recent changes`,
 });
 
 export const runOnlyNames = (ctx: Pick<Context, 'options'>) => {

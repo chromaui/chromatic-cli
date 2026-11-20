@@ -11,13 +11,13 @@ function input(disk: InMemoryDisk = {}) {
 }
 
 describe('resolveStorybookVersion', () => {
-  it('reads the version from the `storybook` package when both are available', () => {
-    const disk = { packageVersions: { storybook: '9.1.20', '@storybook/core': '8.6.18' } };
+  it('reads the version from `storybook` before any Storybook 8.1-and-earlier package', () => {
+    const disk = { packageVersions: { storybook: '7.6.20', '@storybook/preview-api': '7.6.19' } };
 
-    expect(resolveStorybookVersion(input(disk))).toBe('9.1.20');
+    expect(resolveStorybookVersion(input(disk))).toBe('7.6.20');
   });
 
-  it('falls back to `@storybook/core` when the `storybook` meta-package cannot be resolved', () => {
+  it('falls back to `@storybook/core` when `storybook` cannot be resolved', () => {
     const disk = { packageVersions: { '@storybook/core': '8.6.18' } };
 
     expect(resolveStorybookVersion(input(disk))).toBe('8.6.18');
@@ -36,19 +36,52 @@ describe('resolveStorybookVersion', () => {
     expect(resolveStorybookVersion(input(disk))).toBe('10.2.16');
   });
 
-  it('falls back to `@storybook/core-common` for Storybook 6, which has neither of the others', () => {
-    const disk = { packageVersions: { '@storybook/core-common': '6.5.4' } };
+  // A Storybook 7 framework that doesn't depend on `storybook`, installed with a hoisting linker.
+  // Each package has its own version, so the result shows which one was read.
+  it.each<{ packageVersions: Record<string, string>; expected: string }>([
+    {
+      packageVersions: {
+        '@storybook/preview-api': '7.6.20',
+        '@storybook/core-common': '7.6.19',
+        '@storybook/vue': '7.6.18',
+      },
+      expected: '7.6.20',
+    },
+    {
+      packageVersions: { '@storybook/core-common': '7.6.19', '@storybook/vue': '7.6.18' },
+      expected: '7.6.19',
+    },
+  ])(
+    'falls back to the preview runtime, then core-common, where `storybook` was optional (reads $expected)',
+    ({ packageVersions, expected }) => {
+      expect(resolveStorybookVersion(input({ packageVersions }))).toBe(expected);
+    }
+  );
 
-    expect(resolveStorybookVersion(input(disk))).toBe('6.5.4');
+  it('falls back to a renderer when that is all a strict install exposes, as for Storybook 6', () => {
+    const disk = { packageVersions: { '@storybook/react': '6.5.16' } };
+
+    expect(resolveStorybookVersion(input(disk))).toBe('6.5.16');
   });
 
-  it('ignores `@storybook/core-common` from a Storybook other than 6, so a stale copy cannot misreport', () => {
-    const disk = { packageVersions: { '@storybook/core-common': '7.6.20' } };
+  it('trusts a fallback package from the last version before `storybook` was required', () => {
+    const disk = { packageVersions: { '@storybook/core-common': '8.1.11' } };
 
-    expect(() => resolveStorybookVersion(input(disk))).toThrow(
-      'Could not resolve a Storybook version'
-    );
+    expect(resolveStorybookVersion(input(disk))).toBe('8.1.11');
   });
+
+  it.each<Record<string, string>>([
+    { '@storybook/core-common': '8.2.0' },
+    // An 8.6 renderer beside a Storybook 7 preview runtime from an install further up.
+    { '@storybook/preview-api': '7.6.20', '@storybook/react': '8.6.14' },
+  ])(
+    'ignores the fallback packages when any is from 8.2 on, so a stale copy cannot misreport',
+    (packageVersions) => {
+      expect(() => resolveStorybookVersion(input({ packageVersions }))).toThrow(
+        'Could not resolve a Storybook version'
+      );
+    }
+  );
 
   it('throws when no Storybook version is known because the Storybook version is required', () => {
     let err: Error | undefined;

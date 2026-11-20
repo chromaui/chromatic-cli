@@ -96,7 +96,7 @@ export const tracing = (ctx: Pick<Context, 'git' | 'options'>) => {
 
   return {
     status: 'updating',
-    title: `Retrieving ${testType(ctx)} files affected by recent changes`,
+    title: `Retrieving ${testType(ctx)} files potentially affected by recent changes`,
     output: `Traversing dependencies for ${files} that changed since the last build`,
   };
 };
@@ -130,8 +130,8 @@ export const traced = (ctx: Pick<Context, 'options' | 'onlyStoryFiles'>) => {
 
   return {
     status: 'updating',
-    title: `Retrieved ${testType(ctx)} files affected by recent changes`,
-    output: `Found ${files} affected by recent changes`,
+    title: `Retrieved ${testType(ctx)} files potentially affected by recent changes`,
+    output: `Found ${files} potentially affected by recent changes`,
   };
 };
 
@@ -147,7 +147,7 @@ export const hashBased = (
     : {
         status: 'updating',
         title: 'Using TurboSnap 2.0',
-        output: `Chromatic will compare file hashes to find ${testType(ctx)} files affected by recent changes`,
+        output: `Chromatic will compare file hashes to find ${testType(ctx)} files potentially affected by recent changes`,
       };
 
 export const hashing = (ctx: Pick<Context, 'options'>) => ({

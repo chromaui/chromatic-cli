@@ -14,8 +14,8 @@ export class LockFileSizeExceededError extends Error {
 }
 
 /**
- * Error thrown when a changed manifest has no lockfile, neither in its own directory nor at the
- * repository root.
+ * Error thrown when a changed manifest has no lockfile in its own directory or any directory above
+ * it, up to the repository root.
  */
 export class LockFileMissingError extends Error {
   constructor(public manifestPath: string) {

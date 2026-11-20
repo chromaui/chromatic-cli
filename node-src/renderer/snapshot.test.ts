@@ -34,6 +34,20 @@ describe('renderSnapshot skip frames', () => {
     expect(ctx.exitCode).toBeUndefined();
   });
 
+  it('renders a generic pending frame when ctx.build is the TurboSnap baseline build', async () => {
+    // With --only-changed, gitInfo stores the baseline build, which has no test counts, and a dry
+    // run never replaces it.
+    const ctx = createContext({
+      options: { dryRun: true },
+      build: { id: 'baseline', number: 1, status: 'PASSED', webUrl: 'https://example.com' },
+      onlyStoryFiles: ['./src/Button.stories.tsx'],
+    });
+
+    await renderSnapshot(ctx);
+
+    expect(ctx.log.info).toHaveBeenNthCalledWith(1, 'Test your stories');
+  });
+
   it('renders the publish-only skip frame when ctx.skipSnapshots is set', async () => {
     const ctx = createContext({ skipSnapshots: true, isPublishOnly: true });
 

@@ -22,7 +22,7 @@ import { Context } from '../node-src/types';
  *   npx chromatic trace -s ./path/to/preview-stats.json ./src/button.js ./src/header.js
  *
  * Example output:
- *   ℹ Traced 2 changed files to 1 affected story file:
+ *   ℹ Traced 2 changed files to 1 potentially affected story file:
  *   — src/button.js [changed]
  *     ∟ src/button.stories.tsx
  *       ∟ [story index]
@@ -54,7 +54,7 @@ export async function main(argv: string[]) {
       --storybook-base-dir, -b <dirname>    Relative path from repository root to Storybook project root. Alternatively, set STORYBOOK_BASE_DIR. Use when your Storybook is located in a subdirectory of your repository.
       --storybook-config-dir, -c <dirname>  Directory where to load Storybook configurations from. Alternatively, set STORYBOOK_CONFIG_DIR. (default: '.storybook')
       --untraced, -u <filepath>             Disregard these files and their dependencies. Globs are supported via picomatch. This flag can be specified multiple times.
-      --mode, -m <mode>                     Set to 'expanded' to reveal the underlying list of files for each bundle, or set to 'compact' to only show a flat list of affected story files.
+      --mode, -m <mode>                     Set to 'expanded' to reveal the underlying list of files for each bundle, or set to 'compact' to only show a flat list of potentially affected story files.
     `,
     {
       importMeta: meowImportMeta,

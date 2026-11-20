@@ -72,13 +72,19 @@ export const findChangedDependencies = async (ctx: Context, stats: Stats) => {
   ctx.log.debug({ rootPath, rootManifestPath, rootLockfilePath }, `Found manifest and lockfile`);
   ctx.log.debug({ nestedManifestPaths: nestedManifestPaths.length }, 'Found nested manifest paths');
 
+  // Pair each manifest with the nearest lockfile in its own directory or above it. In the default
+  // layouts that is the workspace root's lockfile, even when that root isn't the repository root;
+  // settings that move the lockfile, such as pnpm's `lockfileDir`, aren't read. With none up to the
+  // repository root, there is no lockfile, and we throw below if this manifest changed.
+  const findLockfile = (manifestPath: string) => {
+    let directory = path.posix.dirname(manifestPath);
+    while (!lockfilesByDirectory.has(directory) && directory !== '.') {
+      directory = path.posix.dirname(directory);
+    }
+    return lockfilesByDirectory.get(directory);
+  };
   const metadataPathPairs: [string, string | undefined][] = nestedManifestPaths.map(
-    (manifestPath) => [
-      manifestPath,
-      // Fall back to the root lockfile if we can't find one in the same directory. With neither,
-      // there is no lockfile, and we throw below if this manifest changed.
-      lockfilesByDirectory.get(path.posix.dirname(manifestPath)) || rootLockfilePath,
-    ]
+    (manifestPath) => [manifestPath, findLockfile(manifestPath)]
   );
 
   if (rootManifestPath && rootLockfilePath) {

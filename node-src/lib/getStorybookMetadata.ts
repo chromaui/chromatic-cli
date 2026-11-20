@@ -139,9 +139,6 @@ async function findReferences(mainConfig?: MainConfigReader) {
  * The two sources resolve against different roots: Storybook runs the build script from the project
  * root, but reads `staticDirs` entries relative to the config directory that declares them.
  *
- * Exported only for its unit tests, which feed it each `staticDirs` shape through a fake config.
- * Through `getStorybookMetadata`, every shape would need its own fixture project.
- *
  * @param input The loaded config and the roots each source of directories resolves against.
  * @param input.mainConfig The loaded main config, or undefined when it could not be read.
  * @param input.configDirectory The absolute config directory `staticDirs` entries resolve against.
@@ -151,7 +148,8 @@ async function findReferences(mainConfig?: MainConfigReader) {
  *
  * @returns The resolved static directories, or `{}` when there are none.
  *
- * @internal
+ * @internal Exported only for its unit tests, which feed it each `staticDirs` shape through a fake
+ *   config. Through `getStorybookMetadata`, every shape would need its own fixture project.
  */
 export function findStaticDirectories({
   mainConfig,

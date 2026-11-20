@@ -1,5 +1,8 @@
 import * as Sentry from '@sentry/node';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'fs/promises';
+import { tmpdir } from 'os';
+import path from 'path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { readStatsFile } from '../../tasks/readStatsFile';
 import TestLogger from '../testLogger';
@@ -356,4 +359,94 @@ describe('traceChangedFiles', () => {
       expect(scopeSetTag).toHaveBeenCalledWith('turbosnap_requested', tag);
     }
   );
+
+  describe('when --untraced matches a Storybook config file', () => {
+    let rootPath: string;
+    let configDirectory: string;
+    beforeEach(async () => {
+      rootPath = await mkdtemp(path.join(tmpdir(), 'chromatic-untraced-config-'));
+      configDirectory = path.join(rootPath, 'packages/ui/config/sb');
+      await mkdir(configDirectory, { recursive: true });
+      for (const fileName of [
+        'main.ts',
+        'preview.tsx',
+        'preview-head.html',
+        'preview-body.html',
+        'manager.ts',
+        'manager-head.html',
+        'mocks.json',
+      ]) {
+        await writeFile(path.join(configDirectory, fileName), '');
+      }
+    });
+    afterEach(async () => {
+      await rm(rootPath, { recursive: true, force: true });
+    });
+
+    const contextWith = (
+      untraced: string[],
+      turboSnap?: object,
+      storybookConfigDirectory = configDirectory
+    ) => {
+      const context = makeContext();
+      return {
+        ...context,
+        turboSnap,
+        options: { untraced },
+        git: { changedFiles: [], rootPath },
+        storybook: { ...context.storybook, configDir: storybookConfigDirectory },
+      };
+    };
+
+    it('warns once that it can miss changes to them, even when nothing changed', async () => {
+      const ctx = contextWith(['packages/ui/config/sb/**'], {});
+
+      await traceChangedFiles(ctx);
+
+      expect(ctx.log.warn).toHaveBeenCalledOnce();
+      const [message] = vi.mocked(ctx.log.warn).mock.calls[0];
+      expect(message).toContain('TurboSnap can miss changes to untraced Storybook config files');
+      expect(message).toContain('packages/ui/config/sb/main.ts');
+      expect(message).toContain('packages/ui/config/sb/preview.tsx');
+      expect(message).toContain('packages/ui/config/sb/preview-head.html');
+      expect(message).toContain('packages/ui/config/sb/preview-body.html');
+      expect(message).toContain('packages/ui/config/sb/**');
+      expect(message).not.toContain('manager.ts');
+      expect(message).not.toContain('manager-head.html');
+    });
+
+    it('matches the real path of a symlinked config directory, as TurboSnap 2.0 does', async () => {
+      const linkedDirectory = path.join(rootPath, 'packages/ui/.storybook');
+      await symlink(configDirectory, linkedDirectory);
+      const ctx = contextWith(['packages/ui/config/sb/preview.*'], {}, linkedDirectory);
+
+      await traceChangedFiles(ctx);
+
+      expect(ctx.log.warn).toHaveBeenCalledOnce();
+      expect(vi.mocked(ctx.log.warn).mock.calls[0][0]).toContain(
+        'packages/ui/config/sb/preview.tsx'
+      );
+    });
+
+    it('stays quiet when the globs match only files off the allowlist', async () => {
+      const ctx = contextWith(['packages/ui/config/sb/*.json', '**/manager.ts'], {});
+
+      await traceChangedFiles(ctx);
+
+      expect(ctx.log.warn).not.toHaveBeenCalled();
+      expect(ctx.log.debug).not.toHaveBeenCalledWith(expect.stringContaining('--untraced'));
+    });
+
+    it('only logs it at debug level when TurboSnap was not requested', async () => {
+      const ctx = contextWith(['**/preview.*']);
+
+      await traceChangedFiles(ctx);
+
+      expect(ctx.log.warn).not.toHaveBeenCalled();
+      const debugWarnings = vi
+        .mocked(ctx.log.debug)
+        .mock.calls.filter(([message]) => String(message).includes('preview.tsx'));
+      expect(debugWarnings).toHaveLength(1);
+    });
+  });
 });

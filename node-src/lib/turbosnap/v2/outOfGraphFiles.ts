@@ -1,8 +1,5 @@
-import path from 'path';
-
 import { AbsolutePath } from '../../../types';
-import { MAIN_CONFIG_PATTERN } from '../../getStorybookMetadata';
-import { isDocumentationFile } from '../../utilities';
+import { isMainConfigFile, storybookConfigFileKind } from '../storybookConfigFiles';
 import { FileHash, FilePath, rollUpEntryHashes } from './graph';
 import { ManifestInput } from './manifestInput';
 import { gitRootGlobMatcher, normalizeStatsPath } from './paths';
@@ -58,14 +55,16 @@ export class MissingStorybookConfigError extends Error {
 }
 
 /**
- * Collects the config and static paths that will be checked against git.
+ * Collects the config and static paths that will be checked against git. The config sweep keeps only
+ * the allowlisted config files; see `storybookConfigFileKind`.
  *
  * @param input The config and static locations and disk for this build.
  *
  * @returns The paths in each sweep.
  *
- * @throws {MissingStorybookConfigError} When `configDir` holds no `main.*` file, unless the build is
- * an E2E build.
+ * @throws {MissingStorybookConfigError} When `configDir` holds no `main.*` file on disk, unless the
+ * build is an E2E build. A main config the skip rule later skips, untraced or untracked, still
+ * counts: the directory is still a config directory.
  */
 export function listConfigAndStaticFiles(input: OutOfGraphInput) {
   return {
@@ -76,7 +75,9 @@ export function listConfigAndStaticFiles(input: OutOfGraphInput) {
 }
 
 function listConfigTree(input: Pick<OutOfGraphInput, 'configDir' | 'projectFiles'>) {
-  const configTree = input.projectFiles.listTree(input.configDir);
+  const configTree = input.projectFiles
+    .listTree(input.configDir)
+    .filter((filePath) => storybookConfigFileKind(filePath, input.configDir));
   if (!configTree.some((filePath) => isMainConfigFile(filePath, input.configDir))) {
     throw new MissingStorybookConfigError(input.configDir);
   }
@@ -84,8 +85,9 @@ function listConfigTree(input: Pick<OutOfGraphInput, 'configDir' | 'projectFiles
 }
 
 /**
- * Content-hashes every file in the Storybook config directory, every file in the configured static
- * directories, and every git-tracked file matching the user's `--externals` globs.
+ * Content-hashes the allowlisted files in the Storybook config directory (`main.*`, `preview.*`,
+ * `preview-head.html` and `preview-body.html`), every file in the configured static directories, and
+ * every git-tracked file matching the user's `--externals` globs.
  *
  * These files are structurally invisible to v2's graph hashing — `.storybook/main.ts` is Node-side
  * config and static assets are referenced by URL string, so neither is ever a module in
@@ -99,14 +101,19 @@ function listConfigTree(input: Pick<OutOfGraphInput, 'configDir' | 'projectFiles
  * and exactly the kind the bundler never emits a module for. A glob that matches nothing contributes
  * nothing, so a project without externals is unchanged.
  *
- * We hash bytes rather than following imports. A change to a file that `main.ts` imports from outside
- * the config directory is missed — and missed by v1 too, so it is parity — while following those
- * imports would mean resolving and interpreting Node-side config, which is out of scope.
+ * We hash bytes rather than following imports. A change to a file that only `main.ts` imports, such
+ * as a local preset or a `webpackFinal` helper, is missed wherever it lives, in the config directory
+ * or outside it. v1 misses it too, so it is parity. Following those imports would mean resolving and
+ * interpreting Node-side config, which is out of scope.
  *
  * Static files are hashed unbounded, with no size or count cap: a cap is a silent gap, which is the
  * failure mode this mechanism exists to remove. The files v2 skips are the one exception, in the
- * config directory as in a static directory; see `buildSkipRule` for which those are. The main
- * config is hashed whatever the rule says; see `hashMainConfigRegardless`.
+ * config directory as in a static directory; see `buildSkipRule` for which those are.
+ *
+ * Every other file in the config directory is left out of the sweep, and isn't listed as skipped
+ * either: it isn't a config file. When a story or preview file imports it, the graph pass hashes it
+ * into whichever story or preview subtree reaches it. When only `main.ts` imports it, nothing does
+ * (see above).
  *
  * @param input Where to look and what to read it with; see `OutOfGraphInput`.
  * @param skipRule Which config and static files to leave unhashed; see `buildSkipRule`.
@@ -115,8 +122,8 @@ function listConfigTree(input: Pick<OutOfGraphInput, 'configDir' | 'projectFiles
  *
  * @returns The content hash of every config file, static file and external file, keyed by canonical
  * manifest path, beside the swept config and static files that were skipped instead, keyed the same
- * way with the reason. `storybookConfigFiles` always holds at least the main config, except for an
- * E2E build, where it is empty.
+ * way with the reason. `storybookConfigFiles` is empty for an E2E build, and lacks any config file
+ * the skip rule skips, the main config included.
  */
 export async function hashOutOfGraphFiles(
   input: OutOfGraphInput,
@@ -125,11 +132,9 @@ export async function hashOutOfGraphFiles(
 ): Promise<OutOfGraphSweep> {
   const { configTree, staticTree } = inventory;
 
-  // Documentation in the config dir (e.g. `.storybook/README.md`) shouldn't affect the built
-  // Storybook, so it stays out of the config roll-up.
   const { hashable: configFilePaths, skipped: skippedConfigFiles } = partitionSkipped(
-    configTree.filter((filePath) => !isDocumentationFile(filePath)),
-    hashMainConfigRegardless(skipRule, input)
+    configTree,
+    skipRule
   );
   const { hashable: staticFilePaths, skipped: skippedStaticFiles } = partitionSkipped(
     staticTree,
@@ -158,33 +163,6 @@ export async function hashOutOfGraphFiles(
         reason,
       ])
     ),
-  };
-}
-
-/**
- * The rule as the config sweep applies it: the main config is hashed whatever the rule says. It is
- * the file that makes the directory a config directory, so the config section always has it, and an
- * `--untraced` glob wide enough to catch it, or a main config not yet added to git, is more likely an
- * accident than a request. The case is logged so we can see whether anyone hits it.
- *
- * @param skipRule The rule for every other file; see `buildSkipRule`.
- * @param input Where the config directory is, and where to log.
- *
- * @returns The rule for the config sweep.
- */
-function hashMainConfigRegardless(
-  skipRule: SkipRule,
-  input: Pick<OutOfGraphInput, 'log' | 'configDir'>
-): SkipRule {
-  return (absolutePath) => {
-    const reason = skipRule(absolutePath);
-    if (reason && isMainConfigFile(absolutePath, input.configDir)) {
-      input.log.debug(
-        `Hashing ${absolutePath} although it is ${reason}; the main Storybook config is never skipped`
-      );
-      return undefined;
-    }
-    return reason;
   };
 }
 
@@ -237,10 +215,11 @@ async function listExternalFiles(
  *
  * The static and externals sections contribute no entry when they have no files, matching how the
  * `storybookGlobals` roll-up is omitted when empty. The config section always contributes one,
- * because the Index requires `storybookConfigFiles`. For a Storybook project it is never empty:
- * `listConfigAndStaticFiles` refuses to sweep without the main config, and `hashOutOfGraphFiles`
- * never drops the main config into another section. An E2E build has no config directory, so its
- * entry is the roll-up of nothing, a constant; a package upgrade moves `storybookVersion` instead.
+ * because the Index requires `storybookConfigFiles`. With no files it is the roll-up of nothing, a
+ * constant. An E2E build gets there because it has no config directory; a package upgrade moves
+ * `storybookVersion` instead. A Storybook project gets there when the skip rule skips every config
+ * file, such as with `--untraced '.storybook/**'`; `listConfigAndStaticFiles` still refuses a config
+ * directory with no main config on disk.
  *
  * The roll-ups are path-sensitive, as the graph-rolled entries now are too: a static asset is served
  * at its path and a config file is loaded by name, so a byte-preserving rename changes what Storybook
@@ -269,12 +248,6 @@ export function rollUpOutOfGraphFiles(
     sections
       .filter(([key, files]) => key === STORYBOOK_CONFIG_KEY || files.size > 0)
       .map(([key, files]) => [key, rollUpEntryHashes([...files], h64ToString)])
-  );
-}
-
-function isMainConfigFile(filePath: string, configDirectory: string): boolean {
-  return (
-    path.dirname(filePath) === configDirectory && MAIN_CONFIG_PATTERN.test(path.basename(filePath))
   );
 }
 

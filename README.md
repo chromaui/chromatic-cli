@@ -2,7 +2,7 @@
 
 Publishes your Storybook to Chromatic and kicks off tests if they're enabled.
 
-<img width="100%" src="https://user-images.githubusercontent.com/321738/82901859-d820ec80-9f5e-11ea-81e7-78d494c103ad.gif" alt="">
+<img width="100%" src="docs/chromatic-cli.webp" alt="A terminal running npx chromatic: it builds and publishes a Storybook, runs the tests, and links to the changes to review">
 
 <a href="https://www.npmjs.com/package/chromatic">
   <img src="https://badgen.net/npm/v/chromatic" alt="Published on npm">

@@ -74,6 +74,13 @@ function commitsForCLI(commits: string[]) {
   return commits.map((c) => c.trim()).join(' ');
 }
 
+// `git rev-list` prints one full SHA-1 or SHA-256 per line. Keep only those, so nothing else that
+// reaches its output, such as a warning, is ever sent to the index as a commit.
+const FULL_SHA = /^(?:[\da-f]{40}|[\da-f]{64})$/;
+function parseCommits(output: string) {
+  return output.split(/\r?\n/).filter((line) => FULL_SHA.test(line));
+}
+
 // git rev-list in a basic form gives us a list of commits reaching back to
 // `firstCommittedAtSeconds` (i.e. when the first build of this app happened)
 // in reverse chronological order.
@@ -109,8 +116,7 @@ async function nextCommits(
   const command = `git rev-list HEAD \
       ${firstCommittedAtSeconds ? `--since ${firstCommittedAtSeconds}` : ''} \
       -n ${limit + commitsWithoutBuilds.length} --not ${commitsForCLI(commitsWithBuilds)}`;
-  const commitsString = await execGitCommand(deps, command);
-  const commits = commitsString.split('\n').filter(Boolean);
+  const commits = parseCommits(await execGitCommand(deps, command));
 
   // Later on we want to know which commits we visited on the way to finding the ancestor commits
   // The output of the above rev-list commit includes possibly commits with builds so filter them.
@@ -204,10 +210,7 @@ async function maximallyDescendentCommits(deps: GitDeps, commits: string[]) {
   // List the tree from <commits> not including the tree from <parentCommits>
   // This just filters any commits that are ancestors of other commits
   const command = `git rev-list ${commitsForCLI(commits)} --not ${commitsForCLI(parentCommits)}`;
-  const maxCommitsString = await execGitCommand(deps, command);
-  const maxCommits = maxCommitsString.split('\n').filter(Boolean);
-
-  return maxCommits;
+  return parseCommits(await execGitCommand(deps, command));
 }
 
 /**

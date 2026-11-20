@@ -1,5 +1,6 @@
 /* eslint-disable max-lines */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import path from 'path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
 import {
@@ -34,14 +35,14 @@ import {
 } from './git';
 
 vi.mock('./execGit');
-vi.mock('fs/promises', () => ({ mkdir: vi.fn(), readFile: vi.fn() }));
+vi.mock('fs/promises', () => ({ mkdir: vi.fn(), readFile: vi.fn(), stat: vi.fn() }));
 
 const execGitCommand = vi.mocked(execGit.execGitCommand);
 const execGitCommandEntries = vi.mocked(execGit.execGitCommandEntries);
 const execGitCommandOneLine = vi.mocked(execGit.execGitCommandOneLine);
 const execGitCommandCountLines = vi.mocked(execGit.execGitCommandCountLines);
 
-const { mkdir, readFile } = vi.mocked(await import('fs/promises'));
+const { mkdir, readFile, stat } = vi.mocked(await import('fs/promises'));
 
 const ctx = { log: new TestLogger(), options: {} };
 
@@ -118,6 +119,10 @@ describe('getBranch', () => {
 });
 
 describe('getUncommittedHash', () => {
+  beforeEach(() => {
+    stat.mockResolvedValue({ isFile: () => true } as any);
+  });
+
   it('returns the uncommitted hash', async () => {
     execGitCommand.mockResolvedValue('1234567890');
     expect(await getUncommittedHash(ctx)).toEqual('1234567890');
@@ -128,9 +133,47 @@ describe('getUncommittedHash', () => {
     await getUncommittedHash(ctx);
     expect(execGitCommand).toHaveBeenCalledWith(
       ctx,
-      'git ls-files --others --exclude-standard --full-name',
-      expect.anything()
+      'git -c core.quotePath=false ls-files --others --exclude-standard --full-name'
     );
+  });
+
+  it('hashes only regular files, leaving out the files the CLI writes', async () => {
+    // Run from a subdirectory: the CLI's files are resolved from there, not from the root.
+    const root = path.dirname(process.cwd());
+    const cwd = path.basename(process.cwd());
+    const outputs = {
+      'git -c core.quotePath=false diff --name-only --no-relative --diff-filter=d --cached':
+        'src/staged.ts\n',
+      'git -c core.quotePath=false diff --name-only --no-relative --diff-filter=d':
+        'src/unstaged.ts\nsubmodule\n',
+      'git -c core.quotePath=false ls-files --others --exclude-standard --full-name': [
+        `${cwd}/chromatic.log`,
+        `${cwd}/build-storybook.log`,
+        `${cwd}/chromatic-diagnostics.json`,
+        'logs/custom.log',
+        'chromatic.log', // Not the CLI's: it's at the root, and the CLI ran from the subdirectory.
+        'nested-repo/',
+        'src/vanished.ts',
+        'src/untracked.ts',
+      ].join('\n'),
+      'git rev-parse --show-toplevel': root,
+      'git hash-object --stdin-paths': 'a\nb\nc\nd\n',
+      'git hash-object --stdin': 'abc123\n',
+    };
+    execGitCommand.mockImplementation(async (_, command) => outputs[command]);
+    stat.mockImplementation(async (filePath) => {
+      if (filePath === path.join(root, 'src/vanished.ts')) throw new Error('ENOENT');
+      // A submodule and an untracked nested repository are directories.
+      const directories = new Set([path.join(root, 'submodule'), path.join(root, 'nested-repo/')]);
+      return { isFile: () => !directories.has(String(filePath)) } as any;
+    });
+
+    expect(await getUncommittedHash(ctx, [path.join(root, 'logs/custom.log'), undefined])).toBe(
+      'abc123'
+    );
+    expect(execGitCommand).toHaveBeenCalledWith(ctx, 'git hash-object --stdin-paths', {
+      input: 'src/staged.ts\nsrc/unstaged.ts\nchromatic.log\nsrc/untracked.ts',
+    });
   });
 });
 
@@ -276,7 +319,6 @@ describe('commitsExist', () => {
     expect(await commitsExist(ctx, ['bbb', 'aaa', 'ccc', 'ddd'])).toEqual(new Set(['aaa', 'ddd']));
     expect(execGitCommand).toHaveBeenCalledWith(ctx, 'git cat-file --batch-check', {
       input: 'bbb^{commit}\naaa^{commit}\nccc^{commit}\nddd^{commit}',
-      all: false,
     });
   });
 
@@ -442,8 +484,7 @@ describe('checkoutFile', () => {
     expect(execGitCommand).toHaveBeenNthCalledWith(
       1,
       ctx,
-      'git ls-tree --full-tree abc123 -- "package.json"',
-      { all: false }
+      'git ls-tree --full-tree abc123 -- "package.json"'
     );
     expect(execGitCommand).toHaveBeenLastCalledWith(
       ctx,
