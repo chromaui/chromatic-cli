@@ -43,7 +43,7 @@ Keep implementation details out of the map. Name only user paths, stable handles
 
 ## Features
 
-- [Trace changed files to stories](./trace.md) covers `chromatic trace` in default, compact and expanded modes, the no-match case, a missing stats file, `package.json` refusal, and webpack and monorepo stats.
+- [Trace changed files to stories](./trace.md) covers `chromatic trace` in default, compact and expanded modes, the no-match case, a missing stats file, `package.json` refusal, a Storybook config file bail, and webpack and monorepo stats.
 - [TurboSnap manifest](./turbosnap-manifest.md) covers `chromatic turbosnap-manifest`, its JSON shape, the `--externals` and `--static-dir` options, and `-b` in a monorepo.
 - [Trim stats file](./trim-stats-file.md) covers `chromatic trim-stats-file` output placement, its exit code on failure, its `--help` text, and the webpack module filters.
 - [Preflight and configuration](./preflight-and-config.md) covers the main command's offline option validation, the config file, and diagnostics and log files.

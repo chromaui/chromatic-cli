@@ -29,10 +29,10 @@ Preconditions:
 - Drive from the repo root, which is a git repo with commits. The CLI reads branch and commit from cwd.
 
 - **Prebuilt publish.** Run `mkdir -p "$EVIDENCE/pub-prebuilt" && $S run pub-prebuilt -- --storybook-build-dir "$SB_DIR" --exit-zero-on-changes --skip-update-check --diagnostics-file "$EVIDENCE/pub-prebuilt/d.json" --log-file "$EVIDENCE/pub-prebuilt/chromatic.log"`. Exit code `0`. stdout runs, in order:
-  - `Authenticated with Chromatic`, with the token masked as `'****************<last 4>'`
+  - `Authenticated with Chromatic` (` [staging]` is appended on staging), with the token masked as `'****************<last 4>'`
   - `Build <N> initialized`
   - `Build Storybook [skipped]` / `Using prebuilt Storybook at <SB_DIR>`
-  - `Publish complete`, followed by `Uploaded <n> files` on the first build or `No new files to upload` on later ones
+  - `Publish complete in <duration>` / `→ Uploaded <n> files (<size>)`, with `, skipped <m> files` when some were already uploaded, or `Publish complete` / `→ No new files to upload` when nothing was
   - `✔ Storybook published`
   - `ℹ View your Storybook at https://<appId>-<hash>.chromatic.com/`
   - `Started build <N>`, `Running <n> tests`, then `Build <N> auto-accepted` (first build), `Build <N> completed` (pending changes) or `Build <N> passed!` (no changes). When the build runs no tests, these are replaced by `Finalizing build` / `→ No tests run` and `Test your stories` / `→ No UI tests or UI review enabled`; `.build.status` is still `PASSED`.
@@ -55,6 +55,7 @@ Preconditions:
 - `--skip` is keyed to the current commit. Run it last, or on a commit you will not publish again.
 - The repo's own `build-storybook` script already passes `--stats-json`, so it never shows the CLI adding the flag. Drive builds through an e2e fixture (`pub-build`).
 - A freshly prepared fixture has one commit, so its first run prints `✖ Found only one commit` as a warning. When `CI` is set or a CI environment is detected, that message is fatal instead. Run with `env -u CI`.
+- A token the backend doesn't recognize, such as a production token against staging, exits `202` with `✖ Failed to authenticate` and `✖ Invalid --project-token '<token>'`, and the token is not masked in stdout or stderr (only `chromatic.log` shows `<redacted>`, and `$S cleanup` scrubs only JSON). Match the token to `CHROMATIC_INDEX_URL` before driving, and never share that output.
 - Never pass a real token as `-t`. `command.txt` records it as `REDACTED`, but CLIs older than 18.13.1 write it verbatim to diagnostics `.options.originalArgv` (see `preflight-and-config`).
 - `--patch-build`, `--only-changed` and `--auto-accept-changes` change baselines on the real project. Do not exercise them against a shared project.
 - Same commit and branch as a passed build means the CLI skips the run: `ℹ Skipping rebuild of an already fully passed/accepted build`, exit `0`, and no build. Every journey here runs from the repo root on one commit, so all but the first need `--force-rebuild` (the commands above include it). An exit `0` alone is not proof the journey ran; check for `Build <N> initialized`.
