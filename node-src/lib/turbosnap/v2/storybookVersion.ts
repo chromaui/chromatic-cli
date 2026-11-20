@@ -13,8 +13,10 @@ import { ManifestInput } from './manifestInput';
  * `preview-stats.json`. The version gate covers exactly that blind spot.
  *
  * We do not reuse `ctx.storybook.version`, although it comes from the same chain: the user can pin
- * it with `CHROMATIC_STORYBOOK_VERSION`, and a prebuilt Storybook's `project.json` overrides it, so it
- * can differ from the installed packages this manifest hashes.
+ * it with `CHROMATIC_STORYBOOK_VERSION`, and a prebuilt Storybook's `project.json` overrides it. It
+ * also reads the Storybook from where the main config's framework resolves, while this runs the chain
+ * from the config directory, so a package with an older Storybook under a newer root `storybook`
+ * records the root's version here.
  *
  * Without a version there is no gate on a Storybook upgrade, so this refuses to build a manifest
  * that would silently under-capture.
