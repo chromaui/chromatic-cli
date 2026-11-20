@@ -1,6 +1,6 @@
 # E2E fixtures
 
-Minimal Storybook projects to run the CLI against: one per builder, one monorepo per package manager, and one E2E project that has no Storybook of its own. Use them to check a change by hand. Later they will back scenario scripts and an automated end-to-end suite.
+Minimal Storybook projects to run the CLI against: one per builder, one monorepo per package manager, and one E2E project that has no Storybook of its own. Use them to check a change by hand. The merge queue also runs the packed CLI against them (see [In CI](#in-ci)).
 
 The fixtures are deliberately bare. Each Storybook has a `Button` that imports a `Badge`, with one story each. Anything a test needs beyond that, such as a changed dependency or a story outside the package, should be set up by the scenario on a prepared copy, not added here.
 
@@ -68,9 +68,19 @@ The `build-storybook` scripts leave out the stats flag, as most projects do, so 
 
 `react-vitest` has the same `Button` and `Badge`, with one Vitest browser test each instead of stories. Each test writes one archive and one `.stories.json` under the gitignored `.vitest/chromatic`. Its `vitest.config.ts` turns on `chromaticPlugin({ turboSnap: true })`, which writes the `preview-stats.json` that TurboSnap reads.
 
+## In CI
+
+The `e2e-fixtures` workflow runs in the merge queue, so no code change merges without it. It packs the CLI once, the same tarball a release publishes, and runs `e2e/checkPackedCli.sh` against each fixture in its matrix, one job each. The script prepares the fixture with `prepare.mjs`, installs the tarball with the fixture's package manager, and checks an invalid token, a first build, and a TurboSnap 2.0 build and a TurboSnap 1.0 build after commits to a file only `Button`'s story depends on, then `trace` and `turbosnap-manifest`. The builds publish to the smoke-test project. To run it yourself against a project of your own:
+
+```sh
+yarn build && yarn pack --out chromatic.tgz && yarn clean-package restore
+CHROMATIC_PROJECT_TOKEN=<token> e2e/checkPackedCli.sh react-vite chromatic.tgz
+```
+
 ## Changing a fixture
 
 - Keep fixtures minimal. Add something only when every scenario needs it.
+- `checkPackedCli.sh` expects a `Button` and a `Badge` story, and a change to `src/Button.tsx` (or `packages/shared` in a monorepo) to reach only `Button`. A new fixture needs a row in the matrix in `.github/workflows/e2e-fixtures.yml` and an install command in `checkPackedCli.sh`, which refuses fixtures it has none for.
 - Pin exact versions and commit the lockfile. That keeps installs reproducible and gives dependency-change scenarios a real lockfile diff. Dependabot's version updates skip `e2e/fixtures/`, but its security updates can still bump a single package there, such as `storybook`, without the packages that must match it.
 - To update a lockfile, prepare the fixture, change it and install in the copy, then copy the lockfile back. Installing in place is not recommended: Yarn would pick up this repository's `.yarnrc.yml`.
 - Use neutral names (`@myorg/*`, `Button`) and never commit project tokens. This repository is public.
