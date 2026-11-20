@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import type { Check, DoctorInput } from './checks';
@@ -9,7 +9,34 @@ import {
   matchesBranch,
   storybookConfigCandidates,
 } from './checks';
+import { chromaticRunsFor, detectCi } from './detect';
 import { relativeOrDot } from './shared';
+
+const ONLY_CHANGED_FLAG = /--only-changed\b(?!=false)/;
+
+/**
+ * Finds where TurboSnap is turned on outside the config file: the package's chromatic script, or a
+ * CI step that runs Chromatic for this package.
+ *
+ * @param input What loadDoctorInput read.
+ *
+ * @returns Where it's turned on, such as 'the "chromatic" script', or undefined.
+ */
+function onlyChangedElsewhere(input: DoctorInput) {
+  const scripts: Record<string, string> = input.packageJson?.scripts ?? {};
+  const script = Object.keys(scripts).find(
+    (name) => /\bchromatic\b/.test(scripts[name]) && ONLY_CHANGED_FLAG.test(scripts[name])
+  );
+  if (script) return `the "${script}" script`;
+  if (!input.gitRoot) return undefined;
+  const gitRoot = input.gitRoot;
+  const ci = detectCi(gitRoot, input.files).filter((found) => found.chromaticFiles.length > 0);
+  const run = chromaticRunsFor(ci, gitRoot, relativeOrDot(gitRoot, input.cwd)).find(({ file }) => {
+    const text = readFileSync(path.join(gitRoot, file), 'utf8').replaceAll(/(^|\s)#.*$/gm, '$1');
+    return /onlyChanged:\s*["']?true\b/.test(text) || ONLY_CHANGED_FLAG.test(text);
+  });
+  return run?.file;
+}
 
 // eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
 function onlyChangedChecks(input: DoctorInput): Check[] {
@@ -32,13 +59,21 @@ function onlyChangedChecks(input: DoctorInput): Check[] {
       },
     ];
   }
+  // The config file and flags don't say; the script or the CI step may still pass --only-changed.
+  const elsewhere = onlyChanged === undefined ? onlyChangedElsewhere(input) : undefined;
+  if (elsewhere) {
+    return [{ group: 'Values', status: 'pass', title: `TurboSnap is on (set in ${elsewhere})` }];
+  }
   if (onlyChanged === undefined || onlyChanged === false) {
     return [
       {
         group: 'Values',
         status: 'warn',
         title: 'TurboSnap is off',
-        detail: 'Set "onlyChanged": true to test only the stories your changes affect.',
+        detail:
+          onlyChanged === false
+            ? '"onlyChanged" is false, so every build captures every story.'
+            : 'Nothing turns it on: not the config file, the "chromatic" script, or a CI step. Set "onlyChanged": true to test only the stories your changes affect.',
         // Leave an explicit false alone; that's a choice, not a gap.
         fix:
           onlyChanged === undefined

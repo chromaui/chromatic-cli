@@ -7,8 +7,8 @@ import type { Check, Group } from './checks';
 import { answered, color, relativeOrDot } from './shared';
 
 const GROUP_TITLES: Record<Group, string> = {
-  Loading: 'Can Chromatic load your setup?',
-  Values: 'Are the options right?',
+  Loading: 'Project',
+  Values: 'Configuration',
   Environment: 'Git, token and CI',
 };
 
@@ -61,7 +61,8 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
  */
 export function printChecks(checks: Check[]) {
   // Room for the frame, the box borders and the indent.
-  const width = Math.max(40, Math.min(100, (process.stdout.columns || 100) - 14));
+  // Clack wraps notes at 80 columns without a terminal, so wrap to the same width here.
+  const width = Math.max(40, Math.min(100, (process.stdout.columns || 80) - 14));
   const sections = (Object.keys(GROUP_TITLES) as Group[]).flatMap((group) => {
     const inGroup = checks.filter((c) => c.group === group);
     if (inGroup.length === 0) return [];
