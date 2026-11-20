@@ -1,0 +1,61 @@
+name: E2E fixtures
+
+# Runs the packed CLI, the same tarball a release publishes, against each e2e fixture in the matrix
+# below: every builder, package manager, and Vitest. See e2e/checkPackedCli.sh for what each job
+# checks. A new fixture needs a row here and an install command in that script.
+on:
+  workflow_call:
+    secrets:
+      SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  pack:
+    name: Build and pack the CLI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: |
+          yarn build
+          yarn pack --out chromatic.tgz
+      - uses: actions/upload-artifact@v4
+        with:
+          # smoke-test.yml uploads packed-cli in the same workflow run
+          name: packed-cli-e2e
+          path: chromatic.tgz
+
+  fixture:
+    name: fixture (${{ matrix.fixture }})
+    needs: pack
+    runs-on: ubuntu-latest
+    # The slowest fixture takes about 2 minutes; a stuck build shouldn't hold the merge queue.
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture:
+          - react-vite
+          - react-webpack5
+          - react-rsbuild
+          - react-vitest
+          - monorepo-npm
+          - monorepo-pnpm
+          - monorepo-yarn
+          - monorepo-yarn-classic
+    steps:
+      - uses: actions/checkout@v7
+      # e2e/prepare.mjs needs the repo's dependencies; the fixture never sees them.
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@v4
+        with:
+          name: packed-cli-e2e
+          path: ${{ runner.temp }}
+      - name: Run the packed CLI against ${{ matrix.fixture }}
+        run: e2e/checkPackedCli.sh "${{ matrix.fixture }}" "$RUNNER_TEMP/chromatic.tgz" "$RUNNER_TEMP/e2e"
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.SMOKE_TESTS_CHROMATIC_PROJECT_TOKEN }}
