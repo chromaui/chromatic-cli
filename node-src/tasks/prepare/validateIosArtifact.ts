@@ -8,10 +8,20 @@ export interface ValidateIosArtifactInput {
   browsers?: string[];
 }
 
+// Any key can hold any plist type, so check the type of each value before using it.
+type PlistValue =
+  | string
+  | number
+  | boolean
+  | Date
+  | Buffer
+  | PlistValue[]
+  | { [key: string]: PlistValue };
+
 interface InfoPlist {
-  CFBundleSupportedPlatforms?: string[];
-  DTPlatformName?: string;
-  UIDeviceFamily?: number[];
+  CFBundleSupportedPlatforms?: PlistValue;
+  DTPlatformName?: PlistValue;
+  UIDeviceFamily?: PlistValue;
 }
 
 const SIMULATOR_PLATFORM = 'iPhoneSimulator';
@@ -42,8 +52,10 @@ const FAMILY_NAMES: Record<number, string> = {
  * @returns A comma-separated list of platforms, or undefined.
  */
 function devicePlatform(plist: InfoPlist) {
-  let platforms = plist.CFBundleSupportedPlatforms ?? [];
-  if (platforms.length === 0 && plist.DTPlatformName) {
+  let platforms = Array.isArray(plist.CFBundleSupportedPlatforms)
+    ? plist.CFBundleSupportedPlatforms.filter((platform) => typeof platform === 'string')
+    : [];
+  if (platforms.length === 0 && typeof plist.DTPlatformName === 'string' && plist.DTPlatformName) {
     platforms = [PLATFORM_NAMES[plist.DTPlatformName] ?? plist.DTPlatformName];
   }
   if (platforms.length === 0) return undefined;
@@ -62,7 +74,9 @@ function devicePlatform(plist: InfoPlist) {
  * @returns A comma-separated list of device families, or undefined.
  */
 function nonIPhoneFamilies(plist: InfoPlist) {
-  const families = plist.UIDeviceFamily ?? [];
+  const families = Array.isArray(plist.UIDeviceFamily)
+    ? plist.UIDeviceFamily.map(Number).filter((family) => Number.isInteger(family))
+    : [];
   if (families.length === 0 || families.includes(IPHONE_FAMILY)) return undefined;
   return families.map((family) => FAMILY_NAMES[family] ?? `device family ${family}`).join(', ');
 }
@@ -78,7 +92,13 @@ function nonIPhoneFamilies(plist: InfoPlist) {
 export async function validateIosArtifact(input: ValidateIosArtifactInput) {
   if (!input.browsers?.includes('ios')) return;
 
-  const plist = readFileSync<InfoPlist>(path.join(input.sourceDir, 'storybook.app', 'Info.plist'));
+  let plist: InfoPlist;
+  try {
+    plist = readFileSync<InfoPlist>(path.join(input.sourceDir, 'storybook.app', 'Info.plist'));
+  } catch {
+    // A missing or unreadable Info.plist is left to the install to report.
+    return;
+  }
 
   const platform = devicePlatform(plist);
   if (platform) {
