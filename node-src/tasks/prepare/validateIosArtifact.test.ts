@@ -106,6 +106,42 @@ describe('validateIosArtifact', () => {
     ).rejects.toThrow('Your storybook.app supports iPad, device family 9 but not iPhone.');
   });
 
+  it('reads device families written as strings', async () => {
+    const sourceDirectory = sourceDirectoryWith(
+      xmlPlist(
+        `${simulatorPlatform}<key>UIDeviceFamily</key><array><string>1</string><string>2</string></array>`
+      )
+    );
+    await expect(
+      validateIosArtifact({ sourceDir: sourceDirectory, browsers: ['ios'] })
+    ).resolves.toBeUndefined();
+  });
+
+  it.each([
+    ['garbage', 'not a plist'],
+    ['malformed XML', '<?xml version="1.0"?><plist><dict><key>'],
+    ['a truncated binary plist', Buffer.from('bplist00\u00D1\u0001\u0002')],
+    [
+      'mistyped keys',
+      xmlPlist(
+        '<key>CFBundleSupportedPlatforms</key><string>iPhoneOS</string><key>DTPlatformName</key><integer>1</integer><key>UIDeviceFamily</key><integer>2</integer>'
+      ),
+    ],
+  ])('leaves %s to the install', async (_name, infoPlist) => {
+    const sourceDirectory = sourceDirectoryWith(infoPlist);
+    await expect(
+      validateIosArtifact({ sourceDir: sourceDirectory, browsers: ['ios'] })
+    ).resolves.toBeUndefined();
+  });
+
+  it('leaves a missing Info.plist to the install', async () => {
+    const sourceDirectory = sourceDirectoryWith('');
+    rmSync(path.join(sourceDirectory, 'storybook.app', 'Info.plist'));
+    await expect(
+      validateIosArtifact({ sourceDir: sourceDirectory, browsers: ['ios'] })
+    ).resolves.toBeUndefined();
+  });
+
   it('passes when the plist names no platform or device family', async () => {
     const sourceDirectory = sourceDirectoryWith(xmlPlist(''));
     await expect(
