@@ -1,6 +1,8 @@
 import { ChangedPackageFilesBailReason, Context, Stats, TurboSnap } from '../../../types';
+import bailE2EPackage from '../../../ui/messages/warnings/bailE2EPackage';
 import bailFile from '../../../ui/messages/warnings/bailFile';
 import { checkStorybookBaseDirectory } from '../../checkStorybookBaseDirectory';
+import { getE2EPackage } from '../e2ePackage';
 import { TraceChangedFilesResult } from '../types';
 import { captureBailException } from './captureBailException';
 import { classifyChangedPackageFilesDetail } from './classifyBailDetail';
@@ -51,6 +53,23 @@ export async function traceChangedFiles(
             ? `:\n${changedDependencyNames.map((f) => `  ${f}`).join('\n')}`
             : '';
         ctx.log.info(`Found ${changedDependencyNames.length} changed dependencies${list}`);
+      }
+
+      // The E2E package ships the Storybook that renders every snapshot, but the stats only hold
+      // the tests and what they import, so tracing would find no test affected by an upgrade.
+      const e2ePackage = getE2EPackage(ctx.options);
+      if (e2ePackage && changedDependencyNames.includes(e2ePackage)) {
+        const turboSnap: TurboSnap = {
+          ...ctx.turboSnap,
+          bailReason: {
+            changedPackageFiles: [
+              ...new Set(packageMetadataChanges.flatMap(({ changedFiles }) => changedFiles)),
+            ],
+          },
+          previewConfigInStats,
+        };
+        ctx.log.warn(bailE2EPackage({ packageName: e2ePackage }));
+        return { status: 'bailed', turboSnap };
       }
     } else {
       ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);

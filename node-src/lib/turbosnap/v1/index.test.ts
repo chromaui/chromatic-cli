@@ -227,6 +227,67 @@ describe('traceChangedFiles', () => {
     expect(ctx.git.changedDependencyNames).toBeUndefined();
   });
 
+  describe('when an E2E package changed', () => {
+    const packageMetadataChanges = [
+      { changedFiles: ['package-lock.json', 'package.json'], commit: 'abcdef' },
+      { changedFiles: ['package-lock.json', 'packages/app/package.json'], commit: 'fedcba' },
+    ];
+    const e2eContext = (options: Record<string, boolean>) =>
+      ({
+        env: environment,
+        log,
+        http,
+        options,
+        sourceDir: '/static/',
+        fileInfo: { statsPath: '/static/preview-stats.json' },
+        git: {
+          changedFiles: ['package-lock.json', 'package.json', 'src/Button.tsx'],
+          packageMetadataChanges,
+        },
+        turboSnap: {},
+      }) as any;
+
+    beforeEach(() => {
+      getDependentStoryFiles.mockResolvedValue({
+        status: 'traced',
+        onlyStoryFiles: {},
+        turboSnap: {},
+        untracedFiles: [],
+      });
+    });
+
+    describe.each(['vitest', 'playwright', 'cypress'])('@chromatic-com/%s', (framework) => {
+      beforeEach(() => {
+        findChangedDependencies.mockResolvedValue(['react', `@chromatic-com/${framework}`]);
+      });
+
+      it(`bails on a --${framework} build`, async () => {
+        const result = await traceChangedFiles(e2eContext({ [framework]: true }));
+
+        expect(result).toMatchObject({
+          status: 'bailed',
+          turboSnap: {
+            bailReason: {
+              changedPackageFiles: [
+                'package-lock.json',
+                'package.json',
+                'packages/app/package.json',
+              ],
+            },
+          },
+        });
+        expect(getDependentStoryFiles).not.toHaveBeenCalled();
+      });
+
+      it('traces a Storybook build', async () => {
+        const result = await traceChangedFiles(e2eContext({}));
+
+        expect(result).toMatchObject({ status: 'traced' });
+        expect(getDependentStoryFiles).toHaveBeenCalled();
+      });
+    });
+  });
+
   it('throws an error if storybookBaseDir is incorrect', async () => {
     const deps = { 123: ['./example.stories.js'] };
     findChangedDependencies.mockResolvedValue([]);
