@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { getPackageManagerName } from '../../node-src/lib/getPackageManager';
+import { findConfigFlags, MAIN_CONFIG_PATTERN } from '../../node-src/lib/getStorybookMetadata';
 import { readJson, relativeOrDot } from './shared';
 
 export type Framework = 'storybook' | 'playwright' | 'cypress' | 'vitest';
@@ -44,6 +45,55 @@ function versionOf(directory: string, gitRoot: string, name: string) {
 }
 
 /**
+ * Each Storybook's main config, keyed by the package directory it runs from: .storybook/main.*
+ * next to it, or the folder a build script passes to -c, as the main command reads it.
+ *
+ * @param gitRoot Absolute repository root.
+ * @param present Repository files that exist, relative to the root.
+ *
+ * @returns Main config files by package directory, both relative to the root.
+ */
+function storybookMains(gitRoot: string, present: Set<string>) {
+  const mains = new Map<string, string>();
+  for (const file of present) {
+    if (STORYBOOK_MAIN.test(file)) mains.set(path.dirname(path.dirname(file)), file);
+  }
+  for (const file of [...present].filter((f) => path.basename(f) === 'package.json')) {
+    const directory = path.dirname(file);
+    if (mains.has(directory)) continue;
+    const packageJson = readJson(path.join(gitRoot, file)) ?? {};
+    const scripts: Record<string, string> = packageJson.scripts ?? {};
+    const configDirectories = new Set(
+      Object.keys(scripts)
+        .filter((name) => /\b(storybook build|build-storybook)\b/.test(scripts[name]))
+        .map((buildScriptName) => findConfigFlags({ buildScriptName, packageJson }).configDir)
+        .filter((configDirectory) => configDirectory !== undefined)
+        .map((configDirectory) => path.join(directory, configDirectory))
+    );
+    const main = [...present].find(
+      (f) => configDirectories.has(path.dirname(f)) && MAIN_CONFIG_PATTERN.test(path.basename(f))
+    );
+    if (main) mains.set(directory, main);
+  }
+  return mains;
+}
+
+function storybookProject(gitRoot: string, relative: string, file: string): Project {
+  const directory = path.join(gitRoot, relative);
+  const main = readFileSync(path.join(gitRoot, file), 'utf8');
+  const framework = main.match(/framework\s*:\s*(?:\{\s*name\s*:\s*)?['"]([^'"]+)['"]/)?.[1];
+  return {
+    framework: 'storybook',
+    directory,
+    relative: relativeOrDot(gitRoot, directory),
+    packageName: readJson(path.join(directory, 'package.json'))?.name,
+    storybookVersion: versionOf(directory, gitRoot, 'storybook'),
+    storybookFramework: framework?.replace(/^@storybook\//, ''),
+    evidence: file,
+  };
+}
+
+/**
  * Finds every Storybook and E2E test setup in the repository from files git doesn't ignore.
  *
  * @param gitRoot Absolute repository root.
@@ -53,23 +103,14 @@ function versionOf(directory: string, gitRoot: string, name: string) {
  */
 export function findProjects(gitRoot: string, files: string[]): Project[] {
   const projects: Project[] = [];
+  // git lists deleted files until the deletion is staged.
+  const present = new Set(files.filter((f) => existsSync(path.join(gitRoot, f))));
 
-  for (const file of files.filter((f) => STORYBOOK_MAIN.test(f))) {
-    const directory = path.join(gitRoot, path.dirname(path.dirname(file)));
-    const main = readFileSync(path.join(gitRoot, file), 'utf8');
-    const framework = main.match(/framework\s*:\s*(?:\{\s*name\s*:\s*)?['"]([^'"]+)['"]/)?.[1];
-    projects.push({
-      framework: 'storybook',
-      directory,
-      relative: relativeOrDot(gitRoot, directory),
-      packageName: readJson(path.join(directory, 'package.json'))?.name,
-      storybookVersion: versionOf(directory, gitRoot, 'storybook'),
-      storybookFramework: framework?.replace(/^@storybook\//, ''),
-      evidence: file,
-    });
+  for (const [relative, file] of storybookMains(gitRoot, present)) {
+    projects.push(storybookProject(gitRoot, relative, file));
   }
 
-  for (const file of files.filter((f) => E2E_CONFIG.test(f))) {
+  for (const file of [...present].filter((f) => E2E_CONFIG.test(f))) {
     const framework = file.match(E2E_CONFIG)?.[2] as Framework;
     const directory = path.join(gitRoot, path.dirname(file));
     // A vitest.config next to a Storybook is usually the Storybook's own test setup.
@@ -260,61 +301,3 @@ export const OTHER_CI: CiProvider = {
   docs: 'https://www.chromatic.com/docs/custom-ci-provider',
   secretHelp: "your CI's secret settings",
 };
-
-export interface DetectedCi {
-  provider: CiProvider;
-  files: string[];
-  /** Files that already run Chromatic. */
-  chromaticFiles: string[];
-}
-
-const RUNS_CHROMATIC = /chromaui\/action|\bchromatic\b(?!\.config)/i;
-
-/**
- * Finds each documented CI provider's config files, and which of them run Chromatic.
- *
- * @param gitRoot The repository root.
- * @param files Repository files relative to the git root.
- *
- * @returns Every documented provider, with the config files found for each.
- */
-export function detectCi(gitRoot: string, files: string[]): DetectedCi[] {
-  return CI_PROVIDERS.map((provider) => {
-    const found = files.filter((file) => provider.patterns.some((p) => p.test(file)));
-    const chromaticFiles = found.filter((file) =>
-      RUNS_CHROMATIC.test(readFileSync(path.join(gitRoot, file), 'utf8'))
-    );
-    return { provider, files: found, chromaticFiles };
-  });
-}
-
-/**
- * The CI files that run Chromatic for one package. A file counts for a package in a subdirectory
- * when it names that directory (workingDir, working-directory or cd), and for the repository root
- * when it names no directory. A heuristic: it reads the text, not the pipeline.
- *
- * @param detected Results from detectCi.
- * @param gitRoot Absolute repository root.
- * @param packageDirectory The package's path from the repository root, or '.'.
- *
- * @returns Each matching file with its provider.
- */
-export function chromaticRunsFor(
-  detected: DetectedCi[],
-  gitRoot: string,
-  packageDirectory: string
-) {
-  const normalized = packageDirectory.replace(/^\.\//, '').replace(/\/$/, '');
-  return detected.flatMap(({ provider, chromaticFiles }) =>
-    chromaticFiles
-      .filter((file) => {
-        const text = readFileSync(path.join(gitRoot, file), 'utf8').replaceAll(
-          /(^|\s)#.*$/gm,
-          '$1'
-        );
-        if (normalized === '.') return !/workingDir:|working-directory:|\bcd\s+\S/.test(text);
-        return text.includes(normalized);
-      })
-      .map((file) => ({ provider, file }))
-  );
-}

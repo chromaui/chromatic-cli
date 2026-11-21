@@ -1,20 +1,21 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
-import JSON5 from 'json5';
-
-import { getConfiguration } from '../../node-src/lib/getConfiguration';
+import { findBuildScriptName } from '../../node-src/lib/getOptions';
 import { matchesFile } from '../../node-src/lib/utilities';
 import pkg from '../../package.json';
-import { chromaticRunsFor, detectCi } from './detect';
-import { githubFetchDepth, gitlabGitDepth, packageJsonEdit } from './fixes';
-import { formatJson, gitignoreAdditions, readJson, relativeOrDot } from './shared';
+import { findChromaticRuns, runsFor } from './ci';
+import { configFix, DoctorInput, storybookConfigCandidates } from './doctorInput';
+import { packageJsonEdit } from './fixes';
+import { relativeOrDot } from './shared';
 import { valueChecks } from './valueChecks';
+
+const MAIN_FILE = /^main\.[cm]?[jt]sx?$/;
 
 type Status = 'pass' | 'warn' | 'fail';
 export type Group = 'Loading' | 'Values' | 'Environment';
 
-interface Fix {
+export interface Fix {
   /** What --fix will do, in one line. */
   summary: string;
   /** The file it changes and its new content. */
@@ -27,123 +28,6 @@ export interface Check {
   title: string;
   detail?: string;
   fix?: Fix;
-}
-
-/** The options doctor checks, merged the way a build merges them: flags over the config file. */
-export interface CheckedOptions {
-  onlyChanged?: string | boolean;
-  storybookConfigDir?: string;
-  storybookBuildDir?: string;
-  storybookBaseDir?: string;
-  buildScriptName?: string;
-  buildCommand?: string;
-  untraced?: string[];
-  externals?: string[];
-  projectToken?: string;
-  playwright?: boolean;
-  cypress?: boolean;
-  vitest?: boolean;
-}
-
-export interface DoctorInput {
-  cwd: string;
-  gitRoot?: string;
-  /** Repository files relative to the git root. */
-  files: string[];
-  branch?: string;
-  configFile?: string;
-  /** The config file's raw contents, so fixes can rewrite it. */
-  configJson?: Record<string, any>;
-  /** Which keys came from the config file, so fixes only touch the file for those. */
-  configKeys: Set<string>;
-  options: CheckedOptions;
-  packageJsonPath?: string;
-  packageJson?: Record<string, any>;
-}
-
-/** Rewrites a provider's CI file to clone full history, for providers where that's safe. */
-const CLONE_DEPTH_FIXES: Partial<Record<string, (text: string) => string | undefined>> = {
-  github: githubFetchDepth,
-  gitlab: gitlabGitDepth,
-};
-
-const MAIN_FILE = /^main\.[cm]?[jt]sx?$/;
-
-function nearestPackageJson(cwd: string, stopAt?: string) {
-  for (let directory = cwd; ; directory = path.dirname(directory)) {
-    const file = path.join(directory, 'package.json');
-    if (existsSync(file)) return file;
-    if (directory === stopAt || directory === path.dirname(directory)) return undefined;
-  }
-}
-
-/**
- * Reads the config file and package.json the way the main command does.
- *
- * @param input What the caller already knows: working directory, git root, files, branch, flags.
- * @param input.cwd Working directory Chromatic runs from.
- * @param input.gitRoot Repository root, if in a git repository.
- * @param input.files Repository files relative to the git root.
- * @param input.branch Current branch.
- * @param input.flags Options passed on the command line.
- * @param input.configFile The --config-file value, if any.
- *
- * @returns The input for runChecks, plus a loading error if the config file is broken.
- */
-export async function loadDoctorInput(input: {
-  cwd: string;
-  gitRoot?: string;
-  files: string[];
-  branch?: string;
-  flags: CheckedOptions;
-  configFile?: string;
-}): Promise<{ doctorInput: DoctorInput; configError?: string }> {
-  const { cwd, flags } = input;
-  let configError: string | undefined;
-  let configuration: Record<string, any> = {};
-  try {
-    configuration = await getConfiguration(input.configFile);
-  } catch (err) {
-    configError = err instanceof Error ? err.message : String(err);
-  }
-  const configFile = configuration.configFile
-    ? path.resolve(cwd, configuration.configFile)
-    : undefined;
-  const configJson = configFile ? JSON5.parse(readFileSync(configFile, 'utf8')) : undefined;
-  const definedFlags = Object.fromEntries(
-    Object.entries(flags).filter(([, value]) => value !== undefined)
-  );
-  const packageJsonPath = nearestPackageJson(cwd, input.gitRoot);
-
-  return {
-    configError,
-    doctorInput: {
-      ...input,
-      configFile,
-      configJson,
-      configKeys: new Set(Object.keys(configJson ?? {})),
-      options: { ...configuration, ...definedFlags },
-      packageJsonPath,
-      packageJson: packageJsonPath ? readJson(packageJsonPath) : undefined,
-    },
-  };
-}
-
-/**
- * Where the build looks for the Storybook config directory, in order.
- *
- * @param root0
- * @param root0.cwd
- * @param root0.gitRoot
- * @param root0.options
- *
- * @returns
- */
-export function storybookConfigCandidates({ cwd, gitRoot, options }: DoctorInput) {
-  const projectRoot =
-    options.storybookBaseDir && gitRoot ? path.resolve(gitRoot, options.storybookBaseDir) : cwd;
-  const value = options.storybookConfigDir ?? '.storybook';
-  return [...new Set([path.resolve(projectRoot, value), path.resolve(cwd, value)])];
 }
 
 // eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
@@ -224,7 +108,7 @@ function loadingChecks(input: DoctorInput, configError?: string): Check[] {
     checks.push({
       group: 'Loading',
       status: 'fail',
-      title: `No Storybook found at ${at(path.join(cwd, '.storybook'))}`,
+      title: `No Storybook found at ${at(storybookConfigCandidates(input)[0])}`,
       detail: 'Run Chromatic from the package that contains .storybook, or set storybookConfigDir.',
     });
   }
@@ -257,8 +141,8 @@ function buildScriptCheck(
   packageJson: Record<string, any>,
   hasStorybook: boolean
 ): Check {
-  const scriptName = input.options.buildScriptName ?? 'build-storybook';
   const scripts: Record<string, string> = packageJson.scripts ?? {};
+  const scriptName = findBuildScriptName(scripts, input.options.buildScriptName);
   if (scripts[scriptName]) {
     return {
       group: 'Loading',
@@ -279,10 +163,15 @@ function buildScriptCheck(
     return {
       ...missing,
       detail: `The "${other}" script builds Storybook. Point buildScriptName at it.`,
-      fix: {
-        summary: `Set buildScriptName to "${other}"`,
-        edits: [configEdit(input, (json) => (json.buildScriptName = other))],
-      },
+      fix: configFix(
+        input,
+        'buildScriptName',
+        `Set buildScriptName to "${other}"`,
+        (json) => {
+          json.buildScriptName = other;
+        },
+        { adds: true }
+      ),
     };
   }
   return {
@@ -340,64 +229,64 @@ function environmentChecks(input: DoctorInput): Check[] {
     });
   }
 
-  const ci = detectCi(gitRoot, files).filter((found) => found.chromaticFiles.length > 0);
-  // Only the CI configs that run Chromatic for this package; in a monorepo others belong to
-  // sibling projects.
-  const runs = chromaticRunsFor(ci, gitRoot, relativeOrDot(gitRoot, input.cwd));
+  const allRuns = findChromaticRuns(gitRoot, files);
+  // Only the jobs that run Chromatic from this package; in a monorepo others belong to siblings.
+  const runs = runsFor(allRuns, relativeOrDot(gitRoot, input.cwd));
   if (runs.length === 0) {
     checks.push({
       group: 'Environment',
       status: 'warn',
-      title: ci.length > 0 ? 'No CI runs Chromatic for this project' : 'No CI runs Chromatic yet',
+      title:
+        allRuns.length > 0
+          ? 'No CI job runs Chromatic for this project'
+          : 'No CI runs Chromatic yet',
       detail: 'Run chromatic init to add it.',
     });
   }
-  // A project tested from two CIs builds the same commits twice and pays for the snapshots twice.
+  // A project tested from two jobs builds the same commits twice and pays for the snapshots twice.
   if (runs.length > 1) {
     checks.push({
       group: 'Environment',
       status: 'warn',
-      title: `${runs.length} CI configs run Chromatic for this project`,
-      detail: `${runs.map((r) => `${r.provider.name}: ${r.file}`).join('\n')}\nEach push makes a duplicate build and captures snapshots twice. Keep the one that runs on every push and remove the others.`,
+      title: `${runs.length} CI jobs run Chromatic for this project`,
+      detail: `${runs.map((r) => `${r.provider.name}: ${r.file} (${r.job})`).join('\n')}\nEach push makes a duplicate build and captures snapshots twice. Keep the one that runs on every push and remove the others.`,
     });
   }
-  {
-    for (const { provider, file } of runs) {
-      // Drop comments, so a comment that mentions pull_request doesn't count as a trigger.
-      const raw = readFileSync(path.join(gitRoot, file), 'utf8');
-      const text = raw.replaceAll(/(^|\s)#.*$/gm, '$1');
-      const problems: string[] = [];
-      if (provider.id === 'github' && !/fetch-depth:\s*0/.test(text))
-        problems.push('checkout has no fetch-depth: 0, so the clone is shallow');
-      if (provider.id === 'github' && /\bpull_request\b/.test(text))
-        problems.push('runs on pull_request, which tests a merge commit instead of your branch');
-      if (provider.id === 'gitlab' && !/GIT_DEPTH:\s*["']?0/.test(text))
-        problems.push('no GIT_DEPTH: 0, so the clone is shallow');
-      const fixed = CLONE_DEPTH_FIXES[provider.id]?.(raw);
-      // Only the clone depth has a safe automatic fix; which events trigger a build is a choice.
-      const shallowProblem = problems.some((problem) => problem.includes('shallow'));
-      checks.push(
-        problems.length > 0
-          ? {
-              group: 'Environment',
-              status: 'warn',
-              title: `${provider.name}: ${file}`,
-              detail: problems.join('\n'),
-              fix:
-                shallowProblem && fixed
-                  ? {
-                      summary: `Clone full history in ${file}`,
-                      edits: [{ file: path.join(gitRoot, file), content: fixed }],
-                    }
-                  : undefined,
-            }
-          : {
-              group: 'Environment',
-              status: 'pass',
-              title: `${provider.name} runs Chromatic (${file})`,
-            }
+  for (const run of runs) {
+    const problems: string[] = [];
+    if (run.fullHistory === false) {
+      problems.push(
+        run.provider.id === 'gitlab'
+          ? 'no GIT_DEPTH: 0, so the clone is shallow'
+          : 'checkout has no fetch-depth: 0, so the clone is shallow'
       );
     }
+    if (run.onPullRequest) {
+      problems.push('runs on pull_request, which tests a merge commit instead of your branch');
+    }
+    const where = `${run.file} (${run.job})`;
+    checks.push(
+      problems.length > 0
+        ? {
+            group: 'Environment',
+            status: 'warn',
+            title: `${run.provider.name}: ${where}`,
+            detail: problems.join('\n'),
+            // Only the clone depth has an automatic fix; which events trigger a build is a choice.
+            fix:
+              run.fullHistory === false && run.fullHistoryFix
+                ? {
+                    summary: `Clone full history in ${where}`,
+                    edits: [{ file: path.join(gitRoot, run.file), content: run.fullHistoryFix }],
+                  }
+                : undefined,
+          }
+        : {
+            group: 'Environment',
+            status: 'pass',
+            title: `${run.provider.name} runs Chromatic (${where})`,
+          }
+    );
   }
   return checks;
 }
@@ -408,63 +297,32 @@ function environmentChecks(input: DoctorInput): Check[] {
  *
  * @param input What loadDoctorInput read.
  * @param configError The config file error, if it failed to load.
+ * @param optionsError
  *
  * @returns One result per check.
  */
-export function runChecks(input: DoctorInput, configError?: string): Check[] {
+export function runChecks(
+  input: DoctorInput,
+  configError?: string,
+  optionsError?: string
+): Check[] {
   const checks = [
     ...loadingChecks(input, configError),
-    ...(configError ? [] : valueChecks(input)),
+    ...(optionsError
+      ? [
+          {
+            group: 'Values' as const,
+            status: 'fail' as const,
+            title: "These options don't work together",
+            detail: optionsError,
+          },
+        ]
+      : []),
+    ...(configError || optionsError ? [] : valueChecks(input)),
     ...environmentChecks(input),
   ];
   // A fix would rewrite a config file that failed to load and lose what's in it.
   return configError ? checks.map(({ fix: _fix, ...check }) => check) : checks;
-}
-
-/**
- * Rewrites the config file with a change, for fixes.
- *
- * @param input
- * @param change
- *
- * @returns
- */
-export function configEdit(input: DoctorInput, change: (json: Record<string, any>) => void) {
-  // A new config file starts the way init writes one, with the schema for editor hints.
-  const json = structuredClone(
-    input.configJson ?? { $schema: 'https://www.chromatic.com/config-file.schema.json' }
-  );
-  change(json);
-  const file = input.configFile ?? path.join(input.cwd, 'chromatic.config.json');
-  const previous = existsSync(file) ? readFileSync(file, 'utf8') : undefined;
-  return { file, content: formatJson(json, previous) };
-}
-
-/**
- * Edits that save a token in .env next to where Chromatic runs, and gitignore it.
- *
- * @param input
- * @param token
- *
- * @returns
- */
-export function environmentTokenEdits(input: DoctorInput, token: string) {
-  const environmentFile = path.join(input.cwd, '.env');
-  const text = existsSync(environmentFile) ? readFileSync(environmentFile, 'utf8') : '';
-  const line = `CHROMATIC_PROJECT_TOKEN=${token}`;
-  const environmentContent = /^CHROMATIC_PROJECT_TOKEN=/m.test(text)
-    ? text.replace(/^CHROMATIC_PROJECT_TOKEN=.*$/m, line)
-    : `${text}${text && !text.endsWith('\n') ? '\n' : ''}${line}\n`;
-  const edits = [{ file: environmentFile, content: environmentContent }];
-  if (input.gitRoot) {
-    const ignored = relativeOrDot(input.gitRoot, environmentFile);
-    const gitignore = gitignoreAdditions(input.gitRoot, [
-      ignored === '.env' ? '.env' : `/${ignored}`,
-    ]);
-    if (gitignore.missing.length > 0)
-      edits.push({ file: gitignore.file, content: gitignore.content });
-  }
-  return edits;
 }
 
 /**

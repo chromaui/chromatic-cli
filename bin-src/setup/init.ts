@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import * as clack from '@clack/prompts';
 import { execa } from 'execa';
+import JSON5 from 'json5';
 import meow from 'meow';
 
 import { meowImportMeta } from '../../node-src/lib/meowImportMeta';
@@ -10,12 +11,10 @@ import pkg from '../../package.json';
 import { collectChecks } from '../doctor';
 import { SubcommandFailure } from '../subcommandFailure';
 import type { Check } from './checks';
+import { detectCi, findChromaticRuns, runsFor } from './ci';
 import { ciSnippet, githubWorkflow } from './ciTemplates';
 import {
-  chromaticRunsFor,
   CI_PROVIDERS,
-  describeProject,
-  detectCi,
   detectPackageManager,
   findProjects,
   Framework,
@@ -23,6 +22,7 @@ import {
   PACKAGE_MANAGER_COMMANDS,
   Project,
 } from './detect';
+import { pickProject, secretNameFor } from './project';
 import { applyFixes, printChecks, summarize } from './report';
 import {
   answered,
@@ -62,78 +62,85 @@ const GITIGNORE_ENTRIES = [
   'chromatic-diagnostics.json',
 ];
 
-async function pickProject(session: Session, projects: Project[]): Promise<Project> {
-  const { flags, interactive } = session;
-  let candidates = projects;
-  if (flags.framework) candidates = candidates.filter((p) => p.framework === flags.framework);
-  if (flags.project) {
-    const wanted = path.resolve(process.cwd(), flags.project);
-    candidates = candidates.filter((p) => p.directory === wanted);
+/**
+ * The config file init edits: the one the main command reads, or a new chromatic.config.json.
+ *
+ * @param directory The project's directory.
+ *
+ * @returns The file, its text, and its parsed JSON, which is undefined when init mustn't rewrite it.
+ */
+function existingConfig(directory: string) {
+  const file =
+    ['chromatic.config.json', 'chromatic.config.jsonc', 'chromatic.config.json5']
+      .map((name) => path.join(directory, name))
+      .find((candidate) => existsSync(candidate)) ?? path.join(directory, 'chromatic.config.json');
+  if (!existsSync(file)) return { file, json: {} };
+  const previous = readFileSync(file, 'utf8');
+  let parsed: Record<string, any> | undefined;
+  try {
+    parsed = JSON5.parse<Record<string, any>>(previous);
+  } catch {
+    // The user's to fix; doctor reports it.
   }
-  if (candidates.length === 0) {
-    clack.log.error(
-      projects.length === 0
-        ? 'No Storybook, Playwright, Cypress or Vitest setup found in this repository.'
-        : `None of the setups found match ${[flags.project, flags.framework].filter(Boolean).join(' and ')}.`
-    );
-    clack.log.info(
-      `Set up Storybook first with ${color.cta('npm create storybook@latest')}, then run this again.`
-    );
-    throw new SubcommandFailure('Nothing to set up', { exitCode: 1 });
-  }
+  // Rewriting JSONC or JSON5 as JSON would drop the comments, so only plain JSON is editable.
+  const editable = file.endsWith('.json') && parsed !== undefined && isPlainJson(previous);
+  return { file, previous, parsed, json: editable ? parsed : undefined };
+}
 
-  const name = (p: Project) => (p.relative === '.' ? 'the repository root' : p.relative);
-  const label = (p: Project) => `${name(p)} ${color.muted(`· ${describeProject(p)}`)}`;
-  const kind = candidates.every((p) => p.framework === 'storybook') ? 'Storybooks' : 'test setups';
-  if (candidates.length === 1) {
-    clack.log.info(`Found ${label(candidates[0])}`);
-    return candidates[0];
+function isPlainJson(text: string) {
+  try {
+    JSON.parse(text);
+    return true;
+  } catch {
+    return false;
   }
+}
 
-  // Prefer the one in or above where init was run.
-  const cwd = process.cwd();
-  const here = candidates.find(
-    (p) => cwd === p.directory || cwd.startsWith(`${p.directory}${path.sep}`)
-  );
-  if (!interactive) {
-    if (here) {
-      clack.log.info(`Found ${candidates.length} ${kind}; using ${label(here)}, where init ran`);
-      return here;
-    }
-    clack.log.error(
-      `Found ${candidates.length} ${kind}:\n${candidates.map((p) => label(p)).join('\n')}`
+const describe = (keys: string[], values: Record<string, any>) =>
+  keys.map((key) => `"${key}": ${JSON.stringify(values[key])}`).join(', ');
+
+function explainUnedited(
+  file: string,
+  parsed: Record<string, any> | undefined,
+  wanted: Record<string, any>
+) {
+  const missing = Object.keys(wanted).filter((key) => parsed?.[key] === undefined);
+  if (!parsed) {
+    clack.log.warn(
+      `${file} doesn't parse, so init left it as it is. Run ${color.cta('npx chromatic doctor')} to see why.`
     );
-    clack.log.info(`Pick one with ${color.cta('--project <dir>')}, or run init from inside it.`);
-    throw new SubcommandFailure('More than one project to set up', { exitCode: 1 });
+  } else if (missing.length > 0) {
+    clack.log.warn(
+      `Add ${describe(missing, wanted)} to ${file}. init only edits plain JSON, so it left the file as it is.`
+    );
+  } else {
+    clack.log.success(`${file} already has what Chromatic needs`);
   }
-  return answered(
-    await clack.select({
-      message: `Found ${candidates.length} ${kind}. Which one should this Chromatic project test?`,
-      initialValue: here ?? candidates[0],
-      // Description in the label, not a hint: Clack shows hints only on the highlighted option.
-      options: candidates.map((p) => ({ value: p, label: label(p) })),
-    })
-  );
 }
 
 function configStep(session: Session, project: Project) {
   const { writer } = session;
-  const file = path.join(project.directory, 'chromatic.config.json');
-  const previous = existsSync(file) ? readFileSync(file, 'utf8') : undefined;
-  const existing = previous ? JSON.parse(previous) : {};
+  const { file, previous, parsed, json: existing } = existingConfig(project.directory);
+  // TurboSnap works with Storybook and Vitest, not with Playwright or Cypress (see the docs FAQ).
+  const turboSnap = !['playwright', 'cypress'].includes(project.framework);
+  const wanted: Record<string, any> = {
+    ...(turboSnap && { onlyChanged: true }),
+    ...(project.framework !== 'storybook' && { [project.framework]: true }),
+  };
+  if (!existing) {
+    explainUnedited(writer.display(file), parsed, wanted);
+    return;
+  }
   const next: Record<string, any> = {
     $schema: 'https://www.chromatic.com/config-file.schema.json',
     ...existing,
   };
-  // TurboSnap works with Storybook and Vitest, not with Playwright or Cypress (see the docs FAQ).
-  const turboSnap = !['playwright', 'cypress'].includes(project.framework);
-  if (next.onlyChanged === undefined && turboSnap) next.onlyChanged = true;
-  if (project.framework !== 'storybook') next[project.framework] = true;
+  for (const [key, value] of Object.entries(wanted)) next[key] ??= value;
   const changed = writer.write(file, formatJson(next, previous));
   const added = Object.keys(next).filter((key) => key !== '$schema' && !(key in existing));
   clack.log.success(
     changed
-      ? `${writer.say(previous ? 'Updated' : 'Wrote', previous ? 'update' : 'write')} ${writer.display(file)} ${color.muted(`(${added.map((k) => `${k}: ${JSON.stringify(next[k])}`).join(', ')})`)}`
+      ? `${writer.say(previous ? 'Updated' : 'Wrote', previous ? 'update' : 'write')} ${writer.display(file)} ${color.muted(`(${describe(added, next)})`)}`
       : `${writer.display(file)} already has what Chromatic needs`
   );
 }
@@ -225,24 +232,26 @@ async function ciStep(
 ) {
   const { gitRoot, flags, interactive, writer } = session;
   if (flags.skipCi) return [];
-  const detected = detectCi(gitRoot, listRepoFiles(gitRoot));
+  const files = listRepoFiles(gitRoot);
+  const detected = detectCi(files);
+  const allRuns = findChromaticRuns(gitRoot, files);
   const workingDirectory = relativeOrDot(gitRoot, project.directory);
   const hint = (d: (typeof detected)[number]) => {
     if (d.files.length === 0) return undefined;
     const shown =
       d.files.length > 3 ? [...d.files.slice(0, 3), `+${d.files.length - 3} more`] : d.files;
     // A file that runs Chromatic for another package in this repo doesn't count as set up here.
-    return d.chromaticFiles.length > 0
+    return allRuns.some((run) => run.provider.id === d.provider.id)
       ? `found ${shown.join(', ')} (Chromatic runs there for another project)`
       : `found ${shown.join(', ')}`;
   };
 
   // Chromatic should run from one CI per project: a second one builds the same commits again.
-  const existing = chromaticRunsFor(detected, gitRoot, workingDirectory);
+  const existing = runsFor(allRuns, workingDirectory);
   if (existing.length > 0) {
     clack.log.info(
       `Chromatic already runs for ${workingDirectory === '.' ? 'this project' : workingDirectory} in ${existing
-        .map((r) => `${r.provider.name} (${r.file})`)
+        .map((r) => `${r.provider.name} (${r.file}, job ${r.job})`)
         .join(', ')}. Skipped CI setup.`
     );
     return [];
@@ -291,8 +300,11 @@ async function ciStep(
   const providers = [...CI_PROVIDERS, OTHER_CI].filter((p) => p.id === chosen);
   for (const provider of providers) {
     if (provider.id === 'github') {
+      // The full path, like the secret, so packages/ui and apps/ui get their own workflows.
       const name =
-        workingDirectory === '.' ? 'chromatic' : `chromatic-${path.basename(project.directory)}`;
+        workingDirectory === '.'
+          ? 'chromatic'
+          : `chromatic-${workingDirectory.toLowerCase().replaceAll(/[^a-z0-9]+/g, '-')}`;
       const file = [...new Set(['chromatic', name])]
         .map((base) => path.join(gitRoot, '.github', 'workflows', `${base}.yml`))
         .find((candidate) => !existsSync(candidate));
@@ -374,14 +386,7 @@ export async function main(argv: string[]) {
   // 2. Detect
   const projects = findProjects(gitRoot, listRepoFiles(gitRoot));
   const project = await pickProject(session, projects);
-  // Each Storybook is its own Chromatic project with its own token, so each CI job needs its own
-  // secret. Name it after the package, as the docs' monorepo example does.
-  if (projects.length > 1 && project.relative !== '.') {
-    session.secretName = `CHROMATIC_PROJECT_TOKEN_${path
-      .basename(project.directory)
-      .toUpperCase()
-      .replaceAll(/[^A-Z0-9]+/g, '_')}`;
-  }
+  session.secretName = secretNameFor(gitRoot, projects, project);
 
   // 3. Token, 4. config file, 5. package.json and one install
   await tokenStep(session, project);
@@ -414,7 +419,7 @@ export async function main(argv: string[]) {
       checks.filter(
         (c) => c.status !== 'pass' && !(pasting && c.title.startsWith('No CI runs Chromatic'))
       );
-    const recheck = () => collectChecks(project.directory);
+    const recheck = () => collectChecks(project.directory, { framework: project.framework });
     let checks = await recheck();
     clack.log.step(`Checked the setup: ${summarize(checks)}`);
     printChecks(problemsIn(checks));

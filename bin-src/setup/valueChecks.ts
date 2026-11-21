@@ -1,18 +1,19 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 
-import type { Check, DoctorInput } from './checks';
+import { findBuildScriptName } from '../../node-src/lib/getOptions';
+import type { Check } from './checks';
+import { countMatches, matchesBranch } from './checks';
+import { findChromaticRuns, runsFor } from './ci';
 import {
-  configEdit,
-  countMatches,
+  configFix,
+  DoctorInput,
   environmentTokenEdits,
-  matchesBranch,
   storybookConfigCandidates,
-} from './checks';
-import { chromaticRunsFor, detectCi } from './detect';
+} from './doctorInput';
 import { isTracked, relativeOrDot } from './shared';
 
-const ONLY_CHANGED_FLAG = /--only-changed\b(?!=false)/;
+const ONLY_CHANGED_FLAG = /--only-changed(?!=false)(?=[\s=]|$)/;
 
 /**
  * Finds where TurboSnap is turned on outside the config file: the package's chromatic script, or a
@@ -29,13 +30,11 @@ function onlyChangedElsewhere(input: DoctorInput) {
   );
   if (script) return `the "${script}" script`;
   if (!input.gitRoot) return undefined;
-  const gitRoot = input.gitRoot;
-  const ci = detectCi(gitRoot, input.files).filter((found) => found.chromaticFiles.length > 0);
-  const run = chromaticRunsFor(ci, gitRoot, relativeOrDot(gitRoot, input.cwd)).find(({ file }) => {
-    const text = readFileSync(path.join(gitRoot, file), 'utf8').replaceAll(/(^|\s)#.*$/gm, '$1');
-    return /onlyChanged:\s*["']?true\b/.test(text) || ONLY_CHANGED_FLAG.test(text);
-  });
-  return run?.file;
+  const run = runsFor(
+    findChromaticRuns(input.gitRoot, input.files),
+    relativeOrDot(input.gitRoot, input.cwd)
+  ).find((r) => r.onlyChanged);
+  return run && `${run.file} (${run.job})`;
 }
 
 // eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
@@ -50,12 +49,9 @@ function onlyChangedChecks(input: DoctorInput): Check[] {
         status: 'warn',
         title: `onlyChanged has no effect on ${playwright ? 'Playwright' : 'Cypress'} tests`,
         detail: 'TurboSnap only works with Storybook and Vitest.',
-        fix: input.configKeys.has('onlyChanged')
-          ? {
-              summary: 'Remove onlyChanged from the config file',
-              edits: [configEdit(input, (json) => delete json.onlyChanged)],
-            }
-          : undefined,
+        fix: configFix(input, 'onlyChanged', 'Remove onlyChanged from the config file', (json) => {
+          delete json.onlyChanged;
+        }),
       },
     ];
   }
@@ -77,10 +73,15 @@ function onlyChangedChecks(input: DoctorInput): Check[] {
         // Leave an explicit false alone; that's a choice, not a gap.
         fix:
           onlyChanged === undefined
-            ? {
-                summary: 'Turn on TurboSnap with "onlyChanged": true',
-                edits: [configEdit(input, (json) => (json.onlyChanged = true))],
-              }
+            ? configFix(
+                input,
+                'onlyChanged',
+                'Turn on TurboSnap with "onlyChanged": true',
+                (json) => {
+                  json.onlyChanged = true;
+                },
+                { adds: true }
+              )
             : undefined,
       },
     ];
@@ -88,19 +89,20 @@ function onlyChangedChecks(input: DoctorInput): Check[] {
   if (typeof onlyChanged === 'string') {
     const trimmed = onlyChanged.trim().replace(/,$/, '');
     if (['true', 'false'].includes(trimmed)) {
-      const fromFile = input.configKeys.has('onlyChanged');
       return [
         {
           group: 'Values',
           status: 'fail',
           title: `onlyChanged is the text "${onlyChanged}", not ${trimmed}`,
           detail: `Chromatic reads it as a branch name, so TurboSnap only runs on a branch called "${onlyChanged}".`,
-          fix: fromFile
-            ? {
-                summary: `Set "onlyChanged": ${trimmed} in the config file`,
-                edits: [configEdit(input, (json) => (json.onlyChanged = trimmed === 'true'))],
-              }
-            : undefined,
+          fix: configFix(
+            input,
+            'onlyChanged',
+            `Set "onlyChanged": ${trimmed} in the config file`,
+            (json) => {
+              json.onlyChanged = trimmed === 'true';
+            }
+          ),
         },
       ];
     }
@@ -120,10 +122,9 @@ function onlyChangedChecks(input: DoctorInput): Check[] {
 
 // eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
 function configDirectoryChecks(input: DoctorInput): Check[] {
-  const { cwd, gitRoot, options, configKeys } = input;
+  const { cwd, gitRoot, options } = input;
   const value = options.storybookConfigDir;
   if (value === undefined) return [];
-  const fromFile = configKeys.has('storybookConfigDir');
   const normalized = value.replace(/^\.\//, '').replace(/\/$/, '');
 
   if (normalized === '.storybook' && existsSync(path.join(cwd, '.storybook'))) {
@@ -133,12 +134,14 @@ function configDirectoryChecks(input: DoctorInput): Check[] {
         status: 'warn',
         title: 'storybookConfigDir repeats the default',
         detail: '.storybook is already where Chromatic looks.',
-        fix: fromFile
-          ? {
-              summary: 'Remove storybookConfigDir from the config file',
-              edits: [configEdit(input, (json) => delete json.storybookConfigDir)],
-            }
-          : undefined,
+        fix: configFix(
+          input,
+          'storybookConfigDir',
+          'Remove storybookConfigDir from the config file',
+          (json) => {
+            delete json.storybookConfigDir;
+          }
+        ),
       },
     ];
   }
@@ -154,17 +157,20 @@ function configDirectoryChecks(input: DoctorInput): Check[] {
       : undefined;
   const rebasedExists = rebased !== undefined && existsSync(path.join(cwd, rebased));
   let fix: Check['fix'];
-  if (fromFile && rebasedExists) {
+  if (rebasedExists) {
     fix =
       rebased === '.storybook'
-        ? {
-            summary: 'Remove storybookConfigDir (the default is right)',
-            edits: [configEdit(input, (json) => delete json.storybookConfigDir)],
-          }
-        : {
-            summary: `Set storybookConfigDir to ${rebased}`,
-            edits: [configEdit(input, (json) => (json.storybookConfigDir = rebased))],
-          };
+        ? configFix(
+            input,
+            'storybookConfigDir',
+            'Remove storybookConfigDir (the default is right)',
+            (json) => {
+              delete json.storybookConfigDir;
+            }
+          )
+        : configFix(input, 'storybookConfigDir', `Set storybookConfigDir to ${rebased}`, (json) => {
+            json.storybookConfigDir = rebased;
+          });
   }
   return [
     {
@@ -180,10 +186,9 @@ function configDirectoryChecks(input: DoctorInput): Check[] {
 }
 
 function baseDirectoryChecks(input: DoctorInput): Check[] {
-  const { cwd, gitRoot, options, configKeys } = input;
+  const { cwd, gitRoot, options } = input;
   const value = options.storybookBaseDir;
   if (value === undefined || !gitRoot) return [];
-  const fromFile = configKeys.has('storybookBaseDir');
   const target = path.resolve(gitRoot, value);
   if (!existsSync(target)) {
     return [
@@ -202,12 +207,14 @@ function baseDirectoryChecks(input: DoctorInput): Check[] {
         status: 'warn',
         title: 'storybookBaseDir repeats the default',
         detail: 'Chromatic already uses the directory it runs from.',
-        fix: fromFile
-          ? {
-              summary: 'Remove storybookBaseDir from the config file',
-              edits: [configEdit(input, (json) => delete json.storybookBaseDir)],
-            }
-          : undefined,
+        fix: configFix(
+          input,
+          'storybookBaseDir',
+          'Remove storybookBaseDir from the config file',
+          (json) => {
+            delete json.storybookBaseDir;
+          }
+        ),
       },
     ];
   }
@@ -215,9 +222,9 @@ function baseDirectoryChecks(input: DoctorInput): Check[] {
 }
 
 function buildDirectoryChecks(input: DoctorInput): Check[] {
-  const { options, packageJson, configKeys } = input;
+  const { options, packageJson } = input;
   if (!options.storybookBuildDir) return [];
-  const scriptName = options.buildScriptName ?? 'build-storybook';
+  const scriptName = findBuildScriptName(packageJson?.scripts, options.buildScriptName);
   const canBuild = !!packageJson?.scripts?.[scriptName];
   if (!options.onlyChanged || !canBuild) return [];
   return [
@@ -226,12 +233,14 @@ function buildDirectoryChecks(input: DoctorInput): Check[] {
       status: 'warn',
       title: 'storybookBuildDir stops Chromatic building Storybook',
       detail: `With TurboSnap on, a stale or stats-less build can hide changes. The "${scriptName}" script is available instead.`,
-      fix: configKeys.has('storybookBuildDir')
-        ? {
-            summary: 'Remove storybookBuildDir so Chromatic builds with stats',
-            edits: [configEdit(input, (json) => delete json.storybookBuildDir)],
-          }
-        : undefined,
+      fix: configFix(
+        input,
+        'storybookBuildDir',
+        'Remove storybookBuildDir so Chromatic builds with stats',
+        (json) => {
+          delete json.storybookBuildDir;
+        }
+      ),
     },
   ];
 }
@@ -262,23 +271,34 @@ function globChecks(input: DoctorInput): Check[] {
         status: 'warn',
         title: `${key} ${glob} matches no files`,
         detail: `Globs are matched from the repository root.${suggestion ? ` ${suggestion} matches ${countMatches(files, suggestion)}.` : ''}`,
-        fix:
-          suggestion && input.configKeys.has(key)
-            ? {
-                summary: `Change ${key} ${glob} to ${suggestion}`,
-                edits: [
-                  configEdit(
-                    input,
-                    (json) =>
-                      (json[key] = json[key].map((g: string) => (g === glob ? suggestion : g)))
-                  ),
-                ],
-              }
-            : undefined,
+        fix: suggestion
+          ? configFix(input, key, `Change ${key} ${glob} to ${suggestion}`, (json) => {
+              json[key] = json[key].map((g: string) => (g === glob ? suggestion : g));
+            })
+          : undefined,
       });
     }
   }
   return checks;
+}
+
+function moveTokenFix(input: DoctorInput) {
+  // A tracked .env gets committed too, so only move the token to an untracked one.
+  if (isTracked(path.join(input.cwd, '.env'))) return undefined;
+  const removal = configFix(
+    input,
+    'projectToken',
+    'Move the token to a gitignored .env and remove it from the config file',
+    (json) => {
+      delete json.projectToken;
+    }
+  );
+  return (
+    removal && {
+      ...removal,
+      edits: [...removal.edits, ...environmentTokenEdits(input, input.configJson?.projectToken)],
+    }
+  );
 }
 
 function tokenInConfigChecks(input: DoctorInput): Check[] {
@@ -290,16 +310,7 @@ function tokenInConfigChecks(input: DoctorInput): Check[] {
       title: 'The project token is in the config file',
       detail:
         'Anyone who can read the repository can publish builds. Keep it in CHROMATIC_PROJECT_TOKEN.',
-      // A tracked .env gets committed too, so only move the token to an untracked one.
-      fix: isTracked(path.join(input.cwd, '.env'))
-        ? undefined
-        : {
-            summary: 'Move the token to a gitignored .env and remove it from the config file',
-            edits: [
-              configEdit(input, (json) => delete json.projectToken),
-              ...environmentTokenEdits(input, input.configJson?.projectToken),
-            ],
-          },
+      fix: moveTokenFix(input),
     },
   ];
 }

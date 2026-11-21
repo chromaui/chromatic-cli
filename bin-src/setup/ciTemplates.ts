@@ -36,7 +36,8 @@ export function githubWorkflow({
 }: CiTemplateInput) {
   const pm = PACKAGE_MANAGER_COMMANDS[packageManager];
   const lines = [
-    'name: Chromatic',
+    // One workflow per project in a monorepo, so name each after its folder.
+    workingDir === '.' ? 'name: Chromatic' : `name: Chromatic (${workingDir})`,
     '',
     '# Runs on every push. Chromatic compares each commit with its git ancestors,',
     "# so pull_request triggers (which test a merge commit) aren't recommended.",

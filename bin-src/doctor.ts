@@ -5,11 +5,15 @@ import * as clack from '@clack/prompts';
 import meow from 'meow';
 
 import { meowImportMeta } from '../node-src/lib/meowImportMeta';
+import parseArguments from '../node-src/lib/parseArguments';
+import type { Flags } from '../node-src/types';
 import pkg from '../package.json';
-import { Check, CheckedOptions, loadDoctorInput, runChecks } from './setup/checks';
-import { chromaticRunsFor, describeProject, detectCi, findProjects, Project } from './setup/detect';
+import { Check, runChecks } from './setup/checks';
+import { findChromaticRuns, runsFor } from './setup/ci';
+import { describeProject, findProjects, Framework, Project } from './setup/detect';
+import { loadDoctorInput } from './setup/doctorInput';
 import { applyFixes, printChecks, summarize } from './setup/report';
-import { color, git, listRepoFiles, relativeOrDot } from './setup/shared';
+import { color, git, listRepoFiles, readJson, relativeOrDot } from './setup/shared';
 import { SubcommandFailure } from './subcommandFailure';
 
 const CONFIG_FILES = ['chromatic.config.json', 'chromatic.config.jsonc', 'chromatic.config.json5'];
@@ -17,32 +21,50 @@ const hasConfigFile = (directory: string) =>
   CONFIG_FILES.some((file) => existsSync(path.join(directory, file)));
 
 /**
- * Loads the config the way a build does and runs every check, without starting a build.
+ * Loads the options the way a build does and runs every check, without starting a build.
  *
  * @param cwd Directory Chromatic runs from.
- * @param flags Options passed on the command line, which win over the config file.
- * @param configFile The --config-file value, if any.
+ * @param input What else the build would know.
+ * @param input.argv Arguments for the main command's parser; flags win over the config file.
+ * @param input.framework The detected framework, for E2E projects that set none in their config.
  *
  * @returns The check results.
  */
-export async function collectChecks(cwd: string, flags: CheckedOptions = {}, configFile?: string) {
+export async function collectChecks(
+  cwd: string,
+  { argv = [], framework }: { argv?: string[]; framework?: Framework } = {}
+) {
   // The config file and package.json are found from the process's directory, as in a build.
   const previous = process.cwd();
   process.chdir(cwd);
   try {
     const gitRoot = git(['rev-parse', '--show-toplevel'], cwd);
-    const { doctorInput, configError } = await loadDoctorInput({
+    const { doctorInput, configError, optionsError } = await loadDoctorInput({
       cwd,
       gitRoot,
       files: gitRoot ? listRepoFiles(gitRoot) : [],
       branch: gitRoot ? git(['rev-parse', '--abbrev-ref', 'HEAD'], cwd) : undefined,
-      flags,
-      configFile,
+      argv,
+      flags: parseArguments(argv).flags,
+      framework,
     });
-    return runChecks(doctorInput, configError);
+    return runChecks(doctorInput, configError, optionsError);
   } finally {
     process.chdir(previous);
   }
+}
+
+/**
+ * Whether a package's scripts run the chromatic CLI.
+ *
+ * @param directory
+ *
+ * @returns
+ */
+function scriptRunsChromatic(directory: string) {
+  const scripts: Record<string, string> =
+    readJson(path.join(directory, 'package.json'))?.scripts ?? {};
+  return Object.values(scripts).some((command) => /(^|[\s;&|])chromatic(\s|$)/.test(command));
 }
 
 /**
@@ -55,11 +77,40 @@ export async function collectChecks(cwd: string, flags: CheckedOptions = {}, con
  *
  * @returns
  */
-// eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
-function chooseTargets(cwd: string, flags: Record<string, any>) {
+/**
+ * Drops --config-file and its value from the arguments.
+ *
+ * @param argv
+ * @param configFile
+ *
+ * @returns
+ */
+function withoutConfigFile(argv: string[], configFile?: string) {
+  if (!configFile) return argv;
+  return argv.filter(
+    (argument, index) =>
+      !/^(--config-file|-c)(=|$)/.test(argument) &&
+      !(argument === configFile && /^(--config-file|-c)$/.test(argv[index - 1] ?? ''))
+  );
+}
+
+// eslint-disable-next-line complexity -- target selection has one branch per way to run doctor
+function chooseTargets(cwd: string, flags: Record<string, any>, mainFlags: Flags) {
   const gitRoot = git(['rev-parse', '--show-toplevel'], cwd);
+  const files = gitRoot ? listRepoFiles(gitRoot) : [];
+  const projects = gitRoot
+    ? findProjects(gitRoot, files).filter(
+        (p, index, all) => all.findIndex((other) => other.directory === p.directory) === index
+      )
+    : [];
   const here = (directory: string) => ({
-    targets: [{ directory, label: gitRoot ? relativeOrDot(gitRoot, directory) : '.' }],
+    targets: [
+      {
+        directory,
+        label: gitRoot ? relativeOrDot(gitRoot, directory) : '.',
+        framework: projects.find((p) => p.directory === directory)?.framework,
+      },
+    ],
     notSetUp: [] as Project[],
   });
 
@@ -70,35 +121,34 @@ function chooseTargets(cwd: string, flags: Record<string, any>) {
     return here(directory);
   }
   const explicit =
-    flags.configFile ||
-    flags.storybookConfigDir ||
-    flags.storybookBaseDir ||
-    flags.storybookBuildDir;
+    mainFlags.configFile ||
+    mainFlags.storybookConfigDir ||
+    mainFlags.storybookBaseDir ||
+    mainFlags.storybookBuildDir?.length;
   if (!gitRoot || explicit || hasConfigFile(cwd) || existsSync(path.join(cwd, '.storybook'))) {
     return here(cwd);
   }
 
-  const files = listRepoFiles(gitRoot);
-  const projects = findProjects(gitRoot, files).filter(
-    (p, index, all) => all.findIndex((other) => other.directory === p.directory) === index
-  );
   // Inside a project's subfolder, such as packages/ui/src: check that project.
   const containing = projects
-    .filter((p) => cwd.startsWith(`${p.directory}${path.sep}`))
+    .filter((p) => cwd === p.directory || cwd.startsWith(`${p.directory}${path.sep}`))
     .sort((a, b) => b.directory.length - a.directory.length)
     .at(0);
   if (containing) return here(containing.directory);
   if (projects.length === 0) return here(cwd);
 
-  const ci = detectCi(gitRoot, files);
+  const runs = findChromaticRuns(gitRoot, files);
   const isSetUp = (p: Project) =>
-    hasConfigFile(p.directory) || chromaticRunsFor(ci, gitRoot, p.relative).length > 0;
+    hasConfigFile(p.directory) ||
+    runsFor(runs, p.relative).length > 0 ||
+    scriptRunsChromatic(p.directory);
   return {
     targets: projects
       .filter((p) => isSetUp(p))
       .map((p) => ({
         directory: p.directory,
         label: `${p.relative} ${color.muted(`· ${describeProject(p)}`)}`,
+        framework: p.framework,
       })),
     notSetUp: projects.filter((p) => !isSetUp(p)),
   };
@@ -120,21 +170,15 @@ export async function main(argv: string[]) {
     option's value matches what's on disk and in git, and the git history, token and CI around it.
     Run it from a project to check that project, or from anywhere else in a monorepo to check
     every project with Chromatic set up.
-    Pass the same options you pass to chromatic; they win over the config file, as in a build.
 
     Options
-      --project <dir>                Check only this project.
-      --fix                          Offer to fix what can be fixed, one change at a time.
-                                     Without a terminal (in CI), fixes are listed, not applied.
-      --yes, -y                      With --fix, apply every fix without asking.
-      --config-file, -c <path>       Config file to check. [chromatic.config.json]
-      --only-changed [branch]        As in a build.
-      --storybook-base-dir <dir>     As in a build.
-      --storybook-config-dir <dir>   As in a build.
-      --storybook-build-dir <dir>    As in a build.
-      --build-script-name <name>     As in a build.
-      --untraced <glob>              As in a build. Repeatable.
-      --externals <glob>             As in a build. Repeatable.
+      --project <dir>     Check only this project.
+      --fix               Offer to fix what can be fixed, one change at a time.
+                          Without a terminal (in CI), fixes are listed, not applied.
+      --yes, -y           With --fix, apply every fix without asking.
+
+    Every option chromatic takes, such as --config-file, --only-changed or --build-command, is
+    read the same way as in a build, and flags win over the config file.
     `,
     {
       importMeta: meowImportMeta,
@@ -143,37 +187,21 @@ export async function main(argv: string[]) {
         project: { type: 'string' },
         fix: { type: 'boolean' },
         yes: { type: 'boolean', shortFlag: 'y' },
-        configFile: { type: 'string', shortFlag: 'c' },
-        onlyChanged: { type: 'string' },
-        storybookBaseDir: { type: 'string' },
-        storybookConfigDir: { type: 'string' },
-        storybookBuildDir: { type: 'string' },
-        buildScriptName: { type: 'string' },
-        untraced: { type: 'string', isMultiple: true },
-        externals: { type: 'string', isMultiple: true },
       },
     }
   );
+  // The main command's parser ignores doctor's own flags, as they're unknown to it.
+  const mainFlags = parseArguments(argv).flags;
 
   const cwd = process.cwd();
   // Prompts only when someone can answer them; in CI a prompt would hold the job forever.
   const interactive = !!process.stdin.isTTY && !!process.stdout.isTTY && !process.env.CI;
-  const options: CheckedOptions = {
-    // Like the main command, a bare --only-changed means true.
-    onlyChanged: flags.onlyChanged === '' ? true : flags.onlyChanged,
-    storybookBaseDir: flags.storybookBaseDir,
-    storybookConfigDir: flags.storybookConfigDir,
-    storybookBuildDir: flags.storybookBuildDir,
-    buildScriptName: flags.buildScriptName,
-    untraced: flags.untraced?.length ? flags.untraced : undefined,
-    externals: flags.externals?.length ? flags.externals : undefined,
-  };
 
   // Same frame title as the main command, with what this command does on the line below.
   clack.intro(`Chromatic CLI v${pkg.version}`);
   clack.log.message(color.muted('doctor · checking your setup without starting a build'));
 
-  const { targets, notSetUp } = chooseTargets(cwd, flags);
+  const { targets, notSetUp } = chooseTargets(cwd, flags, mainFlags);
   const multi = targets.length > 1 || notSetUp.length > 0;
   if (multi) {
     clack.log.info(
@@ -185,12 +213,11 @@ export async function main(argv: string[]) {
   let skippedFixes = false;
   for (const target of targets) {
     if (multi) clack.log.step(color.bold(color.cta(`Project ${target.label}`)));
+    // --config-file names a file relative to where doctor runs, so it only applies there.
+    const targetArgv =
+      target.directory === cwd ? argv : withoutConfigFile(argv, mainFlags.configFile);
     const check = () =>
-      collectChecks(
-        target.directory,
-        options,
-        target.directory === cwd ? flags.configFile : undefined
-      );
+      collectChecks(target.directory, { argv: targetArgv, framework: target.framework });
     let checks = await check();
     printChecks(checks);
 
