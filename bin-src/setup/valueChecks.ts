@@ -16,6 +16,16 @@ import { relativeOrDot, tokenEnvironmentEdits } from './shared';
  *
  * @returns Where it's turned on, such as 'the "chromatic" script', or undefined.
  */
+/**
+ * The CI jobs a reader that understands the provider found running Chromatic from here. Fixes that
+ * change what CI reads rely only on these, not on a command scan's guess.
+ *
+ * @param input What loadDoctorInput read.
+ *
+ * @returns The confirmed runs.
+ */
+const confirmedRuns = (input: DoctorInput) => input.ci.runs.filter((run) => run.confirmed);
+
 function onlyChangedElsewhere(input: DoctorInput) {
   const scripts: Record<string, string> = input.packageJson?.scripts ?? {};
   const script = Object.keys(scripts).find(
@@ -58,11 +68,11 @@ function onlyChangedChecks(input: DoctorInput): Check[] {
         detail:
           onlyChanged === false
             ? '"onlyChanged" is false, so every build captures every story.'
-            : `Nothing turns it on: not the config file, the "chromatic" script, or a CI step. Set "onlyChanged": true to test only the stories your changes affect${input.options.storybookBuildDir ? ', and build Storybook with --stats-json' : ''}.`,
+            : `Nothing turns it on: not the config file, the "chromatic" script, or a CI step. Set "onlyChanged": true to test only the stories your changes affect${input.prebuilt ? ', and build Storybook with --stats-json' : ''}.`,
         // Leave an explicit false alone; that's a choice, not a gap. A prebuilt Storybook may have
         // no stats file, and TurboSnap fails the build without one.
         fix:
-          onlyChanged === undefined && !input.options.storybookBuildDir
+          onlyChanged === undefined && !input.prebuilt
             ? configFix(
                 input,
                 'onlyChanged',
@@ -129,7 +139,7 @@ function configDirectoryChecks(input: DoctorInput): Check[] {
       : undefined;
   const rebasedExists = rebased !== undefined && existsSync(path.join(cwd, rebased));
   // A CI that runs Chromatic from the root, with --config-file, reads the path as it is.
-  const fixable = rebasedExists && input.ci.runs.length > 0;
+  const fixable = rebasedExists && confirmedRuns(input).length > 0;
   return [
     {
       group: 'Values',
@@ -171,7 +181,7 @@ function baseDirectoryChecks(input: DoctorInput): Check[] {
         detail: 'Chromatic already uses the directory it runs from.',
         // Only when CI runs Chromatic from here too; from the root, the value isn't the default.
         fix:
-          input.ci.runs.length > 0
+          confirmedRuns(input).length > 0
             ? configFix(
                 input,
                 'storybookBaseDir',
@@ -254,7 +264,7 @@ function moveTokenFix(input: DoctorInput) {
   const token = input.configJson?.projectToken;
   if (!input.gitRoot || typeof token !== 'string') return {};
   // CI may read the token from this file; removing it before CI has its own would fail its builds.
-  if (!input.ci.runs.some((run) => run.passesToken)) {
+  if (!confirmedRuns(input).some((run) => run.passesToken)) {
     return { reason: 'Give CI the token as CHROMATIC_PROJECT_TOKEN first, then remove it here.' };
   }
   const saved = tokenEnvironmentEdits(input.gitRoot, input.cwd, token);

@@ -22,7 +22,7 @@ export interface Project {
   relative: string;
   packageName?: string;
   storybookVersion?: string;
-  /** Storybook framework package without the @storybook/ prefix, such as react-vite. */
+  /** Storybook framework package without the `@storybook/` prefix, such as react-vite. */
   storybookFramework?: string;
   /** The file that gave the project away, such as packages/ui/.storybook/main.ts. */
   evidence: string;

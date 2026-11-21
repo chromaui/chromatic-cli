@@ -12,7 +12,9 @@ import type { Session } from './token';
  * The projects --project and --framework allow. --framework picks among the setups found; with one
  * setup, or a --project folder detection missed, it overrides what detection decided.
  *
- * @param session The init session, for its flags and repository root.
+ * @param session The init session.
+ * @param session.flags Its flags, for --project and --framework.
+ * @param session.gitRoot The repository root.
  * @param projects Every project detection found.
  *
  * @returns The candidates to pick from.

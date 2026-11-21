@@ -21,10 +21,10 @@ const MARKS: Record<Check['status'], string> = {
 /**
  * Wraps text to a width, so long details stay inside their section's box.
  *
- * @param text
- * @param width
+ * @param text The text to wrap.
+ * @param width The widest a line may be.
  *
- * @returns
+ * @returns The wrapped lines.
  */
 function wrap(text: string, width: number) {
   return text.split('\n').flatMap((line) => {
@@ -45,9 +45,9 @@ function wrap(text: string, width: number) {
 /**
  * Length as shown in the terminal, without color codes.
  *
- * @param text
+ * @param text Text that may hold color codes.
  *
- * @returns
+ * @returns The number of visible characters.
  */
 const visible = (text: string) => stripVTControlCharacters(text).length;
 
@@ -111,10 +111,10 @@ export function summarize(checks: Check[]) {
 /**
  * A short line diff: lines removed in red, lines added in green.
  *
- * @param before
- * @param after
+ * @param before The file's text now.
+ * @param after The file's text after the fix.
  *
- * @returns
+ * @returns The changed lines, colored.
  */
 // eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
 function lineDiff(before: string, after: string) {

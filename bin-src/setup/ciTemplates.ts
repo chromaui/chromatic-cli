@@ -10,6 +10,23 @@ export interface CiTemplateInput {
   secretName: string;
 }
 
+/**
+ * The name for a project's CI job and workflow file, from its secret: chromatic, or
+ * chromatic-packages-ui for a monorepo project, so two projects' jobs don't share a key.
+ *
+ * @param secretName The CI secret holding the project's token.
+ *
+ * @returns The job name.
+ */
+export function ciJobName(secretName: string) {
+  const suffix = secretName.replace(/^CHROMATIC_PROJECT_TOKEN_?/, '');
+  return suffix ? `chromatic-${suffix.toLowerCase().replaceAll('_', '-')}` : 'chromatic';
+}
+
+// Yarn 2+ and pnpm come from Corepack in node images; it's off until enabled.
+const needsCorepack = (packageManager: PackageManager) =>
+  packageManager === 'yarn' || packageManager === 'pnpm';
+
 const E2E_RUN: Partial<Record<Framework, string>> = {
   playwright: 'npx playwright test',
   cypress: 'npx cypress run',
@@ -20,20 +37,12 @@ const E2E_RUN: Partial<Record<Framework, string>> = {
  * The GitHub Actions workflow from the docs, filled in for this project: runs on push, clones the
  * full history, installs with the project's package manager, and runs Chromatic from the package.
  *
- * @param root0
- * @param root0.workingDir
- * @param root0.packageManager
- * @param root0.framework
- * @param root0.secretName
+ * @param input The project's directory, package manager, framework and token secret.
  *
- * @returns
+ * @returns The workflow file's text.
  */
-export function githubWorkflow({
-  workingDir,
-  packageManager,
-  framework,
-  secretName,
-}: CiTemplateInput) {
+export function githubWorkflow(input: CiTemplateInput) {
+  const { workingDir, packageManager, framework, secretName } = input;
   const pm = PACKAGE_MANAGER_COMMANDS[packageManager];
   const lines = [
     // One workflow per project in a monorepo, so name each after its folder.
@@ -57,6 +66,7 @@ export function githubWorkflow({
     '      - uses: actions/setup-node@v7',
     '        with:',
     '          node-version: 24',
+    ...(packageManager === 'yarn' ? ['      - run: corepack enable'] : []),
     '      - name: Install dependencies',
     `        run: ${pm.ciInstall}`,
   ];
@@ -102,6 +112,7 @@ function runLines({ workingDir, packageManager, framework, secretName }: CiTempl
     secretName === 'CHROMATIC_PROJECT_TOKEN' ? '' : `CHROMATIC_PROJECT_TOKEN=$${secretName} `;
   const e2e = E2E_RUN[framework];
   return [
+    ...(needsCorepack(packageManager) ? ['corepack enable'] : []),
     PACKAGE_MANAGER_COMMANDS[packageManager].ciInstall,
     ...(framework === 'playwright'
       ? [inDirectory('npx playwright install --with-deps chromium')]
@@ -114,10 +125,10 @@ function runLines({ workingDir, packageManager, framework, secretName }: CiTempl
 /**
  * A snippet to paste into providers that keep the whole pipeline in one shared file.
  *
- * @param providerId
- * @param input
+ * @param providerId The CI provider, such as gitlab.
+ * @param input The project's directory, package manager, framework and token secret.
  *
- * @returns
+ * @returns The YAML to paste.
  */
 export function ciSnippet(providerId: string, input: CiTemplateInput) {
   const run = runLines(input);
@@ -125,7 +136,7 @@ export function ciSnippet(providerId: string, input: CiTemplateInput) {
     case 'gitlab':
       return [
         '# .gitlab-ci.yml',
-        'chromatic:',
+        `${ciJobName(input.secretName)}:`,
         '  image: node:24',
         '  variables:',
         '    GIT_DEPTH: 0  # full history for baselines',
@@ -135,7 +146,7 @@ export function ciSnippet(providerId: string, input: CiTemplateInput) {
     case 'circleci':
       return [
         '# .circleci/config.yml, under jobs: (add it to a workflow too)',
-        'chromatic:',
+        `${ciJobName(input.secretName)}:`,
         '  docker:',
         '    - image: cimg/node:24.0',
         '  steps:',

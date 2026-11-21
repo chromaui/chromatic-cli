@@ -9,7 +9,7 @@ import parseArguments from '../node-src/lib/parseArguments';
 import type { Flags } from '../node-src/types';
 import pkg from '../package.json';
 import { Check, runChecks } from './setup/checks';
-import { findChromaticRuns, runsFor } from './setup/ci';
+import { readCi, runsFor } from './setup/ci';
 import { describeProject, findProjects, Project } from './setup/detect';
 import { loadDoctorInput } from './setup/doctorInput';
 import { applyFixes, printChecks, summarize } from './setup/report';
@@ -112,7 +112,7 @@ function chooseTargets(cwd: string, flags: Record<string, any>, mainFlags: Flags
   if (containing) return here(containing.directory);
   if (projects.length === 0) return here(cwd);
 
-  const runs = findChromaticRuns(gitRoot, files);
+  const { runs } = readCi(gitRoot, files);
   const isSetUp = (p: Project) =>
     hasConfigFile(p.directory) ||
     runsFor(runs, p.relative).length > 0 ||
@@ -179,7 +179,7 @@ export async function main(argv: string[]) {
   const multi = targets.length > 1 || notSetUp.length > 0;
   if (multi) {
     clack.log.info(
-      `Found ${targets.length + notSetUp.length} projects; checking the ${targets.length} with Chromatic set up.`
+      `Found ${targets.length + notSetUp.length} project${targets.length + notSetUp.length === 1 ? '' : 's'}; checking the ${targets.length} with Chromatic set up.`
     );
   }
 

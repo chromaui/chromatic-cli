@@ -44,7 +44,14 @@ export function answered<T>(value: T): Exclude<T, symbol> {
  */
 export function git(args: string[], cwd: string) {
   try {
-    return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+    // No output limit: ls-files in a large repository passes the 1 MiB default, and a cut-off
+    // list would make every file look absent.
+    return execFileSync('git', args, {
+      cwd,
+      encoding: 'utf8',
+      maxBuffer: Number.POSITIVE_INFINITY,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
       .toString()
       .trim();
   } catch {
@@ -55,9 +62,9 @@ export function git(args: string[], cwd: string) {
 /**
  * Files in the repository that git doesn't ignore, tracked or not, relative to the root.
  *
- * @param gitRoot
+ * @param gitRoot Absolute repository root.
  *
- * @returns
+ * @returns The files, or none when git fails.
  */
 export function listRepoFiles(gitRoot: string) {
   const output = git(['ls-files', '--cached', '--others', '--exclude-standard'], gitRoot);
@@ -216,10 +223,10 @@ export class FileWriter {
   /**
    * Wording for log lines, so a dry run reads "Would write" instead of "Wrote".
    *
-   * @param done
-   * @param wouldDo
+   * @param done What happened, such as "Wrote".
+   * @param wouldDo The same in a dry run, such as "write".
    *
-   * @returns
+   * @returns The wording to log.
    */
   say(done: string, wouldDo: string) {
     return this.dryRun ? `Would ${wouldDo}` : done;
@@ -229,10 +236,10 @@ export class FileWriter {
 /**
  * Adds lines to the repository's .gitignore that aren't already in it.
  *
- * @param gitRoot
- * @param wanted
+ * @param gitRoot Absolute repository root.
+ * @param wanted The lines to add.
  *
- * @returns
+ * @returns The .gitignore's path, the lines it lacked, and its new text.
  */
 export function gitignoreAdditions(gitRoot: string, wanted: string[]) {
   const file = path.join(gitRoot, '.gitignore');
@@ -251,7 +258,8 @@ export function gitignoreAdditions(gitRoot: string, wanted: string[]) {
 }
 
 /**
- * Appends a "# Chromatic" section to a .gitignore, after a blank line.
+ * Appends lines to a .gitignore under a "# Chromatic" heading, or after the heading init added
+ * earlier when it's the file's last section.
  *
  * @param text The file's text.
  * @param lines The lines to add.
@@ -259,6 +267,8 @@ export function gitignoreAdditions(gitRoot: string, wanted: string[]) {
  * @returns The new text.
  */
 function withSection(text: string, lines: string[]) {
-  const separator = text ? `${text.endsWith('\n') ? '' : '\n'}\n` : '';
-  return `${text}${separator}# Chromatic\n${lines.join('\n')}\n`;
+  const ended = text && !text.endsWith('\n') ? `${text}\n` : text;
+  const lastSection = ended.split(/\n\s*\n/).at(-1) ?? '';
+  if (lastSection.startsWith('# Chromatic\n')) return `${ended}${lines.join('\n')}\n`;
+  return `${ended}${ended ? '\n' : ''}# Chromatic\n${lines.join('\n')}\n`;
 }

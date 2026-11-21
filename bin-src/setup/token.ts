@@ -135,14 +135,13 @@ export async function tokenStep(session: Session, project: Project) {
 
   // Only offer to save a token the user typed; one from the environment is already set somewhere.
   if (given) return;
-  const save =
-    !interactive ||
-    answered(
-      await clack.confirm({
-        message: 'Save it in a gitignored .env for local runs?',
-        initialValue: true,
-      })
-    );
+  // Only an interactive run gets here: without a terminal the token came from a flag or the environment.
+  const save = answered(
+    await clack.confirm({
+      message: 'Save it in a gitignored .env for local runs?',
+      initialValue: true,
+    })
+  );
   if (!save) return;
   const saved = tokenEnvironmentEdits(session.gitRoot, project.directory, token);
   if (!saved.edits) {

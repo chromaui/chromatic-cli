@@ -42,6 +42,17 @@ describe('tokenEnvironmentEdits', () => {
     ]);
   });
 
+  it("adds to init's own section instead of starting another", () => {
+    const gitRoot = repoWith({ '.gitignore': 'node_modules\n\n# Chromatic\nchromatic.log\n' });
+
+    const { edits } = tokenEnvironmentEdits(gitRoot, gitRoot, 'chpt_abc123');
+
+    expect(edits?.[1]).toEqual({
+      file: path.join(gitRoot, '.gitignore'),
+      content: 'node_modules\n\n# Chromatic\nchromatic.log\n.env\n',
+    });
+  });
+
   it('only writes .env when git already ignores it, replacing an old token', () => {
     const gitRoot = repoWith({
       '.git/info/exclude': '.env\n',

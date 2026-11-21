@@ -25,6 +25,8 @@ export interface ChromaticRun {
    * one from its settings, which the file doesn't show.
    */
   passesToken: boolean;
+  /** Whether the step uploads a prebuilt Storybook (storybookBuildDir) instead of building one. */
+  prebuilt: boolean;
   /** The CI file with full history turned on for this job, when that can be written safely. */
   fullHistoryFix?: string;
   /**
@@ -45,6 +47,7 @@ export interface DetectedCi {
 const CHROMATIC_COMMAND =
   /(?:^|&&|\|\||;|\||\()\s*(?:[A-Za-z_]\w*=\S*\s+)*(?:npx\s+(?:-y\s+)?|pnpm\s+(?:dlx\s+|exec\s+)?|yarn\s+(?:dlx\s+)?|bunx\s+|bun\s+run\s+|npm\s+(?:run|exec)\s+(?:--\s+)?)?chromatic(?:@[^\s)]+)?(?=\s|$|;|&|\||\))/m;
 export const ONLY_CHANGED_FLAG = /--only-changed(?!=false)(?=[\s=)]|$)/;
+const PREBUILT_FLAG = /(?:^|\s)(?:-d|--storybook-build-dir)(?=[\s=]|$)/;
 const TOKEN_IN_COMMAND = /\bCHROMATIC_PROJECT_TOKEN=|--project-token\b|(?:^|\s)-t\s/;
 
 /**
@@ -143,9 +146,9 @@ function parseCi(raw: string) {
  *
  * @returns One run per directory.
  */
-function perDirectory<T extends { directory: string; onlyChanged: boolean; passesToken: boolean }>(
-  runs: T[]
-) {
+function perDirectory<
+  T extends { directory: string; onlyChanged: boolean; passesToken: boolean; prebuilt: boolean },
+>(runs: T[]) {
   const merged = new Map<string, T>();
   for (const run of runs) {
     const previous = merged.get(run.directory);
@@ -156,6 +159,7 @@ function perDirectory<T extends { directory: string; onlyChanged: boolean; passe
             ...previous,
             onlyChanged: previous.onlyChanged || run.onlyChanged,
             passesToken: previous.passesToken || run.passesToken,
+            prebuilt: previous.prebuilt || run.prebuilt,
           }
         : run
     );
@@ -199,6 +203,7 @@ function githubStepRun(step: any, job: JobDefaults) {
       directory: normalizeDirectory(asText(inputs.workingDir)),
       onlyChanged: inputs.onlyChanged !== undefined && String(inputs.onlyChanged) !== 'false',
       passesToken: passesToken(undefined, inputs, step.env, ...job.environments),
+      prebuilt: inputs.storybookBuildDir !== undefined,
     };
   }
   const command = asText(step?.run);
@@ -212,6 +217,7 @@ function githubStepRun(step: any, job: JobDefaults) {
         directory,
         onlyChanged: ONLY_CHANGED_FLAG.test(command),
         passesToken: passesToken(command, step.env, ...job.environments),
+        prebuilt: PREBUILT_FLAG.test(command),
       }
     : undefined;
 }
@@ -266,7 +272,7 @@ function jobDefaults(workflow: any, definition: any): JobDefaults {
 
 function githubRuns(provider: CiProvider, file: string, raw: string): ChromaticRun[] {
   const workflow = parseCi(raw).toJS() ?? {};
-  const onPullRequest = triggersOnPullRequest(workflow.on ?? workflow.true);
+  const onPullRequest = triggersOnPullRequest(workflow.on);
 
   return Object.entries<any>(workflow.jobs ?? {}).flatMap(([job, definition]) => {
     const steps: any[] = Array.isArray(definition?.steps) ? definition.steps : [];
@@ -354,6 +360,7 @@ function gitlabJobRun(pipeline: Record<string, any>, definition: any) {
     passesToken:
       variable('CHROMATIC_PROJECT_TOKEN') !== undefined ||
       commands.some((command) => passesToken(command)),
+    prebuilt: commands.some((command) => PREBUILT_FLAG.test(command)),
   };
 }
 
@@ -406,6 +413,7 @@ function genericRuns(provider: CiProvider, file: string, raw: string): Chromatic
             directory,
             onlyChanged: ONLY_CHANGED_FLAG.test(value),
             passesToken: passesToken(value),
+            prebuilt: PREBUILT_FLAG.test(value),
           },
         ]
       : [];
@@ -444,26 +452,33 @@ export function readCi(gitRoot: string, files: string[]) {
 }
 
 /**
- * Lists the jobs that run Chromatic, from every CI file that can be read.
+ * The jobs that run Chromatic from one package's directory. A scanned run with no `cd` may set its
+ * directory some other way, such as CircleCI's working_directory, so it counts for every package.
  *
- * @param gitRoot Absolute repository root.
- * @param files Repository files relative to the git root.
- *
- * @returns Each job that runs Chromatic.
- */
-export function findChromaticRuns(gitRoot: string, files: string[]): ChromaticRun[] {
-  return readCi(gitRoot, files).runs;
-}
-
-/**
- * The jobs that run Chromatic from one package's directory.
- *
- * @param runs Results from findChromaticRuns.
+ * @param runs Results from readCi.
  * @param packageDirectory The package's path from the repository root, or '.'.
  *
  * @returns The matching jobs.
  */
 export function runsFor(runs: ChromaticRun[], packageDirectory: string) {
   const wanted = normalizeDirectory(packageDirectory);
-  return runs.filter((run) => run.directory === wanted);
+  return runs.filter(
+    (run) => run.directory === wanted || (!run.confirmed && run.directory === '.')
+  );
+}
+
+/**
+ * Whether Chromatic uploads a prebuilt Storybook instead of building one: in a CI job, or in the
+ * package's own script. Such a build may have no stats file, which TurboSnap needs.
+ *
+ * @param runs The package's runs, from runsFor.
+ * @param scripts The package's scripts.
+ *
+ * @returns True when something passes storybookBuildDir.
+ */
+export function uploadsPrebuilt(runs: ChromaticRun[], scripts: Record<string, string> = {}) {
+  return (
+    runs.some((run) => run.prebuilt) ||
+    Object.values(scripts).some((s) => /\bchromatic\b/.test(s) && PREBUILT_FLAG.test(s))
+  );
 }

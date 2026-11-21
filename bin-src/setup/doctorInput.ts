@@ -16,7 +16,7 @@ import { validateFiles } from '../../node-src/tasks/prepare/validateFiles';
 import type { StorybookInfoDeps } from '../../node-src/tasks/storybookInfo';
 import type { Flags, Options } from '../../node-src/types';
 import type { Fix } from './checks';
-import { ChromaticRun, readCi, runsFor } from './ci';
+import { ChromaticRun, readCi, runsFor, uploadsPrebuilt } from './ci';
 import { formatJson, readJson, relativeOrDot } from './shared';
 
 /** The options doctor checks, merged by the main command's own option handling. */
@@ -46,6 +46,8 @@ export interface DoctorInput {
   buildDirectoryError?: string;
   /** Every CI job that runs Chromatic, the ones that run it from cwd, and files that didn't parse. */
   ci: { all: ChromaticRun[]; runs: ChromaticRun[]; unreadable: string[] };
+  /** Whether a build uploads a prebuilt Storybook, set here, in CI or in the chromatic script. */
+  prebuilt: boolean;
 }
 
 function nearestPackageJson(cwd: string, stopAt?: string) {
@@ -165,6 +167,7 @@ export async function loadDoctorInput(input: {
   const packageJsonPath = nearestPackageJson(cwd, input.gitRoot);
   const packageJson = packageJsonPath ? readJson(packageJsonPath) : undefined;
   const ci = input.gitRoot ? readCi(input.gitRoot, input.files) : { runs: [], unreadable: [] };
+  const runs = input.gitRoot ? runsFor(ci.runs, relativeOrDot(input.gitRoot, cwd)) : [];
 
   return {
     configError,
@@ -182,11 +185,8 @@ export async function loadDoctorInput(input: {
       options,
       packageJsonPath,
       packageJson,
-      ci: {
-        all: ci.runs,
-        runs: input.gitRoot ? runsFor(ci.runs, relativeOrDot(input.gitRoot, cwd)) : [],
-        unreadable: ci.unreadable,
-      },
+      ci: { all: ci.runs, runs, unreadable: ci.unreadable },
+      prebuilt: !!options.storybookBuildDir || uploadsPrebuilt(runs, packageJson?.scripts),
       ...(await resolveStorybook(input.gitRoot, options, packageJson)),
     },
   };
@@ -261,10 +261,10 @@ export function configFix(
 /**
  * Rewrites the config file with a change, for fixes.
  *
- * @param input
- * @param change
+ * @param input What loadDoctorInput read.
+ * @param change Edits the parsed config in place.
  *
- * @returns
+ * @returns The config file's path and new text.
  */
 function configEdit(input: DoctorInput, change: (json: Record<string, any>) => void) {
   // A new config file starts the way init writes one, with the schema for editor hints.

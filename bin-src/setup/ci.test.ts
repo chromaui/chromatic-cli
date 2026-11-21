@@ -5,7 +5,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
-import { findChromaticRuns, readCi } from './ci';
+import { readCi, runsFor } from './ci';
 import { ciSnippet } from './ciTemplates';
 
 let root: string | undefined;
@@ -25,20 +25,19 @@ function repoWith(files: Record<string, string>) {
 }
 
 function runsIn(files: Record<string, string>) {
-  return findChromaticRuns(repoWith(files), Object.keys(files));
+  return readCi(repoWith(files), Object.keys(files)).runs;
 }
 
-describe('findChromaticRuns', () => {
-  it('ignores a comment that mentions chromatic', () => {
+describe('readCi', () => {
+  it('ignores a command that only mentions chromatic', () => {
     const runs = runsIn({
       '.github/workflows/ci.yml': `on: push
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      # TODO: run npx chromatic here
       - uses: actions/checkout@v4
-      - run: npm test
+      - run: echo "npx chromatic runs in another workflow"
 `,
     });
 
@@ -78,6 +77,7 @@ jobs:
       onPullRequest: true,
       onlyChanged: true,
       passesToken: false,
+      prebuilt: false,
     });
     const fixed = run.fullHistoryFix ?? '';
     expect(parse(fixed).jobs.visual.steps[0].with).toEqual({ 'fetch-depth': 0 });
@@ -100,6 +100,7 @@ jobs:
           workingDir: ./apps/web/
           onlyChanged: false
           projectToken: \${{ secrets.TOKEN }}
+          storybookBuildDir: storybook-static
 `,
     });
 
@@ -108,6 +109,7 @@ jobs:
       fullHistory: true,
       onlyChanged: false,
       passesToken: true,
+      prebuilt: true,
     });
     expect(run.fullHistoryFix).toBeUndefined();
   });
@@ -123,7 +125,7 @@ jobs:
       - if: github.ref == 'refs/heads/main'
         run: CHROMATIC_PROJECT_TOKEN=$TOKEN npx chromatic --auto-accept-changes
       - if: github.ref != 'refs/heads/main'
-        run: (CHROMATIC_PROJECT_TOKEN=$TOKEN npx chromatic --only-changed)
+        run: (CHROMATIC_PROJECT_TOKEN=$TOKEN npx chromatic --only-changed -d out)
 `,
     });
 
@@ -133,6 +135,7 @@ jobs:
       directory: '.',
       onlyChanged: true,
       passesToken: true,
+      prebuilt: true,
     });
   });
 
@@ -191,6 +194,27 @@ last-parent-wins:
       { job: 'last-parent-wins', directory: 'packages/ui', fullHistory: false, onlyChanged: true },
     ]);
   });
+  it('counts a scanned run with no cd for every project, but a parsed job only for its own', () => {
+    const runs = runsIn({
+      '.circleci/config.yml': `jobs:
+  visual:
+    working_directory: ~/project/packages/ui
+    steps:
+      - run: npx chromatic
+`,
+      '.github/workflows/ci.yml': `on: push
+jobs:
+  root:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npx chromatic
+`,
+    });
+
+    expect(runsFor(runs, 'packages/ui')).toMatchObject([{ job: 'visual', confirmed: false }]);
+    expect(runsFor(runs, '.')).toHaveLength(2);
+  });
+
   it('reports a shallow checkout reached through an alias, without a fix', () => {
     const [run] = runsIn({
       '.github/workflows/ci.yml': `on: push
@@ -223,8 +247,15 @@ jobs:
     const runs = runsIn({ '.gitlab-ci.yml': snippet });
 
     expect(runs).toMatchObject([
-      { job: 'chromatic', directory: 'packages/ui', fullHistory: true, passesToken: true },
+      {
+        job: 'chromatic-packages-ui',
+        directory: 'packages/ui',
+        fullHistory: true,
+        passesToken: true,
+      },
     ]);
+    // pnpm comes from Corepack in the node image.
+    expect(snippet).toMatch(/^ {4}- corepack enable$/m);
     // Each line runs in its own subshell, so no cd carries over to the next line.
     expect(snippet).not.toMatch(/^\s*- cd /m);
   });

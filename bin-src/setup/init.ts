@@ -11,8 +11,8 @@ import pkg from '../../package.json';
 import { collectChecks } from '../doctor';
 import { SubcommandFailure } from '../subcommandFailure';
 import type { Check } from './checks';
-import { detectCi, findChromaticRuns, runsFor } from './ci';
-import { ciSnippet, githubWorkflow } from './ciTemplates';
+import { detectCi, readCi, runsFor, uploadsPrebuilt } from './ci';
+import { ciJobName, ciSnippet, githubWorkflow } from './ciTemplates';
 import {
   CI_PROVIDERS,
   detectPackageManager,
@@ -32,6 +32,7 @@ import {
   git,
   gitignoreAdditions,
   listRepoFiles,
+  readJson,
   relativeOrDot,
 } from './shared';
 import { Session, tokenStep } from './token';
@@ -121,21 +122,33 @@ function explainUnedited(
 /**
  * Whether init should turn TurboSnap on. It works with Storybook and Vitest, not with Playwright or
  * Cypress (see the docs FAQ), and it fails a build without a stats file, which a prebuilt
- * Storybook may not have.
+ * Storybook may not have, whether the config, a CI job or the chromatic script sets it.
  *
- * @param framework The project's framework.
+ * @param session The init session, for the repository root.
+ * @param project The project being set up.
  * @param config The existing config file, if any.
  *
  * @returns True when onlyChanged belongs in the config.
  */
-function turboSnapFits(framework: string, config: Record<string, any> | undefined) {
-  return !['playwright', 'cypress'].includes(framework) && !config?.storybookBuildDir;
+function turboSnapFits(
+  session: Session,
+  project: Project,
+  config: Record<string, any> | undefined
+) {
+  if (['playwright', 'cypress'].includes(project.framework) || config?.storybookBuildDir)
+    return false;
+  const { gitRoot } = session;
+  const runs = runsFor(
+    readCi(gitRoot, listRepoFiles(gitRoot)).runs,
+    relativeOrDot(gitRoot, project.directory)
+  );
+  return !uploadsPrebuilt(runs, readJson(path.join(project.directory, 'package.json'))?.scripts);
 }
 
 function configStep(session: Session, project: Project) {
   const { writer } = session;
   const { file, previous, parsed, json: existing } = existingConfig(project.directory);
-  const turboSnap = turboSnapFits(project.framework, parsed);
+  const turboSnap = turboSnapFits(session, project, parsed);
   const wanted: Record<string, any> = {
     ...(turboSnap && { onlyChanged: true }),
     ...(project.framework !== 'storybook' && { [project.framework]: true }),
@@ -153,7 +166,7 @@ function configStep(session: Session, project: Project) {
   const added = Object.keys(next).filter((key) => key !== '$schema' && !(key in existing));
   clack.log.success(
     changed
-      ? `${writer.say(previous ? 'Updated' : 'Wrote', previous ? 'update' : 'write')} ${writer.display(file)} ${color.muted(`(${describe(added, next)})`)}`
+      ? `${writer.say(previous ? 'Updated' : 'Wrote', previous ? 'update' : 'write')} ${writer.display(file)}${added.length > 0 ? ` ${color.muted(`(${describe(added, next)})`)}` : ''}`
       : `${writer.display(file)} already has what Chromatic needs`
   );
 }
@@ -246,7 +259,7 @@ async function ciStep(
   if (flags.skipCi) return [];
   const files = listRepoFiles(gitRoot);
   const detected = detectCi(files);
-  const allRuns = findChromaticRuns(gitRoot, files);
+  const allRuns = readCi(gitRoot, files).runs;
   const workingDirectory = relativeOrDot(gitRoot, project.directory);
   const hint = (d: (typeof detected)[number]) => {
     if (d.files.length === 0) return undefined;
@@ -313,8 +326,7 @@ async function ciStep(
   for (const provider of providers) {
     if (provider.id === 'github') {
       // Named like the secret: chromatic.yml, or chromatic-packages-ui.yml for a monorepo project.
-      const suffix = session.secretName.replace(/^CHROMATIC_PROJECT_TOKEN_?/, '');
-      const name = suffix ? `chromatic-${suffix.toLowerCase().replaceAll('_', '-')}` : 'chromatic';
+      const name = ciJobName(session.secretName);
       const candidate = path.join(gitRoot, '.github', 'workflows', `${name}.yml`);
       const file = existsSync(candidate) ? undefined : candidate;
       if (!file) {
@@ -439,9 +451,7 @@ export async function main(argv: string[]) {
     // The snippet was just printed, so "no CI runs Chromatic yet" would only repeat it.
     const pasting = providers.some((p) => p.id !== 'github');
     const problemsIn = (checks: Check[]) =>
-      checks.filter(
-        (c) => c.status !== 'pass' && !(pasting && c.title.startsWith('No CI runs Chromatic'))
-      );
+      checks.filter((c) => c.status !== 'pass' && !(pasting && c.title.startsWith('No CI')));
     const recheck = () => collectChecks(project.directory);
     let checks = await recheck();
     clack.log.step(`Checked the setup: ${summarize(checks)}`);

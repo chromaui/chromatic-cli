@@ -395,7 +395,12 @@ function environmentChecks(input: DoctorInput): Check[] {
       detail: 'Run chromatic init to add it.',
     });
   }
-  checks.push(...duplicateRunChecks(runs), ...runs.map((run) => runCheck(gitRoot, run)));
+  // A scanned run counts for every project when its directory is unknown, but isn't a duplicate.
+  const here = relativeOrDot(gitRoot, input.cwd);
+  checks.push(
+    ...duplicateRunChecks(runs.filter((run) => run.confirmed || run.directory === here)),
+    ...runs.map((run) => runCheck(gitRoot, run))
+  );
   return checks;
 }
 
@@ -405,7 +410,7 @@ function environmentChecks(input: DoctorInput): Check[] {
  *
  * @param input What loadDoctorInput read.
  * @param configError The config file error, if it failed to load.
- * @param optionsError
+ * @param optionsError Why the options don't work together, if they don't.
  *
  * @returns One result per check.
  */
