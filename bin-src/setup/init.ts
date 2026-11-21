@@ -175,14 +175,13 @@ async function packageStep(session: Session, project: Project, framework: Framew
   if (addScript) json.scripts = { ...json.scripts, chromatic: 'chromatic' };
   if (missing.length === 0 && !addScript) {
     clack.log.success(`${writer.display(file)} already has chromatic and its script`);
-    return false;
+    return;
   }
   writer.write(file, formatJson(json, previous));
   const what = [addScript && 'a "chromatic" script', missing.length > 0 && missing.join(' and ')]
     .filter(Boolean)
     .join(' and ');
   clack.log.success(`${writer.say('Added', 'add')} ${what} to ${writer.display(file)}`);
-  return missing.length > 0;
 }
 
 const INSTALL_MUTABLE: Partial<Record<string, string[]>> = {
@@ -300,14 +299,11 @@ async function ciStep(
   const providers = [...CI_PROVIDERS, OTHER_CI].filter((p) => p.id === chosen);
   for (const provider of providers) {
     if (provider.id === 'github') {
-      // The full path, like the secret, so packages/ui and apps/ui get their own workflows.
-      const name =
-        workingDirectory === '.'
-          ? 'chromatic'
-          : `chromatic-${workingDirectory.toLowerCase().replaceAll(/[^a-z0-9]+/g, '-')}`;
-      const file = [...new Set(['chromatic', name])]
-        .map((base) => path.join(gitRoot, '.github', 'workflows', `${base}.yml`))
-        .find((candidate) => !existsSync(candidate));
+      // Named like the secret: chromatic.yml, or chromatic-packages-ui.yml for a monorepo project.
+      const suffix = session.secretName.replace(/^CHROMATIC_PROJECT_TOKEN_?/, '');
+      const name = suffix ? `chromatic-${suffix.toLowerCase().replaceAll('_', '-')}` : 'chromatic';
+      const candidate = path.join(gitRoot, '.github', 'workflows', `${name}.yml`);
+      const file = existsSync(candidate) ? undefined : candidate;
       if (!file) {
         clack.note(githubWorkflow(template), `Add this as a workflow in .github/workflows`);
         clack.log.warn(`${name}.yml already exists, so init didn't overwrite it.`);
@@ -391,8 +387,9 @@ export async function main(argv: string[]) {
   // 3. Token, 4. config file, 5. package.json and one install
   await tokenStep(session, project);
   configStep(session, project);
-  const needsInstall = await packageStep(session, project, project.framework);
-  if (needsInstall) await installStep(session, project, packageManager);
+  await packageStep(session, project, project.framework);
+  // Install even when package.json already had everything: an earlier run's install may have failed.
+  await installStep(session, project, packageManager);
 
   // 6. CI
   const providers = await ciStep(session, project, packageManager);

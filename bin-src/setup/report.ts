@@ -155,15 +155,22 @@ function lineDiff(before: string, after: string) {
 }
 
 /**
- * Hides all but the last 4 characters of project tokens, so fix previews are safe in CI logs.
+ * Hides all but the last 4 characters of project tokens, so fix previews are safe in CI logs: the
+ * fix's known secrets and the token in the environment wherever they appear, and any other value
+ * of CHROMATIC_PROJECT_TOKEN or projectToken.
  *
  * @param text Preview text.
+ * @param secrets Values to hide wherever they appear.
  *
  * @returns The text with tokens masked.
  */
-function maskTokens(text: string) {
-  return text.replaceAll(
-    /(CHROMATIC_PROJECT_TOKEN=|"projectToken":\s*")([^"\s]+)/g,
+function maskTokens(text: string, secrets: string[]) {
+  let masked = text;
+  for (const secret of [...secrets, process.env.CHROMATIC_PROJECT_TOKEN]) {
+    if (secret && secret.length > 4) masked = masked.replaceAll(secret, `…${secret.slice(-4)}`);
+  }
+  return masked.replaceAll(
+    /(CHROMATIC_PROJECT_TOKEN\s*=\s*|"projectToken"\s*:\s*")([^"\s…]+)/g,
     (_, key: string, token: string) => `${key}…${token.slice(-4)}`
   );
 }
@@ -192,7 +199,7 @@ export async function applyFixes(
     const preview = fix.edits
       .map(({ file, content }) => {
         const before = existsSync(file) ? readFileSync(file, 'utf8') : '';
-        return `${color.bold(relativeOrDot(cwd, file))}\n${maskTokens(lineDiff(before, content))}`;
+        return `${color.bold(relativeOrDot(cwd, file))}\n${maskTokens(lineDiff(before, content), fix.secrets ?? [])}`;
       })
       .join('\n\n');
     clack.note(preview, fix.summary);

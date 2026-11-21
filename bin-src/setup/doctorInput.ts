@@ -13,7 +13,7 @@ import { createLogger } from '../../node-src/lib/log';
 import type { Flags, Options } from '../../node-src/types';
 import type { Fix } from './checks';
 import type { Framework } from './detect';
-import { formatJson, gitignoreAdditions, readJson, relativeOrDot } from './shared';
+import { formatJson, readJson } from './shared';
 
 /** The options doctor checks, merged by the main command's own option handling. */
 type CheckedOptions = Partial<Options>;
@@ -254,31 +254,4 @@ function configEdit(input: DoctorInput, change: (json: Record<string, any>) => v
   const file = input.configFile ?? path.join(input.cwd, 'chromatic.config.json');
   const previous = existsSync(file) ? readFileSync(file, 'utf8') : undefined;
   return { file, content: formatJson(json, previous) };
-}
-
-/**
- * Edits that save a token in .env next to where Chromatic runs, and gitignore it.
- *
- * @param input
- * @param token
- *
- * @returns
- */
-export function environmentTokenEdits(input: DoctorInput, token: string) {
-  const environmentFile = path.join(input.cwd, '.env');
-  const text = existsSync(environmentFile) ? readFileSync(environmentFile, 'utf8') : '';
-  const line = `CHROMATIC_PROJECT_TOKEN=${token}`;
-  const environmentContent = /^CHROMATIC_PROJECT_TOKEN=/m.test(text)
-    ? text.replace(/^CHROMATIC_PROJECT_TOKEN=.*$/m, line)
-    : `${text}${text && !text.endsWith('\n') ? '\n' : ''}${line}\n`;
-  const edits = [{ file: environmentFile, content: environmentContent }];
-  if (input.gitRoot) {
-    const ignored = relativeOrDot(input.gitRoot, environmentFile);
-    const gitignore = gitignoreAdditions(input.gitRoot, [
-      ignored === '.env' ? '.env' : `/${ignored}`,
-    ]);
-    if (gitignore.missing.length > 0)
-      edits.push({ file: gitignore.file, content: gitignore.content });
-  }
-  return edits;
 }

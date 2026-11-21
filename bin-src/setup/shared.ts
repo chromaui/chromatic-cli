@@ -64,13 +64,54 @@ export function listRepoFiles(gitRoot: string) {
 }
 
 /**
+ * The edits that save a project token in a .env and keep git from committing it, or why that isn't
+ * safe: git tracks the file, or the user's .gitignore deliberately un-ignores it.
+ *
+ * @param gitRoot Absolute repository root.
+ * @param directory Absolute directory the .env goes in, where Chromatic runs.
+ * @param token The project token.
+ *
+ * @returns The edits, or the reason not to write the token.
+ */
+export function tokenEnvironmentEdits(gitRoot: string, directory: string, token: string) {
+  const file = path.join(directory, '.env');
+  if (isTracked(file)) {
+    return {
+      reason: `git tracks ${relativeOrDot(gitRoot, file)}, so the token would be committed`,
+    };
+  }
+  const text = existsSync(file) ? readFileSync(file, 'utf8') : '';
+  const line = `CHROMATIC_PROJECT_TOKEN=${token}`;
+  const edits = [
+    {
+      file,
+      content: /^CHROMATIC_PROJECT_TOKEN=/m.test(text)
+        ? text.replace(/^CHROMATIC_PROJECT_TOKEN=.*$/m, line)
+        : `${text}${text && !text.endsWith('\n') ? '\n' : ''}${line}\n`,
+    },
+  ];
+  // Ask git rather than reading .gitignore: it knows about negations, nested files and excludes.
+  if (git(['check-ignore', '-q', '--no-index', '--', file], gitRoot) !== undefined)
+    return { edits };
+  const relative = relativeOrDot(gitRoot, file);
+  const gitignore = gitignoreAdditions(gitRoot, [relative === '.env' ? '.env' : `/${relative}`]);
+  // A pattern that should cover it but doesn't means a rule like !.env un-ignores it on purpose.
+  if (gitignore.missing.length === 0) {
+    return {
+      reason: `your .gitignore doesn't ignore ${relative}, so the token would be committed`,
+    };
+  }
+  return { edits: [...edits, { file: gitignore.file, content: gitignore.content }] };
+}
+
+/**
  * Whether git tracks a file, so writing a secret to it would get committed.
  *
  * @param file Absolute path.
  *
  * @returns True when the file is in the index.
  */
-export function isTracked(file: string) {
+function isTracked(file: string) {
   return (
     git(['ls-files', '--error-unmatch', '--', path.basename(file)], path.dirname(file)) !==
     undefined
@@ -125,19 +166,15 @@ export function formatJson(value: unknown, previousText?: string) {
   return `${text}\n`;
 }
 
-/** Collects file changes, and writes them unless this is a dry run. */
+/** Writes files unless this is a dry run, and words what it did either way. */
 export class FileWriter {
-  readonly changes: { file: string; kind: 'created' | 'updated'; content: string }[] = [];
-
   constructor(
     private readonly dryRun: boolean,
     private readonly displayRoot: string
   ) {}
 
   write(file: string, content: string) {
-    const existed = existsSync(file);
-    if (existed && readFileSync(file, 'utf8') === content) return false;
-    this.changes.push({ file, kind: existed ? 'updated' : 'created', content });
+    if (existsSync(file) && readFileSync(file, 'utf8') === content) return false;
     if (!this.dryRun) {
       mkdirSync(path.dirname(file), { recursive: true });
       writeFileSync(file, content);

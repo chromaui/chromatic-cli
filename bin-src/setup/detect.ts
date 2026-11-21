@@ -193,36 +193,31 @@ export async function detectPackageManager(gitRoot: string): Promise<PackageMana
 
 export const PACKAGE_MANAGER_COMMANDS: Record<
   PackageManager,
-  { label: string; ciInstall: string; addDev: string[]; run: (script: string) => string }
+  { label: string; ciInstall: string; run: (script: string) => string }
 > = {
   npm: {
     label: 'npm',
     ciInstall: 'npm ci',
-    addDev: ['npm', 'install', '--save-dev'],
     run: (s) => `npm run ${s}`,
   },
   pnpm: {
     label: 'pnpm',
     ciInstall: 'pnpm install --frozen-lockfile',
-    addDev: ['pnpm', 'add', '--save-dev'],
     run: (s) => `pnpm ${s}`,
   },
   yarn: {
     label: 'Yarn',
     ciInstall: 'yarn install --immutable',
-    addDev: ['yarn', 'add', '--dev'],
     run: (s) => `yarn ${s}`,
   },
   'yarn-classic': {
     label: 'Yarn 1',
     ciInstall: 'yarn install --frozen-lockfile',
-    addDev: ['yarn', 'add', '--dev'],
     run: (s) => `yarn ${s}`,
   },
   bun: {
     label: 'Bun',
     ciInstall: 'bun install --frozen-lockfile',
-    addDev: ['bun', 'add', '--dev'],
     run: (s) => `bun run ${s}`,
   },
 };

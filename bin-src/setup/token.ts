@@ -1,18 +1,8 @@
-import { existsSync, readFileSync } from 'node:fs';
-import path from 'node:path';
-
 import * as clack from '@clack/prompts';
 
 import { SubcommandFailure } from '../subcommandFailure';
 import type { Project } from './detect';
-import {
-  answered,
-  color,
-  FileWriter,
-  gitignoreAdditions,
-  isTracked,
-  relativeOrDot,
-} from './shared';
+import { answered, color, FileWriter, tokenEnvironmentEdits } from './shared';
 
 /** State shared by init's steps. */
 export interface Session {
@@ -154,26 +144,13 @@ export async function tokenStep(session: Session, project: Project) {
       })
     );
   if (!save) return;
-  const environmentFile = path.join(project.directory, '.env');
-  if (isTracked(environmentFile)) {
-    clack.log.warn(
-      `Didn't save the token: git tracks ${writer.display(environmentFile)}, so it would be committed.`
-    );
+  const saved = tokenEnvironmentEdits(session.gitRoot, project.directory, token);
+  if (!saved.edits) {
+    clack.log.warn(`Didn't save the token: ${saved.reason}.`);
     return;
   }
-  const text = existsSync(environmentFile) ? readFileSync(environmentFile, 'utf8') : '';
-  const line = `CHROMATIC_PROJECT_TOKEN=${token}`;
-  writer.write(
-    environmentFile,
-    /^CHROMATIC_PROJECT_TOKEN=/m.test(text)
-      ? text.replace(/^CHROMATIC_PROJECT_TOKEN=.*$/m, line)
-      : `${text}${text && !text.endsWith('\n') ? '\n' : ''}${line}\n`
-  );
-  const ignored = relativeOrDot(session.gitRoot, environmentFile);
-  const gitignore = gitignoreAdditions(session.gitRoot, [
-    ignored === '.env' ? '.env' : `/${ignored}`,
-  ]);
-  if (gitignore.missing.length > 0) writer.write(gitignore.file, gitignore.content);
+  for (const edit of saved.edits) writer.write(edit.file, edit.content);
+  const environmentFile = saved.edits[0].file;
   clack.log.success(
     `${writer.say('Saved', 'save')} the token to ${writer.display(environmentFile)} ${color.muted('(gitignored, never committed)')}`
   );

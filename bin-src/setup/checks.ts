@@ -20,6 +20,8 @@ export interface Fix {
   summary: string;
   /** The file it changes and its new content. */
   edits: { file: string; content: string }[];
+  /** Values the preview must never show, such as a token the fix moves. */
+  secrets?: string[];
 }
 
 export interface Check {

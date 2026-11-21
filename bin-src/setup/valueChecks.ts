@@ -5,13 +5,8 @@ import { findBuildScriptName } from '../../node-src/lib/getOptions';
 import type { Check } from './checks';
 import { countMatches, matchesBranch } from './checks';
 import { findChromaticRuns, runsFor } from './ci';
-import {
-  configFix,
-  DoctorInput,
-  environmentTokenEdits,
-  storybookConfigCandidates,
-} from './doctorInput';
-import { isTracked, relativeOrDot } from './shared';
+import { configFix, DoctorInput, storybookConfigCandidates } from './doctorInput';
+import { relativeOrDot, tokenEnvironmentEdits } from './shared';
 
 const ONLY_CHANGED_FLAG = /--only-changed(?!=false)(?=[\s=]|$)/;
 
@@ -283,22 +278,20 @@ function globChecks(input: DoctorInput): Check[] {
 }
 
 function moveTokenFix(input: DoctorInput) {
-  // A tracked .env gets committed too, so only move the token to an untracked one.
-  if (isTracked(path.join(input.cwd, '.env'))) return undefined;
-  const removal = configFix(
-    input,
-    'projectToken',
-    'Move the token to a gitignored .env and remove it from the config file',
-    (json) => {
-      delete json.projectToken;
-    }
-  );
-  return (
-    removal && {
-      ...removal,
-      edits: [...removal.edits, ...environmentTokenEdits(input, input.configJson?.projectToken)],
-    }
-  );
+  const token = input.configJson?.projectToken;
+  if (!input.gitRoot || typeof token !== 'string') return undefined;
+  const saved = tokenEnvironmentEdits(input.gitRoot, input.cwd, token);
+  const removal =
+    saved.edits &&
+    configFix(
+      input,
+      'projectToken',
+      'Move the token to a gitignored .env and remove it from the config file',
+      (json) => {
+        delete json.projectToken;
+      }
+    );
+  return removal && { ...removal, edits: [...removal.edits, ...saved.edits], secrets: [token] };
 }
 
 function tokenInConfigChecks(input: DoctorInput): Check[] {
