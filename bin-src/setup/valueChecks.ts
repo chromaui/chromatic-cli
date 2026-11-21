@@ -5,7 +5,7 @@ import { findBuildScriptName } from '../../node-src/lib/getOptions';
 import type { Check } from './checks';
 import { countMatches, matchesBranch } from './checks';
 import { findChromaticRuns, runsFor } from './ci';
-import { configFix, DoctorInput, storybookConfigCandidates } from './doctorInput';
+import { configFix, DoctorInput } from './doctorInput';
 import { relativeOrDot, tokenEnvironmentEdits } from './shared';
 
 const ONLY_CHANGED_FLAG = /--only-changed(?!=false)(?=[\s=]|$)/;
@@ -115,58 +115,24 @@ function onlyChangedChecks(input: DoctorInput): Check[] {
   return [{ group: 'Values', status: 'pass', title: 'TurboSnap is on' }];
 }
 
-// eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
 function configDirectoryChecks(input: DoctorInput): Check[] {
   const { cwd, gitRoot, options } = input;
   const value = options.storybookConfigDir;
   if (value === undefined) return [];
-  const normalized = value.replace(/^\.\//, '').replace(/\/$/, '');
-
-  if (normalized === '.storybook' && existsSync(path.join(cwd, '.storybook'))) {
-    return [
-      {
-        group: 'Values',
-        status: 'warn',
-        title: 'storybookConfigDir repeats the default',
-        detail: '.storybook is already where Chromatic looks.',
-        fix: configFix(
-          input,
-          'storybookConfigDir',
-          'Remove storybookConfigDir from the config file',
-          (json) => {
-            delete json.storybookConfigDir;
-          }
-        ),
-      },
-    ];
-  }
-  if (storybookConfigCandidates(input).some((directory) => existsSync(directory))) {
+  if (existsSync(input.storybookConfigDirectory)) {
     return [{ group: 'Values', status: 'pass', title: `storybookConfigDir ${value} exists` }];
   }
 
   // A repo-root path used from a subdirectory doubles up, like packages/ui/packages/ui/.storybook.
+  // The fix sets the right path rather than removing the option, because without it the build
+  // script's -c would decide instead.
+  const normalized = value.replace(/^\.\//, '').replace(/\/$/, '');
   const prefix = gitRoot ? relativeOrDot(gitRoot, cwd) : '.';
   const rebased =
     prefix !== '.' && normalized.startsWith(`${prefix}/`)
       ? normalized.slice(prefix.length + 1)
       : undefined;
   const rebasedExists = rebased !== undefined && existsSync(path.join(cwd, rebased));
-  let fix: Check['fix'];
-  if (rebasedExists) {
-    fix =
-      rebased === '.storybook'
-        ? configFix(
-            input,
-            'storybookConfigDir',
-            'Remove storybookConfigDir (the default is right)',
-            (json) => {
-              delete json.storybookConfigDir;
-            }
-          )
-        : configFix(input, 'storybookConfigDir', `Set storybookConfigDir to ${rebased}`, (json) => {
-            json.storybookConfigDir = rebased;
-          });
-  }
   return [
     {
       group: 'Values',
@@ -174,8 +140,12 @@ function configDirectoryChecks(input: DoctorInput): Check[] {
       title: `storybookConfigDir ${value} doesn't exist`,
       detail: rebasedExists
         ? `It's relative to the repository root, but Chromatic reads it from ${prefix}. Here it's ${rebased}.`
-        : `Chromatic looks for it at ${relativeOrDot(cwd, path.resolve(cwd, value))}, relative to where it runs.`,
-      fix,
+        : `Chromatic looks for it at ${relativeOrDot(cwd, input.storybookConfigDirectory)}.`,
+      fix: rebasedExists
+        ? configFix(input, 'storybookConfigDir', `Set storybookConfigDir to ${rebased}`, (json) => {
+            json.storybookConfigDir = rebased;
+          })
+        : undefined,
     },
   ];
 }

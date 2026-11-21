@@ -5,7 +5,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
-import { findChromaticRuns } from './ci';
+import { findChromaticRuns, readCi } from './ci';
 
 let root: string | undefined;
 
@@ -14,13 +14,17 @@ afterEach(() => {
   root = undefined;
 });
 
-function runsIn(files: Record<string, string>) {
+function repoWith(files: Record<string, string>) {
   root = mkdtempSync(path.join(tmpdir(), 'chromatic-ci-'));
   for (const [file, content] of Object.entries(files)) {
     mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
     writeFileSync(path.join(root, file), content);
   }
-  return findChromaticRuns(root, Object.keys(files));
+  return root;
+}
+
+function runsIn(files: Record<string, string>) {
+  return findChromaticRuns(repoWith(files), Object.keys(files));
 }
 
 describe('findChromaticRuns', () => {
@@ -96,31 +100,78 @@ jobs:
     expect(run.fullHistoryFix).toBeUndefined();
   });
 
-  it('takes GitLab clone depth from the job, then its templates, then the global variables', () => {
+  it('recognises a command that sets variables first, and merges two steps in one job', () => {
+    const runs = runsIn({
+      '.github/workflows/ci.yml': `on: push
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - if: github.ref == 'refs/heads/main'
+        run: CHROMATIC_PROJECT_TOKEN=$TOKEN npx chromatic --auto-accept-changes
+      - if: github.ref != 'refs/heads/main'
+        run: CHROMATIC_PROJECT_TOKEN=$TOKEN npx chromatic --only-changed
+`,
+    });
+
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toMatchObject({ job: 'visual', directory: '.', onlyChanged: true });
+  });
+
+  it('reports a file that does not parse instead of reading part of it', () => {
+    const files = {
+      '.github/workflows/ci.yml': `on: push
+jobs:
+  visual:
+    steps: [
+      - run: npx chromatic
+`,
+    };
+
+    expect(readCi(repoWith(files), Object.keys(files))).toEqual({
+      runs: [],
+      unreadable: ['.github/workflows/ci.yml'],
+    });
+  });
+
+  it('resolves GitLab scripts and clone depth the way GitLab merges them', () => {
     const runs = runsIn({
       '.gitlab-ci.yml': `variables:
   GIT_DEPTH: 0
+default:
+  before_script:
+    - cd packages/ui
+.full:
+  variables:
+    GIT_DEPTH: 0
 .shallow:
   variables:
-    GIT_DEPTH: 10
+    GIT_DEPTH: 1
+  script: npx chromatic --only-changed
 inherits-global:
-  script:
-    - cd packages/ui
-    - npx chromatic
-uses-template:
-  extends: .shallow
   script: npx chromatic
+own-depth-wins:
+  extends: .full
+  variables:
+    GIT_DEPTH: 5
+  script: npx chromatic
+last-parent-wins:
+  extends: [.full, .shallow]
 `,
     });
 
     expect(
-      runs.map(({ job, directory, fullHistory }) => ({ job, directory, fullHistory }))
+      runs.map(({ job, directory, fullHistory, onlyChanged }) => ({
+        job,
+        directory,
+        fullHistory,
+        onlyChanged,
+      }))
     ).toEqual([
-      { job: 'inherits-global', directory: 'packages/ui', fullHistory: true },
-      { job: 'uses-template', directory: '.', fullHistory: false },
+      { job: 'inherits-global', directory: 'packages/ui', fullHistory: true, onlyChanged: false },
+      { job: 'own-depth-wins', directory: 'packages/ui', fullHistory: false, onlyChanged: false },
+      { job: 'last-parent-wins', directory: 'packages/ui', fullHistory: false, onlyChanged: true },
     ]);
-    const fixed = parse(runs[1].fullHistoryFix ?? '');
-    expect(fixed['uses-template'].variables).toEqual({ GIT_DEPTH: 0 });
-    expect(fixed['.shallow'].variables).toEqual({ GIT_DEPTH: 10 });
   });
 });

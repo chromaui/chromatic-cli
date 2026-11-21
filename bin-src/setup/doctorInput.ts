@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { stripVTControlCharacters } from 'node:util';
 
 import dotenv from 'dotenv';
 import JSON5 from 'json5';
@@ -8,11 +9,13 @@ import type { InitialContext } from '../../node-src';
 import { getConfiguration } from '../../node-src/lib/getConfiguration';
 import getEnvironment from '../../node-src/lib/getEnvironment';
 import { findBuildScriptName, getPartialOptions } from '../../node-src/lib/getOptions';
-import { findConfigFlags } from '../../node-src/lib/getStorybookMetadata';
+import { findConfigDirectory, findConfigFlags } from '../../node-src/lib/getStorybookMetadata';
+import { getStorybookProjectRoot } from '../../node-src/lib/getStorybookProjectRoot';
 import { createLogger } from '../../node-src/lib/log';
+import { validateFiles } from '../../node-src/tasks/prepare/validateFiles';
+import type { StorybookInfoDeps } from '../../node-src/tasks/storybookInfo';
 import type { Flags, Options } from '../../node-src/types';
 import type { Fix } from './checks';
-import type { Framework } from './detect';
 import { formatJson, readJson } from './shared';
 
 /** The options doctor checks, merged by the main command's own option handling. */
@@ -36,6 +39,10 @@ export interface DoctorInput {
   options: CheckedOptions;
   packageJsonPath?: string;
   packageJson?: Record<string, any>;
+  /** The Storybook config directory a build would read, resolved by the build's own code. */
+  storybookConfigDirectory: string;
+  /** Why storybookBuildDir isn't a usable Storybook build, from the build's own validation. */
+  buildDirectoryError?: string;
 }
 
 function nearestPackageJson(cwd: string, stopAt?: string) {
@@ -115,7 +122,6 @@ function buildEnvironment(cwd: string) {
  * @param input.branch Current branch.
  * @param input.argv The arguments doctor got, which the main command's parser reads.
  * @param input.flags The main command's flags parsed from argv.
- * @param input.framework The detected framework, for E2E projects that set none in their config.
  *
  * @returns The input for runChecks, plus an error if the config file or the options are broken.
  */
@@ -126,7 +132,6 @@ export async function loadDoctorInput(input: {
   branch?: string;
   argv: string[];
   flags: Flags;
-  framework?: Framework;
 }): Promise<{ doctorInput: DoctorInput; configError?: string; optionsError?: string }> {
   const { cwd, flags, argv } = input;
   const config = await readConfigFile(cwd, flags);
@@ -148,12 +153,6 @@ export async function loadDoctorInput(input: {
       optionsError = errorMessage(err);
     }
   }
-  // An E2E project that sets nothing in its config is still an E2E project.
-  const { framework } = input;
-  if (framework && framework !== 'storybook' && options[framework] === undefined) {
-    options = { ...options, [framework]: true };
-  }
-
   const flagKeys = new Set(
     Object.entries(flags)
       .filter(([key, value]) => !FLAG_DEFAULTS.has(key) && value !== undefined)
@@ -161,6 +160,7 @@ export async function loadDoctorInput(input: {
       .map(([key]) => key)
   );
   const packageJsonPath = nearestPackageJson(cwd, input.gitRoot);
+  const packageJson = packageJsonPath ? readJson(packageJsonPath) : undefined;
 
   return {
     configError,
@@ -177,39 +177,51 @@ export async function loadDoctorInput(input: {
       configEditable: config.configEditable,
       options,
       packageJsonPath,
-      packageJson: packageJsonPath ? readJson(packageJsonPath) : undefined,
+      packageJson,
+      ...(await resolveStorybook(input.gitRoot, options, packageJson)),
     },
   };
 }
 
 /**
- * Where a build looks for the Storybook config directory, in order: the main command's
- * findConfigDirectory rules, including the build script's -c.
+ * Resolves Storybook's paths with the build's own functions, from the process's directory as in a
+ * build: the config directory as getStorybookMetadata finds it, and whether storybookBuildDir
+ * passes the same validation as an upload.
  *
- * @param input What loadDoctorInput read.
- * @param input.cwd
- * @param input.gitRoot
- * @param input.options
- * @param input.packageJson
+ * @param gitRoot Repository root, if in a git repository.
+ * @param options The options a build would see.
+ * @param packageJson The project's package.json.
  *
- * @returns Absolute candidate directories.
+ * @returns The config directory, and the error a build would hit with storybookBuildDir.
  */
-export function storybookConfigCandidates({ cwd, gitRoot, options, packageJson }: DoctorInput) {
-  const projectRoot =
-    options.storybookBaseDir && gitRoot ? path.resolve(gitRoot, options.storybookBaseDir) : cwd;
-  if (!options.storybookConfigDir) {
-    const { configDir } = findConfigFlags({
-      buildScriptName: findBuildScriptName(packageJson?.scripts, options.buildScriptName),
-      packageJson: packageJson ?? {},
-    });
-    return [path.resolve(projectRoot, configDir ?? '.storybook')];
+async function resolveStorybook(
+  gitRoot: string | undefined,
+  options: CheckedOptions,
+  packageJson: Record<string, any> | undefined
+) {
+  const log = createLogger({ logLevel: 'silent' });
+  // As getOptions does: the build script only counts when Chromatic builds Storybook itself.
+  const buildScriptName =
+    options.storybookBuildDir || options.buildCommand
+      ? options.buildScriptName
+      : findBuildScriptName(packageJson?.scripts, options.buildScriptName);
+  const { configDir } = findConfigFlags({ buildScriptName, packageJson: packageJson ?? {} });
+  const deps = { log, options, packageJson: packageJson ?? {} } as unknown as StorybookInfoDeps;
+  const storybookConfigDirectory = await findConfigDirectory(
+    deps,
+    getStorybookProjectRoot({ storybookBaseDir: options.storybookBaseDir, gitRootPath: gitRoot }),
+    configDir
+  );
+  if (!options.storybookBuildDir) return { storybookConfigDirectory };
+  try {
+    await validateFiles(deps, { isReactNativeApp: false, sourceDir: options.storybookBuildDir });
+    return { storybookConfigDirectory };
+  } catch (err) {
+    return {
+      storybookConfigDirectory,
+      buildDirectoryError: stripVTControlCharacters(errorMessage(err)),
+    };
   }
-  return [
-    ...new Set([
-      path.resolve(projectRoot, options.storybookConfigDir),
-      path.resolve(options.storybookConfigDir),
-    ]),
-  ];
 }
 
 /**

@@ -247,11 +247,11 @@ async function ciStep(
 
   // Chromatic should run from one CI per project: a second one builds the same commits again.
   const existing = runsFor(allRuns, workingDirectory);
-  if (existing.length > 0) {
+  if (existing.length > 0 && !flags.ci) {
     clack.log.info(
       `Chromatic already runs for ${workingDirectory === '.' ? 'this project' : workingDirectory} in ${existing
         .map((r) => `${r.provider.name} (${r.file}, job ${r.job})`)
-        .join(', ')}. Skipped CI setup.`
+        .join(', ')}. Skipped CI setup; pass --ci <provider> to set it up anyway.`
     );
     return [];
   }
@@ -416,7 +416,7 @@ export async function main(argv: string[]) {
       checks.filter(
         (c) => c.status !== 'pass' && !(pasting && c.title.startsWith('No CI runs Chromatic'))
       );
-    const recheck = () => collectChecks(project.directory, { framework: project.framework });
+    const recheck = () => collectChecks(project.directory);
     let checks = await recheck();
     clack.log.step(`Checked the setup: ${summarize(checks)}`);
     printChecks(problemsIn(checks));

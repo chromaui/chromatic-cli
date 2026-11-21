@@ -10,7 +10,7 @@ import type { Flags } from '../node-src/types';
 import pkg from '../package.json';
 import { Check, runChecks } from './setup/checks';
 import { findChromaticRuns, runsFor } from './setup/ci';
-import { describeProject, findProjects, Framework, Project } from './setup/detect';
+import { describeProject, findProjects, Project } from './setup/detect';
 import { loadDoctorInput } from './setup/doctorInput';
 import { applyFixes, printChecks, summarize } from './setup/report';
 import { color, git, listRepoFiles, readJson, relativeOrDot } from './setup/shared';
@@ -24,16 +24,14 @@ const hasConfigFile = (directory: string) =>
  * Loads the options the way a build does and runs every check, without starting a build.
  *
  * @param cwd Directory Chromatic runs from.
- * @param input What else the build would know.
- * @param input.argv Arguments for the main command's parser; flags win over the config file.
- * @param input.framework The detected framework, for E2E projects that set none in their config.
+ * @param argv Arguments for the main command's parser; flags win over the config file.
  *
  * @returns The check results.
  */
-export async function collectChecks(
-  cwd: string,
-  { argv = [], framework }: { argv?: string[]; framework?: Framework } = {}
-) {
+export async function collectChecks(cwd: string, argv: string[] = []) {
+  const flags = parseArguments(argv).flags;
+  // --config-file names a file from where doctor runs, even when it checks another project.
+  if (flags.configFile) flags.configFile = path.resolve(flags.configFile);
   // The config file and package.json are found from the process's directory, as in a build.
   const previous = process.cwd();
   process.chdir(cwd);
@@ -45,8 +43,7 @@ export async function collectChecks(
       files: gitRoot ? listRepoFiles(gitRoot) : [],
       branch: gitRoot ? git(['rev-parse', '--abbrev-ref', 'HEAD'], cwd) : undefined,
       argv,
-      flags: parseArguments(argv).flags,
-      framework,
+      flags,
     });
     return runChecks(doctorInput, configError, optionsError);
   } finally {
@@ -57,9 +54,9 @@ export async function collectChecks(
 /**
  * Whether a package's scripts run the chromatic CLI.
  *
- * @param directory
+ * @param directory The package's directory.
  *
- * @returns
+ * @returns True when a script runs chromatic.
  */
 function scriptRunsChromatic(directory: string) {
   const scripts: Record<string, string> =
@@ -72,28 +69,12 @@ function scriptRunsChromatic(directory: string) {
  * it. From anywhere else, check every project in the repository that has Chromatic set up, like
  * storybook automigrate does for multi-project repos.
  *
- * @param cwd
- * @param flags
+ * @param cwd Where doctor runs.
+ * @param flags doctor's own flags.
+ * @param mainFlags The main command's flags.
  *
- * @returns
+ * @returns The projects to check, and the ones found without Chromatic.
  */
-/**
- * Drops --config-file and its value from the arguments.
- *
- * @param argv
- * @param configFile
- *
- * @returns
- */
-function withoutConfigFile(argv: string[], configFile?: string) {
-  if (!configFile) return argv;
-  return argv.filter(
-    (argument, index) =>
-      !/^(--config-file|-c)(=|$)/.test(argument) &&
-      !(argument === configFile && /^(--config-file|-c)$/.test(argv[index - 1] ?? ''))
-  );
-}
-
 // eslint-disable-next-line complexity -- target selection has one branch per way to run doctor
 function chooseTargets(cwd: string, flags: Record<string, any>, mainFlags: Flags) {
   const gitRoot = git(['rev-parse', '--show-toplevel'], cwd);
@@ -104,13 +85,7 @@ function chooseTargets(cwd: string, flags: Record<string, any>, mainFlags: Flags
       )
     : [];
   const here = (directory: string) => ({
-    targets: [
-      {
-        directory,
-        label: gitRoot ? relativeOrDot(gitRoot, directory) : '.',
-        framework: projects.find((p) => p.directory === directory)?.framework,
-      },
-    ],
+    targets: [{ directory, label: gitRoot ? relativeOrDot(gitRoot, directory) : '.' }],
     notSetUp: [] as Project[],
   });
 
@@ -148,7 +123,6 @@ function chooseTargets(cwd: string, flags: Record<string, any>, mainFlags: Flags
       .map((p) => ({
         directory: p.directory,
         label: `${p.relative} ${color.muted(`· ${describeProject(p)}`)}`,
-        framework: p.framework,
       })),
     notSetUp: projects.filter((p) => !isSetUp(p)),
   };
@@ -213,11 +187,7 @@ export async function main(argv: string[]) {
   let skippedFixes = false;
   for (const target of targets) {
     if (multi) clack.log.step(color.bold(color.cta(`Project ${target.label}`)));
-    // --config-file names a file relative to where doctor runs, so it only applies there.
-    const targetArgv =
-      target.directory === cwd ? argv : withoutConfigFile(argv, mainFlags.configFile);
-    const check = () =>
-      collectChecks(target.directory, { argv: targetArgv, framework: target.framework });
+    const check = () => collectChecks(target.directory, argv);
     let checks = await check();
     printChecks(checks);
 

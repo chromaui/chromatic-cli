@@ -7,7 +7,7 @@ import { readJson, relativeOrDot } from './shared';
 
 export type Framework = 'storybook' | 'playwright' | 'cypress' | 'vitest';
 
-const FRAMEWORK_NAMES: Record<Framework, string> = {
+export const FRAMEWORK_NAMES: Record<Framework, string> = {
   storybook: 'Storybook',
   playwright: 'Playwright',
   cypress: 'Cypress',
@@ -29,7 +29,7 @@ export interface Project {
 }
 
 const STORYBOOK_MAIN = /(^|\/)\.storybook\/main\.[cm]?[jt]sx?$/;
-const E2E_CONFIG = /(^|\/)(playwright|cypress|vitest)\.config\.[cm]?[jt]s$/;
+export const E2E_CONFIG = /(^|\/)(playwright|cypress|vitest)\.config\.[cm]?[jt]s$/;
 
 // eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
 function versionOf(directory: string, gitRoot: string, name: string) {

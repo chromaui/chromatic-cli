@@ -5,7 +5,7 @@ import { Document, isMap, isScalar, isSeq, parseDocument } from 'yaml';
 
 import { CI_PROVIDERS, CiProvider } from './detect';
 
-/** One CI job that runs Chromatic, read from the parsed pipeline rather than its text. */
+/** One CI job that runs Chromatic from one directory, read from the parsed pipeline. */
 export interface ChromaticRun {
   provider: CiProvider;
   /** The CI file, relative to the repository root. */
@@ -22,6 +22,11 @@ export interface ChromaticRun {
   onlyChanged: boolean;
   /** The CI file with full history turned on for this job, when that can be written safely. */
   fullHistoryFix?: string;
+  /**
+   * Whether a reader that understands the provider's jobs found it. Other providers are scanned
+   * for commands, which says Chromatic probably runs there but not in which job or how often.
+   */
+  confirmed: boolean;
 }
 
 /** Each provider's config files, found by name. */
@@ -30,9 +35,10 @@ export interface DetectedCi {
   files: string[];
 }
 
-// A command that runs the chromatic binary, as the first word of a shell command.
+// A command that runs the chromatic binary, as the first word of a shell command, after any
+// VAR=value assignments such as the CHROMATIC_PROJECT_TOKEN=... that init's snippets set.
 const CHROMATIC_COMMAND =
-  /(?:^|&&|\|\||;|\|)\s*(?:npx\s+(?:-y\s+)?|pnpm\s+(?:dlx\s+|exec\s+)?|yarn\s+(?:dlx\s+)?|bunx\s+|bun\s+run\s+|npm\s+(?:run|exec)\s+(?:--\s+)?)?chromatic(?:@\S+)?(?=\s|$|;|&|\|)/m;
+  /(?:^|&&|\|\||;|\|)\s*(?:[A-Za-z_]\w*=\S*\s+)*(?:npx\s+(?:-y\s+)?|pnpm\s+(?:dlx\s+|exec\s+)?|yarn\s+(?:dlx\s+)?|bunx\s+|bun\s+run\s+|npm\s+(?:run|exec)\s+(?:--\s+)?)?chromatic(?:@\S+)?(?=\s|$|;|&|\|)/m;
 const ONLY_CHANGED_FLAG = /--only-changed(?!=false)(?=[\s=]|$)/;
 const GITLAB_RESERVED = new Set([
   'stages',
@@ -90,6 +96,40 @@ function runsChromaticFrom(command: string, base: string) {
   return normalizeDirectory(cd ? path.posix.join(base === '.' ? '' : base, cd) : base);
 }
 
+/**
+ * Parses a CI file, refusing one with syntax errors: the CI can't run it either, and reading what
+ * parsed would guess at the rest.
+ *
+ * @param raw The file's text.
+ *
+ * @returns The parsed document.
+ */
+function parseCi(raw: string) {
+  const document = parseDocument(raw, { merge: true });
+  if (document.errors.length > 0) throw document.errors[0];
+  return document;
+}
+
+/**
+ * Merges the runs one job makes from the same directory: two steps in one job, such as one per
+ * branch behind an if:, are one job, not a duplicate.
+ *
+ * @param runs Runs found in one job.
+ *
+ * @returns One run per directory.
+ */
+function perDirectory<T extends { directory: string; onlyChanged: boolean }>(runs: T[]) {
+  const merged = new Map<string, T>();
+  for (const run of runs) {
+    const previous = merged.get(run.directory);
+    merged.set(
+      run.directory,
+      previous ? { ...previous, onlyChanged: previous.onlyChanged || run.onlyChanged } : run
+    );
+  }
+  return [...merged.values()];
+}
+
 const asText = (value: unknown) => (typeof value === 'string' ? value : undefined);
 // Keep the user's layout: no padding inside [a, b], and long commands stay on one line.
 const printYaml = (document: Document) =>
@@ -99,7 +139,6 @@ function commandsOf(value: unknown): string[] {
   if (Array.isArray(value)) return value.flatMap((item) => commandsOf(item));
   return typeof value === 'string' ? [value] : [];
 }
-const depthOf = (definition: any) => definition?.variables?.GIT_DEPTH;
 
 function triggersOnPullRequest(triggers: unknown) {
   if (Array.isArray(triggers)) return triggers.includes('pull_request');
@@ -155,8 +194,7 @@ function githubHistory(raw: string, job: string, steps: any[]) {
 }
 
 function githubRuns(provider: CiProvider, file: string, raw: string): ChromaticRun[] {
-  const document = parseDocument(raw, { merge: true });
-  const workflow = document.toJS() ?? {};
+  const workflow = parseCi(raw).toJS() ?? {};
   const onPullRequest = triggersOnPullRequest(workflow.on ?? workflow.true);
 
   return Object.entries<any>(workflow.jobs ?? {}).flatMap(([job, definition]) => {
@@ -164,47 +202,86 @@ function githubRuns(provider: CiProvider, file: string, raw: string): ChromaticR
     const jobDirectory =
       definition?.defaults?.run?.['working-directory'] ??
       workflow.defaults?.run?.['working-directory'];
-    const runs = steps
-      .map((step) => githubStepRun(step, jobDirectory))
-      .filter((run) => run !== undefined);
+    const runs = perDirectory(
+      steps.map((step) => githubStepRun(step, jobDirectory)).filter((run) => run !== undefined)
+    );
     if (runs.length === 0) return [];
     const history = githubHistory(raw, job, steps);
-    return runs.map((run) => ({ provider, file, job, ...run, ...history, onPullRequest }));
+    return runs.map((run) => ({
+      provider,
+      file,
+      job,
+      ...run,
+      ...history,
+      onPullRequest,
+      confirmed: true,
+    }));
   });
 }
 
+/**
+ * A job's own value for a key, else the one it inherits through extends. GitLab merges extends in
+ * order, so a later parent overrides an earlier one, and the job overrides them all.
+ *
+ * @param pipeline The parsed pipeline.
+ * @param definition The job or template.
+ * @param read Reads the key from one definition.
+ * @param depth Guards against extends cycles.
+ *
+ * @returns The value, or undefined when nothing in the chain sets it.
+ */
+function inherited(
+  pipeline: Record<string, any>,
+  definition: any,
+  read: (definition: any) => unknown,
+  depth = 0
+): unknown {
+  if (typeof definition !== 'object' || definition === null || depth > 10) return undefined;
+  const own = read(definition);
+  if (own !== undefined) return own;
+  for (const parent of commandsOf(definition.extends).reverse()) {
+    const value = inherited(pipeline, pipeline[parent], read, depth + 1);
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
+/**
+ * GitLab jobs that run Chromatic, with scripts and GIT_DEPTH resolved through extends and the
+ * pipeline's defaults. Clone depth gets no automatic fix: a job-level variables block can replace
+ * one a YAML anchor or template supplies, so the change is the user's to make.
+ *
+ * @param provider The CI provider.
+ * @param file The CI file, relative to the repository root.
+ * @param raw The file's contents.
+ *
+ * @returns One run per job and directory.
+ */
 function gitlabRuns(provider: CiProvider, file: string, raw: string): ChromaticRun[] {
-  const pipeline = parseDocument(raw, { merge: true }).toJS() ?? {};
+  const pipeline: Record<string, any> = parseCi(raw).toJS() ?? {};
   return Object.entries<any>(pipeline).flatMap(([job, definition]) => {
     if (GITLAB_RESERVED.has(job) || job.startsWith('.') || typeof definition !== 'object')
       return [];
-    const commands = [...commandsOf(definition?.before_script), ...commandsOf(definition?.script)];
-    // Scripts run in sequence, so a `cd` in an earlier line still applies.
-    const directory = runsChromaticFrom(commands.join(' && '), '.');
-    if (!directory) return [];
-    const templates = commandsOf(definition.extends).map((name) => pipeline[name]);
-    const depth = [definition, ...templates, pipeline]
-      .map((source) => depthOf(source))
-      .find((value) => value !== undefined);
-    const fullHistory = depth !== undefined && String(depth) === '0';
-    let fullHistoryFix: string | undefined;
-    if (!fullHistory) {
-      const fixed = parseDocument(raw);
-      fixed.setIn([job, 'variables', 'GIT_DEPTH'], 0);
-      fullHistoryFix = printYaml(fixed);
-    }
-    return [
-      {
-        provider,
-        file,
-        job,
-        directory,
-        fullHistory,
-        onlyChanged: commands.some((command) => ONLY_CHANGED_FLAG.test(command)),
-        fullHistoryFix,
-      },
-    ];
+    const run = gitlabJobRun(pipeline, definition);
+    return run ? [{ provider, file, job, ...run, confirmed: true }] : [];
   });
+}
+
+function gitlabJobRun(pipeline: Record<string, any>, definition: any) {
+  const read = (key: string) => inherited(pipeline, definition, (d) => d[key]);
+  const beforeScript =
+    read('before_script') ?? pipeline.default?.before_script ?? pipeline.before_script;
+  const commands = [...commandsOf(beforeScript), ...commandsOf(read('script'))];
+  // Scripts run in sequence, so a `cd` in an earlier line still applies.
+  const directory = runsChromaticFrom(commands.join(' && '), '.');
+  if (!directory) return undefined;
+  const depth =
+    inherited(pipeline, definition, (d) => d.variables?.GIT_DEPTH) ?? pipeline.variables?.GIT_DEPTH;
+  return {
+    directory,
+    fullHistory: depth !== undefined && String(depth) === '0',
+    onlyChanged: commands.some((command) => ONLY_CHANGED_FLAG.test(command)),
+  };
 }
 
 /**
@@ -228,7 +305,7 @@ function stringsIn(node: unknown, at: string[] = []): { at: string[]; value: str
 
 /**
  * For providers without a dedicated reader, any command in the pipeline that runs chromatic. The
- * job is the top-level key it sits under. Clone depth isn't checked for these.
+ * job is the top-level key it sits under, or the key under jobs. Clone depth isn't checked for these.
  *
  * @param provider The CI provider.
  * @param file The CI file, relative to the repository root.
@@ -243,26 +320,40 @@ function genericRuns(provider: CiProvider, file: string, raw: string): Chromatic
         [...raw.replaceAll(/\/\/.*$/gm, '').matchAll(/\bsh\s*\(?\s*(['"]{1,3})([\S\s]*?)\1/g)].map(
           (match) => ({ at: ['pipeline'], value: match[2] })
         )
-      : stringsIn(parseDocument(raw).contents);
-  return commands.flatMap(({ at, value }) => {
+      : stringsIn(parseCi(raw).contents);
+  const runs = commands.flatMap(({ at, value }) => {
     const directory = runsChromaticFrom(value, '.');
     return directory
-      ? [{ provider, file, job: at[0], directory, onlyChanged: ONLY_CHANGED_FLAG.test(value) }]
+      ? [
+          {
+            provider,
+            file,
+            // CircleCI and similar nest jobs under a jobs key.
+            job: (at[0] === 'jobs' && at[1]) || at[0],
+            directory,
+            onlyChanged: ONLY_CHANGED_FLAG.test(value),
+          },
+        ]
       : [];
   });
+  const jobs = [...new Set(runs.map((run) => run.job))];
+  return jobs.flatMap((job) =>
+    perDirectory(runs.filter((run) => run.job === job)).map((run) => ({ ...run, confirmed: false }))
+  );
 }
 
 /**
- * Reads every CI file and lists the jobs that run Chromatic. A file that doesn't parse counts as
- * running nothing, as it can't run in CI either.
+ * Reads every CI file and lists the jobs that run Chromatic.
  *
  * @param gitRoot Absolute repository root.
  * @param files Repository files relative to the git root.
  *
- * @returns Each job that runs Chromatic.
+ * @returns Each job that runs Chromatic, and the CI files that couldn't be read, which may run it
+ * too.
  */
-export function findChromaticRuns(gitRoot: string, files: string[]): ChromaticRun[] {
-  return detectCi(files).flatMap(({ provider, files: found }) =>
+export function readCi(gitRoot: string, files: string[]) {
+  const unreadable: string[] = [];
+  const runs = detectCi(files).flatMap(({ provider, files: found }) =>
     found.flatMap((file) => {
       try {
         const raw = readFileSync(path.join(gitRoot, file), 'utf8');
@@ -270,10 +361,24 @@ export function findChromaticRuns(gitRoot: string, files: string[]): ChromaticRu
         if (provider.id === 'gitlab') return gitlabRuns(provider, file, raw);
         return genericRuns(provider, file, raw);
       } catch {
+        unreadable.push(file);
         return [];
       }
     })
   );
+  return { runs, unreadable };
+}
+
+/**
+ * Lists the jobs that run Chromatic, from every CI file that can be read.
+ *
+ * @param gitRoot Absolute repository root.
+ * @param files Repository files relative to the git root.
+ *
+ * @returns Each job that runs Chromatic.
+ */
+export function findChromaticRuns(gitRoot: string, files: string[]): ChromaticRun[] {
+  return readCi(gitRoot, files).runs;
 }
 
 /**

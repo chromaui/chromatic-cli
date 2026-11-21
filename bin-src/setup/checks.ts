@@ -4,8 +4,9 @@ import path from 'node:path';
 import { findBuildScriptName } from '../../node-src/lib/getOptions';
 import { matchesFile } from '../../node-src/lib/utilities';
 import pkg from '../../package.json';
-import { findChromaticRuns, runsFor } from './ci';
-import { configFix, DoctorInput, storybookConfigCandidates } from './doctorInput';
+import { ChromaticRun, readCi, runsFor } from './ci';
+import { E2E_CONFIG, Framework, FRAMEWORK_NAMES } from './detect';
+import { configFix, DoctorInput } from './doctorInput';
 import { packageJsonEdit } from './fixes';
 import { relativeOrDot } from './shared';
 import { valueChecks } from './valueChecks';
@@ -32,9 +33,8 @@ export interface Check {
   fix?: Fix;
 }
 
-// eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
 function loadingChecks(input: DoctorInput, configError?: string): Check[] {
-  const { cwd, options, packageJson, packageJsonPath } = input;
+  const { cwd, packageJson, packageJsonPath } = input;
   const checks: Check[] = [];
   const at = (file: string) => relativeOrDot(cwd, file);
 
@@ -90,29 +90,56 @@ function loadingChecks(input: DoctorInput, configError?: string): Check[] {
         }
   );
 
-  const isE2E = options.playwright || options.cypress || options.vitest;
-  if (isE2E) return checks;
+  return [...checks, ...storybookChecks(input, deps)];
+}
 
-  // Look where the build looks (findConfigDirectory): the project root, then the working directory.
-  const configDirectory = storybookConfigCandidates(input).find((directory) =>
-    existsSync(directory)
-  );
-  const main = configDirectory
+/**
+ * The Storybook a build would read: the prebuilt directory, or the config directory, version and
+ * build script. E2E builds read none of these.
+ *
+ * @param input What loadDoctorInput read.
+ * @param deps The project's dependencies, for the Storybook version.
+ *
+ * @returns One result per check.
+ */
+// eslint-disable-next-line complexity -- one branch per way a build finds its Storybook
+function storybookChecks(input: DoctorInput, deps: Record<string, string>): Check[] {
+  const { cwd, options, packageJson, packageJsonPath } = input;
+  const checks: Check[] = [];
+  const at = (file: string) => relativeOrDot(cwd, file);
+  if (options.playwright || options.cypress || options.vitest || !packageJson || !packageJsonPath)
+    return checks;
+  // A prebuilt Storybook is uploaded as it is, so the build reads no Storybook source.
+  if (options.storybookBuildDir) {
+    checks.push(
+      input.buildDirectoryError
+        ? {
+            group: 'Loading',
+            status: 'fail',
+            title: `storybookBuildDir ${options.storybookBuildDir} isn't a Storybook build`,
+            detail: input.buildDirectoryError,
+          }
+        : {
+            group: 'Loading',
+            status: 'pass',
+            title: `Uploads the Storybook built in ${options.storybookBuildDir}`,
+          }
+    );
+    return checks;
+  }
+
+  const configDirectory = input.storybookConfigDirectory;
+  const main = existsSync(configDirectory)
     ? readdirSync(configDirectory).find((f) => MAIN_FILE.test(f))
     : undefined;
-  if (main && configDirectory) {
+  if (main) {
     checks.push({
       group: 'Loading',
       status: 'pass',
       title: `Found Storybook at ${at(path.join(configDirectory, main))}`,
     });
-  } else if (options.storybookConfigDir === undefined) {
-    checks.push({
-      group: 'Loading',
-      status: 'fail',
-      title: `No Storybook found at ${at(storybookConfigCandidates(input)[0])}`,
-      detail: 'Run Chromatic from the package that contains .storybook, or set storybookConfigDir.',
-    });
+  } else if (options.storybookConfigDir === undefined || existsSync(configDirectory)) {
+    checks.push(noStorybookCheck(input));
   }
   // A storybookConfigDir that points nowhere is reported once, with the other option values.
 
@@ -130,11 +157,42 @@ function loadingChecks(input: DoctorInput, configError?: string): Check[] {
     );
   }
 
-  if (!options.storybookBuildDir && !options.buildCommand) {
+  if (!options.buildCommand) {
     checks.push(buildScriptCheck(input, packageJsonPath, packageJson, !!main));
   }
 
   return checks;
+}
+
+function noStorybookCheck(input: DoctorInput): Check {
+  const missing = {
+    group: 'Loading' as const,
+    status: 'fail' as const,
+    title: `No Storybook found at ${relativeOrDot(input.cwd, input.storybookConfigDirectory)}`,
+  };
+  // An E2E project that doesn't say so in its options gets built as a Storybook, and fails.
+  const e2e = readdirSync(input.cwd)
+    .map((file) => file.match(E2E_CONFIG)?.[2] as Framework | undefined)
+    .find(Boolean);
+  if (!e2e) {
+    return {
+      ...missing,
+      detail: 'Run Chromatic from the package that contains .storybook, or set storybookConfigDir.',
+    };
+  }
+  return {
+    ...missing,
+    detail: `This looks like a ${FRAMEWORK_NAMES[e2e]} project, but nothing sets "${e2e}": true, so Chromatic tries to build a Storybook.`,
+    fix: configFix(
+      input,
+      e2e,
+      `Set "${e2e}": true in the config file`,
+      (json) => {
+        json[e2e] = true;
+      },
+      { adds: true }
+    ),
+  };
 }
 
 function buildScriptCheck(
@@ -193,7 +251,70 @@ function buildScriptCheck(
   };
 }
 
-// eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
+/**
+ * Warns when two jobs build this project. A command scan can't tell two jobs in one file from two
+ * branches of one job, so each scanned file counts once; a dedicated reader's jobs each count.
+ *
+ * @param runs The jobs that run Chromatic for this project.
+ *
+ * @returns The warning, if any.
+ */
+function duplicateRunChecks(runs: ChromaticRun[]): Check[] {
+  const counted = new Map<string, ChromaticRun>();
+  for (const run of runs) counted.set(run.confirmed ? `${run.file}\0${run.job}` : run.file, run);
+  if (counted.size < 2) return [];
+  // A project tested from two jobs builds the same commits twice and pays for the snapshots twice.
+  return [
+    {
+      group: 'Environment',
+      status: 'warn',
+      title: `${counted.size} CI jobs run Chromatic for this project`,
+      detail: `${[...counted.values()]
+        .map((r) => `${r.provider.name}: ${r.file} (${r.job})`)
+        .join(
+          '\n'
+        )}\nUnless they run on different events, each push makes a duplicate build. Keep the one that runs on every push.`,
+    },
+  ];
+}
+
+function runCheck(gitRoot: string, run: ChromaticRun): Check {
+  const problems: string[] = [];
+  if (run.fullHistory === false) {
+    problems.push(
+      run.provider.id === 'gitlab'
+        ? "no GIT_DEPTH: 0, so the clone is shallow. Set it in the job's variables."
+        : 'checkout has no fetch-depth: 0, so the clone is shallow'
+    );
+  }
+  if (run.onPullRequest) {
+    problems.push('runs on pull_request, which tests a merge commit instead of your branch');
+  }
+  const where = `${run.file} (${run.job})`;
+  if (problems.length === 0) {
+    return {
+      group: 'Environment',
+      status: 'pass',
+      title: run.confirmed
+        ? `${run.provider.name} runs Chromatic (${where})`
+        : `${run.provider.name} looks like it runs Chromatic (${where})`,
+    };
+  }
+  return {
+    group: 'Environment',
+    status: 'warn',
+    title: `${run.provider.name}: ${where}`,
+    detail: problems.join('\n'),
+    // Only the clone depth has an automatic fix; which events trigger a build is a choice.
+    fix: run.fullHistoryFix
+      ? {
+          summary: `Clone full history in ${where}`,
+          edits: [{ file: path.join(gitRoot, run.file), content: run.fullHistoryFix }],
+        }
+      : undefined,
+  };
+}
+
 function environmentChecks(input: DoctorInput): Check[] {
   const { gitRoot, files } = input;
   const checks: Check[] = [];
@@ -231,9 +352,18 @@ function environmentChecks(input: DoctorInput): Check[] {
     });
   }
 
-  const allRuns = findChromaticRuns(gitRoot, files);
+  const { runs: allRuns, unreadable } = readCi(gitRoot, files);
   // Only the jobs that run Chromatic from this package; in a monorepo others belong to siblings.
   const runs = runsFor(allRuns, relativeOrDot(gitRoot, input.cwd));
+  if (unreadable.length > 0) {
+    checks.push({
+      group: 'Environment',
+      status: 'warn',
+      title: `Couldn't read ${unreadable.join(', ')}`,
+      detail:
+        "It doesn't parse, so doctor can't tell whether it runs Chromatic. Your CI can't run it either.",
+    });
+  }
   if (runs.length === 0) {
     checks.push({
       group: 'Environment',
@@ -245,51 +375,7 @@ function environmentChecks(input: DoctorInput): Check[] {
       detail: 'Run chromatic init to add it.',
     });
   }
-  // A project tested from two jobs builds the same commits twice and pays for the snapshots twice.
-  if (runs.length > 1) {
-    checks.push({
-      group: 'Environment',
-      status: 'warn',
-      title: `${runs.length} CI jobs run Chromatic for this project`,
-      detail: `${runs.map((r) => `${r.provider.name}: ${r.file} (${r.job})`).join('\n')}\nEach push makes a duplicate build and captures snapshots twice. Keep the one that runs on every push and remove the others.`,
-    });
-  }
-  for (const run of runs) {
-    const problems: string[] = [];
-    if (run.fullHistory === false) {
-      problems.push(
-        run.provider.id === 'gitlab'
-          ? 'no GIT_DEPTH: 0, so the clone is shallow'
-          : 'checkout has no fetch-depth: 0, so the clone is shallow'
-      );
-    }
-    if (run.onPullRequest) {
-      problems.push('runs on pull_request, which tests a merge commit instead of your branch');
-    }
-    const where = `${run.file} (${run.job})`;
-    checks.push(
-      problems.length > 0
-        ? {
-            group: 'Environment',
-            status: 'warn',
-            title: `${run.provider.name}: ${where}`,
-            detail: problems.join('\n'),
-            // Only the clone depth has an automatic fix; which events trigger a build is a choice.
-            fix:
-              run.fullHistory === false && run.fullHistoryFix
-                ? {
-                    summary: `Clone full history in ${where}`,
-                    edits: [{ file: path.join(gitRoot, run.file), content: run.fullHistoryFix }],
-                  }
-                : undefined,
-          }
-        : {
-            group: 'Environment',
-            status: 'pass',
-            title: `${run.provider.name} runs Chromatic (${where})`,
-          }
-    );
-  }
+  checks.push(...duplicateRunChecks(runs), ...runs.map((run) => runCheck(gitRoot, run)));
   return checks;
 }
 
