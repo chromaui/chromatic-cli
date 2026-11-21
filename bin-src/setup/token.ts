@@ -177,4 +177,7 @@ export async function tokenStep(session: Session, project: Project) {
   clack.log.success(
     `${writer.say('Saved', 'save')} the token to ${writer.display(environmentFile)} ${color.muted('(gitignored, never committed)')}`
   );
+  // The CLI read .env before init wrote it, so set the variable for the checks that follow, the
+  // way dotenv would: a value already in the environment wins.
+  process.env.CHROMATIC_PROJECT_TOKEN ??= token;
 }
