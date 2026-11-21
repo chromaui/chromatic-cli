@@ -3,6 +3,7 @@ import { dedent } from 'ts-dedent';
 
 import { isE2EBuild } from '../../../lib/e2eUtils';
 import { Context } from '../../../types';
+import { buildResults } from '../../components/buildResults';
 import { autoAcceptedChanges, changeStatus } from '../../components/changeStatus';
 import { info, success } from '../../components/icons';
 import ignoredTests from '../../components/ignoredTests';
@@ -41,10 +42,12 @@ export default (ctx: Context) => {
     `);
   }
 
-  const headline = passed ? `Build ${build.number} passed!` : `Build ${build.number} completed`;
+  if (!passed) {
+    return buildResults(build, false, success);
+  }
 
   return dedent(chalk`
-    ${success} {bold ${headline}}
+    ${success} {bold Build ${build.number} passed!}
     ${[changesLine(build), ignoredLine].filter(Boolean).join('\n')}
     ${info} View build details at ${link(build.webUrl)}
   `);

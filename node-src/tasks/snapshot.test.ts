@@ -11,6 +11,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
 import {
+  buildTests,
+  erroredTests as erroredTestsFixture,
+} from '../ui/components/__fixtures__/buildTests';
+import {
   applySnapshotOutput,
   extractSnapshotInput,
   SnapshotOutput,
@@ -70,6 +74,21 @@ const runLinkedBuild = (options = {}) => {
   });
   return runSnapshot(ctx);
 };
+
+// Answers the poll and the test-list query by name, so the assertions don't depend on call order.
+const contextFor = (status: string, testsQuery: () => unknown) => {
+  const build = { app: {}, number: 7, features: {}, reportToken: 'report-token' };
+  const ctx = { ...createBaseTestContext(), build } as any;
+  ctx.client.runQuery.mockImplementation(async (query: string) =>
+    query.includes('SnapshotBuildTestsQuery')
+      ? testsQuery()
+      : { app: { build: { status, errorCount: 1, pendingCount: 1, completedAt: 1 } } }
+  );
+  return ctx;
+};
+
+const testsQueryCalls = (ctx: any) =>
+  ctx.client.runQuery.mock.calls.filter(([query]) => query.includes('SnapshotBuildTestsQuery'));
 
 describe('snapshotProject', () => {
   it('waits for the build to complete and sets it on context', async () => {
@@ -137,6 +156,8 @@ describe('snapshotProject', () => {
       'pendingCount: testCount(statuses: [PENDING])',
       'acceptedCount: testCount(statuses: [ACCEPTED])',
       'deniedCount: testCount(statuses: [DENIED])',
+      // Verify reads it before any test has run, so the completed build must read it again.
+      'interactionTestFailuresCount',
     ]) {
       expect(ctx.client.runQuery).toHaveBeenCalledWith(
         expect.stringContaining(field),
@@ -245,6 +266,47 @@ describe('snapshotProject', () => {
     await runSnapshot(ctx);
     expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'BROKEN', completedAt: 1 });
     expect(ctx.exitCode).toBe(2);
+  });
+
+  describe('result test lists', () => {
+    const erroredTests = erroredTestsFixture('Icon', 1);
+    const pendingTests = buildTests('Form', 1);
+
+    it('fetches the lists once the build completes, capped at 50, with the report token', async () => {
+      const ctx = contextFor('BROKEN', () => ({ app: { build: { erroredTests, pendingTests } } }));
+
+      await runSnapshot(ctx);
+
+      expect(testsQueryCalls(ctx)).toEqual([
+        [
+          expect.stringContaining('erroredTests: tests(statuses: [BROKEN], limit: $limit)'),
+          { number: 7, limit: 50 },
+          { headers: { Authorization: 'Bearer report-token' } },
+        ],
+      ]);
+      expect(ctx.build).toMatchObject({ erroredTests, pendingTests });
+      expect(ctx.exitCode).toBe(2);
+    });
+
+    it('does not fetch the lists for a passed build', async () => {
+      const ctx = contextFor('PASSED', () => ({ app: { build: { erroredTests } } }));
+
+      await runSnapshot(ctx);
+
+      expect(testsQueryCalls(ctx)).toEqual([]);
+    });
+
+    it('keeps the exit code and leaves the lists out when the index rejects the query', async () => {
+      const ctx = contextFor('PENDING', () => {
+        throw { name: 'GraphQLError', message: 'Cannot access those build fields' };
+      });
+
+      await runSnapshot(ctx);
+
+      expect(ctx.exitCode).toBe(1);
+      expect(ctx.build.pendingTests).toBeUndefined();
+      expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining('1 change needs review'));
+    });
   });
 
   it('sets exitCode to 3 when build fails (system error)', async () => {
@@ -593,6 +655,6 @@ describe('applySnapshotOutput', () => {
     applySnapshotOutput(ctx, output);
 
     expect(ctx.exitCode).toBe(0);
-    expect(ctx.log.info).toHaveBeenCalledWith(expect.stringContaining('Build 1 completed'));
+    expect(ctx.log.info).toHaveBeenCalledWith(expect.stringContaining('View Build 1: https://x'));
   });
 });
