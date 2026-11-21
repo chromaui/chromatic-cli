@@ -155,6 +155,20 @@ function lineDiff(before: string, after: string) {
 }
 
 /**
+ * Hides all but the last 4 characters of project tokens, so fix previews are safe in CI logs.
+ *
+ * @param text Preview text.
+ *
+ * @returns The text with tokens masked.
+ */
+function maskTokens(text: string) {
+  return text.replaceAll(
+    /(CHROMATIC_PROJECT_TOKEN=|"projectToken":\s*")([^"\s]+)/g,
+    (_, key: string, token: string) => `${key}…${token.slice(-4)}`
+  );
+}
+
+/**
  * Offers fixes one at a time like storybook automigrate: show the change, ask, write, then check
  * again, so fixes to the same file build on each other.
  *
@@ -178,7 +192,7 @@ export async function applyFixes(
     const preview = fix.edits
       .map(({ file, content }) => {
         const before = existsSync(file) ? readFileSync(file, 'utf8') : '';
-        return `${color.bold(relativeOrDot(cwd, file))}\n${lineDiff(before, content)}`;
+        return `${color.bold(relativeOrDot(cwd, file))}\n${maskTokens(lineDiff(before, content))}`;
       })
       .join('\n\n');
     clack.note(preview, fix.summary);

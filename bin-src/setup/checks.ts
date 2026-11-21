@@ -412,11 +412,13 @@ function environmentChecks(input: DoctorInput): Check[] {
  * @returns One result per check.
  */
 export function runChecks(input: DoctorInput, configError?: string): Check[] {
-  return [
+  const checks = [
     ...loadingChecks(input, configError),
     ...(configError ? [] : valueChecks(input)),
     ...environmentChecks(input),
   ];
+  // A fix would rewrite a config file that failed to load and lose what's in it.
+  return configError ? checks.map(({ fix: _fix, ...check }) => check) : checks;
 }
 
 /**

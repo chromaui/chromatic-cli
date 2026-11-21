@@ -5,7 +5,14 @@ import * as clack from '@clack/prompts';
 
 import { SubcommandFailure } from '../subcommandFailure';
 import type { Project } from './detect';
-import { answered, color, FileWriter, gitignoreAdditions, relativeOrDot } from './shared';
+import {
+  answered,
+  color,
+  FileWriter,
+  gitignoreAdditions,
+  isTracked,
+  relativeOrDot,
+} from './shared';
 
 /** State shared by init's steps. */
 export interface Session {
@@ -148,6 +155,12 @@ export async function tokenStep(session: Session, project: Project) {
     );
   if (!save) return;
   const environmentFile = path.join(project.directory, '.env');
+  if (isTracked(environmentFile)) {
+    clack.log.warn(
+      `Didn't save the token: git tracks ${writer.display(environmentFile)}, so it would be committed.`
+    );
+    return;
+  }
   const text = existsSync(environmentFile) ? readFileSync(environmentFile, 'utf8') : '';
   const line = `CHROMATIC_PROJECT_TOKEN=${token}`;
   writer.write(

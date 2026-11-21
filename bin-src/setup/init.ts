@@ -178,13 +178,19 @@ async function packageStep(session: Session, project: Project, framework: Framew
   return missing.length > 0;
 }
 
+const INSTALL_MUTABLE: Partial<Record<string, string[]>> = {
+  pnpm: ['--no-frozen-lockfile'],
+  yarn: ['--no-immutable'],
+};
+
 async function installStep(
   session: Session,
   project: Project,
   packageManager: keyof typeof PACKAGE_MANAGER_COMMANDS
 ) {
   const command = packageManager === 'yarn-classic' ? 'yarn' : packageManager;
-  const args = ['install'];
+  // CI defaults pnpm and Yarn Berry to a frozen lockfile, which rejects the dependency init adds.
+  const args = ['install', ...(INSTALL_MUTABLE[packageManager] ?? [])];
   if (session.flags.skipInstall || session.flags.dryRun) {
     clack.log.info(`Skipped installing. Run ${color.cta(`${command} ${args.join(' ')}`)} later.`);
     return;
@@ -207,6 +213,7 @@ async function installStep(
           .join('\n')
       )
     );
+    throw new SubcommandFailure(`${command} install failed`, { exitCode: 1 });
   }
 }
 
@@ -286,8 +293,14 @@ async function ciStep(
     if (provider.id === 'github') {
       const name =
         workingDirectory === '.' ? 'chromatic' : `chromatic-${path.basename(project.directory)}`;
-      let file = path.join(gitRoot, '.github', 'workflows', 'chromatic.yml');
-      if (existsSync(file)) file = path.join(gitRoot, '.github', 'workflows', `${name}.yml`);
+      const file = [...new Set(['chromatic', name])]
+        .map((base) => path.join(gitRoot, '.github', 'workflows', `${base}.yml`))
+        .find((candidate) => !existsSync(candidate));
+      if (!file) {
+        clack.note(githubWorkflow(template), `Add this as a workflow in .github/workflows`);
+        clack.log.warn(`${name}.yml already exists, so init didn't overwrite it.`);
+        continue;
+      }
       writer.write(file, githubWorkflow(template));
       clack.log.success(
         `${writer.say('Wrote', 'write')} ${writer.display(file)} ${color.muted(`(on push, full git history${workingDirectory === '.' ? '' : `, runs from ${workingDirectory}`})`)}`
@@ -406,7 +419,11 @@ export async function main(argv: string[]) {
     clack.log.step(`Checked the setup: ${summarize(checks)}`);
     printChecks(problemsIn(checks));
     // Offer each fix like doctor --fix, then show what's left.
-    if (checks.some((c) => c.fix)) {
+    if (checks.some((c) => c.fix) && !flags.yes && !session.interactive) {
+      clack.log.info(
+        `Run ${color.cta('npx chromatic doctor --fix')} in a terminal to apply the fixes.`
+      );
+    } else if (checks.some((c) => c.fix)) {
       checks = await applyFixes(recheck, { cwd: project.directory, yes: !!flags.yes });
       const left = problemsIn(checks);
       clack.log.step(`Checked again: ${summarize(checks)}`);

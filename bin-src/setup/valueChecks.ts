@@ -10,7 +10,7 @@ import {
   storybookConfigCandidates,
 } from './checks';
 import { chromaticRunsFor, detectCi } from './detect';
-import { relativeOrDot } from './shared';
+import { isTracked, relativeOrDot } from './shared';
 
 const ONLY_CHANGED_FLAG = /--only-changed\b(?!=false)/;
 
@@ -62,7 +62,7 @@ function onlyChangedChecks(input: DoctorInput): Check[] {
   // The config file and flags don't say; the script or the CI step may still pass --only-changed.
   const elsewhere = onlyChanged === undefined ? onlyChangedElsewhere(input) : undefined;
   if (elsewhere) {
-    return [{ group: 'Values', status: 'pass', title: `TurboSnap is on (set in ${elsewhere})` }];
+    return [{ group: 'Values', status: 'pass', title: `TurboSnap is set in ${elsewhere}` }];
   }
   if (onlyChanged === undefined || onlyChanged === false) {
     return [
@@ -290,13 +290,16 @@ function tokenInConfigChecks(input: DoctorInput): Check[] {
       title: 'The project token is in the config file',
       detail:
         'Anyone who can read the repository can publish builds. Keep it in CHROMATIC_PROJECT_TOKEN.',
-      fix: {
-        summary: 'Move the token to a gitignored .env and remove it from the config file',
-        edits: [
-          configEdit(input, (json) => delete json.projectToken),
-          ...environmentTokenEdits(input, input.configJson?.projectToken),
-        ],
-      },
+      // A tracked .env gets committed too, so only move the token to an untracked one.
+      fix: isTracked(path.join(input.cwd, '.env'))
+        ? undefined
+        : {
+            summary: 'Move the token to a gitignored .env and remove it from the config file',
+            edits: [
+              configEdit(input, (json) => delete json.projectToken),
+              ...environmentTokenEdits(input, input.configJson?.projectToken),
+            ],
+          },
     },
   ];
 }

@@ -64,6 +64,20 @@ export function listRepoFiles(gitRoot: string) {
 }
 
 /**
+ * Whether git tracks a file, so writing a secret to it would get committed.
+ *
+ * @param file Absolute path.
+ *
+ * @returns True when the file is in the index.
+ */
+export function isTracked(file: string) {
+  return (
+    git(['ls-files', '--error-unmatch', '--', path.basename(file)], path.dirname(file)) !==
+    undefined
+  );
+}
+
+/**
  * A relative path, or "." when the two are the same.
  *
  * @param from The base path.

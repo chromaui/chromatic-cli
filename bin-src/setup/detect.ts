@@ -117,6 +117,20 @@ const ROOT_LOCKFILES: [string, string][] = [
 ];
 
 /**
+ * Yarn 1 or Berry: from the packageManager version when there is one, else from .yarnrc.yml.
+ *
+ * @param name The packageManager field or lockfile's package manager, such as "yarn@4.5.0".
+ * @param gitRoot The repository root.
+ *
+ * @returns Which Yarn it is.
+ */
+function yarnFlavor(name: string, gitRoot: string): PackageManager {
+  const major = /^yarn@(\d+)/.exec(name)?.[1];
+  if (major) return major === '1' ? 'yarn-classic' : 'yarn';
+  return existsSync(path.join(gitRoot, '.yarnrc.yml')) ? 'yarn' : 'yarn-classic';
+}
+
+/**
  * Reads the package manager from the root packageManager field, then from root lockfiles.
  *
  * @param gitRoot The repository root.
@@ -132,9 +146,7 @@ export async function detectPackageManager(gitRoot: string): Promise<PackageMana
     declared ?? fromRoot ?? (await getPackageManagerName().catch(() => undefined)) ?? 'npm';
   if (name.startsWith('pnpm')) return 'pnpm';
   if (name.startsWith('bun')) return 'bun';
-  if (name.startsWith('yarn')) {
-    return existsSync(path.join(gitRoot, '.yarnrc.yml')) ? 'yarn' : 'yarn-classic';
-  }
+  if (name.startsWith('yarn')) return yarnFlavor(name, gitRoot);
   return 'npm';
 }
 
@@ -264,7 +276,7 @@ const RUNS_CHROMATIC = /chromaui\/action|\bchromatic\b(?!\.config)/i;
  * @param gitRoot The repository root.
  * @param files Repository files relative to the git root.
  *
- * @returns The providers whose config files exist.
+ * @returns Every documented provider, with the config files found for each.
  */
 export function detectCi(gitRoot: string, files: string[]): DetectedCi[] {
   return CI_PROVIDERS.map((provider) => {
