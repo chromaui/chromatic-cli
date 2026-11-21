@@ -1,5 +1,5 @@
 import { execFileSync, spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -15,6 +15,7 @@ import {
   parseTree,
 } from 'jsonc-parser/lib/esm/main.js';
 import picocolors from 'picocolors';
+import picomatch from 'picomatch';
 
 import { SubcommandFailure } from '../subcommandFailure';
 
@@ -381,6 +382,63 @@ function editJsonc(text: string, key: string, value: unknown, indent: string) {
     return value === undefined ? edit.remove(node.parent) : edit.replace(node, node.parent);
   }
   return value === undefined ? text : edit.add(root);
+}
+
+/** Writes files unless this is a dry run, and words what it did either way. */
+export class FileWriter {
+  constructor(
+    private readonly dryRun: boolean,
+    private readonly displayRoot: string
+  ) {}
+
+  write(file: string, content: string) {
+    if (existsSync(file) && readFileSync(file, 'utf8') === content) return false;
+    if (!this.dryRun) {
+      mkdirSync(path.dirname(file), { recursive: true });
+      writeFileSync(file, content);
+    }
+    return true;
+  }
+
+  display(file: string) {
+    return relativeOrDot(this.displayRoot, file);
+  }
+
+  /**
+   * Wording for log lines, so a dry run reads "Would write" instead of "Wrote".
+   *
+   * @param done What happened, such as "Wrote".
+   * @param wouldDo The same in a dry run, such as "write".
+   *
+   * @returns The wording to log.
+   */
+  say(done: string, wouldDo: string) {
+    return this.dryRun ? `Would ${wouldDo}` : done;
+  }
+}
+
+/**
+ * Adds lines to the repository's .gitignore that aren't already in it.
+ *
+ * @param gitRoot Absolute repository root.
+ * @param wanted The lines to add.
+ *
+ * @returns The .gitignore's path, the lines it lacked, and its new text.
+ */
+export function gitignoreAdditions(gitRoot: string, wanted: string[]) {
+  const file = path.join(gitRoot, '.gitignore');
+  const text = existsSync(file) ? readFileSync(file, 'utf8') : '';
+  const present = new Set(text.split('\n').map((line) => line.trim()));
+  // Skip entries an existing pattern already covers, like chromatic.log under *.log.
+  const patterns = [...present].filter(
+    (line) => line && !line.startsWith('#') && !line.startsWith('!')
+  );
+  const covered = (entry: string) =>
+    patterns.some(
+      (p) => p === entry || picomatch(p.replace(/^\//, ''), { dot: true })(entry.replace(/^\//, ''))
+    );
+  const missing = wanted.filter((entry) => !covered(entry));
+  return { file, missing, content: missing.length === 0 ? text : withSection(text, missing) };
 }
 
 /**
