@@ -156,6 +156,8 @@ describe('snapshotProject', () => {
       'pendingCount: testCount(statuses: [PENDING])',
       'acceptedCount: testCount(statuses: [ACCEPTED])',
       'deniedCount: testCount(statuses: [DENIED])',
+      // Verify reads it before any test has run, so the completed build must read it again.
+      'interactionTestFailuresCount',
     ]) {
       expect(ctx.client.runQuery).toHaveBeenCalledWith(
         expect.stringContaining(field),
