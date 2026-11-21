@@ -380,7 +380,10 @@ export default function getOptions(
  *
  * @returns The user's script name, or the one that looks like a Storybook build.
  */
-function findBuildScriptName(scripts: Record<string, string> = {}, buildScriptName?: string) {
+export function findBuildScriptName(
+  scripts: Record<string, string> = {},
+  buildScriptName?: string
+) {
   if (buildScriptName) {
     return buildScriptName;
   }
