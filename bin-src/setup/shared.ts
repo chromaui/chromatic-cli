@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import * as clack from '@clack/prompts';
@@ -91,17 +92,42 @@ export function tokenEnvironmentEdits(gitRoot: string, directory: string, token:
     },
   ];
   // Ask git rather than reading .gitignore: it knows about negations, nested files and excludes.
-  if (git(['check-ignore', '-q', '--no-index', '--', file], gitRoot) !== undefined)
-    return { edits };
+  if (ignoredWith(gitRoot, file)) return { edits };
   const relative = relativeOrDot(gitRoot, file);
-  const gitignore = gitignoreAdditions(gitRoot, [relative === '.env' ? '.env' : `/${relative}`]);
-  // A pattern that should cover it but doesn't means a rule like !.env un-ignores it on purpose.
-  if (gitignore.missing.length === 0) {
+  const pattern = relative === '.env' ? '.env' : `/${relative}`;
+  // Ask again with the pattern init would add. An excludes file ranks below every .gitignore, so a
+  // rule like !.env, in the root or a nested .gitignore, still wins and the token isn't written.
+  if (!ignoredWith(gitRoot, file, pattern)) {
     return {
-      reason: `your .gitignore doesn't ignore ${relative}, so the token would be committed`,
+      reason: `a .gitignore un-ignores ${relative}, so the token would be committed`,
     };
   }
-  return { edits: [...edits, { file: gitignore.file, content: gitignore.content }] };
+  const gitignore = gitignoreAdditions(gitRoot, [pattern]);
+  return gitignore.missing.length > 0
+    ? { edits: [...edits, { file: gitignore.file, content: gitignore.content }] }
+    : { edits };
+}
+
+/**
+ * Whether git ignores a file, optionally with one more pattern in an excludes file.
+ *
+ * @param gitRoot Absolute repository root.
+ * @param file Absolute path.
+ * @param pattern A pattern to add, relative to the repository root.
+ *
+ * @returns True when git would ignore the file.
+ */
+function ignoredWith(gitRoot: string, file: string, pattern?: string) {
+  const args = ['check-ignore', '-q', '--no-index', '--', file];
+  if (!pattern) return git(args, gitRoot) !== undefined;
+  const directory = mkdtempSync(path.join(tmpdir(), 'chromatic-exclude-'));
+  try {
+    const excludes = path.join(directory, 'exclude');
+    writeFileSync(excludes, `${pattern}\n`);
+    return git(['-c', `core.excludesFile=${excludes}`, ...args], gitRoot) !== undefined;
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 }
 
 /**

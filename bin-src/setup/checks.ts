@@ -118,6 +118,20 @@ function storybookChecks(input: DoctorInput, deps: Record<string, string>): Chec
             status: 'fail',
             title: `storybookBuildDir ${options.storybookBuildDir} isn't a Storybook build`,
             detail: input.buildDirectoryError,
+            // The build fails with it either way, so letting Chromatic build can't make it worse.
+            // A valid prebuilt folder is never removed: the script may not build that Storybook.
+            fix: packageJson.scripts?.[
+              findBuildScriptName(packageJson.scripts, options.buildScriptName)
+            ]
+              ? configFix(
+                  input,
+                  'storybookBuildDir',
+                  'Remove storybookBuildDir so Chromatic builds Storybook',
+                  (json) => {
+                    delete json.storybookBuildDir;
+                  }
+                )
+              : undefined,
           }
         : {
             group: 'Loading',
@@ -171,9 +185,21 @@ function noStorybookCheck(input: DoctorInput): Check {
     title: `No Storybook found at ${relativeOrDot(input.cwd, input.storybookConfigDirectory)}`,
   };
   // An E2E project that doesn't say so in its options gets built as a Storybook, and fails.
-  const e2e = readdirSync(input.cwd)
-    .map((file) => file.match(E2E_CONFIG)?.[2] as Framework | undefined)
-    .find(Boolean);
+  const found = [
+    ...new Set(
+      readdirSync(input.cwd)
+        .map((file) => file.match(E2E_CONFIG)?.[2] as Framework | undefined)
+        .filter((framework) => framework !== undefined)
+    ),
+  ];
+  // With two test configs here, which one Chromatic should run is the user's call.
+  const e2e = found.length === 1 ? found[0] : undefined;
+  if (found.length > 1) {
+    return {
+      ...missing,
+      detail: `This folder has ${found.map((f) => FRAMEWORK_NAMES[f]).join(' and ')} configs, but nothing sets which one Chromatic runs, so it tries to build a Storybook. Set one of ${found.map((f) => `"${f}": true`).join(', ')}.`,
+    };
+  }
   if (!e2e) {
     return {
       ...missing,
@@ -360,8 +386,7 @@ function environmentChecks(input: DoctorInput): Check[] {
       group: 'Environment',
       status: 'warn',
       title: `Couldn't read ${unreadable.join(', ')}`,
-      detail:
-        "It doesn't parse, so doctor can't tell whether it runs Chromatic. Your CI can't run it either.",
+      detail: "doctor couldn't parse it, so it can't tell whether it runs Chromatic.",
     });
   }
   if (runs.length === 0) {

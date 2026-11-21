@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
 import { findChromaticRuns, readCi } from './ci';
+import { ciSnippet } from './ciTemplates';
 
 let root: string | undefined;
 
@@ -173,5 +174,38 @@ last-parent-wins:
       { job: 'own-depth-wins', directory: 'packages/ui', fullHistory: false, onlyChanged: false },
       { job: 'last-parent-wins', directory: 'packages/ui', fullHistory: false, onlyChanged: true },
     ]);
+  });
+  it('reports a shallow checkout reached through an alias, without a fix', () => {
+    const [run] = runsIn({
+      '.github/workflows/ci.yml': `on: push
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: &clone { fetch-depth: 1 }
+      - uses: actions/checkout@v4
+        with: *clone
+      - run: npx chromatic
+`,
+    });
+
+    expect(run).toMatchObject({ job: 'visual', fullHistory: false });
+    expect(run.fullHistoryFix).toBeUndefined();
+  });
+
+  it('reads the GitLab snippet init prints for a monorepo project', () => {
+    const snippet = ciSnippet('gitlab', {
+      workingDir: 'packages/ui',
+      packageManager: 'pnpm',
+      framework: 'playwright',
+      secretName: 'CHROMATIC_PROJECT_TOKEN_PACKAGES_UI',
+    });
+
+    const runs = runsIn({ '.gitlab-ci.yml': snippet });
+
+    expect(runs).toMatchObject([{ job: 'chromatic', directory: 'packages/ui', fullHistory: true }]);
+    // Each line runs in its own subshell, so no cd carries over to the next line.
+    expect(snippet).not.toMatch(/^\s*- cd /m);
   });
 });

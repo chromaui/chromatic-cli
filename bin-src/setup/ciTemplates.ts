@@ -93,16 +93,21 @@ export function githubWorkflow({
 }
 
 function runLines({ workingDir, packageManager, framework, secretName }: CiTemplateInput) {
-  const cd = workingDir === '.' ? '' : `cd ${workingDir} && `;
+  // A subshell for each line: GitLab and Bitbucket run every line in one shell, so a bare cd
+  // would carry over and the next one would fail.
+  const inDirectory = (command: string) =>
+    workingDir === '.' ? command : `(cd ${workingDir} && ${command})`;
   // The CLI reads CHROMATIC_PROJECT_TOKEN, so map a per-project secret onto it.
   const token =
     secretName === 'CHROMATIC_PROJECT_TOKEN' ? '' : `CHROMATIC_PROJECT_TOKEN=$${secretName} `;
   const e2e = E2E_RUN[framework];
   return [
     PACKAGE_MANAGER_COMMANDS[packageManager].ciInstall,
-    ...(framework === 'playwright' ? [`${cd}npx playwright install --with-deps chromium`] : []),
-    ...(e2e ? [`${cd}${e2e}`] : []),
-    `${cd}${token}npx chromatic`,
+    ...(framework === 'playwright'
+      ? [inDirectory('npx playwright install --with-deps chromium')]
+      : []),
+    ...(e2e ? [inDirectory(e2e)] : []),
+    inDirectory(`${token}npx chromatic`),
   ];
 }
 

@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -17,8 +17,10 @@ afterEach(() => {
 function repoWith(files: Record<string, string>, tracked: string[] = []) {
   root = mkdtempSync(path.join(tmpdir(), 'chromatic-env-'));
   execFileSync('git', ['init', '-q'], { cwd: root });
-  for (const [file, content] of Object.entries(files))
+  for (const [file, content] of Object.entries(files)) {
+    mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
     writeFileSync(path.join(root, file), content);
+  }
   if (tracked.length > 0) execFileSync('git', ['add', '-f', ...tracked], { cwd: root });
   return root;
 }
@@ -50,12 +52,22 @@ describe('tokenEnvironmentEdits', () => {
   });
 
   it.each([
-    ['.gitignore un-ignores it', { '.gitignore': '.env\n!.env\n' }, []],
-    ['git tracks it', { '.gitignore': '.env\n', '.env': 'OTHER=1\n' }, ['.env']],
-  ])('refuses when %s', (_, files, tracked) => {
+    ['.gitignore un-ignores it', { '.gitignore': '.env\n!.env\n' }, [], '.'],
+    [
+      'a nested .gitignore un-ignores it',
+      { 'packages/ui/.gitignore': '!.env\n' },
+      [],
+      'packages/ui',
+    ],
+    ['git tracks it', { '.gitignore': '.env\n', '.env': 'OTHER=1\n' }, ['.env'], '.'],
+  ])('refuses when %s', (_, files, tracked, directory) => {
     const gitRoot = repoWith(files, tracked);
 
-    const { edits, reason } = tokenEnvironmentEdits(gitRoot, gitRoot, 'chpt_abc123');
+    const { edits, reason } = tokenEnvironmentEdits(
+      gitRoot,
+      path.join(gitRoot, directory),
+      'chpt_abc123'
+    );
 
     expect(edits).toBeUndefined();
     expect(reason).toContain('would be committed');

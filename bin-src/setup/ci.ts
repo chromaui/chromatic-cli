@@ -38,7 +38,7 @@ export interface DetectedCi {
 // A command that runs the chromatic binary, as the first word of a shell command, after any
 // VAR=value assignments such as the CHROMATIC_PROJECT_TOKEN=... that init's snippets set.
 const CHROMATIC_COMMAND =
-  /(?:^|&&|\|\||;|\|)\s*(?:[A-Za-z_]\w*=\S*\s+)*(?:npx\s+(?:-y\s+)?|pnpm\s+(?:dlx\s+|exec\s+)?|yarn\s+(?:dlx\s+)?|bunx\s+|bun\s+run\s+|npm\s+(?:run|exec)\s+(?:--\s+)?)?chromatic(?:@\S+)?(?=\s|$|;|&|\|)/m;
+  /(?:^|&&|\|\||;|\|)\s*(?:[A-Za-z_]\w*=\S*\s+)*(?:npx\s+(?:-y\s+)?|pnpm\s+(?:dlx\s+|exec\s+)?|yarn\s+(?:dlx\s+)?|bunx\s+|bun\s+run\s+|npm\s+(?:run|exec)\s+(?:--\s+)?)?chromatic(?:@[^\s)]+)?(?=\s|$|;|&|\||\))/m;
 const ONLY_CHANGED_FLAG = /--only-changed(?!=false)(?=[\s=]|$)/;
 const GITLAB_RESERVED = new Set([
   'stages',
@@ -187,8 +187,13 @@ function githubHistory(raw: string, job: string, steps: any[]) {
   const shallow = checkouts.filter(({ step }) => String(step.with?.['fetch-depth']) !== '0');
   if (shallow.length === 0) return { fullHistory: checkouts.length > 0 ? true : undefined };
   const fixed = parseDocument(raw);
-  for (const { index } of shallow) {
-    fixed.setIn(['jobs', job, 'steps', index, 'with', 'fetch-depth'], 0);
+  try {
+    for (const { index } of shallow) {
+      fixed.setIn(['jobs', job, 'steps', index, 'with', 'fetch-depth'], 0);
+    }
+  } catch {
+    // A path through an alias or anchor can't be edited in place; report it without a fix.
+    return { fullHistory: false };
   }
   return { fullHistory: false, fullHistoryFix: printYaml(fixed) };
 }

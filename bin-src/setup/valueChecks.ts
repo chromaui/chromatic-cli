@@ -188,24 +188,19 @@ function baseDirectoryChecks(input: DoctorInput): Check[] {
 
 function buildDirectoryChecks(input: DoctorInput): Check[] {
   const { options, packageJson } = input;
-  if (!options.storybookBuildDir) return [];
+  // An invalid folder is reported with the other Storybook checks.
+  if (!options.storybookBuildDir || input.buildDirectoryError) return [];
   const scriptName = findBuildScriptName(packageJson?.scripts, options.buildScriptName);
   const canBuild = !!packageJson?.scripts?.[scriptName];
   if (!options.onlyChanged || !canBuild) return [];
+  // No fix: the script may not build the Storybook that's in the folder, and a working prebuilt
+  // upload would turn into a failing build.
   return [
     {
       group: 'Values',
       status: 'warn',
       title: 'storybookBuildDir stops Chromatic building Storybook',
-      detail: `With TurboSnap on, a stale or stats-less build can hide changes. The "${scriptName}" script is available instead.`,
-      fix: configFix(
-        input,
-        'storybookBuildDir',
-        'Remove storybookBuildDir so Chromatic builds with stats',
-        (json) => {
-          delete json.storybookBuildDir;
-        }
-      ),
+      detail: `With TurboSnap on, a stale or stats-less build can hide changes. If the "${scriptName}" script builds this Storybook, remove storybookBuildDir.`,
     },
   ];
 }
