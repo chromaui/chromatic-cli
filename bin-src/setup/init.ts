@@ -451,7 +451,9 @@ export async function main(argv: string[]) {
     // The snippet was just printed, so "no CI runs Chromatic yet" would only repeat it.
     const pasting = providers.some((p) => p.id !== 'github');
     const problemsIn = (checks: Check[]) =>
-      checks.filter((c) => c.status !== 'pass' && !(pasting && c.title.startsWith('No CI')));
+      checks.filter(
+        (c) => ['warn', 'fail'].includes(c.status) && !(pasting && c.title.startsWith('No CI'))
+      );
     const recheck = () => collectChecks(project.directory);
     let checks = await recheck();
     clack.log.step(`Checked the setup: ${summarize(checks)}`);

@@ -13,7 +13,8 @@ import { valueChecks } from './valueChecks';
 
 const MAIN_FILE = /^main\.[cm]?[jt]sx?$/;
 
-type Status = 'pass' | 'warn' | 'fail';
+// An info line reports something without judging it, and isn't counted.
+type Status = 'pass' | 'warn' | 'fail' | 'info';
 export type Group = 'Loading' | 'Values' | 'Environment';
 
 export interface Fix {
