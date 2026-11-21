@@ -20,6 +20,11 @@ export interface ChromaticRun {
   onPullRequest?: boolean;
   /** Whether the step that runs Chromatic turns TurboSnap on. */
   onlyChanged: boolean;
+  /**
+   * Whether the pipeline file gives Chromatic a project token. False also when the provider injects
+   * one from its settings, which the file doesn't show.
+   */
+  passesToken: boolean;
   /** The CI file with full history turned on for this job, when that can be written safely. */
   fullHistoryFix?: string;
   /**
@@ -38,8 +43,28 @@ export interface DetectedCi {
 // A command that runs the chromatic binary, as the first word of a shell command, after any
 // VAR=value assignments such as the CHROMATIC_PROJECT_TOKEN=... that init's snippets set.
 const CHROMATIC_COMMAND =
-  /(?:^|&&|\|\||;|\|)\s*(?:[A-Za-z_]\w*=\S*\s+)*(?:npx\s+(?:-y\s+)?|pnpm\s+(?:dlx\s+|exec\s+)?|yarn\s+(?:dlx\s+)?|bunx\s+|bun\s+run\s+|npm\s+(?:run|exec)\s+(?:--\s+)?)?chromatic(?:@[^\s)]+)?(?=\s|$|;|&|\||\))/m;
-const ONLY_CHANGED_FLAG = /--only-changed(?!=false)(?=[\s=]|$)/;
+  /(?:^|&&|\|\||;|\||\()\s*(?:[A-Za-z_]\w*=\S*\s+)*(?:npx\s+(?:-y\s+)?|pnpm\s+(?:dlx\s+|exec\s+)?|yarn\s+(?:dlx\s+)?|bunx\s+|bun\s+run\s+|npm\s+(?:run|exec)\s+(?:--\s+)?)?chromatic(?:@[^\s)]+)?(?=\s|$|;|&|\||\))/m;
+export const ONLY_CHANGED_FLAG = /--only-changed(?!=false)(?=[\s=)]|$)/;
+const TOKEN_IN_COMMAND = /\bCHROMATIC_PROJECT_TOKEN=|--project-token\b|(?:^|\s)-t\s/;
+
+/**
+ * Whether a command, or one of the environments it runs in, gives Chromatic a project token.
+ *
+ * @param command The shell command, if any.
+ * @param environments Variables set for it, such as a step's, job's and workflow's env, or the
+ * Action's inputs, which name it projectToken.
+ *
+ * @returns True when the pipeline file passes a token.
+ */
+function passesToken(command: string | undefined, ...environments: unknown[]) {
+  return (
+    environments.some(
+      (environment: any) =>
+        (environment?.CHROMATIC_PROJECT_TOKEN ?? environment?.projectToken) !== undefined
+    ) ||
+    (command !== undefined && TOKEN_IN_COMMAND.test(command))
+  );
+}
 const GITLAB_RESERVED = new Set([
   'stages',
   'variables',
@@ -118,13 +143,21 @@ function parseCi(raw: string) {
  *
  * @returns One run per directory.
  */
-function perDirectory<T extends { directory: string; onlyChanged: boolean }>(runs: T[]) {
+function perDirectory<T extends { directory: string; onlyChanged: boolean; passesToken: boolean }>(
+  runs: T[]
+) {
   const merged = new Map<string, T>();
   for (const run of runs) {
     const previous = merged.get(run.directory);
     merged.set(
       run.directory,
-      previous ? { ...previous, onlyChanged: previous.onlyChanged || run.onlyChanged } : run
+      previous
+        ? {
+            ...previous,
+            onlyChanged: previous.onlyChanged || run.onlyChanged,
+            passesToken: previous.passesToken || run.passesToken,
+          }
+        : run
     );
   }
   return [...merged.values()];
@@ -150,25 +183,37 @@ function triggersOnPullRequest(triggers: unknown) {
  * Where one GitHub Actions step runs Chromatic from, and whether it passes --only-changed.
  *
  * @param step The step's definition.
- * @param jobDirectory The job's or workflow's default working directory.
+ * @param job What the step inherits from its job and workflow.
  *
  * @returns The run, or undefined when the step doesn't run Chromatic.
  */
-function githubStepRun(step: any, jobDirectory: unknown) {
+interface JobDefaults {
+  directory: unknown;
+  environments: unknown[];
+}
+
+function githubStepRun(step: any, job: JobDefaults) {
   if (asText(step?.uses)?.startsWith('chromaui/action')) {
     const inputs = step.with ?? {};
     return {
       directory: normalizeDirectory(asText(inputs.workingDir)),
       onlyChanged: inputs.onlyChanged !== undefined && String(inputs.onlyChanged) !== 'false',
+      passesToken: passesToken(undefined, inputs, step.env, ...job.environments),
     };
   }
   const command = asText(step?.run);
   if (!command) return undefined;
   const directory = runsChromaticFrom(
     command,
-    normalizeDirectory(asText(step['working-directory']) ?? asText(jobDirectory))
+    normalizeDirectory(asText(step['working-directory']) ?? asText(job.directory))
   );
-  return directory ? { directory, onlyChanged: ONLY_CHANGED_FLAG.test(command) } : undefined;
+  return directory
+    ? {
+        directory,
+        onlyChanged: ONLY_CHANGED_FLAG.test(command),
+        passesToken: passesToken(command, step.env, ...job.environments),
+      }
+    : undefined;
 }
 
 /**
@@ -183,7 +228,10 @@ function githubStepRun(step: any, jobDirectory: unknown) {
 function githubHistory(raw: string, job: string, steps: any[]) {
   const checkouts = steps
     .map((step, index) => ({ step, index }))
-    .filter(({ step }) => asText(step?.uses)?.startsWith('actions/checkout'));
+    // A checkout of another repository doesn't hold this one's history.
+    .filter(
+      ({ step }) => asText(step?.uses)?.startsWith('actions/checkout') && !step.with?.repository
+    );
   const shallow = checkouts.filter(({ step }) => String(step.with?.['fetch-depth']) !== '0');
   if (shallow.length === 0) return { fullHistory: checkouts.length > 0 ? true : undefined };
   const fixed = parseDocument(raw);
@@ -192,10 +240,28 @@ function githubHistory(raw: string, job: string, steps: any[]) {
       fixed.setIn(['jobs', job, 'steps', index, 'with', 'fetch-depth'], 0);
     }
   } catch {
-    // A path through an alias or anchor can't be edited in place; report it without a fix.
+    // A path through an alias can't be edited in place; report it without a fix.
     return { fullHistory: false };
   }
   return { fullHistory: false, fullHistoryFix: printYaml(fixed) };
+}
+
+/**
+ * What a GitHub Actions job's steps inherit: its default working directory, else the workflow's,
+ * and both env blocks.
+ *
+ * @param workflow The parsed workflow.
+ * @param definition The job.
+ *
+ * @returns The defaults.
+ */
+function jobDefaults(workflow: any, definition: any): JobDefaults {
+  return {
+    directory:
+      definition?.defaults?.run?.['working-directory'] ??
+      workflow.defaults?.run?.['working-directory'],
+    environments: [definition?.env, workflow.env],
+  };
 }
 
 function githubRuns(provider: CiProvider, file: string, raw: string): ChromaticRun[] {
@@ -204,11 +270,9 @@ function githubRuns(provider: CiProvider, file: string, raw: string): ChromaticR
 
   return Object.entries<any>(workflow.jobs ?? {}).flatMap(([job, definition]) => {
     const steps: any[] = Array.isArray(definition?.steps) ? definition.steps : [];
-    const jobDirectory =
-      definition?.defaults?.run?.['working-directory'] ??
-      workflow.defaults?.run?.['working-directory'];
+    const defaults = jobDefaults(workflow, definition);
     const runs = perDirectory(
-      steps.map((step) => githubStepRun(step, jobDirectory)).filter((run) => run !== undefined)
+      steps.map((step) => githubStepRun(step, defaults)).filter((run) => run !== undefined)
     );
     if (runs.length === 0) return [];
     const history = githubHistory(raw, job, steps);
@@ -280,12 +344,16 @@ function gitlabJobRun(pipeline: Record<string, any>, definition: any) {
   // Scripts run in sequence, so a `cd` in an earlier line still applies.
   const directory = runsChromaticFrom(commands.join(' && '), '.');
   if (!directory) return undefined;
-  const depth =
-    inherited(pipeline, definition, (d) => d.variables?.GIT_DEPTH) ?? pipeline.variables?.GIT_DEPTH;
+  const variable = (name: string) =>
+    inherited(pipeline, definition, (d) => d.variables?.[name]) ?? pipeline.variables?.[name];
+  const depth = variable('GIT_DEPTH');
   return {
     directory,
     fullHistory: depth !== undefined && String(depth) === '0',
     onlyChanged: commands.some((command) => ONLY_CHANGED_FLAG.test(command)),
+    passesToken:
+      variable('CHROMATIC_PROJECT_TOKEN') !== undefined ||
+      commands.some((command) => passesToken(command)),
   };
 }
 
@@ -337,6 +405,7 @@ function genericRuns(provider: CiProvider, file: string, raw: string): Chromatic
             job: (at[0] === 'jobs' && at[1]) || at[0],
             directory,
             onlyChanged: ONLY_CHANGED_FLAG.test(value),
+            passesToken: passesToken(value),
           },
         ]
       : [];

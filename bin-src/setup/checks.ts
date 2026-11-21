@@ -4,7 +4,7 @@ import path from 'node:path';
 import { findBuildScriptName } from '../../node-src/lib/getOptions';
 import { matchesFile } from '../../node-src/lib/utilities';
 import pkg from '../../package.json';
-import { ChromaticRun, readCi, runsFor } from './ci';
+import { ChromaticRun } from './ci';
 import { E2E_CONFIG, Framework, FRAMEWORK_NAMES } from './detect';
 import { configFix, DoctorInput } from './doctorInput';
 import { packageJsonEdit } from './fixes';
@@ -110,35 +110,30 @@ function storybookChecks(input: DoctorInput, deps: Record<string, string>): Chec
   if (options.playwright || options.cypress || options.vitest || !packageJson || !packageJsonPath)
     return checks;
   // A prebuilt Storybook is uploaded as it is, so the build reads no Storybook source.
+  // No fix either way: CI may build the folder before it runs Chromatic.
   if (options.storybookBuildDir) {
-    checks.push(
-      input.buildDirectoryError
-        ? {
-            group: 'Loading',
-            status: 'fail',
-            title: `storybookBuildDir ${options.storybookBuildDir} isn't a Storybook build`,
-            detail: input.buildDirectoryError,
-            // The build fails with it either way, so letting Chromatic build can't make it worse.
-            // A valid prebuilt folder is never removed: the script may not build that Storybook.
-            fix: packageJson.scripts?.[
-              findBuildScriptName(packageJson.scripts, options.buildScriptName)
-            ]
-              ? configFix(
-                  input,
-                  'storybookBuildDir',
-                  'Remove storybookBuildDir so Chromatic builds Storybook',
-                  (json) => {
-                    delete json.storybookBuildDir;
-                  }
-                )
-              : undefined,
-          }
-        : {
-            group: 'Loading',
-            status: 'pass',
-            title: `Uploads the Storybook built in ${options.storybookBuildDir}`,
-          }
-    );
+    const folder = options.storybookBuildDir;
+    if (!input.buildDirectoryError) {
+      checks.push({
+        group: 'Loading',
+        status: 'pass',
+        title: `Uploads the Storybook built in ${folder}`,
+      });
+    } else if (existsSync(path.resolve(cwd, folder))) {
+      checks.push({
+        group: 'Loading',
+        status: 'fail',
+        title: `storybookBuildDir ${folder} isn't a Storybook build`,
+        detail: input.buildDirectoryError,
+      });
+    } else {
+      checks.push({
+        group: 'Loading',
+        status: 'warn',
+        title: `storybookBuildDir ${folder} hasn't been built here`,
+        detail: 'Build Storybook into it before Chromatic runs, as CI must.',
+      });
+    }
     return checks;
   }
 
@@ -342,7 +337,7 @@ function runCheck(gitRoot: string, run: ChromaticRun): Check {
 }
 
 function environmentChecks(input: DoctorInput): Check[] {
-  const { gitRoot, files } = input;
+  const { gitRoot } = input;
   const checks: Check[] = [];
   if (!gitRoot) {
     return [
@@ -378,9 +373,8 @@ function environmentChecks(input: DoctorInput): Check[] {
     });
   }
 
-  const { runs: allRuns, unreadable } = readCi(gitRoot, files);
   // Only the jobs that run Chromatic from this package; in a monorepo others belong to siblings.
-  const runs = runsFor(allRuns, relativeOrDot(gitRoot, input.cwd));
+  const { all: allRuns, runs, unreadable } = input.ci;
   if (unreadable.length > 0) {
     checks.push({
       group: 'Environment',
@@ -389,7 +383,8 @@ function environmentChecks(input: DoctorInput): Check[] {
       detail: "doctor couldn't parse it, so it can't tell whether it runs Chromatic.",
     });
   }
-  if (runs.length === 0) {
+  // A file doctor couldn't read may run it; that's reported above.
+  if (runs.length === 0 && unreadable.length === 0) {
     checks.push({
       group: 'Environment',
       status: 'warn',

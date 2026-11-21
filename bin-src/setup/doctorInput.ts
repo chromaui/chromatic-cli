@@ -16,7 +16,8 @@ import { validateFiles } from '../../node-src/tasks/prepare/validateFiles';
 import type { StorybookInfoDeps } from '../../node-src/tasks/storybookInfo';
 import type { Flags, Options } from '../../node-src/types';
 import type { Fix } from './checks';
-import { formatJson, readJson } from './shared';
+import { ChromaticRun, readCi, runsFor } from './ci';
+import { formatJson, readJson, relativeOrDot } from './shared';
 
 /** The options doctor checks, merged by the main command's own option handling. */
 type CheckedOptions = Partial<Options>;
@@ -43,6 +44,8 @@ export interface DoctorInput {
   storybookConfigDirectory: string;
   /** Why storybookBuildDir isn't a usable Storybook build, from the build's own validation. */
   buildDirectoryError?: string;
+  /** Every CI job that runs Chromatic, the ones that run it from cwd, and files that didn't parse. */
+  ci: { all: ChromaticRun[]; runs: ChromaticRun[]; unreadable: string[] };
 }
 
 function nearestPackageJson(cwd: string, stopAt?: string) {
@@ -161,6 +164,7 @@ export async function loadDoctorInput(input: {
   );
   const packageJsonPath = nearestPackageJson(cwd, input.gitRoot);
   const packageJson = packageJsonPath ? readJson(packageJsonPath) : undefined;
+  const ci = input.gitRoot ? readCi(input.gitRoot, input.files) : { runs: [], unreadable: [] };
 
   return {
     configError,
@@ -178,6 +182,11 @@ export async function loadDoctorInput(input: {
       options,
       packageJsonPath,
       packageJson,
+      ci: {
+        all: ci.runs,
+        runs: input.gitRoot ? runsFor(ci.runs, relativeOrDot(input.gitRoot, cwd)) : [],
+        unreadable: ci.unreadable,
+      },
       ...(await resolveStorybook(input.gitRoot, options, packageJson)),
     },
   };

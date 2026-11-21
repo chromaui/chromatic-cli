@@ -4,11 +4,9 @@ import path from 'node:path';
 import { findBuildScriptName } from '../../node-src/lib/getOptions';
 import type { Check } from './checks';
 import { countMatches, matchesBranch } from './checks';
-import { findChromaticRuns, runsFor } from './ci';
+import { ONLY_CHANGED_FLAG } from './ci';
 import { configFix, DoctorInput } from './doctorInput';
 import { relativeOrDot, tokenEnvironmentEdits } from './shared';
-
-const ONLY_CHANGED_FLAG = /--only-changed(?!=false)(?=[\s=]|$)/;
 
 /**
  * Finds where TurboSnap is turned on outside the config file: the package's chromatic script, or a
@@ -24,11 +22,7 @@ function onlyChangedElsewhere(input: DoctorInput) {
     (name) => /\bchromatic\b/.test(scripts[name]) && ONLY_CHANGED_FLAG.test(scripts[name])
   );
   if (script) return `the "${script}" script`;
-  if (!input.gitRoot) return undefined;
-  const run = runsFor(
-    findChromaticRuns(input.gitRoot, input.files),
-    relativeOrDot(input.gitRoot, input.cwd)
-  ).find((r) => r.onlyChanged);
+  const run = input.ci.runs.find((r) => r.onlyChanged);
   return run && `${run.file} (${run.job})`;
 }
 
@@ -64,10 +58,11 @@ function onlyChangedChecks(input: DoctorInput): Check[] {
         detail:
           onlyChanged === false
             ? '"onlyChanged" is false, so every build captures every story.'
-            : 'Nothing turns it on: not the config file, the "chromatic" script, or a CI step. Set "onlyChanged": true to test only the stories your changes affect.',
-        // Leave an explicit false alone; that's a choice, not a gap.
+            : `Nothing turns it on: not the config file, the "chromatic" script, or a CI step. Set "onlyChanged": true to test only the stories your changes affect${input.options.storybookBuildDir ? ', and build Storybook with --stats-json' : ''}.`,
+        // Leave an explicit false alone; that's a choice, not a gap. A prebuilt Storybook may have
+        // no stats file, and TurboSnap fails the build without one.
         fix:
-          onlyChanged === undefined
+          onlyChanged === undefined && !input.options.storybookBuildDir
             ? configFix(
                 input,
                 'onlyChanged',
@@ -133,6 +128,8 @@ function configDirectoryChecks(input: DoctorInput): Check[] {
       ? normalized.slice(prefix.length + 1)
       : undefined;
   const rebasedExists = rebased !== undefined && existsSync(path.join(cwd, rebased));
+  // A CI that runs Chromatic from the root, with --config-file, reads the path as it is.
+  const fixable = rebasedExists && input.ci.runs.length > 0;
   return [
     {
       group: 'Values',
@@ -141,7 +138,7 @@ function configDirectoryChecks(input: DoctorInput): Check[] {
       detail: rebasedExists
         ? `It's relative to the repository root, but Chromatic reads it from ${prefix}. Here it's ${rebased}.`
         : `Chromatic looks for it at ${relativeOrDot(cwd, input.storybookConfigDirectory)}.`,
-      fix: rebasedExists
+      fix: fixable
         ? configFix(input, 'storybookConfigDir', `Set storybookConfigDir to ${rebased}`, (json) => {
             json.storybookConfigDir = rebased;
           })
@@ -172,14 +169,18 @@ function baseDirectoryChecks(input: DoctorInput): Check[] {
         status: 'warn',
         title: 'storybookBaseDir repeats the default',
         detail: 'Chromatic already uses the directory it runs from.',
-        fix: configFix(
-          input,
-          'storybookBaseDir',
-          'Remove storybookBaseDir from the config file',
-          (json) => {
-            delete json.storybookBaseDir;
-          }
-        ),
+        // Only when CI runs Chromatic from here too; from the root, the value isn't the default.
+        fix:
+          input.ci.runs.length > 0
+            ? configFix(
+                input,
+                'storybookBaseDir',
+                'Remove storybookBaseDir from the config file',
+                (json) => {
+                  delete json.storybookBaseDir;
+                }
+              )
+            : undefined,
       },
     ];
   }
@@ -242,33 +243,45 @@ function globChecks(input: DoctorInput): Check[] {
   return checks;
 }
 
+/**
+ * The fix that moves the token out of the config file, or why there's none.
+ *
+ * @param input What loadDoctorInput read.
+ *
+ * @returns The fix, or the reason doctor can't make it.
+ */
 function moveTokenFix(input: DoctorInput) {
   const token = input.configJson?.projectToken;
-  if (!input.gitRoot || typeof token !== 'string') return undefined;
+  if (!input.gitRoot || typeof token !== 'string') return {};
+  // CI may read the token from this file; removing it before CI has its own would fail its builds.
+  if (!input.ci.runs.some((run) => run.passesToken)) {
+    return { reason: 'Give CI the token as CHROMATIC_PROJECT_TOKEN first, then remove it here.' };
+  }
   const saved = tokenEnvironmentEdits(input.gitRoot, input.cwd, token);
-  const removal =
-    saved.edits &&
-    configFix(
-      input,
-      'projectToken',
-      'Move the token to a gitignored .env and remove it from the config file',
-      (json) => {
-        delete json.projectToken;
-      }
-    );
-  return removal && { ...removal, edits: [...removal.edits, ...saved.edits], secrets: [token] };
+  if (!saved.edits) return { reason: `doctor can't move it to .env: ${saved.reason}.` };
+  const removal = configFix(
+    input,
+    'projectToken',
+    'Move the token to a gitignored .env and remove it from the config file',
+    (json) => {
+      delete json.projectToken;
+    }
+  );
+  return {
+    fix: removal && { ...removal, edits: [...removal.edits, ...saved.edits], secrets: [token] },
+  };
 }
 
 function tokenInConfigChecks(input: DoctorInput): Check[] {
   if (!input.configKeys.has('projectToken')) return [];
+  const { fix, reason } = moveTokenFix(input);
   return [
     {
       group: 'Values',
       status: 'warn',
       title: 'The project token is in the config file',
-      detail:
-        'Anyone who can read the repository can publish builds. Keep it in CHROMATIC_PROJECT_TOKEN.',
-      fix: moveTokenFix(input),
+      detail: `Anyone who can read the repository can publish builds. Keep it in CHROMATIC_PROJECT_TOKEN.${reason ? ` ${reason}` : ''}`,
+      fix,
     },
   ];
 }

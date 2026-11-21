@@ -118,11 +118,24 @@ function explainUnedited(
   }
 }
 
+/**
+ * Whether init should turn TurboSnap on. It works with Storybook and Vitest, not with Playwright or
+ * Cypress (see the docs FAQ), and it fails a build without a stats file, which a prebuilt
+ * Storybook may not have.
+ *
+ * @param framework The project's framework.
+ * @param config The existing config file, if any.
+ *
+ * @returns True when onlyChanged belongs in the config.
+ */
+function turboSnapFits(framework: string, config: Record<string, any> | undefined) {
+  return !['playwright', 'cypress'].includes(framework) && !config?.storybookBuildDir;
+}
+
 function configStep(session: Session, project: Project) {
   const { writer } = session;
   const { file, previous, parsed, json: existing } = existingConfig(project.directory);
-  // TurboSnap works with Storybook and Vitest, not with Playwright or Cypress (see the docs FAQ).
-  const turboSnap = !['playwright', 'cypress'].includes(project.framework);
+  const turboSnap = turboSnapFits(project.framework, parsed);
   const wanted: Record<string, any> = {
     ...(turboSnap && { onlyChanged: true }),
     ...(project.framework !== 'storybook' && { [project.framework]: true }),
@@ -305,7 +318,7 @@ async function ciStep(
       const candidate = path.join(gitRoot, '.github', 'workflows', `${name}.yml`);
       const file = existsSync(candidate) ? undefined : candidate;
       if (!file) {
-        clack.note(githubWorkflow(template), `Add this as a workflow in .github/workflows`);
+        pasteable(githubWorkflow(template), 'Add this as a workflow in .github/workflows');
         clack.log.warn(`${name}.yml already exists, so init didn't overwrite it.`);
         continue;
       }
@@ -314,11 +327,23 @@ async function ciStep(
         `${writer.say('Wrote', 'write')} ${writer.display(file)} ${color.muted(`(on push, full git history${workingDirectory === '.' ? '' : `, runs from ${workingDirectory}`})`)}`
       );
     } else {
-      clack.note(ciSnippet(provider.id, template), `${provider.name}: add this to your pipeline`);
+      pasteable(ciSnippet(provider.id, template), `${provider.name}: add this to your pipeline`);
       clack.log.info(`More for ${provider.name}: ${color.cta(provider.docs)}`);
     }
   }
   return providers;
+}
+
+/**
+ * Prints YAML to paste, outside clack's box: a note wraps long lines and adds a border, and both
+ * break the YAML when it's copied.
+ *
+ * @param yaml The YAML.
+ * @param title What to do with it.
+ */
+function pasteable(yaml: string, title: string) {
+  clack.log.step(`${title}:`);
+  process.stdout.write(`\n${yaml.trimEnd()}\n\n`);
 }
 
 /**
@@ -404,6 +429,7 @@ export async function main(argv: string[]) {
   }
 
   // 8. Check the result, as storybook add runs doctor
+  let failed = false;
   if (flags.dryRun) {
     clack.log.info(
       `Skipped the setup check in a dry run. Run ${color.cta('npx chromatic doctor')} afterwards.`
@@ -431,6 +457,7 @@ export async function main(argv: string[]) {
       clack.log.step(`Checked again: ${summarize(checks)}`);
       printChecks(left);
     }
+    failed = checks.some((c) => c.status === 'fail');
   }
 
   // 9. Next steps
@@ -439,11 +466,14 @@ export async function main(argv: string[]) {
   const secretLines = providers.map(
     (p) => `  ${p.name}: ${p.secretHelp.replace('CHROMATIC_PROJECT_TOKEN', session.secretName)}`
   );
+  let closing = color.success(
+    flags.dryRun ? 'Dry run finished. Nothing was written.' : 'Chromatic is set up.'
+  );
+  if (failed)
+    closing = color.error('Chromatic is set up, but a check failed. Fix it, then run doctor.');
   clack.outro(
     [
-      color.success(
-        flags.dryRun ? 'Dry run finished. Nothing was written.' : 'Chromatic is set up.'
-      ),
+      closing,
       ...(secretLines.length > 0
         ? ['', `Add this project's token to CI as ${session.secretName}:`, ...secretLines]
         : []),
@@ -451,4 +481,6 @@ export async function main(argv: string[]) {
       `Then run ${color.cta(runFrom === '.' ? run : `cd ${runFrom} && ${run}`)} to create your first baselines.`,
     ].join('\n')
   );
+  // Exit like doctor, so CI doesn't take a setup that can't build for a working one.
+  if (failed) throw new SubcommandFailure('Some checks failed', { exitCode: 1 });
 }

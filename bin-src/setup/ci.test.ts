@@ -50,6 +50,8 @@ jobs:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      CHROMATIC_PROJECT_TOKEN: \${{ secrets.TOKEN }} # another job's token isn't this one's
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,6 +64,8 @@ jobs:
         working-directory: packages/ui
     steps:
       - uses: actions/checkout@v4 # keep this comment
+      - uses: actions/checkout@v4 # another repository's history doesn't matter
+        with: {repository: org/tools, path: tools}
       - run: npx chromatic --only-changed
 `;
     const [run, ...others] = runsIn({ '.github/workflows/ci.yml': workflow });
@@ -73,6 +77,7 @@ jobs:
       fullHistory: false,
       onPullRequest: true,
       onlyChanged: true,
+      passesToken: false,
     });
     const fixed = run.fullHistoryFix ?? '';
     expect(parse(fixed).jobs.visual.steps[0].with).toEqual({ 'fetch-depth': 0 });
@@ -94,10 +99,16 @@ jobs:
         with:
           workingDir: ./apps/web/
           onlyChanged: false
+          projectToken: \${{ secrets.TOKEN }}
 `,
     });
 
-    expect(run).toMatchObject({ directory: 'apps/web', fullHistory: true, onlyChanged: false });
+    expect(run).toMatchObject({
+      directory: 'apps/web',
+      fullHistory: true,
+      onlyChanged: false,
+      passesToken: true,
+    });
     expect(run.fullHistoryFix).toBeUndefined();
   });
 
@@ -112,12 +123,17 @@ jobs:
       - if: github.ref == 'refs/heads/main'
         run: CHROMATIC_PROJECT_TOKEN=$TOKEN npx chromatic --auto-accept-changes
       - if: github.ref != 'refs/heads/main'
-        run: CHROMATIC_PROJECT_TOKEN=$TOKEN npx chromatic --only-changed
+        run: (CHROMATIC_PROJECT_TOKEN=$TOKEN npx chromatic --only-changed)
 `,
     });
 
     expect(runs).toHaveLength(1);
-    expect(runs[0]).toMatchObject({ job: 'visual', directory: '.', onlyChanged: true });
+    expect(runs[0]).toMatchObject({
+      job: 'visual',
+      directory: '.',
+      onlyChanged: true,
+      passesToken: true,
+    });
   });
 
   it('reports a file that does not parse instead of reading part of it', () => {
@@ -181,6 +197,8 @@ last-parent-wins:
 jobs:
   visual:
     runs-on: ubuntu-latest
+    env:
+      CHROMATIC_PROJECT_TOKEN: \${{ secrets.TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with: &clone { fetch-depth: 1 }
@@ -190,7 +208,7 @@ jobs:
 `,
     });
 
-    expect(run).toMatchObject({ job: 'visual', fullHistory: false });
+    expect(run).toMatchObject({ job: 'visual', fullHistory: false, passesToken: true });
     expect(run.fullHistoryFix).toBeUndefined();
   });
 
@@ -204,7 +222,9 @@ jobs:
 
     const runs = runsIn({ '.gitlab-ci.yml': snippet });
 
-    expect(runs).toMatchObject([{ job: 'chromatic', directory: 'packages/ui', fullHistory: true }]);
+    expect(runs).toMatchObject([
+      { job: 'chromatic', directory: 'packages/ui', fullHistory: true, passesToken: true },
+    ]);
     // Each line runs in its own subshell, so no cd carries over to the next line.
     expect(snippet).not.toMatch(/^\s*- cd /m);
   });

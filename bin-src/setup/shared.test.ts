@@ -27,26 +27,33 @@ function repoWith(files: Record<string, string>, tracked: string[] = []) {
 
 describe('tokenEnvironmentEdits', () => {
   it('writes .env and ignores it when nothing covers it yet', () => {
-    const gitRoot = repoWith({ '.gitignore': 'node_modules\n' });
+    // Git doesn't read ./.env as .env, though it looks like it covers it.
+    const gitRoot = repoWith({ '.gitignore': 'node_modules\n./.env\n' });
 
     const { edits, reason } = tokenEnvironmentEdits(gitRoot, gitRoot, 'chpt_abc123');
 
     expect(reason).toBeUndefined();
     expect(edits).toEqual([
       { file: path.join(gitRoot, '.env'), content: 'CHROMATIC_PROJECT_TOKEN=chpt_abc123\n' },
-      { file: path.join(gitRoot, '.gitignore'), content: 'node_modules\n\n# Chromatic\n.env\n' },
+      {
+        file: path.join(gitRoot, '.gitignore'),
+        content: 'node_modules\n./.env\n\n# Chromatic\n.env\n',
+      },
     ]);
   });
 
-  it('only writes .env when a pattern already ignores it', () => {
-    const gitRoot = repoWith({ '.gitignore': '*.env\n.env\n', '.env': 'OTHER=1' });
+  it('only writes .env when git already ignores it, replacing an old token', () => {
+    const gitRoot = repoWith({
+      '.git/info/exclude': '.env\n',
+      '.env': 'CHROMATIC_PROJECT_TOKEN=chpt_old\nOTHER=1',
+    });
 
     const { edits } = tokenEnvironmentEdits(gitRoot, gitRoot, 'chpt_abc123');
 
     expect(edits).toEqual([
       {
         file: path.join(gitRoot, '.env'),
-        content: 'OTHER=1\nCHROMATIC_PROJECT_TOKEN=chpt_abc123\n',
+        content: 'CHROMATIC_PROJECT_TOKEN=chpt_abc123\nOTHER=1',
       },
     ]);
   });

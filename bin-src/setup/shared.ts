@@ -96,16 +96,17 @@ export function tokenEnvironmentEdits(gitRoot: string, directory: string, token:
   const relative = relativeOrDot(gitRoot, file);
   const pattern = relative === '.env' ? '.env' : `/${relative}`;
   // Ask again with the pattern init would add. An excludes file ranks below every .gitignore, so a
-  // rule like !.env, in the root or a nested .gitignore, still wins and the token isn't written.
+  // rule like !.env, in a .gitignore or .git/info/exclude, still wins and the token isn't written.
   if (!ignoredWith(gitRoot, file, pattern)) {
     return {
-      reason: `a .gitignore un-ignores ${relative}, so the token would be committed`,
+      reason: `an ignore rule un-ignores ${relative}, so the token would be committed`,
     };
   }
-  const gitignore = gitignoreAdditions(gitRoot, [pattern]);
-  return gitignore.missing.length > 0
-    ? { edits: [...edits, { file: gitignore.file, content: gitignore.content }] }
-    : { edits };
+  // Always add the pattern: git just said no existing line ignores the file, even one that looks
+  // like it should, such as ./.env.
+  const gitignore = path.join(gitRoot, '.gitignore');
+  const ignoreText = existsSync(gitignore) ? readFileSync(gitignore, 'utf8') : '';
+  return { edits: [...edits, { file: gitignore, content: withSection(ignoreText, [pattern]) }] };
 }
 
 /**
@@ -246,9 +247,18 @@ export function gitignoreAdditions(gitRoot: string, wanted: string[]) {
       (p) => p === entry || picomatch(p.replace(/^\//, ''), { dot: true })(entry.replace(/^\//, ''))
     );
   const missing = wanted.filter((entry) => !covered(entry));
-  const content =
-    missing.length === 0
-      ? text
-      : `${text}${text && !text.endsWith('\n') ? '\n' : ''}${text ? '\n' : ''}# Chromatic\n${missing.join('\n')}\n`;
-  return { file, missing, content };
+  return { file, missing, content: missing.length === 0 ? text : withSection(text, missing) };
+}
+
+/**
+ * Appends a "# Chromatic" section to a .gitignore, after a blank line.
+ *
+ * @param text The file's text.
+ * @param lines The lines to add.
+ *
+ * @returns The new text.
+ */
+function withSection(text: string, lines: string[]) {
+  const separator = text ? `${text.endsWith('\n') ? '' : '\n'}\n` : '';
+  return `${text}${separator}# Chromatic\n${lines.join('\n')}\n`;
 }
