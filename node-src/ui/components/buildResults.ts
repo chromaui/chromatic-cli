@@ -9,7 +9,7 @@ import { testLabel } from './testLabel';
 // was found, a link to the build, and the tests in each category. It hands people and coding
 // agents the data and leaves the next step to them.
 
-const MAX_LISTED_TESTS = 50;
+export const MAX_LISTED_TESTS = 50;
 
 type ResultsBuild = Partial<
   Pick<

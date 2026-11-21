@@ -10,6 +10,7 @@ import * as Sentry from '@sentry/node';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { delay, throttle } from '../lib/utilities';
 import { Context, Deps, TaskResult } from '../types';
+import { MAX_LISTED_TESTS } from '../ui/components/buildResults';
 import { testLabel } from '../ui/components/testLabel';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';
@@ -39,6 +40,34 @@ const SnapshotBuildQuery = `
     }
   }
 `;
+
+const testFields = `
+  spec { name component { name displayName } }
+  parameters { viewport viewportIsDefault }
+  mode { id name }
+`;
+
+// The tests the result message lists, fetched once the build completes rather than on every poll.
+// The index has to allow these aliases (graphql-armor maxAliases) and `tests.hasInteractionFailure`
+// for report tokens (authorizedBuildFieldsViaAppCode).
+const SnapshotBuildTestsQuery = `
+  query SnapshotBuildTestsQuery($number: Int!, $limit: Int!) {
+    app {
+      build(number: $number) {
+        erroredTests: tests(statuses: [BROKEN], limit: $limit) { hasInteractionFailure ${testFields} }
+        deniedTests: tests(statuses: [DENIED], limit: $limit) { ${testFields} }
+        pendingTests: tests(statuses: [PENDING], limit: $limit) { ${testFields} }
+        ignoredTests: tests(statuses: [IGNORED], limit: $limit) { ${testFields} }
+      }
+    }
+  }
+`;
+
+interface BuildTestsQueryResult {
+  app: {
+    build: Pick<Context['build'], 'erroredTests' | 'deniedTests' | 'pendingTests' | 'ignoredTests'>;
+  };
+}
 
 interface BuildQueryResult {
   app: {
@@ -160,7 +189,10 @@ export async function snapshotProject(
     await waitForBuildToCompleteAndHandleErrors(deps, build.id, uiStateUpdater, reportToken);
   }
 
-  const completedBuild = await getCompletedBuild();
+  let completedBuild = await getCompletedBuild();
+  if (listsTests(completedBuild)) {
+    completedBuild = { ...completedBuild, ...(await getResultTests(deps, number, reportToken)) };
+  }
 
   switch (completedBuild.status) {
     case 'PASSED':
@@ -224,6 +256,31 @@ export async function snapshotProject(
 
     default:
       throw new Error(`Unexpected build status: ${completedBuild.status}`);
+  }
+}
+
+// Builds that end with the result message, which lists tests. Passed, auto-accepted, failed, and
+// canceled builds print other messages.
+const listsTests = (build: Context['build']) =>
+  ['BROKEN', 'PENDING', 'DENIED', 'ACCEPTED'].includes(build.status) && !build.autoAcceptChanges;
+
+// The counts already decided the exit code and the headline, so a failed fetch leaves the lists out
+// instead of failing a completed build.
+async function getResultTests(
+  deps: Pick<Deps, 'client' | 'log'>,
+  number: number,
+  reportToken: string | undefined
+): Promise<Partial<BuildTestsQueryResult['app']['build']>> {
+  try {
+    const data = await deps.client.runQuery<BuildTestsQueryResult>(
+      SnapshotBuildTestsQuery,
+      { number, limit: MAX_LISTED_TESTS },
+      { headers: { Authorization: `Bearer ${reportToken}` } }
+    );
+    return data.app.build;
+  } catch (err) {
+    deps.log.debug(`Could not fetch the tests to list in the build result: ${err.message}`);
+    return {};
   }
 }
 
