@@ -88,7 +88,7 @@ const GITLAB_RESERVED = new Set([
  *
  * @returns Every documented provider, with the config files found for each.
  */
-function detectCi(files: string[]): DetectedCi[] {
+export function detectCi(files: string[]): DetectedCi[] {
   return CI_PROVIDERS.map((provider) => ({
     provider,
     files: files.filter((file) => provider.patterns.some((p) => p.test(file))),

@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
 import { readCi, runsFor } from './ci';
+import { ciSnippet } from './ciTemplates';
 
 let root: string | undefined;
 
@@ -233,5 +234,29 @@ jobs:
 
     expect(run).toMatchObject({ job: 'visual', fullHistory: false, passesToken: true });
     expect(run.fullHistoryFix).toBeUndefined();
+  });
+
+  it('reads the GitLab snippet init prints for a monorepo project', () => {
+    const snippet = ciSnippet('gitlab', {
+      workingDir: 'packages/ui',
+      packageManager: 'pnpm',
+      framework: 'playwright',
+      secretName: 'CHROMATIC_PROJECT_TOKEN_PACKAGES_UI',
+    });
+
+    const runs = runsIn({ '.gitlab-ci.yml': snippet });
+
+    expect(runs).toMatchObject([
+      {
+        job: 'chromatic-packages-ui',
+        directory: 'packages/ui',
+        fullHistory: true,
+        passesToken: true,
+      },
+    ]);
+    // pnpm comes from Corepack in the node image.
+    expect(snippet).toMatch(/^ {4}- corepack enable$/m);
+    // Each line runs in its own subshell, so no cd carries over to the next line.
+    expect(snippet).not.toMatch(/^\s*- cd /m);
   });
 });

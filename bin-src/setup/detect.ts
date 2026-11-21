@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
+import { getPackageManagerName } from '../../node-src/lib/getPackageManager';
 import { findConfigFlags, MAIN_CONFIG_PATTERN } from '../../node-src/lib/getStorybookMetadata';
 import { readJson, relativeOrDot } from './shared';
 
@@ -144,6 +145,83 @@ export function describeProject(project: Project) {
     .join(' ');
 }
 
+export type PackageManager = 'npm' | 'pnpm' | 'yarn' | 'yarn-classic' | 'bun';
+
+// Lockfiles at the repository root, so a run from inside a workspace package finds the same answer.
+const ROOT_LOCKFILES: [string, string][] = [
+  ['pnpm-lock.yaml', 'pnpm'],
+  ['pnpm-workspace.yaml', 'pnpm'],
+  ['yarn.lock', 'yarn'],
+  ['bun.lock', 'bun'],
+  ['bun.lockb', 'bun'],
+  ['package-lock.json', 'npm'],
+];
+
+/**
+ * Yarn 1 or Berry: from the packageManager version when there is one, else from .yarnrc.yml.
+ *
+ * @param name The packageManager field or lockfile's package manager, such as "yarn@4.5.0".
+ * @param gitRoot The repository root.
+ *
+ * @returns Which Yarn it is.
+ */
+function yarnFlavor(name: string, gitRoot: string): PackageManager {
+  const major = /^yarn@(\d+)/.exec(name)?.[1];
+  if (major) return major === '1' ? 'yarn-classic' : 'yarn';
+  return existsSync(path.join(gitRoot, '.yarnrc.yml')) ? 'yarn' : 'yarn-classic';
+}
+
+/**
+ * Reads the package manager from the root packageManager field, then from root lockfiles.
+ *
+ * @param gitRoot The repository root.
+ *
+ * @returns The package manager, npm when nothing says otherwise.
+ */
+export async function detectPackageManager(gitRoot: string): Promise<PackageManager> {
+  const declared = readJson(path.join(gitRoot, 'package.json'))?.packageManager as
+    | string
+    | undefined;
+  const fromRoot = ROOT_LOCKFILES.find(([file]) => existsSync(path.join(gitRoot, file)))?.[1];
+  const name =
+    declared ?? fromRoot ?? (await getPackageManagerName().catch(() => undefined)) ?? 'npm';
+  if (name.startsWith('pnpm')) return 'pnpm';
+  if (name.startsWith('bun')) return 'bun';
+  if (name.startsWith('yarn')) return yarnFlavor(name, gitRoot);
+  return 'npm';
+}
+
+export const PACKAGE_MANAGER_COMMANDS: Record<
+  PackageManager,
+  { label: string; ciInstall: string; run: (script: string) => string }
+> = {
+  npm: {
+    label: 'npm',
+    ciInstall: 'npm ci',
+    run: (s) => `npm run ${s}`,
+  },
+  pnpm: {
+    label: 'pnpm',
+    ciInstall: 'pnpm install --frozen-lockfile',
+    run: (s) => `pnpm ${s}`,
+  },
+  yarn: {
+    label: 'Yarn',
+    ciInstall: 'yarn install --immutable',
+    run: (s) => `yarn ${s}`,
+  },
+  'yarn-classic': {
+    label: 'Yarn 1',
+    ciInstall: 'yarn install --frozen-lockfile',
+    run: (s) => `yarn ${s}`,
+  },
+  bun: {
+    label: 'Bun',
+    ciInstall: 'bun install --frozen-lockfile',
+    run: (s) => `bun run ${s}`,
+  },
+};
+
 export interface CiProvider {
   id: string;
   name: string;
@@ -210,3 +288,11 @@ export const CI_PROVIDERS: CiProvider[] = [
     secretHelp: 'Organization settings → Secrets',
   },
 ];
+
+export const OTHER_CI: CiProvider = {
+  id: 'other',
+  name: "Other / I'll set it up myself",
+  patterns: [],
+  docs: 'https://www.chromatic.com/docs/custom-ci-provider',
+  secretHelp: "your CI's secret settings",
+};
