@@ -6,12 +6,14 @@ import meow from 'meow';
 
 import { meowImportMeta } from '../node-src/lib/meowImportMeta';
 import parseArguments from '../node-src/lib/parseArguments';
+import { allowPnpRuntime } from '../node-src/lib/turbosnap/v2/pnpRuntime';
 import type { Flags } from '../node-src/types';
 import pkg from '../package.json';
 import { Check, runChecks } from './setup/checks';
 import { readCi, runsFor } from './setup/ci';
 import { describeProject, findProjects, Project } from './setup/detect';
 import { loadDoctorInput } from './setup/doctorInput';
+import { previewReachChecks } from './setup/previewReach';
 import { applyFixes, printChecks, summarize } from './setup/report';
 import { color, git, listRepoFiles, readJson, relativeOrDot } from './setup/shared';
 import { SubcommandFailure } from './subcommandFailure';
@@ -45,7 +47,11 @@ export async function collectChecks(cwd: string, argv: string[] = []) {
       argv,
       flags,
     });
-    return runChecks(doctorInput, configError, optionsError);
+    const checks = runChecks(doctorInput, configError, optionsError);
+    if (configError || optionsError) return checks;
+    // Like a build, read a Yarn Plug'n'Play project's packages through its runtime.
+    allowPnpRuntime();
+    return [...checks, ...(await previewReachChecks(doctorInput))];
   } finally {
     process.chdir(previous);
   }
