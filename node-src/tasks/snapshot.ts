@@ -40,6 +40,65 @@ const SnapshotBuildQuery = `
   }
 `;
 
+// The most tests each section of the result message lists.
+const MAX_LISTED_TESTS = 50;
+
+const testFields = `
+  spec { name component { name displayName } }
+  parameters { viewport viewportIsDefault }
+  mode { id name }
+`;
+
+// The result message's counts and lists, fetched once the build completes rather than on every
+// poll. The counts replace the ones the last poll read, but the build's status and accepted count
+// still come from that poll. The index must allow these aliases (graphql-armor maxAliases) and the
+// `hasInteractionFailure` argument.
+//
+// These reads are not one snapshot. If someone reviews a test between the last poll and this
+// query, or while the index resolves its fields one by one, the message can disagree with itself,
+// such as a pending count of 0 above a listed pending test. That needs a review to land in the
+// one or two requests' time between the last poll and this query returning, and it only changes
+// what is printed: the exit code comes from the poll's status alone. We accept that rather than
+// make the index return one consistent read.
+const SnapshotBuildTestsQuery = `
+  query SnapshotBuildTestsQuery($number: Int!, $limit: Int!) {
+    app {
+      build(number: $number) {
+        errorCount: testCount(statuses: [BROKEN])
+        renderFailureCount: testCount(statuses: [BROKEN], hasInteractionFailure: false)
+        renderFailureTests: tests(statuses: [BROKEN], hasInteractionFailure: false, limit: $limit) { ${testFields} }
+        interactionFailureCount: testCount(statuses: [BROKEN], hasInteractionFailure: true)
+        interactionFailureTests: tests(statuses: [BROKEN], hasInteractionFailure: true, limit: $limit) { ${testFields} }
+        deniedCount: testCount(statuses: [DENIED])
+        deniedTests: tests(statuses: [DENIED], limit: $limit) { ${testFields} }
+        pendingCount: testCount(statuses: [PENDING])
+        pendingTests: tests(statuses: [PENDING], limit: $limit) { ${testFields} }
+        ignoredCount: testCount(statuses: [IGNORED])
+        ignoredTests: tests(statuses: [IGNORED], limit: $limit) { ${testFields} }
+      }
+    }
+  }
+`;
+
+interface BuildTestsQueryResult {
+  app: {
+    build: Pick<
+      Context['build'],
+      | 'errorCount'
+      | 'renderFailureCount'
+      | 'renderFailureTests'
+      | 'interactionFailureCount'
+      | 'interactionFailureTests'
+      | 'deniedCount'
+      | 'deniedTests'
+      | 'pendingCount'
+      | 'pendingTests'
+      | 'ignoredCount'
+      | 'ignoredTests'
+    >;
+  };
+}
+
 interface BuildQueryResult {
   app: {
     build: {
@@ -158,7 +217,10 @@ export async function snapshotProject(
     await waitForBuildToCompleteAndHandleErrors(deps, build.id, uiStateUpdater, reportToken);
   }
 
-  const completedBuild = await getCompletedBuild();
+  let completedBuild = await getCompletedBuild();
+  if (listsTests(completedBuild)) {
+    completedBuild = { ...completedBuild, ...(await getResultTests(deps, number, reportToken)) };
+  }
 
   switch (completedBuild.status) {
     case 'PASSED':
@@ -222,6 +284,32 @@ export async function snapshotProject(
 
     default:
       throw new Error(`Unexpected build status: ${completedBuild.status}`);
+  }
+}
+
+// Builds that end with the result message, which lists tests. Passed, auto-accepted, failed, and
+// canceled builds print other messages.
+const listsTests = (build: Context['build']) =>
+  build.status === 'BROKEN' ||
+  (['PENDING', 'DENIED', 'ACCEPTED'].includes(build.status) && !build.autoAcceptChanges);
+
+// The poll's counts already decided the exit code, so a failed fetch keeps them and leaves the
+// lists out instead of failing a completed build.
+async function getResultTests(
+  deps: Pick<Deps, 'client' | 'log'>,
+  number: number,
+  reportToken: string | undefined
+): Promise<Partial<BuildTestsQueryResult['app']['build']>> {
+  try {
+    const data = await deps.client.runQuery<BuildTestsQueryResult>(
+      SnapshotBuildTestsQuery,
+      { number, limit: MAX_LISTED_TESTS },
+      { headers: { Authorization: `Bearer ${reportToken}` } }
+    );
+    return data.app.build;
+  } catch (err) {
+    deps.log.debug(`Could not fetch the tests to list in the build result: ${err.message}`);
+    return {};
   }
 }
 
