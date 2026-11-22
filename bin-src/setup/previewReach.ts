@@ -1,18 +1,23 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
+import { findBuildScriptName } from '../../node-src/lib/getOptions';
 import { getStorybookProjectRoot } from '../../node-src/lib/getStorybookProjectRoot';
 import { createLogger } from '../../node-src/lib/log';
 import { buildManifest } from '../../node-src/lib/turbosnap/v2/manifest';
 import { isInstalledPackagePath, isSyntheticFile } from '../../node-src/lib/turbosnap/v2/paths';
 import { realProjectFiles } from '../../node-src/lib/turbosnap/v2/projectFiles';
+import { setBuildCommand } from '../../node-src/tasks/build/setBuildCommand';
 import { readStatsFile } from '../../node-src/tasks/readStatsFile';
-import type { Check } from './checks';
+import type { Context, Options } from '../../node-src/types';
+import { type Check, matchesBranch } from './checks';
+import { versionOf } from './detect';
 import type { DoctorInput } from './doctorInput';
 import { git, relativeOrDot } from './shared';
 
 const HISTORY_DAYS = 90;
 const IMPORTS_SHOWN = 5;
+const FILES_SHOWN = 5;
 const PREVIEW_FILE = /^preview\.[cm]?[jt]sx?$/;
 
 type Graph = Map<string, { dependencies: Set<string> }>;
@@ -129,12 +134,16 @@ function historyLine(gitRoot: string, files: Set<string>) {
     };
   }
   const often = [...changes.perFile]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([file, n]) => `${file} (${n})`);
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, FILES_SHOWN)
+    .map(([file, n]) => `- ${file}: ${plural(n, 'commit')}`);
   return {
     commits: changes.commits,
-    line: `${plural(changes.commits, 'commit')} in the last ${HISTORY_DAYS} days changed one of the project files. Most often: ${often.join(', ')}. (Packages change through the lockfile, so they aren't counted.)`,
+    line: [
+      `${plural(changes.commits, 'commit')} in the last ${HISTORY_DAYS} days changed one of the project files. (Packages change through the lockfile, so they aren't counted.)`,
+      'Changed most often:',
+      ...often,
+    ].join('\n'),
   };
 }
 
@@ -268,6 +277,62 @@ function statsFileFor(input: DoctorInput) {
 }
 
 /**
+ * Whether doctor may build Storybook for the stats file: TurboSnap is on for this branch, as in a
+ * build, Chromatic builds Storybook itself, and the output folder doesn't exist yet, since Storybook
+ * empties it.
+ *
+ * @param input What loadDoctorInput read.
+ * @param statsFile Where the stats file goes.
+ *
+ * @returns True when doctor may build.
+ */
+function buildsHere(input: DoctorInput, statsFile: string) {
+  const { branch, options } = input;
+  if (!branch || !matchesBranch(branch, options.onlyChanged ?? false)) return false;
+  return !options.storybookBuildDir && !existsSync(path.dirname(statsFile));
+}
+
+/**
+ * The command a TurboSnap build runs to build Storybook, writing the stats file where doctor reads
+ * it. Only when TurboSnap is on and Chromatic builds Storybook itself: a prebuilt Storybook comes
+ * from the user's own build.
+ *
+ * @param input What loadDoctorInput read.
+ * @param statsFile Where the stats file goes.
+ *
+ * @returns The command, or undefined when doctor shouldn't build.
+ */
+async function statsBuildFor(input: DoctorInput, statsFile: string) {
+  const { options, gitRoot } = input;
+  if (!gitRoot || !buildsHere(input, statsFile)) return undefined;
+  const scripts: Record<string, string> = input.packageJson?.scripts ?? {};
+  const buildScriptName = findBuildScriptName(scripts, options.buildScriptName);
+  // Without the script, the build would fail; the build script check already says so.
+  if (!options.buildCommand && !scripts[buildScriptName]) return undefined;
+  const version = versionOf(input.cwd, gitRoot, 'storybook');
+  try {
+    const command = await setBuildCommand(
+      {
+        options: { ...options, buildScriptName } as Options,
+        log: createLogger({}, { logLevel: 'silent' }),
+        env: {} as Context['env'],
+      },
+      {
+        sourceDir: relativeOrDot(input.cwd, path.dirname(statsFile)),
+        flags: {},
+        storybook: { version } as Context['storybook'],
+        // Asks for the stats flag, as --only-changed does.
+        turboSnap: {},
+      }
+    );
+    return command ? { command, statsFile } : undefined;
+  } catch {
+    // The package manager couldn't be found to run the script.
+    return undefined;
+  }
+}
+
+/**
  * Shows what the Storybook preview pulls in, from an existing stats file: with TurboSnap, a change
  * to any of those files recaptures every story. Read-only, with no fix: it changes no hash or
  * capture decision.
@@ -284,12 +349,16 @@ export async function previewReachChecks(input: DoctorInput): Promise<Check[]> {
   const relative = relativeOrDot(input.cwd, statsFile);
   const shown = relative.startsWith('..') ? statsFile : relative;
   if (!existsSync(statsFile)) {
+    const build = await statsBuildFor(input, statsFile);
     return [
       {
         group: 'Values',
         status: 'info',
         title: `No ${shown} to show what preview imports`,
-        detail: `Build Storybook into ${path.dirname(shown)} with --stats-json, then run doctor again. With TurboSnap, a change to any file preview imports recaptures every story.`,
+        detail: build
+          ? `With TurboSnap, a change to any file preview imports recaptures every story. Building Storybook with stats shows which files those are: ${build.command}`
+          : `Build Storybook into ${path.dirname(shown)} with --stats-json, then run doctor again. With TurboSnap, a change to any file preview imports recaptures every story.`,
+        build,
       },
     ];
   }

@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import * as clack from '@clack/prompts';
@@ -9,6 +9,7 @@ import { findConfigFlags } from '../node-src/lib/getStorybookMetadata';
 import { allowPnpRuntime } from '../node-src/lib/installedPackages';
 import { meowImportMeta } from '../node-src/lib/meowImportMeta';
 import parseArguments from '../node-src/lib/parseArguments';
+import { runCommand } from '../node-src/lib/shell/shell';
 import type { Flags } from '../node-src/types';
 import pkg from '../package.json';
 import { Check, runChecks } from './setup/checks';
@@ -280,6 +281,47 @@ function projectRequired(
 }
 
 /**
+ * Runs a check's Storybook build with a spinner. When it fails, its output goes to
+ * build-storybook.log, where a Chromatic build writes it.
+ *
+ * @param build The build a check asked for.
+ * @param cwd Directory to build from.
+ *
+ * @returns Whether the build wrote the stats file.
+ */
+async function buildStats(build: NonNullable<Check['build']>, cwd: string) {
+  // Without a terminal, such as in CI, a spinner prints a line per frame, so log the start instead.
+  const spinner = process.stdout.isTTY ? clack.spinner() : undefined;
+  const message = 'Building Storybook with stats';
+  if (spinner) spinner.start(message);
+  else clack.log.step(`${message}…`);
+  const stop = (text: string, failed = false) => {
+    if (spinner) spinner[failed ? 'error' : 'stop'](text);
+    else clack.log[failed ? 'error' : 'success'](text);
+  };
+  try {
+    await runCommand(build.command, {
+      cwd,
+      stdin: 'ignore',
+      all: true,
+      preferLocal: false,
+      env: { CI: '1', NODE_ENV: process.env.STORYBOOK_NODE_ENV || 'production' },
+    });
+  } catch (err) {
+    const logFile = path.join(cwd, 'build-storybook.log');
+    writeFileSync(logFile, String((err as { all?: string }).all ?? err));
+    stop(`Storybook build failed. See ${relativeOrDot(process.cwd(), logFile)}`, true);
+    return false;
+  }
+  if (!existsSync(build.statsFile)) {
+    stop(`Storybook built, but wrote no ${relativeOrDot(process.cwd(), build.statsFile)}`, true);
+    return false;
+  }
+  stop('Built Storybook with stats');
+  return true;
+}
+
+/**
  * The main entrypoint for `chromatic doctor`.
  *
  * @param argv A list of arguments passed.
@@ -303,8 +345,10 @@ export async function main(argv: string[]) {
       --project <dir>     Check only this project.
       --fix               Offer to fix what can be fixed, one change at a time.
                           Without a terminal (in CI), fixes are listed, not applied.
-      --yes, -y           With --fix, apply every fix without asking, except fixes that
-                          ask how your CI runs Chromatic, which need a terminal.
+      --yes, -y           Answer yes without asking: build Storybook with stats when
+                          TurboSnap needs them and there are none, and with --fix, apply
+                          every fix except those that ask how your CI runs Chromatic,
+                          which need a terminal.
 
     Every option chromatic takes, such as --config-file, --only-changed or --build-command, is
     read the same way as in a build, and flags win over the config file.
@@ -368,12 +412,34 @@ export async function main(argv: string[]) {
 
   const all: Check[] = [];
   let skippedFixes = false;
+  let skippedBuild = false;
   let questions = false;
   for (const target of targets) {
     if (multi) clack.log.step(color.bold(color.cta(`Project ${target.label}`)));
     const check = () => collectChecks(target.directory, argv, true);
     let checks = await check();
     printChecks(checks);
+
+    // A build can take minutes, so it only runs when someone says yes, or --yes does.
+    const build = checks.find((c) => c.build)?.build;
+    if (build && !flags.yes && !interactive) {
+      skippedBuild = true;
+    } else if (
+      build &&
+      (flags.yes ||
+        answered(
+          await clack.confirm({
+            message:
+              'Build Storybook with stats to check what preview imports? It can take a few minutes.',
+          })
+        )) &&
+      (await buildStats(build, target.directory))
+    ) {
+      // Show only what the stats file changed, which is the preview check.
+      const before = new Set(checks.map((c) => c.title));
+      checks = await check();
+      printChecks(checks.filter((c) => !before.has(c.title)));
+    }
 
     if (flags.fix && checks.some((c) => c.fix)) {
       if (flags.yes || interactive) {
@@ -395,6 +461,11 @@ export async function main(argv: string[]) {
       `Not set up with Chromatic:\n${notSetUp
         .map((p) => `${relativeOrDot(cwd, p.directory)} ${color.muted(`· ${describeProject(p)}`)}`)
         .join('\n')}\nRun ${color.cta('npx chromatic init --project <dir>')} to add one.`
+    );
+  }
+  if (skippedBuild) {
+    clack.log.info(
+      `Didn't build Storybook to check what preview imports: there's no terminal to confirm it.\nRun ${color.cta('npx chromatic doctor --yes')} to build it and check.`
     );
   }
   if (skippedFixes) {

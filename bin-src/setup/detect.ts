@@ -134,8 +134,18 @@ export function runsAbove(directory: string, gitRoot: string | undefined, flagge
   return undefined;
 }
 
+/**
+ * The installed version of a package, else the version package.json declares, looking up from a
+ * directory to the repository root.
+ *
+ * @param directory Where to start.
+ * @param gitRoot Where to stop.
+ * @param name The package.
+ *
+ * @returns The version, or undefined when no package.json up to the root names it.
+ */
 // eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
-function versionOf(directory: string, gitRoot: string, name: string) {
+export function versionOf(directory: string, gitRoot: string, name: string) {
   for (let current = directory; current.startsWith(gitRoot); current = path.dirname(current)) {
     const installed = readJson(path.join(current, 'node_modules', name, 'package.json'));
     if (installed?.version) return installed.version as string;

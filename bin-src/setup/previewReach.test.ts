@@ -32,6 +32,7 @@ function inputFor(cwd: string, statsDirectory?: string) {
   return {
     cwd,
     gitRoot: cwd,
+    branch: 'main',
     options: { storybookBuildDir: statsDirectory },
     storybookConfigDirectory: path.join(cwd, '.storybook'),
   } as DoctorInput;
@@ -93,7 +94,11 @@ describe('previewReachChecks', () => {
     });
     expect(check.fix).toBeUndefined();
     expect(check.detail).toContain(
-      '3 commits in the last 90 days changed one of the project files. Most often: src/b.ts (2), src/theme.ts (1).'
+      `3 commits in the last 90 days changed one of the project files. (Packages change through the lockfile, so they aren't counted.)
+Changed most often:
+- src/b.ts: 2 commits
+- src/theme.ts: 1 commit
+Imports`
     );
     // src/a.ts is also reached through the theme, so removing the barrel keeps it.
     expect(check.detail).toContain(
@@ -154,5 +159,41 @@ describe('previewReachChecks', () => {
     expect(checks).toMatchObject([
       { status: 'info', title: 'No out/preview-stats.json to show what preview imports' },
     ]);
+  });
+
+  it('offers to build Storybook with stats only when TurboSnap is on and Chromatic builds it', async () => {
+    root = mkdtempSync(path.join(tmpdir(), 'chromatic-reach-'));
+    const packageJson = {
+      scripts: { 'build-storybook': 'storybook build' },
+      devDependencies: { storybook: '^10.0.0' },
+    };
+    write('package.json', JSON.stringify(packageJson));
+    const input = (options: DoctorInput['options']) => ({
+      ...inputFor(root ?? ''),
+      options,
+      packageJson,
+    });
+
+    const [on] = await previewReachChecks(input({ onlyChanged: true }));
+    const [off] = await previewReachChecks(input({}));
+    const [otherBranch] = await previewReachChecks(input({ onlyChanged: 'release/*' }));
+    const [prebuilt] = await previewReachChecks(
+      input({ onlyChanged: true, storybookBuildDir: 'out' })
+    );
+
+    expect(on.build).toEqual({
+      command: expect.stringMatching(
+        /build-storybook .*--output-dir=storybook-static --stats-json=storybook-static$/
+      ),
+      statsFile: path.join(root, 'storybook-static', 'preview-stats.json'),
+    });
+    expect(off.build).toBeUndefined();
+    expect(otherBranch.build).toBeUndefined();
+    expect(prebuilt.build).toBeUndefined();
+
+    // Storybook empties its output folder, so doctor never builds over one that's there.
+    write('storybook-static/index.html', '');
+    const [existing] = await previewReachChecks(input({ onlyChanged: true }));
+    expect(existing.build).toBeUndefined();
   });
 });
