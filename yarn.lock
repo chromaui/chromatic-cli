@@ -4564,7 +4564,7 @@ __metadata:
     xxhash-wasm: "npm:^1.0.2"
     yarn-or-npm: "npm:^3.0.1"
     yazl: "patch:yazl@npm%3A3.3.1#~/.yarn/patches/yazl-npm-3.3.1-2e7f415791.patch"
-    zen-observable: "npm:^0.8.15"
+    zen-observable: "npm:^0.10.0"
     zod: "npm:^3.22.2"
   peerDependencies:
     "@chromatic-com/cypress": ^0.*.* || ^1.0.0
@@ -11653,10 +11653,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zen-observable@npm:^0.8.15":
-  version: 0.8.15
-  resolution: "zen-observable@npm:0.8.15"
-  checksum: 10c0/71cc2f2bbb537300c3f569e25693d37b3bc91f225cefce251a71c30bc6bb3e7f8e9420ca0eb57f2ac9e492b085b8dfa075fd1e8195c40b83c951dd59c6e4fbf8
+"zen-observable@npm:^0.10.0":
+  version: 0.10.0
+  resolution: "zen-observable@npm:0.10.0"
+  checksum: 10c0/f97e97bfaa1dbe0033761d4860368120c1b69ee12dd1fa649c902f3f740c6cac3470a07e3dd00e2d41598dd9f17a97c80f69652b851ba1a73802f30748eb4260
   languageName: node
   linkType: hard
 
