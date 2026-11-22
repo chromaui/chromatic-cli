@@ -9,7 +9,7 @@ import { answered, color, relativeOrDot } from './shared';
 const GROUP_TITLES: Record<Group, string> = {
   Loading: 'Project',
   Values: 'Configuration',
-  Environment: 'Git, token and CI',
+  Environment: 'Git and token',
 };
 
 const MARKS: Record<Check['status'], string> = {
@@ -182,7 +182,7 @@ function maskTokens(text: string, secrets: string[]) {
  * @param recheck Runs the checks against the files as they are now.
  * @param options How to apply.
  * @param options.cwd Directory paths are shown relative to.
- * @param options.yes Apply every fix without asking.
+ * @param options.yes Apply every fix without asking, except those with a question.
  *
  * @returns The checks after the last fix.
  */
@@ -196,6 +196,13 @@ export async function applyFixes(
     const next = checks.find((c) => c.fix && !skipped.has(c.fix.summary));
     if (!next?.fix) return checks;
     const { fix } = next;
+    skipped.add(fix.summary);
+    if (fix.question && yes) {
+      clack.log.warn(
+        `Skipped: ${fix.summary}. Run ${color.cta('npx chromatic doctor --fix')} in a terminal to answer: ${fix.question}`
+      );
+      continue;
+    }
     const preview = fix.edits
       .map(({ file, content }) => {
         const before = existsSync(file) ? readFileSync(file, 'utf8') : '';
@@ -203,8 +210,7 @@ export async function applyFixes(
       })
       .join('\n\n');
     clack.note(preview, fix.summary);
-    const ok = yes || answered(await clack.confirm({ message: 'Apply this fix?' }));
-    skipped.add(fix.summary);
+    const ok = yes || answered(await clack.confirm({ message: fix.question ?? 'Apply this fix?' }));
     if (!ok) continue;
     for (const { file, content } of fix.edits) writeFileSync(file, content);
     clack.log.success(`Applied: ${fix.summary}`);

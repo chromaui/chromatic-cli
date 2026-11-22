@@ -12,12 +12,12 @@ import { findBuildScriptName, getPartialOptions } from '../../node-src/lib/getOp
 import { findConfigDirectory, findConfigFlags } from '../../node-src/lib/getStorybookMetadata';
 import { getStorybookProjectRoot } from '../../node-src/lib/getStorybookProjectRoot';
 import { createLogger } from '../../node-src/lib/log';
+import { matchesFile } from '../../node-src/lib/utilities';
 import { validateFiles } from '../../node-src/tasks/prepare/validateFiles';
 import type { StorybookInfoDeps } from '../../node-src/tasks/storybookInfo';
 import type { Flags, Options } from '../../node-src/types';
 import type { Fix } from './checks';
-import { ChromaticRun, readCi, runsFor, uploadsPrebuilt } from './ci';
-import { formatJson, readJson, relativeOrDot } from './shared';
+import { forEachRepoFile, formatJson, readJson, relativeOrDot } from './shared';
 
 // One logger for every check run: each createLogger adds a process listener, so `--fix`, which
 // checks again after each fix, would pile them up until Node warns.
@@ -30,8 +30,8 @@ type CheckedOptions = Partial<Options>;
 export interface DoctorInput {
   cwd: string;
   gitRoot?: string;
-  /** Repository files relative to the git root. */
-  files: string[];
+  /** How many repository files each untraced and externals glob matches, and each suggestion. */
+  globMatches: Map<string, number>;
   branch?: string;
   configFile?: string;
   /** The config file's raw contents, so fixes can rewrite it. */
@@ -49,9 +49,10 @@ export interface DoctorInput {
   storybookConfigDirectory: string;
   /** Why storybookBuildDir isn't a usable Storybook build, from the build's own validation. */
   buildDirectoryError?: string;
-  /** Every CI job that runs Chromatic, the ones that run it from cwd, and files that didn't parse. */
-  ci: { all: ChromaticRun[]; runs: ChromaticRun[]; unreadable: string[] };
-  /** Whether a build uploads a prebuilt Storybook, set here, in CI or in the chromatic script. */
+  /**
+   * Whether a build uploads a prebuilt Storybook, set here or in the chromatic script. CI may pass
+   * it too, which doctor can't see.
+   */
   prebuilt: boolean;
 }
 
@@ -128,7 +129,6 @@ function buildEnvironment(cwd: string) {
  * @param input What the caller already knows.
  * @param input.cwd Working directory Chromatic runs from.
  * @param input.gitRoot Repository root, if in a git repository.
- * @param input.files Repository files relative to the git root.
  * @param input.branch Current branch.
  * @param input.argv The arguments doctor got, which the main command's parser reads.
  * @param input.flags The main command's flags parsed from argv.
@@ -138,7 +138,6 @@ function buildEnvironment(cwd: string) {
 export async function loadDoctorInput(input: {
   cwd: string;
   gitRoot?: string;
-  files: string[];
   branch?: string;
   argv: string[];
   flags: Flags;
@@ -171,8 +170,6 @@ export async function loadDoctorInput(input: {
   );
   const packageJsonPath = nearestPackageJson(cwd, input.gitRoot);
   const packageJson = packageJsonPath ? readJson(packageJsonPath) : undefined;
-  const ci = input.gitRoot ? readCi(input.gitRoot, input.files) : { runs: [], unreadable: [] };
-  const runs = input.gitRoot ? runsFor(ci.runs, relativeOrDot(input.gitRoot, cwd)) : [];
 
   return {
     configError,
@@ -180,7 +177,7 @@ export async function loadDoctorInput(input: {
     doctorInput: {
       cwd,
       gitRoot: input.gitRoot,
-      files: input.files,
+      globMatches: await countGlobMatches(input.gitRoot, cwd, options),
       branch: input.branch,
       configFile: config.configFile,
       configJson: config.configJson,
@@ -190,11 +187,67 @@ export async function loadDoctorInput(input: {
       options,
       packageJsonPath,
       packageJson,
-      ci: { all: ci.runs, runs, unreadable: ci.unreadable },
-      prebuilt: !!options.storybookBuildDir || uploadsPrebuilt(runs, packageJson?.scripts),
+      prebuilt: !!options.storybookBuildDir || scriptUploadsPrebuilt(packageJson?.scripts),
       ...(await resolveStorybook(input.gitRoot, options, packageJson)),
     },
   };
+}
+
+/**
+ * Whether a package script runs Chromatic on a prebuilt Storybook, which may have no stats file.
+ *
+ * @param scripts The package's scripts.
+ *
+ * @returns True when a chromatic script passes -d or --storybook-build-dir.
+ */
+function scriptUploadsPrebuilt(scripts: Record<string, string> = {}) {
+  return Object.values(scripts).some(
+    (script) =>
+      /\bchromatic\b/.test(script) && /(?:^|\s)(?:-d|--storybook-build-dir)(?=[\s=]|$)/.test(script)
+  );
+}
+
+/**
+ * Other globs that may be what an untraced or externals glob meant: the same glob from the
+ * project's directory, or anywhere in the repository.
+ *
+ * @param glob The glob as written.
+ * @param prefix The project's directory from the repository root, or '.'.
+ *
+ * @returns The suggestions, most specific first.
+ */
+export function globSuggestions(glob: string, prefix: string) {
+  const bare = glob.replace(/^\.\//, '');
+  return [
+    prefix === '.' ? undefined : `${prefix}/${bare}`,
+    glob.startsWith('**/') ? undefined : `**/${bare}`,
+  ].filter((suggestion) => suggestion !== undefined);
+}
+
+/**
+ * Counts the repository files each untraced and externals glob, and each suggestion for it,
+ * matches, the way TurboSnap matches them, in one pass over the repository.
+ *
+ * @param gitRoot Absolute repository root, if in a git repository.
+ * @param cwd Working directory Chromatic runs from.
+ * @param options The options a build would see.
+ *
+ * @returns Each glob's count.
+ */
+async function countGlobMatches(gitRoot: string | undefined, cwd: string, options: CheckedOptions) {
+  const prefix = gitRoot ? relativeOrDot(gitRoot, cwd) : '.';
+  const globs = [...(options.untraced ?? []), ...(options.externals ?? [])].flatMap((glob) => [
+    glob,
+    ...globSuggestions(glob, prefix),
+  ]);
+  const counts = new Map(globs.map((glob) => [glob, 0]));
+  if (!gitRoot || globs.length === 0) return counts;
+  await forEachRepoFile(gitRoot, (file) => {
+    for (const glob of counts.keys()) {
+      if (matchesFile(glob, file)) counts.set(glob, (counts.get(glob) ?? 0) + 1);
+    }
+  });
+  return counts;
 }
 
 /**

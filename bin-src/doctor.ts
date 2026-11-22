@@ -9,11 +9,10 @@ import parseArguments from '../node-src/lib/parseArguments';
 import type { Flags } from '../node-src/types';
 import pkg from '../package.json';
 import { Check, runChecks } from './setup/checks';
-import { readCi, runsFor } from './setup/ci';
-import { describeProject, findProjects, Project } from './setup/detect';
+import { describeProject, findProjects, listProjectFiles, Project } from './setup/detect';
 import { loadDoctorInput } from './setup/doctorInput';
 import { applyFixes, printChecks, summarize } from './setup/report';
-import { color, git, listRepoFiles, readJson, relativeOrDot } from './setup/shared';
+import { color, git, readJson, relativeOrDot } from './setup/shared';
 import { SubcommandFailure } from './subcommandFailure';
 
 const CONFIG_FILES = ['chromatic.config.json', 'chromatic.config.jsonc', 'chromatic.config.json5'];
@@ -40,7 +39,6 @@ export async function collectChecks(cwd: string, argv: string[] = []) {
     const { doctorInput, configError, optionsError } = await loadDoctorInput({
       cwd,
       gitRoot,
-      files: gitRoot ? listRepoFiles(gitRoot) : [],
       branch: gitRoot ? git(['rev-parse', '--abbrev-ref', 'HEAD'], cwd) : undefined,
       argv,
       flags,
@@ -64,6 +62,27 @@ function scriptRunsChromatic(directory: string) {
   return Object.values(scripts).some((command) => /(^|[\s;&|])chromatic(\s|$)/.test(command));
 }
 
+// Whether a path is a folder or inside it.
+const within = (folder: string, file: string) =>
+  file === folder || file.startsWith(`${folder}${path.sep}`);
+
+/**
+ * The package a folder belongs to: the nearest folder at or above it with a package.json, up to
+ * the repository root.
+ *
+ * @param directory Where to start.
+ * @param gitRoot The repository root.
+ *
+ * @returns The package's folder, or the repository root when there's none below it.
+ */
+function packageDirectory(directory: string, gitRoot: string) {
+  for (let current = directory; current !== gitRoot; current = path.dirname(current)) {
+    if (!within(gitRoot, current)) break;
+    if (existsSync(path.join(current, 'package.json'))) return current;
+  }
+  return gitRoot;
+}
+
 /**
  * Decides what to check. From a project (a config file or .storybook here, or path flags), check
  * it. From anywhere else, check every project in the repository that has Chromatic set up, like
@@ -76,14 +95,17 @@ function scriptRunsChromatic(directory: string) {
  * @returns The projects to check, and the ones found without Chromatic.
  */
 // eslint-disable-next-line complexity -- target selection has one branch per way to run doctor
-function chooseTargets(cwd: string, flags: Record<string, any>, mainFlags: Flags) {
+async function chooseTargets(cwd: string, flags: Record<string, any>, mainFlags: Flags) {
   const gitRoot = git(['rev-parse', '--show-toplevel'], cwd);
-  const files = gitRoot ? listRepoFiles(gitRoot) : [];
+  const files = gitRoot ? await listProjectFiles(gitRoot) : [];
   const projects = gitRoot
     ? findProjects(gitRoot, files).filter(
         (p, index, all) => all.findIndex((other) => other.directory === p.directory) === index
       )
     : [];
+  const packageDirectories = files
+    .filter((file) => path.basename(file) === 'package.json')
+    .map((file) => path.join(gitRoot ?? '', path.dirname(file)));
   const here = (directory: string) => ({
     targets: [{ directory, label: gitRoot ? relativeOrDot(gitRoot, directory) : '.' }],
     notSetUp: [] as Project[],
@@ -104,27 +126,40 @@ function chooseTargets(cwd: string, flags: Record<string, any>, mainFlags: Flags
     return here(cwd);
   }
 
-  // Inside a project's subfolder, such as packages/ui/src: check that project.
-  const containing = projects
-    .filter((p) => cwd === p.directory || cwd.startsWith(`${p.directory}${path.sep}`))
-    .sort((a, b) => b.directory.length - a.directory.length)
-    .at(0);
+  // Inside a project's subfolder, such as packages/ui/src: check that project. When the package
+  // doctor runs in is set up itself, it owns the run, so doctor never checks or fixes the Storybook
+  // of a folder above it.
+  const isSetUp = (directory: string) => hasConfigFile(directory) || scriptRunsChromatic(directory);
+  const ownPackage = packageDirectory(cwd, gitRoot);
+  const nearest = (inside: string) =>
+    projects
+      .filter((p) => within(p.directory, cwd) && within(inside, p.directory))
+      .sort((a, b) => b.directory.length - a.directory.length)
+      .at(0);
+  const ownProject = nearest(ownPackage);
+  if (ownProject) return here(ownProject.directory);
+  if (ownPackage !== gitRoot && isSetUp(ownPackage)) return here(ownPackage);
+  const containing = nearest(gitRoot);
   if (containing) return here(containing.directory);
   if (projects.length === 0) return here(cwd);
 
-  const { runs } = readCi(gitRoot, files);
-  const isSetUp = (p: Project) =>
-    hasConfigFile(p.directory) ||
-    runsFor(runs, p.relative).length > 0 ||
-    scriptRunsChromatic(p.directory);
+  // A package set up with a config file or a chromatic script, but no Storybook or E2E config
+  // doctor can find, is checked too, so it fails instead of going unmentioned. The root's config or
+  // script, such as `turbo run chromatic`, may be for every package, so it doesn't count.
+  const configured = packageDirectories
+    .filter((directory) => directory !== gitRoot && isSetUp(directory))
+    .filter((directory) => !projects.some((p) => p.directory === directory));
   return {
-    targets: projects
-      .filter((p) => isSetUp(p))
-      .map((p) => ({
-        directory: p.directory,
-        label: `${p.relative} ${color.muted(`· ${describeProject(p)}`)}`,
-      })),
-    notSetUp: projects.filter((p) => !isSetUp(p)),
+    targets: [
+      ...projects
+        .filter((p) => isSetUp(p.directory))
+        .map((p) => ({
+          directory: p.directory,
+          label: `${p.relative} ${color.muted(`· ${describeProject(p)}`)}`,
+        })),
+      ...configured.map((directory) => ({ directory, label: relativeOrDot(gitRoot, directory) })),
+    ],
+    notSetUp: projects.filter((p) => !isSetUp(p.directory)),
   };
 }
 
@@ -141,7 +176,7 @@ export async function main(argv: string[]) {
       $ chromatic doctor [--fix] [options]
 
     Checks your Chromatic setup without starting a build: that the config loads, that each
-    option's value matches what's on disk and in git, and the git history, token and CI around it.
+    option's value matches what's on disk and in git, and the git history and token around it.
     Run it from a project to check that project, or from anywhere else in a monorepo to check
     every project with Chromatic set up.
 
@@ -149,7 +184,8 @@ export async function main(argv: string[]) {
       --project <dir>     Check only this project.
       --fix               Offer to fix what can be fixed, one change at a time.
                           Without a terminal (in CI), fixes are listed, not applied.
-      --yes, -y           With --fix, apply every fix without asking.
+      --yes, -y           With --fix, apply every fix without asking, except fixes that
+                          ask how your CI runs Chromatic, which need a terminal.
 
     Every option chromatic takes, such as --config-file, --only-changed or --build-command, is
     read the same way as in a build, and flags win over the config file.
@@ -175,7 +211,7 @@ export async function main(argv: string[]) {
   clack.intro(`Chromatic CLI v${pkg.version}`);
   clack.log.message(color.muted('doctor · checking your setup without starting a build'));
 
-  const { targets, notSetUp } = chooseTargets(cwd, flags, mainFlags);
+  const { targets, notSetUp } = await chooseTargets(cwd, flags, mainFlags);
   const multi = targets.length > 1 || notSetUp.length > 0;
   if (multi) {
     clack.log.info(
@@ -185,6 +221,7 @@ export async function main(argv: string[]) {
 
   const all: Check[] = [];
   let skippedFixes = false;
+  let questions = false;
   for (const target of targets) {
     if (multi) clack.log.step(color.bold(color.cta(`Project ${target.label}`)));
     const check = () => collectChecks(target.directory, argv);
@@ -199,6 +236,7 @@ export async function main(argv: string[]) {
         printChecks(checks);
       } else {
         skippedFixes = true;
+        questions ||= checks.some((c) => c.fix?.question);
       }
     }
     if (multi) clack.log.info(`${target.label}: ${summarize(checks)}`);
@@ -214,7 +252,7 @@ export async function main(argv: string[]) {
   }
   if (skippedFixes) {
     clack.log.warn(
-      `Didn't apply fixes: there's no terminal to confirm them (CI or piped input).\nRun ${color.cta('npx chromatic doctor --fix --yes')} to apply them all.`
+      `Didn't apply fixes: there's no terminal to confirm them (CI or piped input).\nRun ${color.cta('npx chromatic doctor --fix --yes')} to apply them${questions ? ', except the ones that ask how your CI runs Chromatic, which need a terminal' : ''}.`
     );
   } else if (!flags.fix && all.some((c) => c.fix)) {
     clack.log.info(`Run ${color.cta('npx chromatic doctor --fix')} to fix what's marked fixable.`);

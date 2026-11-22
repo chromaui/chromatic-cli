@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { findConfigFlags, MAIN_CONFIG_PATTERN } from '../../node-src/lib/getStorybookMetadata';
-import { readJson, relativeOrDot } from './shared';
+import { forEachRepoFile, readJson, relativeOrDot } from './shared';
 
 export type Framework = 'storybook' | 'playwright' | 'cypress' | 'vitest';
 
@@ -54,24 +54,23 @@ function versionOf(directory: string, gitRoot: string, name: string) {
  */
 function storybookMains(gitRoot: string, present: Set<string>) {
   const mains = new Map<string, string>();
+  // Every main config by its folder, so a -c folder is one lookup rather than a scan per package.
+  const mainsByFolder = new Map<string, string>();
   for (const file of present) {
     if (STORYBOOK_MAIN.test(file)) mains.set(path.dirname(path.dirname(file)), file);
+    if (MAIN_CONFIG_PATTERN.test(path.basename(file))) mainsByFolder.set(path.dirname(file), file);
   }
   for (const file of [...present].filter((f) => path.basename(f) === 'package.json')) {
     const directory = path.dirname(file);
     if (mains.has(directory)) continue;
     const packageJson = readJson(path.join(gitRoot, file)) ?? {};
     const scripts: Record<string, string> = packageJson.scripts ?? {};
-    const configDirectories = new Set(
-      Object.keys(scripts)
-        .filter((name) => /\b(storybook build|build-storybook)\b/.test(scripts[name]))
-        .map((buildScriptName) => findConfigFlags({ buildScriptName, packageJson }).configDir)
-        .filter((configDirectory) => configDirectory !== undefined)
-        .map((configDirectory) => path.join(directory, configDirectory))
-    );
-    const main = [...present].find(
-      (f) => configDirectories.has(path.dirname(f)) && MAIN_CONFIG_PATTERN.test(path.basename(f))
-    );
+    const main = Object.keys(scripts)
+      .filter((name) => /\b(storybook build|build-storybook)\b/.test(scripts[name]))
+      .map((buildScriptName) => findConfigFlags({ buildScriptName, packageJson }).configDir)
+      .filter((configDirectory) => configDirectory !== undefined)
+      .map((configDirectory) => mainsByFolder.get(path.join(directory, configDirectory)))
+      .find((found) => found !== undefined);
     if (main) mains.set(directory, main);
   }
   return mains;
@@ -90,6 +89,25 @@ function storybookProject(gitRoot: string, relative: string, file: string): Proj
     storybookFramework: framework?.replace(/^@storybook\//, ''),
     evidence: file,
   };
+}
+
+/**
+ * The repository files that can make a project: package.json files, Storybook main configs and E2E
+ * test configs. Only these are kept, so a large repository's file list isn't.
+ *
+ * @param gitRoot Absolute repository root.
+ *
+ * @returns The files, relative to the root.
+ */
+export async function listProjectFiles(gitRoot: string) {
+  const files: string[] = [];
+  await forEachRepoFile(gitRoot, (file) => {
+    const name = path.basename(file);
+    if (name === 'package.json' || MAIN_CONFIG_PATTERN.test(name) || E2E_CONFIG.test(file)) {
+      files.push(file);
+    }
+  });
+  return files;
 }
 
 /**
@@ -143,70 +161,3 @@ export function describeProject(project: Project) {
     .filter(Boolean)
     .join(' ');
 }
-
-export interface CiProvider {
-  id: string;
-  name: string;
-  patterns: RegExp[];
-  docs: string;
-  secretHelp: string;
-}
-
-export const CI_PROVIDERS: CiProvider[] = [
-  {
-    id: 'github',
-    name: 'GitHub Actions',
-    patterns: [/^\.github\/workflows\/[^/]+\.ya?ml$/],
-    docs: 'https://www.chromatic.com/docs/github-actions',
-    secretHelp: 'gh secret set CHROMATIC_PROJECT_TOKEN',
-  },
-  {
-    id: 'gitlab',
-    name: 'GitLab Pipelines',
-    patterns: [/^\.gitlab-ci\.ya?ml$/],
-    docs: 'https://www.chromatic.com/docs/gitlab',
-    secretHelp: 'Settings → CI/CD → Variables, masked',
-  },
-  {
-    id: 'bitbucket',
-    name: 'Bitbucket Pipelines',
-    patterns: [/^bitbucket-pipelines\.ya?ml$/],
-    docs: 'https://www.chromatic.com/docs/bitbucket-pipelines',
-    secretHelp: 'Repository settings → Repository variables, secured',
-  },
-  {
-    id: 'circleci',
-    name: 'CircleCI',
-    patterns: [/^\.circleci\/config\.ya?ml$/],
-    docs: 'https://www.chromatic.com/docs/circleci',
-    secretHelp: 'Project settings → Environment variables',
-  },
-  {
-    id: 'travis',
-    name: 'Travis CI',
-    patterns: [/^\.travis\.ya?ml$/],
-    docs: 'https://www.chromatic.com/docs/travisci',
-    secretHelp: 'Repository settings → Environment variables',
-  },
-  {
-    id: 'jenkins',
-    name: 'Jenkins',
-    patterns: [/^Jenkinsfile$/],
-    docs: 'https://www.chromatic.com/docs/jenkins',
-    secretHelp: 'a Jenkins credential exposed as an environment variable',
-  },
-  {
-    id: 'azure',
-    name: 'Azure Pipelines',
-    patterns: [/^azure-pipelines\.ya?ml$/, /^\.azure-pipelines\/.+\.ya?ml$/],
-    docs: 'https://www.chromatic.com/docs/azure-pipelines',
-    secretHelp: 'Pipeline → Variables, kept secret',
-  },
-  {
-    id: 'semaphore',
-    name: 'Semaphore',
-    patterns: [/^\.semaphore\/[^/]+\.ya?ml$/],
-    docs: 'https://www.chromatic.com/docs/semaphore',
-    secretHelp: 'Organization settings → Secrets',
-  },
-];

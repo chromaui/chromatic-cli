@@ -2,9 +2,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 import { findBuildScriptName } from '../../node-src/lib/getOptions';
-import { matchesFile } from '../../node-src/lib/utilities';
 import pkg from '../../package.json';
-import { ChromaticRun } from './ci';
 import { E2E_CONFIG, Framework, FRAMEWORK_NAMES } from './detect';
 import { configFix, DoctorInput } from './doctorInput';
 import { packageJsonEdit } from './fixes';
@@ -23,6 +21,11 @@ export interface Fix {
   edits: { file: string; content: string }[];
   /** Values the preview must never show, such as a token the fix moves. */
   secrets?: string[];
+  /**
+   * Asked in place of "Apply this fix?" when the fix is only right if the answer is yes, such as
+   * how CI runs Chromatic, which doctor can't see. --yes can't answer it, so it skips the fix.
+   */
+  question?: string;
 }
 
 export interface Check {
@@ -272,70 +275,6 @@ function buildScriptCheck(
   };
 }
 
-/**
- * Warns when two jobs build this project. A command scan can't tell two jobs in one file from two
- * branches of one job, so each scanned file counts once; a dedicated reader's jobs each count.
- *
- * @param runs The jobs that run Chromatic for this project.
- *
- * @returns The warning, if any.
- */
-function duplicateRunChecks(runs: ChromaticRun[]): Check[] {
-  const counted = new Map<string, ChromaticRun>();
-  for (const run of runs) counted.set(run.confirmed ? `${run.file}\0${run.job}` : run.file, run);
-  if (counted.size < 2) return [];
-  // A project tested from two jobs builds the same commits twice and pays for the snapshots twice.
-  return [
-    {
-      group: 'Environment',
-      status: 'warn',
-      title: `${counted.size} CI jobs run Chromatic for this project`,
-      detail: `${[...counted.values()]
-        .map((r) => `${r.provider.name}: ${r.file} (${r.job})`)
-        .join(
-          '\n'
-        )}\nUnless they run on different events, each push makes a duplicate build. Keep the one that runs on every push.`,
-    },
-  ];
-}
-
-function runCheck(gitRoot: string, run: ChromaticRun): Check {
-  const problems: string[] = [];
-  if (run.fullHistory === false) {
-    problems.push(
-      run.provider.id === 'gitlab'
-        ? "no GIT_DEPTH: 0, so the clone is shallow. Set it in the job's variables."
-        : 'checkout has no fetch-depth: 0, so the clone is shallow'
-    );
-  }
-  if (run.onPullRequest) {
-    problems.push('runs on pull_request, which tests a merge commit instead of your branch');
-  }
-  const where = `${run.file} (${run.job})`;
-  if (problems.length === 0) {
-    return {
-      group: 'Environment',
-      status: 'pass',
-      title: run.confirmed
-        ? `${run.provider.name} runs Chromatic (${where})`
-        : `${run.provider.name} looks like it runs Chromatic (${where})`,
-    };
-  }
-  return {
-    group: 'Environment',
-    status: 'warn',
-    title: `${run.provider.name}: ${where}`,
-    detail: problems.join('\n'),
-    // Only the clone depth has an automatic fix; which events trigger a build is a choice.
-    fix: run.fullHistoryFix
-      ? {
-          summary: `Clone full history in ${where}`,
-          edits: [{ file: path.join(gitRoot, run.file), content: run.fullHistoryFix }],
-        }
-      : undefined,
-  };
-}
-
 function environmentChecks(input: DoctorInput): Check[] {
   const { gitRoot } = input;
   const checks: Check[] = [];
@@ -373,34 +312,6 @@ function environmentChecks(input: DoctorInput): Check[] {
     });
   }
 
-  // Only the jobs that run Chromatic from this package; in a monorepo others belong to siblings.
-  const { all: allRuns, runs, unreadable } = input.ci;
-  if (unreadable.length > 0) {
-    checks.push({
-      group: 'Environment',
-      status: 'warn',
-      title: `Couldn't read ${unreadable.join(', ')}`,
-      detail: "doctor couldn't parse it, so it can't tell whether it runs Chromatic.",
-    });
-  }
-  // A file doctor couldn't read may run it; that's reported above.
-  if (runs.length === 0 && unreadable.length === 0) {
-    checks.push({
-      group: 'Environment',
-      status: 'warn',
-      title:
-        allRuns.length > 0
-          ? 'No CI job runs Chromatic for this project'
-          : 'No CI runs Chromatic yet',
-      detail: 'Run chromatic init to add it.',
-    });
-  }
-  // A scanned run counts for every project when its directory is unknown, but isn't a duplicate.
-  const here = relativeOrDot(gitRoot, input.cwd);
-  checks.push(
-    ...duplicateRunChecks(runs.filter((run) => run.confirmed || run.directory === here)),
-    ...runs.map((run) => runCheck(gitRoot, run))
-  );
   return checks;
 }
 
@@ -436,18 +347,6 @@ export function runChecks(
   ];
   // A fix would rewrite a config file that failed to load and lose what's in it.
   return configError ? checks.map(({ fix: _fix, ...check }) => check) : checks;
-}
-
-/**
- * Counts the repository files a glob matches, the way TurboSnap matches them.
- *
- * @param files Repository files relative to the git root.
- * @param glob The glob from untraced or externals.
- *
- * @returns How many files match.
- */
-export function countMatches(files: string[], glob: string) {
-  return files.filter((file) => matchesFile(glob, file)).length;
 }
 
 export { default as matchesBranch } from '../../node-src/lib/matchesBranch';

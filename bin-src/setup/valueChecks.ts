@@ -2,38 +2,40 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 import { findBuildScriptName } from '../../node-src/lib/getOptions';
-import type { Check } from './checks';
-import { countMatches, matchesBranch } from './checks';
-import { ONLY_CHANGED_FLAG } from './ci';
-import { configFix, DoctorInput } from './doctorInput';
+import type { Check, Fix } from './checks';
+import { matchesBranch } from './checks';
+import { configFix, DoctorInput, globSuggestions } from './doctorInput';
 import { relativeOrDot, tokenEnvironmentEdits } from './shared';
 
 /**
- * Finds where TurboSnap is turned on outside the config file: the package's chromatic script, or a
- * CI step that runs Chromatic for this package.
+ * Finds a package script that turns TurboSnap on outside the config file.
  *
  * @param input What loadDoctorInput read.
  *
- * @returns Where it's turned on, such as 'the "chromatic" script', or undefined.
+ * @returns The script's name, or undefined.
  */
-/**
- * The CI jobs a reader that understands the provider found running Chromatic from here. Fixes that
- * change what CI reads rely only on these, not on a command scan's guess.
- *
- * @param input What loadDoctorInput read.
- *
- * @returns The confirmed runs.
- */
-const confirmedRuns = (input: DoctorInput) => input.ci.runs.filter((run) => run.confirmed);
-
-function onlyChangedElsewhere(input: DoctorInput) {
+function onlyChangedScript(input: DoctorInput) {
   const scripts: Record<string, string> = input.packageJson?.scripts ?? {};
-  const script = Object.keys(scripts).find(
-    (name) => /\bchromatic\b/.test(scripts[name]) && ONLY_CHANGED_FLAG.test(scripts[name])
+  return Object.keys(scripts).find(
+    (name) =>
+      /\bchromatic\b/.test(scripts[name]) &&
+      /--only-changed(?!=false)(?=[\s=]|$)/.test(scripts[name])
   );
-  if (script) return `the "${script}" script`;
-  const run = input.ci.runs.find((r) => r.onlyChanged);
-  return run && `${run.file} (${run.job})`;
+}
+
+/**
+ * The question for fixes that are only right when CI runs Chromatic from this project, which
+ * doctor can't see.
+ *
+ * @param input What loadDoctorInput read.
+ *
+ * @returns The question.
+ */
+function runsHereQuestion(input: DoctorInput) {
+  const here = input.gitRoot ? relativeOrDot(input.gitRoot, input.cwd) : '.';
+  return here === '.'
+    ? 'Does CI run Chromatic from the repository root?'
+    : `Does CI run Chromatic from ${here}?`;
 }
 
 // eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
@@ -54,33 +56,38 @@ function onlyChangedChecks(input: DoctorInput): Check[] {
       },
     ];
   }
-  // The config file and flags don't say; the script or the CI step may still pass --only-changed.
-  const elsewhere = onlyChanged === undefined ? onlyChangedElsewhere(input) : undefined;
-  if (elsewhere) {
-    return [{ group: 'Values', status: 'pass', title: `TurboSnap is set in ${elsewhere}` }];
+  // The config file and flags don't say; the script may still pass --only-changed.
+  const script = onlyChanged === undefined ? onlyChangedScript(input) : undefined;
+  if (script) {
+    return [
+      { group: 'Values', status: 'pass', title: `TurboSnap is set in the "${script}" script` },
+    ];
   }
   if (onlyChanged === undefined || onlyChanged === false) {
     return [
       {
         group: 'Values',
         status: 'warn',
-        title: 'TurboSnap is off',
+        title: onlyChanged === false ? 'TurboSnap is off' : "TurboSnap isn't on here",
         detail:
           onlyChanged === false
             ? '"onlyChanged" is false, so every build captures every story.'
-            : `Nothing turns it on: not the config file, the "chromatic" script, or a CI step. Set "onlyChanged": true to test only the stories your changes affect${input.prebuilt ? ', and build Storybook with --stats-json' : ''}.`,
+            : `Not the config file, flags or a package script turn it on. If CI passes --only-changed, it's on there; otherwise set "onlyChanged": true to test only the stories your changes affect. If CI uploads a prebuilt Storybook (--storybook-build-dir), build it with --stats-json first.`,
         // Leave an explicit false alone; that's a choice, not a gap. A prebuilt Storybook may have
-        // no stats file, and TurboSnap fails the build without one.
+        // no stats file, and TurboSnap fails the build without one; CI may pass one doctor can't see.
         fix:
           onlyChanged === undefined && !input.prebuilt
-            ? configFix(
-                input,
-                'onlyChanged',
-                'Turn on TurboSnap with "onlyChanged": true',
-                (json) => {
-                  json.onlyChanged = true;
-                },
-                { adds: true }
+            ? withQuestion(
+                configFix(
+                  input,
+                  'onlyChanged',
+                  'Turn on TurboSnap with "onlyChanged": true',
+                  (json) => {
+                    json.onlyChanged = true;
+                  },
+                  { adds: true }
+                ),
+                'Does CI let Chromatic build Storybook, rather than pass --storybook-build-dir?'
               )
             : undefined,
       },
@@ -138,20 +145,27 @@ function configDirectoryChecks(input: DoctorInput): Check[] {
       ? normalized.slice(prefix.length + 1)
       : undefined;
   const rebasedExists = rebased !== undefined && existsSync(path.join(cwd, rebased));
-  // A CI that runs Chromatic from the root, with --config-file, reads the path as it is.
-  const fixable = rebasedExists && confirmedRuns(input).length > 0;
   return [
     {
       group: 'Values',
       status: 'fail',
       title: `storybookConfigDir ${value} doesn't exist`,
       detail: rebasedExists
-        ? `It's relative to the repository root, but Chromatic reads it from ${prefix}. Here it's ${rebased}.`
+        ? `It's relative to the repository root, but Chromatic reads it from ${prefix}. Here it's ${rebased}. If CI runs Chromatic from the root with --config-file, it reads the path as written.`
         : `Chromatic looks for it at ${relativeOrDot(cwd, input.storybookConfigDirectory)}.`,
-      fix: fixable
-        ? configFix(input, 'storybookConfigDir', `Set storybookConfigDir to ${rebased}`, (json) => {
-            json.storybookConfigDir = rebased;
-          })
+      // A CI that runs Chromatic from the root, with --config-file, reads the path as it is.
+      fix: rebasedExists
+        ? withQuestion(
+            configFix(
+              input,
+              'storybookConfigDir',
+              `Set storybookConfigDir to ${rebased}`,
+              (json) => {
+                json.storybookConfigDir = rebased;
+              }
+            ),
+            runsHereQuestion(input)
+          )
         : undefined,
     },
   ];
@@ -178,19 +192,20 @@ function baseDirectoryChecks(input: DoctorInput): Check[] {
         group: 'Values',
         status: 'warn',
         title: 'storybookBaseDir repeats the default',
-        detail: 'Chromatic already uses the directory it runs from.',
+        detail:
+          'Chromatic already uses the directory it runs from. If CI runs Chromatic from somewhere else, keep it.',
         // Only when CI runs Chromatic from here too; from the root, the value isn't the default.
-        fix:
-          confirmedRuns(input).length > 0
-            ? configFix(
-                input,
-                'storybookBaseDir',
-                'Remove storybookBaseDir from the config file',
-                (json) => {
-                  delete json.storybookBaseDir;
-                }
-              )
-            : undefined,
+        fix: withQuestion(
+          configFix(
+            input,
+            'storybookBaseDir',
+            'Remove storybookBaseDir from the config file',
+            (json) => {
+              delete json.storybookBaseDir;
+            }
+          ),
+          runsHereQuestion(input)
+        ),
       },
     ];
   }
@@ -216,41 +231,58 @@ function buildDirectoryChecks(input: DoctorInput): Check[] {
   ];
 }
 
-// eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
 function globChecks(input: DoctorInput): Check[] {
-  const { files, options, cwd, gitRoot } = input;
   const checks: Check[] = [];
   for (const key of ['untraced', 'externals'] as const) {
-    for (const glob of options[key] ?? []) {
-      const count = countMatches(files, glob);
-      if (count > 0) {
-        checks.push({
-          group: 'Values',
-          status: 'pass',
-          title: `${key} ${glob} matches ${count} file${count === 1 ? '' : 's'}`,
-        });
-        continue;
-      }
-      const prefix = gitRoot ? relativeOrDot(gitRoot, cwd) : '.';
-      const candidate = [
-        prefix === '.' ? undefined : `${prefix}/${glob.replace(/^\.\//, '')}`,
-        glob.startsWith('**/') ? undefined : `**/${glob.replace(/^\.\//, '')}`,
-      ].find((c): c is string => !!c && countMatches(files, c) > 0);
-      const suggestion = candidate;
-      checks.push({
-        group: 'Values',
-        status: 'warn',
-        title: `${key} ${glob} matches no files`,
-        detail: `Globs are matched from the repository root.${suggestion ? ` ${suggestion} matches ${countMatches(files, suggestion)}.` : ''}`,
-        fix: suggestion
-          ? configFix(input, key, `Change ${key} ${glob} to ${suggestion}`, (json) => {
-              json[key] = json[key].map((g: string) => (g === glob ? suggestion : g));
-            })
-          : undefined,
-      });
+    for (const glob of input.options[key] ?? []) {
+      const count = input.globMatches.get(glob) ?? 0;
+      checks.push(
+        count > 0
+          ? {
+              group: 'Values',
+              status: 'pass',
+              title: `${key} ${glob} matches ${count} file${count === 1 ? '' : 's'}`,
+            }
+          : unmatchedGlobCheck(input, key, glob)
+      );
     }
   }
   return checks;
+}
+
+/**
+ * The warning for a glob that matches no files, with a glob that does if there is one.
+ *
+ * @param input What doctor read.
+ * @param key The option the glob is in.
+ * @param glob The glob.
+ *
+ * @returns The check.
+ */
+function unmatchedGlobCheck(
+  input: DoctorInput,
+  key: 'untraced' | 'externals',
+  glob: string
+): Check {
+  const { globMatches, cwd, gitRoot } = input;
+  const countMatches = (candidate: string) => globMatches.get(candidate) ?? 0;
+  const prefix = gitRoot ? relativeOrDot(gitRoot, cwd) : '.';
+  const suggestion = globSuggestions(glob, prefix).find((c) => countMatches(c) > 0);
+  // A `**/` glob matches in every folder, which in a monorepo includes other packages, such as
+  // shared code whose changes should recapture stories, so doctor suggests it but doesn't make it.
+  const anywhere = suggestion?.startsWith('**/');
+  return {
+    group: 'Values',
+    status: 'warn',
+    title: `${key} ${glob} matches no files`,
+    detail: `Globs are matched from the repository root.${suggestion ? ` ${suggestion} matches ${countMatches(suggestion)}${anywhere ? ', in any folder' : ''}.` : ''}`,
+    fix:
+      suggestion && !anywhere
+        ? configFix(input, key, `Change ${key} ${glob} to ${suggestion}`, (json) => {
+            json[key] = json[key].map((g: string) => (g === glob ? suggestion : g));
+          })
+        : undefined,
+  };
 }
 
 /**
@@ -263,10 +295,6 @@ function globChecks(input: DoctorInput): Check[] {
 function moveTokenFix(input: DoctorInput) {
   const token = input.configJson?.projectToken;
   if (!input.gitRoot || typeof token !== 'string') return {};
-  // CI may read the token from this file; removing it before CI has its own would fail its builds.
-  if (!confirmedRuns(input).some((run) => run.passesToken)) {
-    return { reason: 'Give CI the token as CHROMATIC_PROJECT_TOKEN first, then remove it here.' };
-  }
   const saved = tokenEnvironmentEdits(input.gitRoot, input.cwd, token);
   if (!saved.edits) return { reason: `doctor can't move it to .env: ${saved.reason}.` };
   const removal = configFix(
@@ -277,8 +305,12 @@ function moveTokenFix(input: DoctorInput) {
       delete json.projectToken;
     }
   );
+  // CI may read the token from this file; removing it before CI has its own would fail its builds.
   return {
-    fix: removal && { ...removal, edits: [...removal.edits, ...saved.edits], secrets: [token] },
+    fix: withQuestion(
+      removal && { ...removal, edits: [...removal.edits, ...saved.edits], secrets: [token] },
+      'Does CI already pass the token as CHROMATIC_PROJECT_TOKEN?'
+    ),
   };
 }
 
@@ -290,10 +322,22 @@ function tokenInConfigChecks(input: DoctorInput): Check[] {
       group: 'Values',
       status: 'warn',
       title: 'The project token is in the config file',
-      detail: `Anyone who can read the repository can publish builds. Keep it in CHROMATIC_PROJECT_TOKEN.${reason ? ` ${reason}` : ''}`,
+      detail: `Anyone who can read the repository can publish builds. Give CI the token as CHROMATIC_PROJECT_TOKEN, then remove it here.${reason ? ` ${reason}` : ''}`,
       fix,
     },
   ];
+}
+
+/**
+ * Adds the question a fix needs answered, which doctor can't answer from the files it reads.
+ *
+ * @param fix The fix, if there is one.
+ * @param question What the user must confirm for the fix to be right.
+ *
+ * @returns The fix with its question.
+ */
+function withQuestion(fix: Fix | undefined, question: string): Fix | undefined {
+  return fix && { ...fix, question };
 }
 
 /**

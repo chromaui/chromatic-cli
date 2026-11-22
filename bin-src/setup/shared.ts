@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -43,14 +43,7 @@ export function answered<T>(value: T): Exclude<T, symbol> {
  */
 export function git(args: string[], cwd: string) {
   try {
-    // No output limit: ls-files in a large repository passes the 1 MiB default, and a cut-off
-    // list would make every file look absent.
-    return execFileSync('git', args, {
-      cwd,
-      encoding: 'utf8',
-      maxBuffer: Number.POSITIVE_INFINITY,
-      stdio: ['ignore', 'pipe', 'ignore'],
-    })
+    return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
       .toString()
       .trim();
   } catch {
@@ -59,15 +52,34 @@ export function git(args: string[], cwd: string) {
 }
 
 /**
- * Files in the repository that git doesn't ignore, tracked or not, relative to the root.
+ * Calls visit with each file in the repository that git doesn't ignore, tracked or not, relative
+ * to the root. Reads git's output as it streams, so a large repository's file list never sits in
+ * memory at once.
  *
  * @param gitRoot Absolute repository root.
+ * @param visit Called once per file.
  *
- * @returns The files, or none when git fails.
+ * @returns A promise that settles when git has listed every file, and rejects when git fails.
  */
-export function listRepoFiles(gitRoot: string) {
-  const output = git(['ls-files', '--cached', '--others', '--exclude-standard'], gitRoot);
-  return output ? output.split('\n').filter(Boolean) : [];
+export function forEachRepoFile(gitRoot: string, visit: (file: string) => void) {
+  return new Promise<void>((resolve, reject) => {
+    // -z ends each path with a NUL and leaves non-ASCII paths unquoted.
+    const child = spawn('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
+      cwd: gitRoot,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    let partial = '';
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', (chunk: string) => {
+      const paths = (partial + chunk).split('\0');
+      partial = paths.pop() ?? '';
+      for (const file of paths) visit(file);
+    });
+    child.on('error', reject);
+    child.on('close', (code) =>
+      code === 0 ? resolve() : reject(new Error(`git ls-files failed in ${gitRoot}`))
+    );
+  });
 }
 
 /**
