@@ -10,8 +10,6 @@ export interface Session {
   interactive: boolean;
   writer: FileWriter;
   flags: Record<string, any>;
-  /** The CI secret for this project's token, set once the project is picked. */
-  secretName: string;
 }
 
 async function verifyToken(token: string) {

@@ -40,30 +40,6 @@ function matchFlags({ flags, gitRoot }: Session, projects: Project[]): Project[]
 }
 
 /**
- * The CI secret for a project's token. Each project in a monorepo is its own Chromatic project
- * with its own token, so each CI job needs its own secret, named after the project's whole path so
- * packages/ui and apps/ui differ. A single-project repository keeps the plain name.
- *
- * @param gitRoot Absolute repository root.
- * @param projects Every project detection found.
- * @param project The project being set up.
- *
- * @returns The secret's name.
- */
-export function secretNameFor(gitRoot: string, projects: Project[], project: Project) {
-  const monorepo =
-    projects.length > 1 ||
-    !!readJson(path.join(gitRoot, 'package.json'))?.workspaces ||
-    existsSync(path.join(gitRoot, 'pnpm-workspace.yaml'));
-  if (!monorepo || project.relative === '.') return 'CHROMATIC_PROJECT_TOKEN';
-  const suffix = project.relative
-    .toUpperCase()
-    .replaceAll(/[^A-Z0-9]+/g, '_')
-    .replaceAll(/^_+|_+$/g, '');
-  return `CHROMATIC_PROJECT_TOKEN_${suffix}`;
-}
-
-/**
  * Picks the project to set up: the only one, the one init ran in, or the user's choice.
  *
  * @param session The init session.

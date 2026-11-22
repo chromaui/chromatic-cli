@@ -313,31 +313,26 @@ export async function detectPackageManager(gitRoot: string): Promise<PackageMana
 
 export const PACKAGE_MANAGER_COMMANDS: Record<
   PackageManager,
-  { label: string; ciInstall: string; run: (script: string) => string }
+  { label: string; run: (script: string) => string }
 > = {
   npm: {
     label: 'npm',
-    ciInstall: 'npm ci',
     run: (s) => `npm run ${s}`,
   },
   pnpm: {
     label: 'pnpm',
-    ciInstall: 'pnpm install --frozen-lockfile',
     run: (s) => `pnpm ${s}`,
   },
   yarn: {
     label: 'Yarn',
-    ciInstall: 'yarn install --immutable',
     run: (s) => `yarn ${s}`,
   },
   'yarn-classic': {
     label: 'Yarn 1',
-    ciInstall: 'yarn install --frozen-lockfile',
     run: (s) => `yarn ${s}`,
   },
   bun: {
     label: 'Bun',
-    ciInstall: 'bun install --frozen-lockfile',
     run: (s) => `bun run ${s}`,
   },
 };

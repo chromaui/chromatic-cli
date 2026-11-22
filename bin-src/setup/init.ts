@@ -11,30 +11,17 @@ import pkg from '../../package.json';
 import { collectChecks } from '../doctor';
 import { SubcommandFailure } from '../subcommandFailure';
 import type { Check } from './checks';
-import { detectCi, readCi, runsFor, uploadsPrebuilt } from './ci';
-import { ciJobName, ciSnippet, githubWorkflow } from './ciTemplates';
 import {
-  CI_PROVIDERS,
   detectPackageManager,
   findProjects,
   Framework,
-  OTHER_CI,
+  listProjectFiles,
   PACKAGE_MANAGER_COMMANDS,
   Project,
 } from './detect';
-import { pickProject, secretNameFor } from './project';
+import { pickProject } from './project';
 import { applyFixes, printChecks, summarize } from './report';
-import {
-  answered,
-  color,
-  FileWriter,
-  git,
-  gitignoreAdditions,
-  listRepoFiles,
-  readJson,
-  relativeOrDot,
-  rewriteJson,
-} from './shared';
+import { color, FileWriter, git, gitignoreAdditions, relativeOrDot, rewriteJson } from './shared';
 import { Session, tokenStep } from './token';
 
 const HELP = `
@@ -42,15 +29,13 @@ const HELP = `
       $ chromatic init [options]
 
     Sets up Chromatic in this repository: finds your Storybook or E2E tests, checks your project
-    token, writes chromatic.config.json, adds the chromatic package and script, sets up CI, and
-    checks the result with chromatic doctor.
+    token, writes chromatic.config.json, adds the chromatic package and script, and checks the
+    result with chromatic doctor. It doesn't set up CI; it links to the steps for yours.
 
     Options
       --project <dir>                  Package to set up, when the repository has several.
       --framework, -f <name>           storybook, playwright, cypress or vitest, when detection is wrong.
       --project-token, -t <token>      Use this token instead of asking. Or set CHROMATIC_PROJECT_TOKEN.
-      --ci <provider>                  The CI that runs on every push: ${CI_PROVIDERS.map((p) => p.id).join(', ')}, other.
-      --skip-ci                        Don't set up CI.
       --skip-install                   Edit package.json but don't run the install.
       --dry-run                        Show what would change without writing anything.
       --yes, -y                        Accept every default without asking.
@@ -119,40 +104,13 @@ function explainUnedited(
   }
 }
 
-/**
- * Whether init should turn TurboSnap on. It works with Storybook and Vitest, not with Playwright or
- * Cypress (see the docs FAQ), and it fails a build without a stats file, which a prebuilt
- * Storybook may not have, whether the config, a CI job or the chromatic script sets it.
- *
- * @param session The init session, for the repository root.
- * @param project The project being set up.
- * @param config The existing config file, if any.
- *
- * @returns True when onlyChanged belongs in the config.
- */
-function turboSnapFits(
-  session: Session,
-  project: Project,
-  config: Record<string, any> | undefined
-) {
-  if (['playwright', 'cypress'].includes(project.framework) || config?.storybookBuildDir)
-    return false;
-  const { gitRoot } = session;
-  const runs = runsFor(
-    readCi(gitRoot, listRepoFiles(gitRoot)).runs,
-    relativeOrDot(gitRoot, project.directory)
-  );
-  return !uploadsPrebuilt(runs, readJson(path.join(project.directory, 'package.json'))?.scripts);
-}
-
 function configStep(session: Session, project: Project) {
   const { writer } = session;
   const { file, previous, parsed, json: existing } = existingConfig(project.directory);
-  const turboSnap = turboSnapFits(session, project, parsed);
-  const wanted: Record<string, any> = {
-    ...(turboSnap && { onlyChanged: true }),
-    ...(project.framework !== 'storybook' && { [project.framework]: true }),
-  };
+  // TurboSnap comes from doctor's fix in the closing check, which asks how CI runs Chromatic
+  // first: a prebuilt Storybook may have no stats file, and TurboSnap fails the build without one.
+  const wanted: Record<string, any> =
+    project.framework === 'storybook' ? {} : { [project.framework]: true };
   if (!existing) {
     explainUnedited(writer.display(file), parsed, wanted);
     return;
@@ -250,115 +208,6 @@ async function installStep(
   }
 }
 
-// eslint-disable-next-line complexity, max-statements -- prototype; split into smaller steps if this ships
-async function ciStep(
-  session: Session,
-  project: Project,
-  packageManager: keyof typeof PACKAGE_MANAGER_COMMANDS
-) {
-  const { gitRoot, flags, interactive, writer } = session;
-  if (flags.skipCi) return [];
-  const files = listRepoFiles(gitRoot);
-  const detected = detectCi(files);
-  const allRuns = readCi(gitRoot, files).runs;
-  const workingDirectory = relativeOrDot(gitRoot, project.directory);
-  const hint = (d: (typeof detected)[number]) => {
-    if (d.files.length === 0) return undefined;
-    const shown =
-      d.files.length > 3 ? [...d.files.slice(0, 3), `+${d.files.length - 3} more`] : d.files;
-    // A file that runs Chromatic for another package in this repo doesn't count as set up here.
-    return allRuns.some((run) => run.provider.id === d.provider.id)
-      ? `found ${shown.join(', ')} (Chromatic runs there for another project)`
-      : `found ${shown.join(', ')}`;
-  };
-
-  // Chromatic should run from one CI per project: a second one builds the same commits again.
-  const existing = runsFor(allRuns, workingDirectory);
-  if (existing.length > 0 && !flags.ci) {
-    clack.log.info(
-      `Chromatic already runs for ${workingDirectory === '.' ? 'this project' : workingDirectory} in ${existing
-        .map((r) => `${r.provider.name} (${r.file}, job ${r.job})`)
-        .join(', ')}. Skipped CI setup; pass --ci <provider> to set it up anyway.`
-    );
-    return [];
-  }
-  const found = detected.filter((d) => d.files.length > 0);
-
-  let chosen: string | undefined;
-  if (flags.ci) {
-    chosen = flags.ci;
-  } else if (interactive) {
-    // Providers with config files first, so the likely answers are at the top.
-    const ordered = [...found, ...detected.filter((d) => d.files.length === 0)];
-    chosen = answered(
-      await clack.select<string>({
-        message: 'Which CI runs on every push? Chromatic should run from one.',
-        initialValue: found.length === 1 ? found[0].provider.id : undefined,
-        options: [
-          ...ordered.map((d) => ({
-            value: d.provider.id,
-            // In the label, not a hint: Clack shows hints only on the highlighted option.
-            label: hint(d) ? `${d.provider.name} ${color.muted(`· ${hint(d)}`)}` : d.provider.name,
-          })),
-          { value: OTHER_CI.id, label: OTHER_CI.name },
-          { value: 'none', label: 'Skip CI for now' },
-        ],
-      })
-    );
-  } else if (found.length === 1) {
-    chosen = found[0].provider.id;
-  } else if (found.length > 1) {
-    clack.log.warn(
-      `Found ${found.map((d) => d.provider.name).join(' and ')}. Pass --ci <provider> to pick the one that runs on every push.`
-    );
-  }
-  if (!chosen || chosen === 'none') {
-    clack.log.info('Skipped CI setup.');
-    return [];
-  }
-
-  const template = {
-    workingDir: workingDirectory,
-    packageManager,
-    framework: project.framework,
-    secretName: session.secretName,
-  };
-  const providers = [...CI_PROVIDERS, OTHER_CI].filter((p) => p.id === chosen);
-  for (const provider of providers) {
-    if (provider.id === 'github') {
-      // Named like the secret: chromatic.yml, or chromatic-packages-ui.yml for a monorepo project.
-      const name = ciJobName(session.secretName);
-      const candidate = path.join(gitRoot, '.github', 'workflows', `${name}.yml`);
-      const file = existsSync(candidate) ? undefined : candidate;
-      if (!file) {
-        pasteable(githubWorkflow(template), 'Add this as a workflow in .github/workflows');
-        clack.log.warn(`${name}.yml already exists, so init didn't overwrite it.`);
-        continue;
-      }
-      writer.write(file, githubWorkflow(template));
-      clack.log.success(
-        `${writer.say('Wrote', 'write')} ${writer.display(file)} ${color.muted(`(on push, full git history${workingDirectory === '.' ? '' : `, runs from ${workingDirectory}`})`)}`
-      );
-    } else {
-      pasteable(ciSnippet(provider.id, template), `${provider.name}: add this to your pipeline`);
-      clack.log.info(`More for ${provider.name}: ${color.cta(provider.docs)}`);
-    }
-  }
-  return providers;
-}
-
-/**
- * Prints YAML to paste, outside clack's box: a note wraps long lines and adds a border, and both
- * break the YAML when it's copied.
- *
- * @param yaml The YAML.
- * @param title What to do with it.
- */
-function pasteable(yaml: string, title: string) {
-  clack.log.step(`${title}:`);
-  process.stdout.write(`\n${yaml.trimEnd()}\n\n`);
-}
-
 /**
  * The main entrypoint for `chromatic init`: a step-by-step setup modeled on `storybook init`.
  *
@@ -377,8 +226,6 @@ export async function main(argv: string[]) {
         choices: ['storybook', 'playwright', 'cypress', 'vitest'],
       },
       projectToken: { type: 'string', shortFlag: 't' },
-      ci: { type: 'string', choices: [...CI_PROVIDERS.map((p) => p.id), 'other'] },
-      skipCi: { type: 'boolean' },
       skipInstall: { type: 'boolean' },
       dryRun: { type: 'boolean' },
       yes: { type: 'boolean', shortFlag: 'y' },
@@ -414,13 +261,11 @@ export async function main(argv: string[]) {
     interactive,
     writer: new FileWriter(!!flags.dryRun, process.cwd()),
     flags,
-    secretName: 'CHROMATIC_PROJECT_TOKEN',
   };
 
   // 2. Detect
-  const projects = findProjects(gitRoot, listRepoFiles(gitRoot));
+  const projects = findProjects(gitRoot, await listProjectFiles(gitRoot));
   const project = await pickProject(session, projects);
-  session.secretName = secretNameFor(gitRoot, projects, project);
 
   // 3. Token, 4. config file, 5. package.json and one install
   await tokenStep(session, project);
@@ -429,10 +274,7 @@ export async function main(argv: string[]) {
   // Install even when package.json already had everything: an earlier run's install may have failed.
   await installStep(session, project, packageManager);
 
-  // 6. CI
-  const providers = await ciStep(session, project, packageManager);
-
-  // 7. .gitignore
+  // 6. .gitignore
   const gitignore = gitignoreAdditions(gitRoot, GITIGNORE_ENTRIES);
   if (gitignore.missing.length > 0) {
     session.writer.write(gitignore.file, gitignore.content);
@@ -441,7 +283,7 @@ export async function main(argv: string[]) {
     );
   }
 
-  // 8. Check the result, as storybook add runs doctor
+  // 7. Check the result, as storybook add runs doctor
   let failed = false;
   if (flags.dryRun) {
     clack.log.info(
@@ -449,10 +291,7 @@ export async function main(argv: string[]) {
     );
   } else {
     process.chdir(project.directory);
-    // The snippet was just printed, so "no CI runs Chromatic yet" would only repeat it.
-    const pasting = providers.some((p) => p.id !== 'github');
-    const problemsIn = (checks: Check[]) =>
-      checks.filter((c) => c.status !== 'pass' && !(pasting && c.title.startsWith('No CI')));
+    const problemsIn = (checks: Check[]) => checks.filter((c) => c.status !== 'pass');
     const recheck = () => collectChecks(project.directory);
     let checks = await recheck();
     clack.log.step(`Checked the setup: ${summarize(checks)}`);
@@ -471,12 +310,9 @@ export async function main(argv: string[]) {
     failed = checks.some((c) => c.status === 'fail');
   }
 
-  // 9. Next steps
+  // 8. Next steps
   const runFrom = relativeOrDot(startDirectory, project.directory);
   const run = PACKAGE_MANAGER_COMMANDS[packageManager].run('chromatic');
-  const secretLines = providers.map(
-    (p) => `  ${p.name}: ${p.secretHelp.replace('CHROMATIC_PROJECT_TOKEN', session.secretName)}`
-  );
   let closing = color.success(
     flags.dryRun ? 'Dry run finished. Nothing was written.' : 'Chromatic is set up.'
   );
@@ -485,11 +321,9 @@ export async function main(argv: string[]) {
   clack.outro(
     [
       closing,
-      ...(secretLines.length > 0
-        ? ['', `Add this project's token to CI as ${session.secretName}:`, ...secretLines]
-        : []),
       '',
-      `Then run ${color.cta(runFrom === '.' ? run : `cd ${runFrom} && ${run}`)} to create your first baselines.`,
+      `Run ${color.cta(runFrom === '.' ? run : `cd ${runFrom} && ${run}`)} to create your first baselines.`,
+      `Then run it in CI on every push, with the token as CHROMATIC_PROJECT_TOKEN: ${color.cta('https://www.chromatic.com/docs/ci')}`,
     ].join('\n')
   );
   // Exit like doctor, so CI doesn't take a setup that can't build for a working one.
