@@ -164,11 +164,6 @@
       "count": 3
     }
   },
-  "node-src/tasks/prepare/index.ts": {
-    "@typescript-eslint/no-unnecessary-condition": {
-      "count": 1
-    }
-  },
   "node-src/tasks/report.ts": {
     "@typescript-eslint/no-unnecessary-condition": {
       "count": 2

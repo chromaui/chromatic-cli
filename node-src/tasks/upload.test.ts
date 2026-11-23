@@ -7,7 +7,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import makeZipFile from '../lib/compress';
 import TestLogger from '../lib/testLogger';
 import buildFullyTurboSnapped from '../ui/messages/info/buildFullyTurboSnapped';
-import turboSnapEnabled from '../ui/messages/info/turboSnapEnabled';
 import { applyUploadOutput, extractUploadInput, uploadProject } from './upload';
 
 vi.mock('@sentry/node');
@@ -36,6 +35,17 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+// The deps `buildDeps` takes from ctx, plus the given reporter.
+const depsFor = (ctx: any, report: any = vi.fn()) =>
+  ({
+    log: ctx.log,
+    client: ctx.client,
+    http: ctx.http,
+    env: ctx.env,
+    options: ctx.options,
+    report,
+  }) as any;
+
 // Drive uploadProject the way the render engine would: build input from ctx, fan progress reports
 // out to experimental_onTaskProgress (as makeReporter does), and fold a continue result back onto
 // ctx via applyUploadOutput.
@@ -45,8 +55,7 @@ const runUpload = async (ctx: any) => {
       ctx.options.experimental_onTaskProgress?.({ ...ctx }, update.progress);
     }
   });
-  const deps = { log: ctx.log, report } as any;
-  const result = await uploadProject(deps, extractUploadInput(ctx));
+  const result = await uploadProject(depsFor(ctx, report), extractUploadInput(ctx));
   if (result.kind === 'continue') {
     applyUploadOutput(ctx, result.output);
   }
@@ -446,7 +455,11 @@ describe('uploadProject', () => {
       expect(http.fetch).not.toHaveBeenCalled(); // we're not checking for sentinel files
     });
 
-    it('logs the TurboSnap skip messages with ancestor build details when SKIPPED', async () => {
+    // A 2.0 bail can still be bypassed with the 1.0 list, so only an applied 2.0 gets the credit.
+    it.each([
+      { bailed: false, enabled: 'TurboSnap 2.0 enabled' },
+      { bailed: true, enabled: 'TurboSnap enabled' },
+    ])('logs that $enabled bypassed the build when SKIPPED', async ({ bailed, enabled }) => {
       const skipLogger = new TestLogger();
       const ancestorBuild = {
         status: 'PASSED',
@@ -471,12 +484,15 @@ describe('uploadProject', () => {
         fileInfo,
         announcedBuild: { id: '1' },
         onlyStoryFiles: [],
+        turboSnapOutcome: { mechanism: 'v2', bailed },
       } as any;
-      await uploadProject({ log: skipLogger, report: vi.fn() } as any, extractUploadInput(ctx));
+      await uploadProject(depsFor(ctx), extractUploadInput(ctx));
 
-      expect(skipLogger.info).toHaveBeenCalledWith(
-        turboSnapEnabled({ ...ctx, skip: true, ancestorBuild })
-      );
+      const [bypassed] = vi.mocked(skipLogger.info).mock.calls[0];
+      expect(bypassed.split('\n').map((line: string) => line.trim())).toEqual([
+        `✔ ${enabled}`,
+        'Bypassed 54 snapshots because no frontend files were changed.',
+      ]);
       expect(skipLogger.info).toHaveBeenCalledWith(buildFullyTurboSnapped({ ancestorBuild }));
     });
 

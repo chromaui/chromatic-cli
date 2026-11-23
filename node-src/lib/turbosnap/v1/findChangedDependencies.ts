@@ -7,9 +7,10 @@ import semver from 'semver';
 
 import { checkoutFile, findFilesFromRepositoryRoot, getRepositoryRoot } from '../../../git/git';
 import { pathExistsAtReference } from '../../../git/treeAtReference';
-import { Context, Stats } from '../../../types';
+import { Stats } from '../../../types';
 import { matchesFile, SUPPORTED_LOCK_FILES } from '../../utilities';
 import { getStatsProjectRoot } from '../statsPaths';
+import { TurboSnapV1Input } from '../types';
 import { compareBaseline } from './compareBaseline';
 import { BaselineCheckoutFailedError, LockFileMissingError } from './errors';
 import { getDependencies, getWorkspaceName } from './getDependencies';
@@ -21,7 +22,7 @@ const PACKAGE_JSON = 'package.json';
 // E.g. ['react', 'react-dom', '@storybook/react']
 // TODO: refactor this function
 // eslint-disable-next-line complexity,max-statements
-export const findChangedDependencies = async (ctx: Context, stats: Stats) => {
+export const findChangedDependencies = async (ctx: TurboSnapV1Input, stats: Stats) => {
   const { packageMetadataChanges } = ctx.git;
   const { untraced = [] } = ctx.options;
 
@@ -209,7 +210,7 @@ export const findChangedDependencies = async (ctx: Context, stats: Stats) => {
  * @returns The distinct names of the changes to keep.
  */
 async function keepChangesInScope(
-  ctx: Context,
+  ctx: TurboSnapV1Input,
   {
     stats,
     rootPath,
@@ -306,7 +307,7 @@ async function keepChangesInScope(
  * that exists at the baseline, can't be checked out, which makes the caller bail.
  */
 async function getBaselineChanges(
-  ctx: Context,
+  ctx: TurboSnapV1Input,
   {
     rootPath,
     reference,

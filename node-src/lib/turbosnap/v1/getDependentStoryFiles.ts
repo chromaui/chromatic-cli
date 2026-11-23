@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { Context, Module, Reason, Stats, TurboSnap, UntracedFile } from '../../../types';
+import { Module, Reason, Stats, TurboSnap, UntracedFile } from '../../../types';
 import noCSFGlobs from '../../../ui/messages/errors/noCSFGlobs';
 import tracedAffectedFiles from '../../../ui/messages/info/tracedAffectedFiles';
 import bailFile from '../../../ui/messages/warnings/bailFile';
@@ -18,7 +18,7 @@ import {
   stripConcatenatedModuleSuffix,
 } from '../statsPaths';
 import { storybookConfigFileKind } from '../storybookConfigFiles';
-import { TraceChangedFilesResult } from '../types';
+import { TraceChangedFilesResult, TurboSnapV1Input } from '../types';
 import { classifyChangedStorybookFilesDetail } from './classifyBailDetail';
 
 type FilePath = string;
@@ -64,7 +64,7 @@ export type DependentStoryFilesResult = Exclude<TraceChangedFilesResult, { statu
 // TODO: refactor this function
 // eslint-disable-next-line complexity, max-statements
 export async function getDependentStoryFiles(
-  ctx: Context,
+  ctx: TurboSnapV1Input,
   stats: Stats,
   statsPath: string,
   changedFiles: string[],

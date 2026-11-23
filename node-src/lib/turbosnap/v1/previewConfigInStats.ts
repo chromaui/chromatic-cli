@@ -1,4 +1,4 @@
-import { Context, Stats } from '../../../types';
+import { Stats } from '../../../types';
 import { findStorybookConfigFile, PREVIEW_CONFIG_PATTERN } from '../../getStorybookMetadata';
 import { relativeTo } from '../../getStorybookProjectRoot';
 import {
@@ -8,6 +8,7 @@ import {
   stripConcatenatedModuleSuffix,
 } from '../statsPaths';
 import { isPreviewConfig } from '../storybookConfigFiles';
+import { TurboSnapV1Input } from '../types';
 
 /**
  * Checks whether the stats file's module graph has the config directory's `preview.*`, either as a
@@ -22,7 +23,7 @@ import { isPreviewConfig } from '../storybookConfigFiles';
  * has no `preview.*` file (or can't be read), since then there is nothing to find.
  */
 export async function isPreviewConfigInStats(
-  ctx: Context,
+  ctx: TurboSnapV1Input,
   stats: Stats
 ): Promise<boolean | undefined> {
   const { rootPath } = ctx.git;

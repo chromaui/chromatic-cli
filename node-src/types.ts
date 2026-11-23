@@ -546,8 +546,8 @@ export interface Context {
     snapshotCount: number;
   };
   turboSnap?: TurboSnap;
-  /** Set when the Index applies TurboSnap 2.0 to this build instead of the CLI's 1.0 trace. */
-  hashBasedTurboSnap?: HashBasedTurboSnap;
+  /** Which TurboSnap decided what this build captures. Set by the prepare task. */
+  turboSnapOutcome?: TurboSnapOutcome;
   mergeBase?: string;
   onlyStoryFiles?: string[];
   untracedFiles?: UntracedFile[];
@@ -726,6 +726,15 @@ export interface HashBasedTurboSnap {
   /** Why it bailed, such as `NO_ANCESTORS`. Only set when `bailed` is. */
   bailReason?: string;
 }
+
+/**
+ * Which TurboSnap decided what a build captures, and whether it bailed to a full build. When the
+ * Index applies TurboSnap 2.0, 1.0 may still trace, but its result doesn't decide the build.
+ */
+export type TurboSnapOutcome =
+  | { mechanism: 'none' }
+  | { mechanism: 'v1'; bailed: boolean }
+  | ({ mechanism: 'v2' } & HashBasedTurboSnap);
 
 // Mirrors the TurboSnap status values defined by the backend.
 export type TurboSnapStatus = 'APPLIED' | 'BAILED' | 'UNAVAILABLE' | 'UNUSED';

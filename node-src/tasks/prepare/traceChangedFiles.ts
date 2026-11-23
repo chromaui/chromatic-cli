@@ -1,9 +1,9 @@
 import * as turbosnap from '@cli/turbosnap';
 
 import { isTurboSnapV1Enabled } from '../../lib/turbosnap/shouldTraceWithV1';
-import { TurboSnapResult } from '../../lib/turbosnap/types';
+import { TurboSnapInput, TurboSnapResult } from '../../lib/turbosnap/types';
 import { groupUntracedFilesByGlob, rewriteErrorMessage } from '../../lib/utilities';
-import { Context, Deps, HashBasedTurboSnap } from '../../types';
+import { Deps, HashBasedTurboSnap, TurboSnap, TurboSnapOutcome, UntracedFile } from '../../types';
 import turboSnapDryRun from '../../ui/messages/info/turboSnapDryRun';
 import hashBasedBailed from '../../ui/messages/warnings/hashBasedBailed';
 import { bailed, hashBased, traced, tracing } from '../../ui/tasks/prepare';
@@ -12,28 +12,28 @@ import { testType } from '../../ui/tasks/utilities';
 // These are the special characters that need to be escaped in the filename
 // because they are used as special characters in picomatch
 const SPECIAL_CHARS_REGEXP = /([$()*+?[\]^])/g;
-type TraceChangedFilesDeps = Pick<Deps, 'log' | 'options' | 'report'>;
+type TraceChangedFilesDeps = Pick<Deps, 'log' | 'options' | 'env' | 'client' | 'report'>;
 
-export interface TraceChangedFilesInput {
-  // The TurboSnap lib still reads `Context` (options, git, log), but no longer mutates it; this
-  // function is the single place trace results get written back onto the context.
-  turboSnapContext: Context;
-}
+export type TraceChangedFilesInput = Omit<TurboSnapInput, keyof TraceChangedFilesDeps>;
 
 export interface TraceChangedFilesOutput {
+  turboSnapOutcome: TurboSnapOutcome;
+  turboSnap?: TurboSnap;
   onlyStoryFiles?: string[];
+  untracedFiles?: UntracedFile[];
+  changedDependencyNames?: string[];
 }
 
 /**
  * Traces which story files are affected by recent changes using TurboSnap.
  * Analyzes changed files to determine which stories need to be tested.
  *
- * @param deps - Logger, options, and the mid-task reporter.
- * @param input - The CLI context the TurboSnap lib reads; trace results are written back to it.
+ * @param deps - Logger, options, environment, GraphQL client, and the mid-task reporter.
+ * @param input - The build, its stats file, and the git and Storybook state TurboSnap reads.
  *
- * @returns An object with picomatch-escaped affected module IDs in `onlyStoryFiles`, or `{}` when
- * tracing is skipped, bails, or fails while TurboSnap v1 is disabled. An empty `onlyStoryFiles`
- * array means no stories are affected.
+ * @returns Which TurboSnap decides the build and the 1.0 trace results. `onlyStoryFiles` holds
+ * picomatch-escaped affected module IDs, and is unset when tracing is skipped, bails, or fails while
+ * TurboSnap v1 is disabled. An empty `onlyStoryFiles` array means no stories are affected.
  *
  * @throws {Error} When TurboSnap v1 is enabled and stats loading or tracing fails. The error
  * message is prefixed with context about retrieving dependent files.
@@ -42,18 +42,19 @@ export async function traceChangedFiles(
   deps: TraceChangedFilesDeps,
   input: TraceChangedFilesInput
 ): Promise<TraceChangedFilesOutput> {
-  const ctx = input.turboSnapContext;
+  const { log, options, env, client } = deps;
 
   try {
-    const result = await turbosnap.traceChangedFiles(ctx, {
-      onTraceWithV1: () => deps.report(tracing({ git: ctx.git, options: deps.options })),
-    });
-    const output = applyTraceResult(ctx, result);
+    const result = await turbosnap.traceChangedFiles(
+      { ...input, log, options, env, client },
+      { onTraceWithV1: () => deps.report(tracing({ git: input.git, options })) }
+    );
+    const output = toOutput(result);
 
     // When the Index applies TurboSnap 2.0 it ignores the 1.0 result, so report 2.0's decision
     // instead of 1.0's. The 1.0 story files are still sent along with the build.
-    if (result.hashBased) {
-      reportHashBased(deps, result.hashBased);
+    if (result.outcome.mechanism === 'v2') {
+      reportHashBased(deps, result.outcome);
     } else {
       reportTraceResult(deps, result, output.onlyStoryFiles);
     }
@@ -61,14 +62,14 @@ export async function traceChangedFiles(
   } catch (err) {
     // The lib still collects hashes when TurboSnap v1 is disabled, and that build must stay
     // silent and must never fail because of it.
-    if (!isTurboSnapV1Enabled(ctx)) {
-      return {};
+    if (!isTurboSnapV1Enabled(input)) {
+      return { turboSnapOutcome: { mechanism: 'none' } };
     }
 
-    if (!deps.options.interactive) {
-      const { statsPath } = ctx.fileInfo ?? {};
-      const { changedFiles } = ctx.git;
-      deps.log.info(`Failed to retrieve dependent ${testType(deps)} files`, {
+    if (!options.interactive) {
+      const { statsPath } = input;
+      const { changedFiles } = input.git;
+      log.info(`Failed to retrieve dependent ${testType(deps)} files`, {
         statsPath,
         changedFiles,
         err,
@@ -81,30 +82,27 @@ export async function traceChangedFiles(
   }
 }
 
-// Writes the trace results onto the context and returns the picomatch-escaped affected story files.
-function applyTraceResult(ctx: Context, result: TurboSnapResult): TraceChangedFilesOutput {
-  if (result.hashBased) {
-    ctx.hashBasedTurboSnap = result.hashBased;
-  }
+// Picks the trace results the build keeps and picomatch-escapes the affected story files.
+function toOutput(result: TurboSnapResult): TraceChangedFilesOutput {
+  const turboSnapOutcome = result.outcome;
   if (result.status === 'skipped') {
-    return {};
+    return { turboSnapOutcome };
   }
-
-  ctx.turboSnap = result.turboSnap;
   if (result.status === 'bailed') {
-    return {};
-  }
-
-  ctx.untracedFiles = result.untracedFiles;
-  if (result.changedDependencyNames) {
-    ctx.git.changedDependencyNames = result.changedDependencyNames;
+    return { turboSnapOutcome, turboSnap: result.turboSnap };
   }
 
   // Escape special characters in the filename so it does not conflict with picomatch
   const onlyStoryFiles = Object.keys(result.onlyStoryFiles).map((key) =>
     key.replaceAll(SPECIAL_CHARS_REGEXP, String.raw`\$1`)
   );
-  return { onlyStoryFiles };
+  return {
+    turboSnapOutcome,
+    turboSnap: result.turboSnap,
+    onlyStoryFiles,
+    untracedFiles: result.untracedFiles,
+    changedDependencyNames: result.changedDependencyNames,
+  };
 }
 
 function reportTraceResult(

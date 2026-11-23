@@ -3,7 +3,7 @@ import { readdir, realpath } from 'fs/promises';
 import semver from 'semver';
 
 import { readStatsFile } from '../../tasks/readStatsFile';
-import { Context, HashBasedTurboSnap, Stats, UntracedFile } from '../../types';
+import { HashBasedTurboSnap, Stats, TurboSnapOutcome, UntracedFile } from '../../types';
 import missingStatsFile from '../../ui/messages/errors/missingStatsFile';
 import untracedStorybookConfig from '../../ui/messages/warnings/untracedStorybookConfig';
 import { relativeTo } from '../getStorybookProjectRoot';
@@ -12,11 +12,18 @@ import { getE2EPackage } from './e2ePackage';
 import { isHashCollectionDisabled } from './isHashCollectionDisabled';
 import { isTurboSnapV1Enabled, shouldTraceWithV1 } from './shouldTraceWithV1';
 import { storybookConfigFileKind } from './storybookConfigFiles';
-import { TurboSnapResult } from './types';
+import {
+  TraceChangedFilesResult,
+  TurboSnapInput,
+  TurboSnapResult,
+  TurboSnapV1Input,
+} from './types';
 import { traceChangedFiles as traceChangedFilesV1 } from './v1';
 import { traceChangedFiles as traceChangedFilesV2 } from './v2';
 import { getManifestPath } from './v2/manifest';
 import { realProjectFiles } from './v2/projectFiles';
+
+type TraceWithV2Result = TraceChangedFilesResult & { hashBased?: HashBasedTurboSnap };
 
 /**
  * Determines which story files are affected by the changed git files, bailing out of TurboSnap
@@ -28,63 +35,88 @@ import { realProjectFiles } from './v2/projectFiles';
  * warnings and info logs drop to debug: the Index ignores that result, so they would contradict
  * what gets captured. Setting CHROMATIC_TURBOSNAP_DISABLE_V1 skips v1 entirely in that case.
  *
- * @param ctx The context set when executing the CLI.
+ * @param input What TurboSnap reads: the build, its stats file, git state, and options.
  * @param hooks Callbacks into the caller's progress reporting.
  * @param hooks.onTraceWithV1 Called just before v1 tracing starts, unless the Index applied v2.
  *
- * @returns The trace result: skipped, bailed, or traced with the affected story files, plus the
- * Index's v2 decision when it applies v2.
+ * @returns The trace result: skipped, bailed, or traced with the affected story files, plus which
+ * TurboSnap decides the build.
  *
  * @throws {Error} If v1 is enabled without a stats path, or if reading or parsing the stats file
  * or v1 tracing fails.
  */
 export async function traceChangedFiles(
-  ctx: Context,
-  { onTraceWithV1 }: { onTraceWithV1?: () => void } = {}
+  input: TurboSnapInput,
+  hooks: { onTraceWithV1?: () => void } = {}
 ): Promise<TurboSnapResult> {
-  if (!ctx.fileInfo?.statsPath) {
-    if (isTurboSnapV1Enabled(ctx)) {
-      throw missingStatsFileError(ctx);
+  const { hashBased, ...result } = await traceWithBothGenerations(input, hooks);
+  return { ...result, outcome: getOutcome(input, result, hashBased) };
+}
+
+// The Index decides with v2 whenever it applies it, bailed or not. Otherwise v1 decides when the
+// user asked for TurboSnap, and anything short of a trace means a full build.
+function getOutcome(
+  input: TurboSnapInput,
+  result: TraceChangedFilesResult,
+  hashBased: HashBasedTurboSnap | undefined
+): TurboSnapOutcome {
+  if (hashBased) {
+    return { mechanism: 'v2', ...hashBased };
+  }
+  if (isTurboSnapV1Enabled(input)) {
+    return { mechanism: 'v1', bailed: result.status !== 'traced' };
+  }
+  return { mechanism: 'none' };
+}
+
+async function traceWithBothGenerations(
+  input: TurboSnapInput,
+  { onTraceWithV1 }: { onTraceWithV1?: () => void }
+): Promise<TraceWithV2Result> {
+  const { statsPath, buildId } = input;
+  if (!statsPath) {
+    if (isTurboSnapV1Enabled(input)) {
+      throw missingStatsFileError(input);
     }
 
-    ctx.log.debug('No stats file; skipping TurboSnap hash collection');
+    input.log.debug('No stats file; skipping TurboSnap hash collection');
     return { status: 'skipped' };
   }
 
-  const collectHashes = shouldCollectHashes(ctx);
-  const traceWithV1 = shouldTraceWithV1(ctx);
+  // Sharing a Storybook announces no build, so there is nothing to attach hashes to.
+  const collectHashes = !!buildId && shouldCollectHashes(input);
+  const traceWithV1 = shouldTraceWithV1(input);
   if (!collectHashes && !traceWithV1) {
     return { status: 'skipped' };
   }
 
-  await logUntracedStorybookConfig(ctx);
+  await logUntracedStorybookConfig(input);
 
-  const statsPath = ctx.fileInfo.statsPath;
   const stats = await readStatsFile(statsPath);
   // V2 never affects the v1 decision; it only reports whether the Index applies v2 to this build.
-  const hashBased = collectHashes ? await runTurboSnapV2(ctx, stats) : undefined;
+  const hashBased = collectHashes ? await runTurboSnapV2(input, stats, buildId) : undefined;
 
   if (!traceWithV1) {
     return { status: 'skipped', ...(hashBased && { hashBased }) };
   }
 
-  return runTurboSnapV1(ctx, stats, statsPath, { hashBased, onTraceWithV1 });
+  return runTurboSnapV1(input, stats, statsPath, { hashBased, onTraceWithV1 });
 }
 
 // Playwright and Cypress report no module graph, so their generated story files reach no tracked
 // files and would hash the same on every build, and TurboSnap 2.0 could skip captures that changed.
-function shouldCollectHashes(ctx: Context) {
+function shouldCollectHashes(ctx: TurboSnapInput) {
   return !isHashCollectionDisabled(ctx) && !ctx.options.playwright && !ctx.options.cypress;
 }
 
 // The Index ignores v1's result when it applies v2, so v1 then traces without reporting progress
 // and with its warnings and info logs dropped to debug, or not at all when the user opted out.
 async function runTurboSnapV1(
-  ctx: Context,
+  ctx: TurboSnapV1Input,
   stats: Stats,
   statsPath: string,
   { hashBased, onTraceWithV1 }: { hashBased?: HashBasedTurboSnap; onTraceWithV1?: () => void }
-): Promise<TurboSnapResult> {
+): Promise<TraceWithV2Result> {
   if (shouldSkipV1(ctx, hashBased)) {
     return { status: 'skipped', hashBased };
   }
@@ -103,7 +135,7 @@ async function runTurboSnapV1(
 // Users can skip v1 with CHROMATIC_TURBOSNAP_DISABLE_V1 because tracing can be slow on large
 // projects. It applies only when the Index applies v2, since otherwise the Index decides the build
 // with v1's result.
-function shouldSkipV1(ctx: Context, hashBased: HashBasedTurboSnap | undefined) {
+function shouldSkipV1(ctx: TurboSnapV1Input, hashBased: HashBasedTurboSnap | undefined) {
   if (!ctx.env.CHROMATIC_TURBOSNAP_DISABLE_V1) {
     return false;
   }
@@ -123,7 +155,7 @@ const realPathOrSelf = (absolutePath: string) => realpath(absolutePath).catch(()
 // warning is only logged at debug level when this build doesn't use TurboSnap, such as when
 // `--only-changed` names a branch glob the build's branch doesn't match.
 // Globs are matched against real paths, as TurboSnap 2.0 does, so they cover a symlinked config dir.
-async function logUntracedStorybookConfig(ctx: Context) {
+async function logUntracedStorybookConfig(ctx: TurboSnapV1Input) {
   const untraced = (ctx.options.untraced ?? []).filter(Boolean);
   const { rootPath } = ctx.git;
   if (untraced.length === 0 || !rootPath) {
@@ -145,7 +177,7 @@ async function logUntracedStorybookConfig(ctx: Context) {
   }
 }
 
-function missingStatsFileError(ctx: Context) {
+function missingStatsFileError(ctx: Pick<TurboSnapInput, 'storybook'>) {
   // If we don't know the SB version, we should assume we don't support `--stats-json`
   const nonLegacyStatsSupported =
     ctx.storybook.version && semver.gte(semver.coerce(ctx.storybook.version) || '0.0.0', '8.0.0');
@@ -153,7 +185,11 @@ function missingStatsFileError(ctx: Context) {
   return new Error(missingStatsFile({ legacy: !nonLegacyStatsSupported }));
 }
 
-async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<HashBasedTurboSnap | undefined> {
+async function runTurboSnapV2(
+  ctx: TurboSnapInput,
+  stats: Stats,
+  buildId: string
+): Promise<HashBasedTurboSnap | undefined> {
   // Set the default log level for v2 so errors don't show up in the interactive flow when the user
   // didn't request TurboSnap.
   const turboSnapRequested = !!ctx.turboSnap;
@@ -188,7 +224,7 @@ async function runTurboSnapV2(ctx: Context, stats: Stats): Promise<HashBasedTurb
         failureLogLevel,
         onlyChanged: turboSnapRequested,
         graphqlClient: ctx.client,
-        buildId: ctx.announcedBuild.id,
+        buildId,
         stats,
         manifestPath: getManifestPath(ctx.sourceDir),
         projectRoot: ctx.storybook.projectRoot,

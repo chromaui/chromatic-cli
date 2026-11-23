@@ -16,7 +16,10 @@ export const dryRun = (ctx: Context) => ({
   output: 'Skipped due to --dry-run',
 });
 
-export const invalid = (ctx: Context, error?: Error) => {
+export const invalid = (
+  ctx: Pick<Context, 'options' | 'sourceDir' | 'buildLogFile'>,
+  error?: Error
+) => {
   let output = `Invalid ${buildType(ctx)} build at ${ctx.sourceDir}`;
   if (ctx.buildLogFile) output += ' (check the build log)';
   if (error) output += `: ${error.message}`;
@@ -33,13 +36,16 @@ export const starting = (ctx: Context) => ({
   output: `Starting publish`,
 });
 
-export const uploading = (ctx: Context, { percentage }: { percentage: number }) => ({
+export const uploading = (
+  ctx: Pick<Context, 'options'>,
+  { percentage }: { percentage: number }
+) => ({
   status: 'pending',
   title: `Publishing your built ${buildType(ctx)}`,
   output: `${percentage}%`,
 });
 
-export const finalizing = (ctx: Context) => ({
+export const finalizing = (ctx: Pick<Context, 'options'>) => ({
   status: 'pending',
   title: `Publishing your built ${buildType(ctx)}`,
   output: `Finalizing upload`,
@@ -66,7 +72,7 @@ export const turboSnapped = () => ({
   title: 'Publish skipped',
 });
 
-export const failed = (ctx: Context, { path }: { path: string }) => ({
+export const failed = (ctx: Pick<Context, 'options'>, { path }: { path: string }) => ({
   status: 'error',
   title: `Publishing your built ${buildType(ctx)}`,
   output: `Failed to upload ${path}`,

@@ -315,14 +315,10 @@ describe('traceChangedFiles', () => {
       git: { changedFiles: ['./example.js'] },
       turboSnap: {},
     } as any;
-    let err;
-    try {
-      await traceChangedFiles(ctx);
-    } catch (error) {
-      err = error;
-    }
-    expect(err).toBeTruthy();
-    expect(ctx.exitCode).toBe(exitCodes.INVALID_OPTIONS);
+    await expect(traceChangedFiles(ctx)).rejects.toMatchObject({
+      exitCode: exitCodes.INVALID_OPTIONS,
+      userError: true,
+    });
   });
 
   it('continues story file tracing if no dependencies are changed in package.json (fallback scenario)', async () => {
