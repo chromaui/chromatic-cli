@@ -14,7 +14,6 @@ import type { Check } from './checks';
 import {
   detectPackageManager,
   findProjects,
-  Framework,
   listProjectFiles,
   PACKAGE_MANAGER_COMMANDS,
   Project,
@@ -23,11 +22,13 @@ import { pickProject } from './project';
 import { applyFixes, printChecks, showEdits, summarize } from './report';
 import {
   answered,
+  chromaticScript,
   color,
   FileWriter,
   git,
   gitignoreAdditions,
   isEditableJson,
+  readJson,
   relativeOrDot,
   rewriteJson,
 } from './shared';
@@ -180,40 +181,138 @@ async function latestVersion(name: string) {
   }
 }
 
-async function packageStep(session: Session, project: Project, framework: Framework) {
+/**
+ * Whether init should add a "chromatic" script: none of the scripts runs a build, and none is
+ * called "chromatic" already. Init never replaces one that runs something else, such as
+ * `chromatic init`, and says so.
+ *
+ * @param scripts The package's scripts.
+ * @param display The package.json, as shown to the user.
+ *
+ * @returns Whether to add the script.
+ */
+function needsScript(scripts: Record<string, string> = {}, display: string) {
+  if (chromaticScript(scripts)) return false;
+  if (!scripts.chromatic) return true;
+  clack.log.warn(
+    `The "chromatic" script in ${display} doesn't run a build, so init leaves it as it is`
+  );
+  return false;
+}
+
+/**
+ * Asks before adding a "chromatic" script to package.json.
+ *
+ * @param session The setup session.
+ * @param file The package.json.
+ * @param command What the script runs.
+ * @param question What to ask.
+ *
+ * @returns Whether init added it.
+ */
+async function scriptStep(session: Session, file: string, command: string, question: string) {
+  const { writer } = session;
+  const previous = readFileSync(file, 'utf8');
+  const json = JSON.parse(previous);
+  json.scripts = { ...json.scripts, chromatic: command };
+  const content = rewriteJson(json, previous);
+  if (!(await confirmEdit(session, 'Add a "chromatic" script', { file, content }, question))) {
+    clack.log.info(`Left ${writer.display(file)} as it is.`);
+    return false;
+  }
+  writer.write(file, content);
+  clack.log.success(
+    `${writer.say('Added', 'add')} a "chromatic" script ${color.muted(`(${command})`)} to ${writer.display(file)}`
+  );
+  return true;
+}
+
+/**
+ * After a no to installing: without an install, a script can run the latest release. E2E tests
+ * need their package installed, though, and the docs recommend installing the CLI alongside it.
+ *
+ * @param session The setup session.
+ * @param project The project being set up.
+ * @param dlx The package manager's npx, such as `pnpm dlx`.
+ * @param declined What the user said no to.
+ * @param declined.what The packages and script init would have added.
+ * @param declined.addScript Whether that included a "chromatic" script.
+ */
+async function declinedInstall(
+  session: Session,
+  project: Project,
+  dlx: string,
+  { what, addScript }: { what: string; addScript: boolean }
+) {
+  const file = path.join(project.directory, 'package.json');
+  if (addScript && project.framework === 'storybook') {
+    const command = `${dlx} chromatic@latest`;
+    await scriptStep(
+      session,
+      file,
+      command,
+      `Add a "chromatic" script that runs ${command} instead?`
+    );
+  } else {
+    clack.log.info(
+      `Left ${session.writer.display(file)} as it is. Add ${what} yourself, then install.`
+    );
+  }
+}
+
+/**
+ * Adds the chromatic package (and the E2E package) and a "chromatic" script to package.json. When
+ * the user doesn't want chromatic installed, a Storybook project can run the latest release
+ * through the package manager's npx instead, so init offers just that script.
+ *
+ * @param session The setup session.
+ * @param project The project being set up.
+ * @param dlx The package manager's npx, such as `pnpm dlx`.
+ *
+ * @returns Whether to run the install.
+ */
+async function packageStep(session: Session, project: Project, dlx: string) {
   const { writer } = session;
   const file = path.join(project.directory, 'package.json');
+  const display = writer.display(file);
   const previous = readFileSync(file, 'utf8');
   const json = JSON.parse(previous);
   const wanted: Record<string, string> = { chromatic: `^${pkg.version}` };
-  if (framework !== 'storybook')
-    wanted[`@chromatic-com/${framework}`] = await latestVersion(`@chromatic-com/${framework}`);
+  if (project.framework !== 'storybook')
+    wanted[`@chromatic-com/${project.framework}`] = await latestVersion(
+      `@chromatic-com/${project.framework}`
+    );
   const present = { ...json.dependencies, ...json.devDependencies };
   const missing = Object.keys(wanted).filter((name) => !present[name]);
+  const existingScript = chromaticScript(json.scripts);
+  const addScript = needsScript(json.scripts, display);
+  if (missing.length === 0) {
+    // A no to the script means no install either; with nothing to add, install in case an earlier
+    // run's install failed.
+    if (addScript) return scriptStep(session, file, 'chromatic', `Add it to ${display}?`);
+    if (existingScript)
+      clack.log.success(
+        `${display} already has chromatic and a script that runs it ("${existingScript}")`
+      );
+    return true;
+  }
+
+  // Install the packages first, with a script that runs the installed CLI.
   json.devDependencies = {
     ...json.devDependencies,
     ...Object.fromEntries(missing.map((n) => [n, wanted[n]])),
   };
-  const addScript = !json.scripts?.chromatic;
   if (addScript) json.scripts = { ...json.scripts, chromatic: 'chromatic' };
-  if (missing.length === 0 && !addScript) {
-    clack.log.success(`${writer.display(file)} already has chromatic and its script`);
+  const content = rewriteJson(json, previous);
+  const what = `${missing.join(' and ')}${addScript ? ' and a "chromatic" script' : ''}`;
+  const question = `Add ${what} to ${display}${session.flags.skipInstall ? '' : ', then install'}?`;
+  if (await confirmEdit(session, `Install ${missing.join(' and ')}`, { file, content }, question)) {
+    writer.write(file, content);
+    clack.log.success(`${writer.say('Added', 'add')} ${what} to ${display}`);
     return true;
   }
-  const content = rewriteJson(json, previous);
-  const what = [addScript && 'a "chromatic" script', missing.length > 0 && missing.join(' and ')]
-    .filter(Boolean)
-    .join(' and ');
-  const question = `Add ${what} to ${writer.display(file)}${session.flags.skipInstall ? '' : ', then install'}?`;
-  if (!(await confirmEdit(session, `Add ${what}`, { file, content }, question))) {
-    clack.log.info(
-      `Left ${writer.display(file)} as it is. Add ${what} yourself, then install, to run Chromatic.`
-    );
-    return false;
-  }
-  writer.write(file, content);
-  clack.log.success(`${writer.say('Added', 'add')} ${what} to ${writer.display(file)}`);
-  return true;
+  await declinedInstall(session, project, dlx, { what, addScript });
+  return false;
 }
 
 const INSTALL_MUTABLE: Partial<Record<string, string[]>> = {
@@ -318,8 +417,12 @@ export async function main(argv: string[]) {
   await tokenStep(session, project);
   await configStep(session, project);
   // Install even when package.json already had everything: an earlier run's install may have failed.
-  const packageJsonAccepted = await packageStep(session, project, project.framework);
-  if (packageJsonAccepted) await installStep(session, project, packageManager);
+  const installAccepted = await packageStep(
+    session,
+    project,
+    PACKAGE_MANAGER_COMMANDS[packageManager].dlx
+  );
+  if (installAccepted) await installStep(session, project, packageManager);
 
   // 6. .gitignore
   const gitignore = gitignoreAdditions(gitRoot, GITIGNORE_ENTRIES);
@@ -339,11 +442,11 @@ export async function main(argv: string[]) {
   } else {
     process.chdir(project.directory);
     const problemsIn = (checks: Check[]) => checks.filter((c) => c.status !== 'pass');
-    // After a no to the package.json change, don't offer to change package.json again.
+    // After a no to installing chromatic, don't offer to change package.json again.
     const packageJson = path.join(project.directory, 'package.json');
     const recheck = async () => {
       const results = await collectChecks(project.directory);
-      if (packageJsonAccepted) return results;
+      if (installAccepted) return results;
       return results.map((check): Check => {
         const { fix, ...rest } = check;
         return fix?.edits.some((edit) => edit.file === packageJson) ? rest : check;
@@ -368,7 +471,14 @@ export async function main(argv: string[]) {
 
   // 8. Next steps
   const runFrom = relativeOrDot(startDirectory, project.directory);
-  const run = PACKAGE_MANAGER_COMMANDS[packageManager].run('chromatic');
+  // The script that runs Chromatic, whatever it's called; without one, such as after a no to
+  // adding one, run the CLI directly.
+  const commands = PACKAGE_MANAGER_COMMANDS[packageManager];
+  // A dry run didn't write the script it would add.
+  const scripts = readJson(path.join(project.directory, 'package.json'))?.scripts;
+  const script =
+    chromaticScript(scripts) ?? (flags.dryRun && !scripts?.chromatic ? 'chromatic' : undefined);
+  const run = script ? commands.run(script) : `${commands.dlx} chromatic`;
   let closing = color.success(
     flags.dryRun ? 'Dry run finished. Nothing was written.' : 'Chromatic is set up.'
   );

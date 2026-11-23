@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { isEditableJson, rewriteJson, tokenEnvironmentEdits } from './shared';
+import { chromaticScript, isEditableJson, rewriteJson, tokenEnvironmentEdits } from './shared';
 
 let root: string | undefined;
 
@@ -89,6 +89,42 @@ describe('tokenEnvironmentEdits', () => {
 
     expect(edits).toBeUndefined();
     expect(reason).toContain('would be committed');
+  });
+});
+
+describe('chromaticScript', () => {
+  it('finds the script that runs a build, whatever it is called', () => {
+    expect(
+      chromaticScript({
+        chromatic: 'chromatic init',
+        notice: 'echo chromatic',
+        'publish-visuals': 'npm run build && npx chromatic@latest --exit-zero-on-changes',
+      })
+    ).toBe('publish-visuals');
+    expect(
+      chromaticScript({
+        visuals: 'chromatic',
+        chromatic: 'CI=1 pnpm exec chromatic --only-changed',
+      })
+    ).toBe('chromatic');
+    expect(chromaticScript({ lint: 'eslint .', check: 'chromatic doctor' })).toBeUndefined();
+  });
+  it('sees the CLI through env wrappers and package runners, but not as an argument', () => {
+    const builds = [
+      'dotenv -e .env.ci -- chromatic --only-changed',
+      'cross-env X=1 chromatic',
+      'env-cmd chromatic',
+      'pnpm chromatic',
+      './node_modules/.bin/chromatic',
+    ];
+    for (const command of builds)
+      expect(chromaticScript({ visuals: command }), command).toBe('visuals');
+    for (const command of [
+      'dotenv -- echo chromatic',
+      'npm run chromatic',
+      'npx chromatic@latest trace',
+    ])
+      expect(chromaticScript({ visuals: command }), command).toBeUndefined();
   });
 });
 

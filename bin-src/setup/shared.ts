@@ -456,3 +456,41 @@ function withSection(text: string, lines: string[]) {
   if (lastSection.startsWith('# Chromatic\n')) return `${ended}${lines.join('\n')}\n`;
   return `${ended}${ended ? '\n' : ''}# Chromatic\n${lines.join('\n')}\n`;
 }
+
+const SUBCOMMANDS =
+  /^(init|doctor|trace|turbosnap-manifest|trim-stats-file|generate-manifest|react-native-build)\b/;
+
+// A command that runs the CLI, with its arguments: `chromatic --exit-zero-on-changes`, after
+// variables (`CI=1`), an env wrapper (`dotenv -e .env --`, `cross-env X=1`, `env-cmd`) or a package
+// runner (`npx -y`, `pnpm exec`, `yarn dlx`, `npm exec --`), or as
+// `./node_modules/.bin/chromatic`. Not `echo chromatic`.
+const RUNS_CLI =
+  /^(?:\w+=\S*\s+)*(?:(?:dotenv|cross-env|env-cmd)(?:\s+(?:--|\w+=\S*|--?[^\s-]\S*(?:\s+(?!-|chromatic\b)[^\s=]+)?))*\s+)?(?:(?:npx|pnpm(?:\s+(?:dlx|exec))?|yarn(?:\s+(?:dlx|exec))?|npm\s+exec)\s+(?:-\S+\s+)*)?(?:\.\/)?(?:node_modules\/\.bin\/)?chromatic(?:@\S*)?(?=\s|$)(.*)$/;
+
+/**
+ * Whether a script runs a Chromatic build: one of its commands runs the CLI, and not one of its
+ * utility subcommands.
+ *
+ * @param script The script's command.
+ *
+ * @returns Whether it builds.
+ */
+function runsBuild(script = '') {
+  return script.split(/&&|\|\||[;|]/).some((command) => {
+    const match = RUNS_CLI.exec(command.trim());
+    return match !== null && !SUBCOMMANDS.test(match[1].trim());
+  });
+}
+
+/**
+ * The script that runs a Chromatic build, whatever it's called, such as "chromatic" or
+ * "publish-visuals": the one named "chromatic" if it builds, else the first that does.
+ *
+ * @param scripts The package's scripts.
+ *
+ * @returns The script's name, if there is one.
+ */
+export function chromaticScript(scripts: Record<string, string> = {}) {
+  if (runsBuild(scripts.chromatic)) return 'chromatic';
+  return Object.keys(scripts).find((name) => runsBuild(scripts[name]));
+}

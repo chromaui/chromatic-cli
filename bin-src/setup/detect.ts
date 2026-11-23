@@ -313,26 +313,26 @@ export async function detectPackageManager(gitRoot: string): Promise<PackageMana
 
 export const PACKAGE_MANAGER_COMMANDS: Record<
   PackageManager,
-  { label: string; run: (script: string) => string }
+  { label: string; run: (script: string) => string; dlx: string }
 > = {
   npm: {
     label: 'npm',
     run: (s) => `npm run ${s}`,
+    dlx: 'npx',
   },
   pnpm: {
     label: 'pnpm',
     run: (s) => `pnpm ${s}`,
+    dlx: 'pnpm dlx',
   },
   yarn: {
     label: 'Yarn',
     run: (s) => `yarn ${s}`,
+    dlx: 'yarn dlx',
   },
   'yarn-classic': {
     label: 'Yarn 1',
     run: (s) => `yarn ${s}`,
-  },
-  bun: {
-    label: 'Bun',
-    run: (s) => `bun run ${s}`,
+    dlx: 'npx',
   },
 };
