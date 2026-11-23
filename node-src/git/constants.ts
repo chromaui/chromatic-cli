@@ -13,3 +13,8 @@ export const DEFAULT_GIT_TIMEOUT_SECONDS = 20;
 // Default timeout for git commands that are not necessary for the build to succeed. Please note that, unlike the
 // previous constant, this timeout is in MILLISECONDS.
 export const DEFAULT_METADATA_GIT_TIMEOUT_MILLISECONDS = 5000;
+
+// Timeout for fetching a missing TurboSnap baseline commit from the remote, in MILLISECONDS. The build succeeds without
+// it (it falls back to a replacement build), and an unreachable git host would otherwise stall the build for the whole
+// git timeout.
+export const BASELINE_FETCH_TIMEOUT_MILLISECONDS = 5000;

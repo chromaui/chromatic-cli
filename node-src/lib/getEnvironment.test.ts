@@ -33,33 +33,36 @@ describe('CHROMATIC_NOTIFY_SERVICE_URL', () => {
   });
 });
 
-describe('CHROMATIC_TURBOSNAP_DISABLE_HASHES', () => {
+describe.each([
+  'CHROMATIC_TURBOSNAP_DISABLE_HASHES',
+  'CHROMATIC_TURBOSNAP_DISABLE_BASELINE_FETCH',
+] as const)('%s', (name) => {
   it('is off when the variable is not set', async () => {
     const { default: getEnvironment } = await import('./getEnvironment');
-    expect(getEnvironment().CHROMATIC_TURBOSNAP_DISABLE_HASHES).toBe(false);
+    expect(getEnvironment()[name]).toBe(false);
   });
 
   it('is off when the variable is set to an empty string', async () => {
-    vi.stubEnv('CHROMATIC_TURBOSNAP_DISABLE_HASHES', '');
+    vi.stubEnv(name, '');
     vi.resetModules();
 
     const { default: getEnvironment } = await import('./getEnvironment');
-    expect(getEnvironment().CHROMATIC_TURBOSNAP_DISABLE_HASHES).toBe(false);
+    expect(getEnvironment()[name]).toBe(false);
   });
 
   it.each(['1', 'false'])('is off when the variable is set to %s', async (value) => {
-    vi.stubEnv('CHROMATIC_TURBOSNAP_DISABLE_HASHES', value);
+    vi.stubEnv(name, value);
     vi.resetModules();
 
     const { default: getEnvironment } = await import('./getEnvironment');
-    expect(getEnvironment().CHROMATIC_TURBOSNAP_DISABLE_HASHES).toBe(false);
+    expect(getEnvironment()[name]).toBe(false);
   });
 
   it('is on when the variable is set to true', async () => {
-    vi.stubEnv('CHROMATIC_TURBOSNAP_DISABLE_HASHES', 'true');
+    vi.stubEnv(name, 'true');
     vi.resetModules();
 
     const { default: getEnvironment } = await import('./getEnvironment');
-    expect(getEnvironment().CHROMATIC_TURBOSNAP_DISABLE_HASHES).toBe(true);
+    expect(getEnvironment()[name]).toBe(true);
   });
 });

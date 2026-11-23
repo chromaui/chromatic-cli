@@ -44,7 +44,7 @@ import { skipFailed, skippingBuild } from '../ui/tasks/gitInfo';
 
 export type GitInfoDeps = Pick<
   Deps,
-  'log' | 'client' | 'options' | 'runtime' | 'packageJson' | 'report'
+  'log' | 'client' | 'env' | 'options' | 'runtime' | 'packageJson' | 'report'
 >;
 
 export interface GitInfoInput {
@@ -140,7 +140,7 @@ export async function gatherGitInfo(
   deps: GitInfoDeps,
   input: GitInfoInput
 ): Promise<TaskResult<GitInfoOutput, GitInfoPartial>> {
-  const { log, client, options, runtime, packageJson, report } = deps;
+  const { log, client, env, options, runtime, packageJson, report } = deps;
   const {
     branchName,
     ownerName,
@@ -370,12 +370,13 @@ export async function gatherGitInfo(
     build = baselineBuilds.sort((a, b) => b.committedAt - a.committedAt)[0];
 
     try {
-      // Map the baseline builds to their changed files, falling back to an earlier "replacement"
-      // build if the baseline commit no longer exists or the baseline had uncommitted changes.
+      // Map the baseline builds to their changed files. A baseline commit missing locally is
+      // fetched from origin; if that fails or the baseline had uncommitted changes, fall back to
+      // an earlier "replacement" build.
       const changedFilesWithInfo = await Promise.all(
         baselineBuilds.map(async (build) => {
           const changedFilesWithReplacement = await getChangedFilesWithReplacement(
-            { log, client, options },
+            { log, client, env, options },
             build
           );
           return { build, ...changedFilesWithReplacement };

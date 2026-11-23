@@ -1,8 +1,9 @@
 import { AncestorMissingError, BaselineDirtyError } from '../lib/turbosnap/v1/errors';
 import { Deps } from '../types';
 import { GitDeps } from './execGit';
+import { fetchCommit } from './fetchCommit';
 import { findAncestorBuildWithCommit } from './findAncestorBuildWithCommit';
-import { fetchCommit, getChangedFiles } from './git';
+import { getChangedFiles } from './git';
 
 export interface BuildWithCommitInfo {
   id: string;
@@ -22,22 +23,30 @@ export interface BuildWithCommitInfo {
  * Only an `AncestorMissingError` is recoverable this way. A `BaselineDirtyError` means the commit
  * exists locally but the baseline was built with uncommitted changes, which no fetch can restore.
  *
- * @param deps Dependencies (log, and options for the git timeout).
+ * Setting `CHROMATIC_TURBOSNAP_DISABLE_BASELINE_FETCH=true` skips the fetch, for environments
+ * where reaching the git host is slow or blocked.
+ *
+ * @param deps Dependencies (log, env, and options for the git timeout).
  * @param build The build whose commit went missing locally.
  * @param error The error thrown while diffing against the build's commit.
  *
  * @returns The changed files against the recovered commit, or undefined if recovery failed.
  */
 async function recoverOrphanedCommit(
-  deps: GitDeps,
+  deps: GitDeps & Pick<Deps, 'env'>,
   build: BuildWithCommitInfo,
   error: unknown
 ): Promise<string[] | undefined> {
-  if (!(error instanceof AncestorMissingError) || !(await fetchCommit(deps, build.commit))) {
+  if (!(error instanceof AncestorMissingError)) return undefined;
+  if (deps.env.CHROMATIC_TURBOSNAP_DISABLE_BASELINE_FETCH) {
+    deps.log.debug(
+      `Not fetching missing commit for #${build.number}(${build.commit}): CHROMATIC_TURBOSNAP_DISABLE_BASELINE_FETCH is set`
+    );
     return undefined;
   }
+  if (!(await fetchCommit(deps, build.commit))) return undefined;
   try {
-    const changedFiles = (await getChangedFiles(deps, build.commit)) || [];
+    const changedFiles = await getChangedFiles(deps, build.commit);
     deps.log.debug(`Fetched orphaned commit for #${build.number}(${build.commit})`);
     return changedFiles;
   } catch (retryError) {
@@ -52,18 +61,18 @@ async function recoverOrphanedCommit(
  * Find the set of files that have changed (according to git) between the historical build's commit
  * and the current commit.
  *
- * If the historical build's commit doesn't exist (for instance if it has been rebased and force-
- * pushed away) or the historical build had uncommitted changes, find the nearest ancestor build
- * that *does* have a valid commit, and return the differences along with the two builds (for
- * tracking purposes).
+ * If the historical build's commit doesn't exist locally (for instance if it has been rebased and
+ * force-pushed away), first try to fetch it from `origin`. If that fails, or the historical build
+ * had uncommitted changes, find the nearest ancestor build that *does* have a valid commit, and
+ * return the differences along with the two builds (for tracking purposes).
  *
- * @param deps Dependencies (log, client, options).
+ * @param deps Dependencies (log, client, env, options).
  * @param build The build details for gathering changed files.
  *
  * @returns A list of changed files for the build, adding a replacement build if necessary.
  */
 export async function getChangedFilesWithReplacement(
-  deps: GitDeps & Pick<Deps, 'client'>,
+  deps: GitDeps & Pick<Deps, 'client' | 'env'>,
   build: BuildWithCommitInfo
 ): Promise<{ changedFiles: string[]; replacementBuild?: BuildWithCommitInfo }> {
   try {

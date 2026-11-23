@@ -90,6 +90,7 @@ const client = { runQuery: vi.fn(), setAuthorization: vi.fn() };
 const buildDeps = (overrides: Partial<GitInfoDeps> = {}): GitInfoDeps => ({
   log,
   client: client as any,
+  env: {} as any,
   options: {} as any,
   runtime: {} as any,
   packageJson: {},

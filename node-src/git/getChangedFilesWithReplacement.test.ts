@@ -6,6 +6,7 @@ import {
   BaselineDirtyError,
   GitCommandError,
 } from '../lib/turbosnap/v1/errors';
+import * as fetchCommitModule from './fetchCommit';
 import { getChangedFilesWithReplacement } from './getChangedFilesWithReplacement';
 import * as gitModule from './git';
 
@@ -13,10 +14,14 @@ const { fetched } = vi.hoisted(() => ({ fetched: new Set<string>() }));
 
 vi.mock('./git', () => ({
   getChangedFiles: vi.fn((_: unknown, hash: string) => {
+    if (fetched.has(hash) && /empty/.test(hash)) return [];
     if (/exists/.test(hash) || fetched.has(hash)) return ['changed', 'files'];
     throw new AncestorMissingError(hash, { cause: new Error(`fatal: bad object ${hash}`) });
   }),
   commitExists: vi.fn((_: unknown, hash: string) => /exists/.test(hash) || fetched.has(hash)),
+}));
+
+vi.mock('./fetchCommit', () => ({
   fetchCommit: vi.fn((_: unknown, hash: string) => {
     if (!/fetchable/.test(hash)) return false;
     // Simulate a fetch that succeeds but leaves the commit undiffable.
@@ -33,7 +38,35 @@ describe('getChangedFilesWithReplacements', () => {
     client.runQuery.mockReset();
     fetched.clear();
   });
-  const context = { client, log: new TestLogger() } as any;
+  const context = { client, env: {}, log: new TestLogger() } as any;
+
+  it('skips the fetch and uses a replacement when CHROMATIC_TURBOSNAP_DISABLE_BASELINE_FETCH is set', async () => {
+    const replacementBuild = {
+      id: 'replacement',
+      number: 2,
+      commit: 'exists',
+      uncommittedHash: '',
+    };
+    client.runQuery.mockReturnValue({ app: { build: { ancestorBuilds: [replacementBuild] } } });
+
+    expect(
+      await getChangedFilesWithReplacement(
+        { ...context, env: { CHROMATIC_TURBOSNAP_DISABLE_BASELINE_FETCH: true } },
+        {
+          id: 'id',
+          number: 3,
+          commit: 'missing-but-fetchable',
+          uncommittedHash: '',
+          isLocalBuild: false,
+        }
+      )
+    ).toEqual({
+      changedFiles: ['changed', 'files'],
+      replacementBuild,
+    });
+
+    expect(fetchCommitModule.fetchCommit).not.toHaveBeenCalled();
+  });
 
   it('fetches an orphaned commit by hash and retries, without using a replacement', async () => {
     expect(
@@ -48,7 +81,21 @@ describe('getChangedFilesWithReplacements', () => {
       changedFiles: ['changed', 'files'],
     });
 
-    expect(gitModule.fetchCommit).toHaveBeenCalledWith(context, 'missing-but-fetchable');
+    expect(fetchCommitModule.fetchCommit).toHaveBeenCalledWith(context, 'missing-but-fetchable');
+    expect(client.runQuery).not.toHaveBeenCalled();
+  });
+
+  it('keeps an empty diff against a fetched commit, without using a replacement', async () => {
+    expect(
+      await getChangedFilesWithReplacement(context, {
+        id: 'id',
+        number: 3,
+        commit: 'missing-fetchable-empty',
+        uncommittedHash: '',
+        isLocalBuild: false,
+      })
+    ).toEqual({ changedFiles: [] });
+
     expect(client.runQuery).not.toHaveBeenCalled();
   });
 
@@ -74,7 +121,10 @@ describe('getChangedFilesWithReplacements', () => {
       replacementBuild,
     });
 
-    expect(gitModule.fetchCommit).toHaveBeenCalledWith(context, 'missing-fetchable-but-undiffable');
+    expect(fetchCommitModule.fetchCommit).toHaveBeenCalledWith(
+      context,
+      'missing-fetchable-but-undiffable'
+    );
     expect(client.runQuery).toHaveBeenCalled();
   });
 
@@ -132,7 +182,7 @@ describe('getChangedFilesWithReplacements', () => {
       await getChangedFilesWithReplacement(context, {
         id: 'id',
         number: 3,
-        commit: 'exists',
+        commit: 'exists-fetchable',
         uncommittedHash: 'abcdef',
         isLocalBuild: true,
       })
@@ -142,10 +192,12 @@ describe('getChangedFilesWithReplacements', () => {
     });
 
     expect(client.runQuery).toHaveBeenCalled();
+    // Fetching can't restore a dirty baseline's uncommitted changes.
+    expect(fetchCommitModule.fetchCommit).not.toHaveBeenCalled();
   });
 
   it('preserves the configured git timeout for an existing baseline commit', async () => {
-    const deps = { client, log: new TestLogger(), options: { gitTimeout: 60_000 } };
+    const deps = { client, env: {} as any, log: new TestLogger(), options: { gitTimeout: 60_000 } };
     const baselineBuild = {
       id: 'baseline',
       number: 3,
@@ -163,7 +215,7 @@ describe('getChangedFilesWithReplacements', () => {
   });
 
   it('preserves the configured git timeout when replacing a missing baseline commit', async () => {
-    const deps = { client, log: new TestLogger(), options: { gitTimeout: 60_000 } };
+    const deps = { client, env: {} as any, log: new TestLogger(), options: { gitTimeout: 60_000 } };
     const baselineBuild = {
       id: 'baseline',
       number: 3,
