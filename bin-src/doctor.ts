@@ -4,6 +4,7 @@ import path from 'node:path';
 import * as clack from '@clack/prompts';
 import meow from 'meow';
 
+import getEnvironment from '../node-src/lib/getEnvironment';
 import { findBuildScriptName } from '../node-src/lib/getOptions';
 import { findConfigFlags } from '../node-src/lib/getStorybookMetadata';
 import { allowPnpRuntime } from '../node-src/lib/installedPackages';
@@ -287,12 +288,12 @@ function projectRequired(
  * @param build The build a check asked for.
  * @param cwd Directory to build from.
  *
- * @returns Whether the build wrote the stats file.
+ * @returns The check to show in place of the preview check when the build failed, else undefined.
  */
 async function buildStats(build: NonNullable<Check['build']>, cwd: string) {
   // Without a terminal, such as in CI, a spinner prints a line per frame, so log the start instead.
   const spinner = process.stdout.isTTY ? clack.spinner() : undefined;
-  const message = 'Building Storybook with stats';
+  const message = 'Building Storybook with stats to check what preview imports';
   if (spinner) spinner.start(message);
   else clack.log.step(`${message}…`);
   const stop = (text: string, failed = false) => {
@@ -305,21 +306,33 @@ async function buildStats(build: NonNullable<Check['build']>, cwd: string) {
       stdin: 'ignore',
       all: true,
       preferLocal: false,
+      // As in a build, so a build that hangs stops instead of holding doctor forever.
+      timeout: getEnvironment().STORYBOOK_BUILD_TIMEOUT,
       env: { CI: '1', NODE_ENV: process.env.STORYBOOK_NODE_ENV || 'production' },
     });
   } catch (err) {
     const logFile = path.join(cwd, 'build-storybook.log');
     writeFileSync(logFile, String((err as { all?: string }).all ?? err));
-    stop(`Storybook build failed. See ${relativeOrDot(process.cwd(), logFile)}`, true);
-    return false;
+    stop('Storybook build failed', true);
+    return couldNotDetermine(
+      `The Storybook build failed. See ${relativeOrDot(process.cwd(), logFile)} for its output. The rest of the report doesn't depend on it.`
+    );
   }
   if (!existsSync(build.statsFile)) {
-    stop(`Storybook built, but wrote no ${relativeOrDot(process.cwd(), build.statsFile)}`, true);
-    return false;
+    const shown = relativeOrDot(process.cwd(), build.statsFile);
+    stop(`Storybook built, but wrote no ${shown}`, true);
+    return couldNotDetermine(`The Storybook build wrote no ${shown}. It ran: ${build.command}`);
   }
   stop('Built Storybook with stats');
-  return true;
+  return undefined;
 }
+
+const couldNotDetermine = (detail: string): Check => ({
+  group: 'Values',
+  status: 'info',
+  title: "Couldn't determine the impact of preview imports",
+  detail,
+});
 
 /**
  * The main entrypoint for `chromatic doctor`.
@@ -345,10 +358,11 @@ export async function main(argv: string[]) {
       --project <dir>     Check only this project.
       --fix               Offer to fix what can be fixed, one change at a time.
                           Without a terminal (in CI), fixes are listed, not applied.
-      --yes, -y           Answer yes without asking: build Storybook with stats when
-                          TurboSnap needs them and there are none, and with --fix, apply
-                          every fix except those that ask how your CI runs Chromatic,
-                          which need a terminal.
+      --yes, -y           With --fix, apply every fix without asking, except fixes that
+                          ask how your CI runs Chromatic, which need a terminal.
+
+    With TurboSnap on and no stats file, doctor builds Storybook with stats first, the way a
+    TurboSnap build does, to show what the Storybook preview imports.
 
     Every option chromatic takes, such as --config-file, --only-changed or --build-command, is
     read the same way as in a build, and flags win over the config file.
@@ -412,34 +426,23 @@ export async function main(argv: string[]) {
 
   const all: Check[] = [];
   let skippedFixes = false;
-  let skippedBuild = false;
   let questions = false;
   for (const target of targets) {
     if (multi) clack.log.step(color.bold(color.cta(`Project ${target.label}`)));
-    const check = () => collectChecks(target.directory, argv, true);
+    // When the preview check needs a stats file, build Storybook first, then report. A failed
+    // build replaces only that check, here and on every recheck after a fix.
+    let buildFailure: Check | undefined;
+    const check = async () => {
+      const results = await collectChecks(target.directory, argv, true);
+      return results.map((c) => (c.build && buildFailure ? buildFailure : c));
+    };
     let checks = await check();
-    printChecks(checks);
-
-    // A build can take minutes, so it only runs when someone says yes, or --yes does.
     const build = checks.find((c) => c.build)?.build;
-    if (build && !flags.yes && !interactive) {
-      skippedBuild = true;
-    } else if (
-      build &&
-      (flags.yes ||
-        answered(
-          await clack.confirm({
-            message:
-              'Build Storybook with stats to check what preview imports? It can take a few minutes.',
-          })
-        )) &&
-      (await buildStats(build, target.directory))
-    ) {
-      // Show only what the stats file changed, which is the preview check.
-      const before = new Set(checks.map((c) => c.title));
+    if (build) {
+      buildFailure = await buildStats(build, target.directory);
       checks = await check();
-      printChecks(checks.filter((c) => !before.has(c.title)));
     }
+    printChecks(checks);
 
     if (flags.fix && checks.some((c) => c.fix)) {
       if (flags.yes || interactive) {
@@ -461,11 +464,6 @@ export async function main(argv: string[]) {
       `Not set up with Chromatic:\n${notSetUp
         .map((p) => `${relativeOrDot(cwd, p.directory)} ${color.muted(`· ${describeProject(p)}`)}`)
         .join('\n')}\nRun ${color.cta('npx chromatic init --project <dir>')} to add one.`
-    );
-  }
-  if (skippedBuild) {
-    clack.log.info(
-      `Didn't build Storybook to check what preview imports: there's no terminal to confirm it.\nRun ${color.cta('npx chromatic doctor --yes')} to build it and check.`
     );
   }
   if (skippedFixes) {

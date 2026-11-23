@@ -47,7 +47,7 @@ export interface Check {
   title: string;
   detail?: string;
   fix?: Fix;
-  /** A Storybook build that writes the stats file this check needs; doctor offers to run it. */
+  /** A Storybook build that writes the stats file this check needs; doctor runs it first. */
   build?: { command: string; statsFile: string };
 }
 
