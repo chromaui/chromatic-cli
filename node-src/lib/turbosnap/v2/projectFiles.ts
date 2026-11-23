@@ -1,14 +1,5 @@
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  realpathSync,
-  statSync,
-  writeFileSync,
-} from 'fs';
+import { mkdirSync, readdirSync, realpathSync, statSync, writeFileSync } from 'fs';
 import { Dirent, Stats } from 'fs';
-import { createRequire } from 'module';
 import path from 'path';
 
 import { GitDeps } from '../../../git/execGit';
@@ -16,6 +7,7 @@ import { trackedFiles as trackedRelativePaths } from '../../../git/git';
 import { getUntrackedPaths, UntrackedPaths } from '../../../git/untrackedPaths';
 import { AbsolutePath } from '../../../types';
 import { getFileHashes } from '../../getFileHashes';
+import { readInstalledVersion } from '../../installedPackages';
 import { Logger } from '../../log';
 import { FileHash } from './graph';
 
@@ -90,7 +82,7 @@ export function realProjectFiles(deps: GitDeps): ProjectFiles {
     isDirectory: (absolutePath: AbsolutePath) =>
       statFile(log, absolutePath)?.isDirectory() ?? false,
     packageVersion: (fromDirectory: AbsolutePath, packageName: string) =>
-      readPackageVersion(log, fromDirectory, packageName),
+      readInstalledVersion(log, fromDirectory, packageName),
     hashAll: hashFileContents,
     listTree: (absolutePath: AbsolutePath) => listTree(log, absolutePath),
     trackedFiles: (gitRoot, globs) => trackedFiles(deps, gitRoot, globs),
@@ -133,68 +125,6 @@ function statFile(log: Logger, absolutePath: AbsolutePath): Stats | undefined {
       return undefined;
     }
     throw error;
-  }
-}
-
-/**
- * Reads a package's installed version from its own `package.json`, resolved from a directory.
- *
- * @param log The logger to record a resolution failure with.
- * @param fromDirectory The absolute directory to resolve from.
- * @param packageName The package to read the version of.
- *
- * @returns The installed version, or undefined when the package cannot be resolved or read.
- */
-function readPackageVersion(
-  log: Logger,
-  fromDirectory: AbsolutePath,
-  packageName: string
-): string | undefined {
-  const requireFromDirectory = createRequire(path.join(fromDirectory, 'package.json'));
-
-  try {
-    const packageJsonPath = resolvePackageJson(requireFromDirectory, packageName);
-    const { version } = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
-    return version;
-  } catch (error) {
-    log.debug(`Could not resolve ${packageName} from ${fromDirectory}`, error);
-    // Marking which candidates exist tells a checkout with no install apart from one whose install
-    // lacks the package.
-    log.debug(
-      'Directories checked:',
-      requireFromDirectory.resolve
-        .paths(`${packageName}/package.json`)
-        ?.map((directory) => (existsSync(directory) ? directory : `${directory} (missing)`))
-    );
-    return undefined;
-  }
-}
-
-/**
- * Resolves a package's own `package.json`. When the package's `exports` map leaves it out (as
- * `@chromatic-com/vitest` did before 1.0.2), Node refuses the subpath, so this looks for the file in
- * each `node_modules` Node searched. The first one there is the package Node found and refused.
- *
- * @param requireFromDirectory A `require` created for the directory to resolve from.
- * @param packageName The package whose manifest to find.
- *
- * @returns The absolute path of the package's `package.json`.
- */
-function resolvePackageJson(
-  requireFromDirectory: ReturnType<typeof createRequire>,
-  packageName: string
-): string {
-  try {
-    return requireFromDirectory.resolve(`${packageName}/package.json`);
-  } catch (error) {
-    if (error.code !== 'ERR_PACKAGE_PATH_NOT_EXPORTED') throw error;
-
-    const packageJsonPath = requireFromDirectory.resolve
-      .paths(packageName)
-      ?.map((directory) => path.join(directory, packageName, 'package.json'))
-      .find((candidate) => existsSync(candidate));
-    if (!packageJsonPath) throw error;
-    return packageJsonPath;
   }
 }
 

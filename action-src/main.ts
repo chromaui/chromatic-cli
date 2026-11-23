@@ -6,7 +6,7 @@ import * as Sentry from '@sentry/node';
 import path from 'path';
 
 import { run as runNode } from '../node-src';
-import { allowPnpRuntime } from '../node-src/lib/turbosnap/v2/pnpRuntime';
+import { allowPnpRuntime } from '../node-src/lib/installedPackages';
 
 const maybe = (a: string | string[], b: any = undefined) => {
   if (!a) {

@@ -1,6 +1,6 @@
+import { allowPnpRuntime } from '@cli/installedPackages';
 import { getE2EPackage } from '@cli/turbosnap/e2ePackage';
 import { buildManifest, serializeManifest } from '@cli/turbosnap/v2/manifest';
-import { allowPnpRuntime } from '@cli/turbosnap/v2/pnpRuntime';
 import { realProjectFiles } from '@cli/turbosnap/v2/projectFiles';
 import { existsSync } from 'fs';
 import meow from 'meow';

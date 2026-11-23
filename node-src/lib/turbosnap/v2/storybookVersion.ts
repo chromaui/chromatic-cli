@@ -1,63 +1,23 @@
-import semver from 'semver';
-
-import { viewLayers } from '../../viewLayers';
+import { readStorybookVersion, VersionNotFoundError } from '../../installedPackages';
 import { ManifestInput } from './manifestInput';
 
-// Storybook's own package. From 8.2 it is the core runtime and every framework and renderer lists it
-// as a peer dependency, so a working install can always resolve it.
-const STORYBOOK_PACKAGE = 'storybook';
-
-// The core package `storybook` wraps from 8.2 to 8.6, reachable under strict installs where
-// `storybook` isn't. Storybook 6 also has one, at its own version.
-const STORYBOOK_CORE_PACKAGE = '@storybook/core';
-
-// Before 8.2, `storybook` was only the CLI and projects often left it out. These packages ship with
-// every 6.x to 8.1 install and are versioned in lockstep with it: the preview runtime (7.0 to 8.1),
-// core-common (6.x to 8.1), then the renderer and framework packages in `viewLayers`, one of which
-// every project installs. Which of them a given install can resolve from the config directory
-// depends on how it hoists.
-const LEGACY_PACKAGES = [
-  '@storybook/preview-api',
-  '@storybook/core-common',
-  ...Object.keys(viewLayers),
-];
-
-// The first version that requires `storybook`. A legacy package at this version or later means the
-// install is missing `storybook`, or holds a stale copy, so its version can't stand in for one.
-const STORYBOOK_REQUIRED_SINCE = '8.2.0';
-
 /**
- * Thrown when no version can be resolved, which comes down to how the project is installed: nothing
- * installed, Yarn Plug'n'Play without its runtime, or Storybook out of reach of the config
- * directory. The user can fix it, so TurboSnap 2.0 logs it and leaves the build to TurboSnap 1.0
- * rather than reporting it.
- */
-export class VersionNotFoundError extends Error {
-  readonly name = 'VersionNotFoundError';
-}
-
-function isLegacyVersion(version: string) {
-  const coerced = semver.coerce(version);
-  return !!coerced && semver.lt(coerced, STORYBOOK_REQUIRED_SINCE);
-}
-
-/**
- * Reads the installed Storybook version from the resolved Storybook package's own `package.json`.
+ * Resolves the `storybookVersion` manifest entry: the installed Storybook version, read from the
+ * config directory by `readStorybookVersion`.
  *
- * This backs the `storybookVersion` manifest entry, which gates recapture on a Storybook upgrade
- * that file hashing cannot see. The view layer (e.g. `@storybook/react`) is always bundled into the
- * preview, so it appears in `preview-stats.json` and a view-layer upgrade already changes the story
- * hashes. The core preview runtime is different: on some builder/version combinations it is served
- * as an externalized bundle (e.g. an `storybook/internal/*` bare specifier), so it never appears as
- * a hashable file in `preview-stats.json`. The version gate covers exactly that blind spot.
+ * This entry gates recapture on a Storybook upgrade that file hashing cannot see. The view layer
+ * (e.g. `@storybook/react`) is always bundled into the preview, so it appears in `preview-stats.json`
+ * and a view-layer upgrade already changes the story hashes. The core preview runtime is different:
+ * on some builder/version combinations it is served as an externalized bundle (e.g. an
+ * `storybook/internal/*` bare specifier), so it never appears as a hashable file in
+ * `preview-stats.json`. The version gate covers exactly that blind spot.
  *
  * We therefore do not reuse `ctx.storybook.version`: that reports the view-layer package. It also
  * resolves relative to the working directory without walking up to a hoisted install, and can be a
  * bare semver range rather than a concrete version.
  *
- * We resolve from the config directory, because that is the package directory that should've
- * been used to build the Storybook. It then walks up every ancestor `node_modules` to find the
- * first package it can resolve.
+ * Without a version there is no gate on a Storybook upgrade, so this refuses to build a manifest
+ * that would silently under-capture.
  *
  * An E2E build resolves its E2E package instead; see `resolveE2EPackageVersion`.
  *
@@ -68,6 +28,8 @@ function isLegacyVersion(version: string) {
  * @param input.projectFiles How to read the disk.
  *
  * @returns The installed Storybook version (e.g. `9.1.20`), or the E2E package and its version.
+ *
+ * @throws {VersionNotFoundError} When no version can be resolved.
  */
 export function resolveStorybookVersion(
   input: Pick<ManifestInput, 'configDir' | 'projectRoot' | 'e2ePackage' | 'projectFiles'>
@@ -76,26 +38,7 @@ export function resolveStorybookVersion(
     return resolveE2EPackageVersion(input.e2ePackage, input);
   }
 
-  const version =
-    input.projectFiles.packageVersion(input.configDir, STORYBOOK_PACKAGE) ??
-    input.projectFiles.packageVersion(input.configDir, STORYBOOK_CORE_PACKAGE);
-  if (version) return version;
-
-  // Trusted only when every one that resolves is from before 8.2: a newer one means this is an 8.2+
-  // install missing `storybook`, and an older one beside it is a stale copy from somewhere else.
-  const legacyVersions = LEGACY_PACKAGES.map((packageName) =>
-    input.projectFiles.packageVersion(input.configDir, packageName)
-  ).filter((version) => version !== undefined);
-  if (legacyVersions.length > 0 && legacyVersions.every((version) => isLegacyVersion(version))) {
-    return legacyVersions[0];
-  }
-
-  // Without a version there is no gate on a Storybook upgrade, so refuse to build a manifest that
-  // would silently under-capture. Not finding a Storybook dependency usually means nothing is
-  // installed so we'll inform the customer accordingly.
-  throw new VersionNotFoundError(
-    `Could not resolve a Storybook version from ${input.configDir}: neither ${STORYBOOK_PACKAGE}, ${STORYBOOK_CORE_PACKAGE} nor, for Storybook 8.1 and earlier, its preview, core or renderer packages could be resolved with a version. TurboSnap hashes installed dependencies, so they must be installed before running Chromatic, even for a prebuilt Storybook. From Storybook 8.2, storybook must also be a dependency of this project.`
-  );
+  return readStorybookVersion(input.configDir, input.projectFiles.packageVersion);
 }
 
 /**

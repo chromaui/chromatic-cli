@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { Stats } from '../../../types';
+import { VersionNotFoundError } from '../../installedPackages';
 import { createFixture, projectRoot, syntheticAbsent } from './__fixtures__/manifestFixtures';
 import { buildManifest } from './manifest';
-import { VersionNotFoundError } from './storybookVersion';
 
 // A Vitest build, shaped like the stats `build-archive-storybook` writes: the stories entry imports
 // one generated `.stories.json` per test file, which imports that test, which imports the component.

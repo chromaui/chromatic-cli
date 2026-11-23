@@ -3,8 +3,8 @@ import '../node-src/errorMonitoring';
 import * as Sentry from '@sentry/node';
 
 import { run } from '../node-src';
+import { allowPnpRuntime } from '../node-src/lib/installedPackages';
 import { exitCodes } from '../node-src/lib/setExitCode';
-import { allowPnpRuntime } from '../node-src/lib/turbosnap/v2/pnpRuntime';
 
 /**
  * The main entrypoint for the CLI.
