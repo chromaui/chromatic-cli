@@ -20,12 +20,30 @@ export function readInstalledVersion(
   fromDirectory: string,
   packageName: string
 ): string | undefined {
+  return readInstalledPackage(log, fromDirectory, packageName)?.version;
+}
+
+/**
+ * Resolves a package the way `readInstalledVersion` does, and also says where it is installed.
+ *
+ * @param log The logger to record a resolution failure with.
+ * @param fromDirectory The absolute directory to resolve from.
+ * @param packageName The package to read.
+ *
+ * @returns The package's `package.json` path, name and version, or undefined when the package cannot be
+ * resolved or read.
+ */
+export function readInstalledPackage(
+  log: Logger,
+  fromDirectory: string,
+  packageName: string
+): { packageJsonPath: string; name?: string; version: string } | undefined {
   const requireFromDirectory = createRequire(path.join(fromDirectory, 'package.json'));
 
   try {
     const packageJsonPath = resolvePackageJson(requireFromDirectory, packageName);
-    const { version } = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
-    return version;
+    const { name, version } = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
+    return { packageJsonPath, name, version };
   } catch (error) {
     log.debug(`Could not resolve ${packageName} from ${fromDirectory}`, error);
     // Marking which candidates exist tells a checkout with no install apart from one whose install

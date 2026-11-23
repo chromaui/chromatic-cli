@@ -51,6 +51,7 @@ Every fixture except `react-vitest` is a React and TypeScript Storybook. Its `pa
 | `monorepo-npm`          | npm workspaces                            | Vite      | `packages/ui` |
 | `monorepo-yarn-classic` | Yarn 1 workspaces                         | Vite      | `packages/ui` |
 | `monorepo-yarn`         | Yarn 4 workspaces (`node-modules` linker) | Vite      | `packages/ui` |
+| `monorepo-yarn-pnp`     | Yarn 4 workspaces (Plug'n'Play)           | Vite      | `packages/ui` |
 | `monorepo-pnpm`         | pnpm 12 workspace                         | Vite      | `packages/ui` |
 | `react-vitest`          | npm                                       | Vitest browser mode | `@chromatic-com/vitest` (none in the project) |
 
@@ -65,6 +66,8 @@ Every monorepo has the same three packages:
 npm and Yarn 1 have no `workspace:` protocol, so their `ui` depends on `@myorg/shared` by version (`0.0.1`).
 
 The `build-storybook` scripts leave out the stats flag, as most projects do, so the CLI has to add it.
+
+`monorepo-yarn-pnp` installs no `node_modules`: its dependencies stay in Yarn's zip archives or its unplugged folder, reachable only through the `.pnp.cjs` runtime the install writes. Its `main.ts` wraps the framework in `getAbsolutePath(...)`, as `storybook init` writes it for Plug'n'Play. Run the CLI with plain `node` to see what the GitHub Action and `npx` see, or with `NODE_OPTIONS="--require <copy>/.pnp.cjs --experimental-loader <copy>/.pnp.loader.mjs"` to see what `yarn chromatic` sees.
 
 `react-vitest` has the same `Button` and `Badge`, with one Vitest browser test each instead of stories. Each test writes one archive and one `.stories.json` under the gitignored `.vitest/chromatic`. Its `vitest.config.ts` turns on `chromaticPlugin({ turboSnap: true })`, which writes the `preview-stats.json` that TurboSnap reads.
 

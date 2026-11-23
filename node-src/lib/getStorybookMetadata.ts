@@ -1,5 +1,5 @@
 import { readdir } from 'fs/promises';
-import { pathExists, readJson } from 'fs-extra';
+import { pathExists } from 'fs-extra';
 import meow from 'meow';
 import path from 'path';
 import semver from 'semver';
@@ -10,11 +10,14 @@ import type { StorybookInfoDeps } from '../tasks/storybookInfo';
 import { AbsolutePath, Storybook } from '../types';
 import packageDoesNotExist from '../ui/messages/errors/noViewLayerPackage';
 import { builders } from './builders';
+import {
+  ensurePnpRuntime,
+  readFrameworkStorybookVersion,
+  readInstalledVersion,
+  VersionNotFoundError,
+} from './installedPackages';
 import { meowImportMeta } from './meowImportMeta';
-import { withTimeout } from './utilities';
 import { viewLayers } from './viewLayers';
-
-const LOOKUP_TIMEOUT_MESSAGE = 'Timeout while resolving Storybook view layer package';
 
 /**
  * Reads the `-c` and `-s` flags out of the project's Storybook build script.
@@ -68,54 +71,71 @@ function findConfigFlags({
 interface MainConfigReader {
   /** Reads a top-level field, returning `undefined` when it is absent. */
   readField: (field: string) => unknown;
+  /**
+   * Reads the name of a preset field such as `framework` or `core.builder`, written either as a
+   * string or as an object with a `name`. Returns `undefined` when it is absent or can't be read.
+   */
+  readName: (fieldPath: string[]) => string | undefined;
 }
 
 /**
  * Resolves the builder the main config declares, along with its installed version.
  *
  * @param mainConfig The loaded main config, or undefined when it could not be read.
+ * @param configDirectory The absolute Storybook config directory to resolve the package from.
+ * @param log The logger to record a resolution failure with.
  *
  * @returns The builder name and package version, or an unknown builder without a config.
  */
-async function findBuilder(mainConfig?: MainConfigReader) {
+async function findBuilder(
+  mainConfig: MainConfigReader | undefined,
+  configDirectory: AbsolutePath,
+  log: StorybookInfoDeps['log']
+) {
   if (!mainConfig) {
     return { builder: { name: 'unknown', packageVersion: '0' } };
   }
 
-  const framework = objectField(mainConfig, 'framework');
-  const core = objectField(mainConfig, 'core');
+  const readVersion = (packageName: string) => {
+    const packageVersion = readInstalledVersion(log, configDirectory, packageName);
+    if (!packageVersion) throw new Error(packageDoesNotExist(packageName));
+    return packageVersion;
+  };
 
-  if (typeof framework?.name === 'string') {
-    const sbV7BuilderName = framework.name;
-
-    return withTimeout(
-      resolvePackageJson(sbV7BuilderName)
-        .then((json) => ({ builder: { name: sbV7BuilderName, packageVersion: json.version } }))
-        .catch(() => {
-          throw new Error(packageDoesNotExist(sbV7BuilderName));
-        }),
-      10_000,
-      LOOKUP_TIMEOUT_MESSAGE
-    );
+  const framework = mainConfig.readName(['framework']);
+  const builder = mainConfig.readName(['core', 'builder']);
+  // From Storybook 7 the framework names the builder. Storybook 6 named its renderer there, such
+  // as `@storybook/react`, and left the builder to `core.builder`, or to webpack 4. Third-party
+  // frameworks have their own versions.
+  const isRenderer = (name: string) =>
+    packageNameOf(name).startsWith('@storybook/') &&
+    (semver.coerce(readInstalledVersion(log, configDirectory, name))?.major ?? 7) < 7;
+  if (framework && !isRenderer(framework)) {
+    return { builder: { name: packageNameOf(framework), packageVersion: readVersion(framework) } };
   }
 
-  let name = 'webpack4'; // default builder in Storybook v6
-  const builder = core?.builder;
-  if (typeof builder === 'string') {
-    name = builder;
-  } else if (isRecord(builder) && typeof builder.name === 'string') {
-    name = builder.name;
-  }
+  const name = builder ? packageNameOf(builder) : 'webpack4'; // default builder in Storybook v6
+  return { builder: { name, packageVersion: readVersion(builders[name]) } };
+}
 
-  return withTimeout(
-    resolvePackageJson(builders[name])
-      .then((json) => ({ builder: { name, packageVersion: json.version } }))
-      .catch(() => {
-        throw new Error(packageDoesNotExist(builders[name]));
-      }),
-    10_000,
-    LOOKUP_TIMEOUT_MESSAGE
-  );
+/**
+ * Recovers the package name from a preset name. Storybook wraps names in `getAbsolutePath(...)` for
+ * Yarn Plug'n'Play and monorepo projects, so an evaluated config holds the package's directory, such
+ * as `.../node_modules/@storybook/react-vite`, or the same path inside a Yarn zip archive.
+ *
+ * @param nameOrPath A package name, or the absolute directory of an installed package.
+ *
+ * @returns The package name, or `nameOrPath` unchanged when it isn't inside a `node_modules`.
+ */
+function packageNameOf(nameOrPath: string) {
+  if (!path.isAbsolute(nameOrPath)) return nameOrPath;
+
+  const segments = nameOrPath.split(/[/\\]/);
+  const index = segments.lastIndexOf('node_modules');
+  if (index === -1) return nameOrPath;
+
+  const [scopeOrName, name] = segments.slice(index + 1);
+  return scopeOrName.startsWith('@') ? `${scopeOrName}/${name}` : scopeOrName;
 }
 
 // TODO: Update this when we start tracking refs within the project.json file; if refs are tracked there, we can skip this logic
@@ -242,7 +262,16 @@ async function readMainConfig(
     log.debug({ configDirectory, mainConfig });
     // An evaluated module that exports nothing is treated the same as no config at all.
     if (!mainConfig) return undefined;
-    return { readField: (field) => mainConfig.default?.[field] ?? mainConfig[field] };
+    const readField = (field: string) => mainConfig.default?.[field] ?? mainConfig[field];
+    return {
+      readField,
+      readName: ([field, ...nestedPath]) => {
+        let value = readField(field);
+        for (const key of nestedPath) value = isRecord(value) ? value[key] : undefined;
+        if (typeof value === 'string') return value;
+        return isRecord(value) && typeof value.name === 'string' ? value.name : undefined;
+      },
+    };
   } catch (err) {
     log.debug({ storybookV6error: err });
   }
@@ -255,7 +284,18 @@ async function readMainConfig(
 
     const mainConfig = await readConfig(storybookConfig);
     log.debug({ configDirectory, mainConfig: printConfig(mainConfig) });
-    return { readField: (field) => mainConfig.getSafeFieldValue([field]) };
+    return {
+      readField: (field) => mainConfig.getSafeFieldValue([field]),
+      // Unlike `getSafeFieldValue`, this sees through a name wrapped in `getAbsolutePath(...)`, and
+      // throws on a value it can't read statically, such as a variable.
+      readName: (fieldPath) => {
+        try {
+          return mainConfig.getNameFromPath(fieldPath);
+        } catch {
+          return undefined;
+        }
+      },
+    };
   } catch (err) {
     log.debug({ storybookV7error: err });
     return undefined;
@@ -279,13 +319,22 @@ export async function getStorybookMetadata(
     packageJson: deps.packageJson,
   });
   const configDirectory = await findConfigDirectory(deps, projectRoot, buildScript.configDir);
-  const mainConfig = await readMainConfig(configDirectory, deps.log);
-
-  const info = await Promise.allSettled([
-    findStorybookVersion(deps),
-    findBuilder(mainConfig),
-    findReferences(mainConfig),
+  let mainConfig = await readMainConfig(configDirectory, deps.log);
+  const versionInfo = await Promise.allSettled([
+    findStorybookVersion(deps, configDirectory, mainConfig?.readName(['framework']), async () => {
+      // A config that requires its dependencies only evaluates once the runtime is loaded.
+      mainConfig = await readMainConfig(configDirectory, deps.log);
+      return mainConfig?.readName(['framework']);
+    }),
   ]);
+
+  const info = [
+    ...versionInfo,
+    ...(await Promise.allSettled([
+      findBuilder(mainConfig, configDirectory, deps.log),
+      findReferences(mainConfig),
+    ])),
+  ];
 
   deps.log.debug(info);
   let metadata: Partial<Omit<Storybook, 'projectRoot'>> = {
@@ -353,49 +402,27 @@ export async function findConfigDirectory(
   return candidates[0];
 }
 
-function resolvePackageJson(pkg: string) {
-  try {
-    const packagePath = path.resolve(`node_modules/${pkg}/package.json`);
-    return readJson(packagePath);
-  } catch (error) {
-    return Promise.reject(error);
-  }
-}
-
-function findDependency(
-  { dependencies, devDependencies, peerDependencies }: StorybookInfoDeps['packageJson'],
-  predicate: (key: string) => string
+/**
+ * Finds the installed version of the Storybook the project's framework builds with. Under Yarn
+ * Plug'n'Play nothing resolves until the project's runtime is loaded, so only a miss looks for one,
+ * loads it and tries again. Projects that resolve never pay for that.
+ *
+ * @param deps The environment and logger.
+ * @param deps.env The environment, which can pin the version with `CHROMATIC_STORYBOOK_VERSION`.
+ * @param deps.log The logger.
+ * @param configDirectory The absolute Storybook config directory to resolve from.
+ * @param framework The framework the main config names, if any, as a name or a directory.
+ * @param rereadFramework Reads the main config again once the runtime is loaded and returns its
+ * framework.
+ *
+ * @returns The Storybook version.
+ */
+async function findStorybookVersion(
+  { env, log }: StorybookInfoDeps,
+  configDirectory: AbsolutePath,
+  framework: string | undefined,
+  rereadFramework: () => Promise<string | undefined>
 ) {
-  return [
-    Object.keys(dependencies || {}).find((dependency) => predicate(dependency)),
-    Object.keys(devDependencies || {}).find((dependency) => predicate(dependency)),
-    Object.keys(peerDependencies || {}).find((dependency) => predicate(dependency)),
-  ];
-}
-
-function getDependencyInfo(
-  { packageJson, log }: Pick<StorybookInfoDeps, 'packageJson' | 'log'>,
-  dependencyMap: Record<string, string>
-) {
-  // eslint-disable-next-line unicorn/prevent-abbreviations
-  const [dep, devDep, peerDep] = findDependency(packageJson, (key) => dependencyMap[key]);
-  const [pkg, version] = dep || devDep || peerDep || [];
-  const dependency = viewLayers[pkg];
-
-  if (dep && devDep && dep[0] === devDep[0]) {
-    log.warn(
-      `Found "${dep[0]}" in both "dependencies" and "devDependencies". This is probably a mistake.`
-    );
-  }
-  if (dep && peerDep && dep[0] === peerDep[0]) {
-    log.warn(
-      `Found "${dep[0]}" in both "dependencies" and "peerDependencies". This is probably a mistake.`
-    );
-  }
-  return { dependency, version, dependencyPackage: pkg };
-}
-
-async function findStorybookVersion({ env, log, options, packageJson }: StorybookInfoDeps) {
   // Allow setting Storybook version via CHROMATIC_STORYBOOK_VERSION='@storybook/react@4.0-alpha.8' for unusual cases
   if (env.CHROMATIC_STORYBOOK_VERSION) {
     const [, p, v] = env.CHROMATIC_STORYBOOK_VERSION.match(/(.+)@(.+)$/) || [];
@@ -412,49 +439,22 @@ async function findStorybookVersion({ env, log, options, packageJson }: Storyboo
     return { version };
   }
 
-  const {
-    dependency: viewLayer,
-    version,
-    dependencyPackage: pkg,
-  } = getDependencyInfo({ log, packageJson }, viewLayers);
-
-  if (viewLayer) {
-    if (options.storybookBuildDir) {
-      // If we aren't going to invoke the Storybook CLI later, we can exit early.
-      // Note that `version` can be a semver range in this case.
-      return { version };
+  const readVersion = (fromFramework: string | undefined) => {
+    try {
+      return readFrameworkStorybookVersion(log, configDirectory, fromFramework);
+    } catch (error) {
+      // Its message is advice for TurboSnap, so a miss is reported below in our own words.
+      if (error instanceof VersionNotFoundError) return undefined;
+      throw error;
     }
-    // Verify that the viewlayer package is actually present in node_modules.
-    return withTimeout(
-      resolvePackageJson(pkg)
-        .then((json) => ({ version: json.version }))
-        .catch(() => {
-          throw new Error(packageDoesNotExist(pkg));
-        }),
-      10_000,
-      LOOKUP_TIMEOUT_MESSAGE
-    );
-  }
-
-  if (!options.interactive) {
-    log.info(`No viewlayer package listed in dependencies. Checking transitive dependencies.`);
-  }
-
-  // We might have a transitive dependency (e.g. through `@nuxtjs/storybook` which depends on
-  // `@storybook/vue`). In this case we look for any viewlayer package present in node_modules,
-  // and return the first one we find.
-  return withTimeout(
-    Promise.any(
-      Object.entries(viewLayers).map(async ([key]) => {
-        const json = await resolvePackageJson(key);
-        return { version: json.version };
-      })
-    ).catch(() => {
-      throw new Error(packageDoesNotExist(pkg));
-    }),
-    10_000,
-    LOOKUP_TIMEOUT_MESSAGE
-  );
+  };
+  const version =
+    readVersion(framework) ??
+    (ensurePnpRuntime(configDirectory, log).status === 'loaded'
+      ? readVersion(await rereadFramework())
+      : undefined);
+  if (!version) throw new Error(packageDoesNotExist('storybook'));
+  return { version };
 }
 
 /**

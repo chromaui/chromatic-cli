@@ -1,4 +1,5 @@
 import TestLogger from '@cli/testLogger';
+import { readFileSync } from 'fs';
 import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,6 +21,11 @@ const REACT = { '@storybook/react': '1.2.3' };
 const VUE = { '@storybook/vue': '1.2.3' };
 
 const FIXTURES = 'node-src/__mocks__/storybookMainConfig';
+
+// The version comes from the installed `storybook` package, not the view layer package.json declares.
+const STORYBOOK_VERSION = JSON.parse(
+  readFileSync('node_modules/storybook/package.json', 'utf8')
+).version;
 
 // The CLI runs at the repo root in these tests, so the fixture paths below are already relative to
 // the project root.
@@ -44,27 +50,9 @@ describe('getStorybookInfo', () => {
     expect(sbInfo).toEqual(
       // We're getting the result of tracing chromatic-cli's node_modules here.
       expect.objectContaining({
-        version: expect.any(String),
+        version: STORYBOOK_VERSION,
         builder: { name: '@storybook/html-vite', packageVersion: expect.any(String) },
       })
-    );
-  });
-
-  it('warns on duplicate devDependency', async () => {
-    const ctx = getContext({ packageJson: { dependencies: REACT, devDependencies: REACT } });
-    await getStorybookInfo(ctx, PROJECT_ROOT);
-    expect(log.warn).toHaveBeenCalledWith(
-      expect.stringContaining('both "dependencies" and "devDependencies"')
-    );
-  });
-
-  it('warns on duplicate peerDependency', async () => {
-    const ctx = getContext({
-      packageJson: { dependencies: REACT, peerDependencies: REACT },
-    });
-    await getStorybookInfo(ctx, PROJECT_ROOT);
-    expect(log.warn).toHaveBeenCalledWith(
-      expect.stringContaining('both "dependencies" and "peerDependencies"')
     );
   });
 
@@ -100,16 +88,9 @@ describe('getStorybookInfo', () => {
     });
   });
 
-  it('looks up package in node_modules on missing dependency', async () => {
+  it('reports the installed version when package.json declares no view layer', async () => {
     await expect(getStorybookInfo(baseDeps, PROJECT_ROOT)).resolves.toEqual(
-      // We're getting the result of tracing chromatic-cli's node_modules here.
-      expect.objectContaining({
-        version: expect.any(String),
-        builder: { name: '@storybook/html-vite', packageVersion: expect.any(String) },
-      })
-    );
-    expect(log.info).toHaveBeenCalledWith(
-      expect.stringContaining('No viewlayer package listed in dependencies')
+      expect.objectContaining({ version: STORYBOOK_VERSION })
     );
   });
 

@@ -52,7 +52,7 @@ case "$fixture" in
     install=("${pnpm[@]}" --filter @myorg/ui add --save-dev "$tgz")
     cli=("${pnpm[@]}" exec chromatic)
     ;;
-  monorepo-yarn)
+  monorepo-yarn | monorepo-yarn-pnp)
     install=(corepack yarn workspace @myorg/ui add --dev "chromatic@file:$tgz")
     cli=(corepack yarn chromatic)
     ;;
