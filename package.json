@@ -196,7 +196,7 @@
     "snyk-nodejs-lockfile-parser": "2.10.4",
     "snyk-nodejs-plugin": "2.2.1",
     "storybook": "^10.6.5",
-    "string-argv": "^0.3.1",
+    "string-argv": "^0.4.0",
     "strip-ansi": "^7.1.0",
     "tmp-promise": "3.0.2",
     "ts-dedent": "^1.0.0",

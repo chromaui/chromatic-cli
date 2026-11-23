@@ -4548,7 +4548,7 @@ __metadata:
     snyk-nodejs-lockfile-parser: "npm:2.10.4"
     snyk-nodejs-plugin: "npm:2.2.1"
     storybook: "npm:^10.6.5"
-    string-argv: "npm:^0.3.1"
+    string-argv: "npm:^0.4.0"
     strip-ansi: "npm:^7.1.0"
     tmp-promise: "npm:3.0.2"
     ts-dedent: "npm:^1.0.0"
@@ -10210,10 +10210,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"string-argv@npm:^0.3.1":
-  version: 0.3.2
-  resolution: "string-argv@npm:0.3.2"
-  checksum: 10c0/75c02a83759ad1722e040b86823909d9a2fc75d15dd71ec4b537c3560746e33b5f5a07f7332d1e3f88319909f82190843aa2f0a0d8c8d591ec08e93d5b8dec82
+"string-argv@npm:^0.4.0":
+  version: 0.4.0
+  resolution: "string-argv@npm:0.4.0"
+  checksum: 10c0/73bd6f146bb2054e020f00863c37c53ac2c0f575910d69114f9ba15cc18f7d46912e0fa5bd08a178a7f624fdfdcb7c62b46af0b65df579efece9085307aaed19
   languageName: node
   linkType: hard
 
