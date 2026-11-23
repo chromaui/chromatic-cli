@@ -30,7 +30,9 @@ const failure = (output: string) =>
   captureTask(fallbackFailureState(validating(ctx).title, new Error(output)));
 
 const rnFailure = (output: string) =>
-  captureTask(fallbackFailureState('Prepare your built React Native Storybook', new Error(output)));
+  captureTask(
+    fallbackFailureState('Preparing your built React Native Storybook', new Error(output))
+  );
 
 export const Validating = () => captureTask(validating(ctx));
 
