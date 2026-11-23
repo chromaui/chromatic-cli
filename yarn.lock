@@ -4524,6 +4524,7 @@ __metadata:
     https-proxy-agent: "npm:^9.1.0"
     jiti: "npm:^2.7.0"
     json5: "npm:^2.2.3"
+    jsonc-parser: "npm:^3.3.1"
     jsonfile: "npm:^6.0.1"
     junit-report-builder: "npm:3.1.0"
     knip: "npm:^6.43.0"

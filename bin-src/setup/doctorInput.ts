@@ -17,7 +17,7 @@ import { validateFiles } from '../../node-src/tasks/prepare/validateFiles';
 import type { StorybookInfoDeps } from '../../node-src/tasks/storybookInfo';
 import type { Flags, Options } from '../../node-src/types';
 import type { Fix } from './checks';
-import { forEachRepoFile, formatJson, readJson, relativeOrDot } from './shared';
+import { forEachRepoFile, isEditableJson, readJson, relativeOrDot, rewriteJson } from './shared';
 
 // One logger for every check run: each createLogger adds a process listener, so `--fix`, which
 // checks again after each fix, would pile them up until Node warns.
@@ -40,7 +40,7 @@ export interface DoctorInput {
   configKeys: Set<string>;
   /** Which options were passed as flags. A flag wins over the config file, so fixing it there does nothing. */
   flagKeys: Set<string>;
-  /** Whether fixes can rewrite the config file: plain JSON, or no file yet. JSONC and JSON5 would lose comments. */
+  /** Whether fixes can edit the config file: JSON or JSONC, which keeps its comments, or no file yet. */
   configEditable: boolean;
   options: CheckedOptions;
   packageJsonPath?: string;
@@ -87,20 +87,12 @@ async function readConfigFile(cwd: string, flags: Flags) {
   if (!configuration.configFile) return { configuration, configEditable: true };
   const configFile = path.resolve(cwd, configuration.configFile);
   const configText = readFileSync(configFile, 'utf8');
-  let configEditable = false;
-  if (configFile.endsWith('.json')) {
-    try {
-      JSON.parse(configText);
-      configEditable = true;
-    } catch {
-      // JSON5 syntax such as comments, which rewriting would drop.
-    }
-  }
   return {
     configuration,
     configFile,
     configJson: JSON5.parse<Record<string, any>>(configText),
-    configEditable,
+    // Fixes edit JSON and JSONC in place, keeping comments; other JSON5 syntax can't be edited.
+    configEditable: isEditableJson(configText),
   };
 }
 
@@ -293,7 +285,7 @@ async function resolveStorybook(
 
 /**
  * A fix that edits the config file, offered only when the file decides that option: a flag would
- * win over the edit, and rewriting JSONC or JSON5 would drop its comments.
+ * win over the edit, and JSON5 syntax beyond comments can't be edited in place.
  *
  * @param input What loadDoctorInput read.
  * @param key The option the fix changes.
@@ -332,5 +324,5 @@ function configEdit(input: DoctorInput, change: (json: Record<string, any>) => v
   change(json);
   const file = input.configFile ?? path.join(input.cwd, 'chromatic.config.json');
   const previous = existsSync(file) ? readFileSync(file, 'utf8') : undefined;
-  return { file, content: formatJson(json, previous) };
+  return { file, content: rewriteJson(json, previous) };
 }

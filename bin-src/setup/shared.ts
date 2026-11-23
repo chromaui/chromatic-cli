@@ -4,6 +4,16 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import * as clack from '@clack/prompts';
+// jsonc-parser's main entry is a UMD build whose require calls the bundler can't follow.
+import {
+  applyEdits,
+  findNodeAtLocation,
+  modify,
+  type Node as JsonNode,
+  parse as parseJsonc,
+  ParseError,
+  parseTree,
+} from 'jsonc-parser/lib/esm/main.js';
 import picocolors from 'picocolors';
 
 import { SubcommandFailure } from '../subcommandFailure';
@@ -191,16 +201,15 @@ export function readJson(filePath: string): Record<string, any> | undefined {
 }
 
 /**
- * Writes JSON with the file's existing indentation and a trailing newline. Short arrays of strings
- * stay on one line, the way people write `untraced` and `externals` by hand.
+ * Writes JSON with a trailing newline. Short arrays of strings stay on one line, the way people
+ * write `untraced` and `externals` by hand.
  *
  * @param value The value to write.
- * @param previousText The file's current text, to keep its indentation.
+ * @param indent One level of indentation.
  *
- * @returns The file's new text.
+ * @returns The text.
  */
-export function formatJson(value: unknown, previousText?: string) {
-  const indent = previousText?.match(/^[\t ]+(?=")/m)?.[0] ?? '  ';
+function formatJson(value: unknown, indent = '  ') {
   const text = JSON.stringify(value, undefined, indent).replaceAll(
     /\[\s+((?:"[^"\n]*",\s+)*"[^"\n]*")\s+\]/g,
     (whole, items: string) => {
@@ -209,6 +218,169 @@ export function formatJson(value: unknown, previousText?: string) {
     }
   );
   return `${text}\n`;
+}
+
+const JSONC_OPTIONS = { allowTrailingComma: true, disallowComments: false };
+
+/**
+ * Whether a config file's text can be edited in place: JSON, or JSON with comments and trailing
+ * commas. JSON5's other syntax, such as unquoted keys, can't.
+ *
+ * @param text The file's text.
+ *
+ * @returns True when rewriteJson can edit it.
+ */
+export function isEditableJson(text: string) {
+  const errors: ParseError[] = [];
+  parseJsonc(text, errors, JSONC_OPTIONS);
+  return errors.length === 0;
+}
+
+/**
+ * The new text of a JSON file whose value changes. A new file is written like formatJson. An
+ * existing one, with or without comments, is edited in place, one changed top-level key at a time,
+ * so the rest of it keeps its layout, such as how its arrays are wrapped, and its comments.
+ *
+ * @param value The file's new value.
+ * @param previousText The file's current text, if it exists; isEditableJson must accept it.
+ *
+ * @returns The file's new text.
+ */
+export function rewriteJson(value: Record<string, any>, previousText?: string) {
+  if (previousText === undefined) return formatJson(value);
+  const previous: Record<string, any> = parseJsonc(previousText, [], JSONC_OPTIONS) ?? {};
+  const indent = previousText.match(/^[\t ]+(?=["/])/m)?.[0] ?? '  ';
+  let text = previousText;
+  for (const key of new Set([...Object.keys(previous), ...Object.keys(value)])) {
+    if (JSON.stringify(previous[key]) === JSON.stringify(value[key])) continue;
+    text = editJsonc(text, key, value[key], indent);
+  }
+  return text;
+}
+
+// The rest of a line after a property: an optional comma, then whitespace and an optional comment.
+const LINE_END = /^(\s*?)(,?)([\t ]*(?:\/\/[^\r\n]*|\/\*.*?\*\/[\t ]*)?)(?=\r?\n|$)/;
+
+/** One key edit in a file's text, with the file's line ending and indentation. */
+class JsonEdit {
+  readonly eol: string;
+
+  constructor(
+    readonly text: string,
+    readonly key: string,
+    readonly value: unknown,
+    readonly indent: string
+  ) {
+    this.eol = text.includes('\r\n') ? '\r\n' : '\n';
+  }
+
+  fallback() {
+    const { text, key, value, indent, eol } = this;
+    const formattingOptions = {
+      insertSpaces: !indent.startsWith('\t'),
+      tabSize: indent.startsWith('\t') ? 1 : indent.length,
+      eol,
+    };
+    return applyEdits(text, modify(text, [key], value, { formattingOptions }));
+  }
+
+  lineStart(offset: number) {
+    return this.text.lastIndexOf('\n', offset - 1) + 1;
+  }
+
+  // The whitespace before offset, when nothing else comes before it on its line.
+  ownLine(offset: number) {
+    const before = this.text.slice(this.lineStart(offset), offset);
+    return before.trim() ? undefined : before;
+  }
+
+  // The value as written on a line indented by lineIndent.
+  render(lineIndent: string, wrapped = false) {
+    const { value, indent } = this;
+    const json = wrapped ? JSON.stringify(value, undefined, indent) : formatJson(value, indent);
+    return json
+      .trimEnd()
+      .split('\n')
+      .join(this.eol + lineIndent);
+  }
+
+  // Replaces only the value. An array keeps the wrapping it had.
+  replace(node: JsonNode, property: JsonNode) {
+    const { text } = this;
+    const old = text.slice(node.offset, node.offset + node.length);
+    const wrapped = Array.isArray(this.value) && old.includes('\n');
+    const rendered = this.render(this.ownLine(property.offset) ?? '', wrapped);
+    return text.slice(0, node.offset) + rendered + text.slice(node.offset + node.length);
+  }
+
+  // Removes the property's lines when it has them to itself.
+  remove(property: JsonNode) {
+    const { text } = this;
+    const end = property.offset + property.length;
+    const after = LINE_END.exec(text.slice(end));
+    if (this.ownLine(property.offset) === undefined || !after) return this.fallback();
+    const start = this.lineStart(property.offset);
+    const rest = text.slice(end + after[0].length).replace(/^\r?\n/, '');
+    const siblings = property.parent?.children ?? [];
+    const index = siblings.indexOf(property);
+    const before = index > 0 ? siblings.at(index - 1) : undefined;
+    if (after[2] || !before) return text.slice(0, start) + rest;
+    // It was the last key, so the one before it loses its comma.
+    const beforeEnd = before.offset + before.length;
+    const tail = LINE_END.exec(text.slice(beforeEnd));
+    if (!tail?.[2]) return this.fallback();
+    const comma = beforeEnd + tail[1].length;
+    return text.slice(0, comma) + text.slice(comma + 1, start) + rest;
+  }
+
+  // Adds a line after the object's last property, keeping a trailing comment on that line.
+  add(parent: JsonNode | undefined) {
+    const { text } = this;
+    const last = parent?.children?.at(-1);
+    const lineIndent = last && this.ownLine(last.offset);
+    if (!last || lineIndent === undefined) return this.fallback();
+    const end = last.offset + last.length;
+    const after = LINE_END.exec(text.slice(end));
+    if (!after) return this.fallback();
+    const [whole, space, comma, comment] = after;
+    const line = `${this.eol}${lineIndent}${JSON.stringify(this.key)}: ${this.render(lineIndent)}${comma}`;
+    return `${text.slice(0, end)}${space},${comment}${line}${text.slice(end + whole.length)}`;
+  }
+}
+
+/**
+ * Sets, adds or removes one top-level key in JSON or JSONC text. jsonc-parser's own edits drop the
+ * comment on the line before a removed key and reformat the key before an added one, so whole lines
+ * are added and removed here, and a changed value is replaced on its own. jsonc-parser is only the
+ * fallback for layouts these don't handle, such as several keys on one line.
+ *
+ * @param text The file's text.
+ * @param key The top-level key.
+ * @param value The key's new value, or undefined to remove it.
+ * @param indent The file's indentation.
+ *
+ * @returns The new text.
+ */
+function editJsonc(text: string, key: string, value: unknown, indent: string) {
+  // Parsers keep a repeated key's last value, so its earlier copies go before the edit.
+  const copies = parseTree(text, [], JSONC_OPTIONS)?.children?.filter(
+    (property) => property.children?.[0].value === key
+  );
+  if (copies && copies.length > 1) {
+    return editJsonc(
+      new JsonEdit(text, key, undefined, indent).remove(copies[0]),
+      key,
+      value,
+      indent
+    );
+  }
+  const edit = new JsonEdit(text, key, value, indent);
+  const root = parseTree(text, [], JSONC_OPTIONS);
+  const node = root && findNodeAtLocation(root, [key]);
+  if (node?.parent) {
+    return value === undefined ? edit.remove(node.parent) : edit.replace(node, node.parent);
+  }
+  return value === undefined ? text : edit.add(root);
 }
 
 /**

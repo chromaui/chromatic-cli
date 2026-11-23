@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 
-import { formatJson } from './shared';
+import { rewriteJson } from './shared';
 
 /**
- * Changes package.json and keeps its indentation.
+ * Changes package.json in place, so only the keys that change are touched.
  *
  * @param file The package.json to edit.
  * @param change Edits the parsed JSON in place.
@@ -14,5 +14,5 @@ export function packageJsonEdit(file: string, change: (json: Record<string, any>
   const previous = readFileSync(file, 'utf8');
   const json = JSON.parse(previous);
   change(json);
-  return { file, content: formatJson(json, previous) };
+  return { file, content: rewriteJson(json, previous) };
 }
