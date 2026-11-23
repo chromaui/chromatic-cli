@@ -318,9 +318,8 @@ export async function main(argv: string[]) {
   await tokenStep(session, project);
   await configStep(session, project);
   // Install even when package.json already had everything: an earlier run's install may have failed.
-  if (await packageStep(session, project, project.framework)) {
-    await installStep(session, project, packageManager);
-  }
+  const packageJsonAccepted = await packageStep(session, project, project.framework);
+  if (packageJsonAccepted) await installStep(session, project, packageManager);
 
   // 6. .gitignore
   const gitignore = gitignoreAdditions(gitRoot, GITIGNORE_ENTRIES);
@@ -340,7 +339,16 @@ export async function main(argv: string[]) {
   } else {
     process.chdir(project.directory);
     const problemsIn = (checks: Check[]) => checks.filter((c) => c.status !== 'pass');
-    const recheck = () => collectChecks(project.directory);
+    // After a no to the package.json change, don't offer to change package.json again.
+    const packageJson = path.join(project.directory, 'package.json');
+    const recheck = async () => {
+      const results = await collectChecks(project.directory);
+      if (packageJsonAccepted) return results;
+      return results.map((check): Check => {
+        const { fix, ...rest } = check;
+        return fix?.edits.some((edit) => edit.file === packageJson) ? rest : check;
+      });
+    };
     let checks = await recheck();
     clack.log.step(`Checked the setup: ${summarize(checks)}`);
     printChecks(problemsIn(checks));
