@@ -22,7 +22,7 @@ export async function renderPrepare(ctx: Context): Promise<void> {
         failure: (context: Context, error: Error) =>
           fallbackFailureState(
             context.isReactNativeApp
-              ? 'Prepare your built React Native Storybook'
+              ? 'Preparing your built React Native Storybook'
               : validating(context).title,
             error
           ),

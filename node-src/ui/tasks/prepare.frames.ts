@@ -6,6 +6,7 @@ import {
   hashing,
   invalid,
   invalidAndroidArtifact,
+  invalidIosArtifact,
   invalidReactNative,
   success,
   traced,
@@ -29,7 +30,9 @@ const failure = (output: string) =>
   captureTask(fallbackFailureState(validating(ctx).title, new Error(output)));
 
 const rnFailure = (output: string) =>
-  captureTask(fallbackFailureState('Prepare your built React Native Storybook', new Error(output)));
+  captureTask(
+    fallbackFailureState('Preparing your built React Native Storybook', new Error(output))
+  );
 
 export const Validating = () => captureTask(validating(ctx));
 
@@ -37,6 +40,12 @@ export const Invalid = () =>
   failure(invalid({ ...ctx, sourceDir: sourceDirectory, buildLogFile }).output);
 
 export const InvalidAndroidArtifact = () => rnFailure(invalidAndroidArtifact().output);
+
+export const InvalidIosArtifactDeviceBuild = () =>
+  rnFailure(invalidIosArtifact({ platform: 'iPhoneOS' }).output);
+
+export const InvalidIosArtifactIPadOnly = () =>
+  rnFailure(invalidIosArtifact({ families: 'iPad' }).output);
 
 export const InvalidReactNativeAndroidMissing = () =>
   rnFailure(invalidReactNative({ sourceDir: sourceDirectory }, ['storybook.apk']).output);
