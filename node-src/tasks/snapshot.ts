@@ -13,7 +13,7 @@ import { Context, Deps, TaskResult } from '../types';
 import { testLabel } from '../ui/components/testLabel';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';
-import buildSummaryMessage from '../ui/messages/info/buildSummary';
+import buildSummaryMessage, { summaryListsTests } from '../ui/messages/info/buildSummary';
 import speedUpCI from '../ui/messages/info/speedUpCI';
 import { pending } from '../ui/tasks/snapshot';
 
@@ -57,9 +57,10 @@ const testFields = `
 // These reads are not one snapshot. If someone reviews a test between the last poll and this
 // query, or while the index resolves its fields one by one, the message can disagree with itself,
 // such as a pending count of 0 above a listed pending test. That needs a review to land in the
-// one or two requests' time between the last poll and this query returning, and it only changes
-// what is printed: the exit code comes from the poll's status alone. We accept that rather than
-// make the index return one consistent read.
+// one or two requests' time between the last poll and this query returning. It changes only the
+// printed text and the counts the run reports (`getRunOutput` reads them from `ctx.build`), never
+// the exit code, which comes from the poll's status alone. We accept that rather than make the
+// index return one consistent read.
 const SnapshotBuildTestsQuery = `
   query SnapshotBuildTestsQuery($number: Int!, $limit: Int!) {
     app {
@@ -135,6 +136,7 @@ export interface SnapshotInput {
   uploadedBytes?: number;
   matchesBranch: Context['git']['matchesBranch'];
   turboSnapOutcome?: Context['turboSnapOutcome'];
+  isOnboarding: Context['isOnboarding'];
 }
 
 export type SnapshotDeps = Pick<Deps, 'client' | 'log' | 'env' | 'options' | 'report'>;
@@ -155,7 +157,7 @@ export async function snapshotProject(
   input: SnapshotInput
 ): Promise<TaskResult<SnapshotOutput>> {
   const { client, log, env, options } = deps;
-  const { skipSnapshots, uploadedBytes, matchesBranch, turboSnapOutcome } = input;
+  const { skipSnapshots, uploadedBytes, matchesBranch, turboSnapOutcome, isOnboarding } = input;
 
   if (skipSnapshots || options.dryRun) {
     return { kind: 'skip-self' };
@@ -217,81 +219,74 @@ export async function snapshotProject(
     await waitForBuildToCompleteAndHandleErrors(deps, build.id, uiStateUpdater, reportToken);
   }
 
-  let completedBuild = await getCompletedBuild();
-  if (listsTests(completedBuild)) {
-    completedBuild = { ...completedBuild, ...(await getResultTests(deps, number, reportToken)) };
+  const output = completedOutput(await getCompletedBuild(), options, matchesBranch);
+  if (listsTests(output, isOnboarding)) {
+    output.build = { ...output.build, ...(await getResultTests(deps, number, reportToken)) };
   }
+  return { kind: 'continue', output };
+}
 
+// A build with changes passes when they were auto-accepted or --exit-zero-on-changes applies.
+const changesPass = (
+  completedBuild: Context['build'],
+  options: SnapshotDeps['options'],
+  matchesBranch: SnapshotInput['matchesBranch']
+) =>
+  completedBuild.autoAcceptChanges ||
+  // The boolean version of this check is handled by ctx.git.matchesBranch
+  options?.exitZeroOnChanges === 'true' ||
+  matchesBranch?.(options?.exitZeroOnChanges || false);
+
+// Maps a completed build's status to its exit code and the message that reports it.
+function completedOutput(
+  completedBuild: Context['build'],
+  options: SnapshotDeps['options'],
+  matchesBranch: SnapshotInput['matchesBranch']
+): SnapshotOutput {
   switch (completedBuild.status) {
     case 'PASSED':
-      return {
-        kind: 'continue',
-        output: { exitCode: exitCodes.OK, userError: false, log: 'passed', build: completedBuild },
-      };
+      return { exitCode: exitCodes.OK, userError: false, log: 'passed', build: completedBuild };
 
     // They may have sneakily looked at the build while we were waiting
     case 'ACCEPTED':
     case 'PENDING':
     case 'DENIED': {
-      const passed =
-        completedBuild.autoAcceptChanges ||
-        // The boolean version of this check is handled by ctx.git.matchesBranch
-        options?.exitZeroOnChanges === 'true' ||
-        matchesBranch?.(options?.exitZeroOnChanges || false);
-      return passed
-        ? {
-            kind: 'continue',
-            output: {
-              exitCode: exitCodes.OK,
-              userError: false,
-              log: 'passed',
-              build: completedBuild,
-            },
-          }
+      return changesPass(completedBuild, options, matchesBranch)
+        ? { exitCode: exitCodes.OK, userError: false, log: 'passed', build: completedBuild }
         : {
-            kind: 'continue',
-            output: {
-              exitCode: exitCodes.BUILD_HAS_CHANGES,
-              userError: true,
-              log: 'changes',
-              build: completedBuild,
-            },
+            exitCode: exitCodes.BUILD_HAS_CHANGES,
+            userError: true,
+            log: 'changes',
+            build: completedBuild,
           };
     }
 
     case 'BROKEN':
       return {
-        kind: 'continue',
-        output: {
-          exitCode: exitCodes.BUILD_HAS_ERRORS,
-          userError: true,
-          log: 'errors',
-          build: completedBuild,
-        },
+        exitCode: exitCodes.BUILD_HAS_ERRORS,
+        userError: true,
+        log: 'errors',
+        build: completedBuild,
       };
 
     case 'FAILED':
-      return {
-        kind: 'continue',
-        output: { exitCode: exitCodes.BUILD_FAILED, userError: false, build: completedBuild },
-      };
+      return { exitCode: exitCodes.BUILD_FAILED, userError: false, build: completedBuild };
 
     case 'CANCELLED':
-      return {
-        kind: 'continue',
-        output: { exitCode: exitCodes.BUILD_WAS_CANCELED, userError: true, build: completedBuild },
-      };
+      return { exitCode: exitCodes.BUILD_WAS_CANCELED, userError: true, build: completedBuild };
 
     default:
       throw new Error(`Unexpected build status: ${completedBuild.status}`);
   }
 }
 
-// Builds that end with the result message, which lists tests. Passed, auto-accepted, failed, and
-// canceled builds print other messages.
-const listsTests = (build: Context['build']) =>
-  build.status === 'BROKEN' ||
-  (['PENDING', 'DENIED', 'ACCEPTED'].includes(build.status) && !build.autoAcceptChanges);
+// Outcomes whose message is the result block, which lists tests. The errors and changes messages
+// always are; the passed message is only for a build that passed because of
+// --exit-zero-on-changes.
+const listsTests = ({ log, build }: SnapshotOutput, isOnboarding: boolean) =>
+  log === 'errors' ||
+  log === 'changes' ||
+  (log === 'passed' && summaryListsTests(build, isOnboarding));
 
 // The poll's counts already decided the exit code, so a failed fetch keeps them and leaves the
 // lists out instead of failing a completed build.
@@ -356,6 +351,7 @@ export const extractSnapshotInput = (ctx: Context): SnapshotInput => ({
   uploadedBytes: ctx.uploadedBytes,
   matchesBranch: ctx.git.matchesBranch,
   turboSnapOutcome: ctx.turboSnapOutcome,
+  isOnboarding: ctx.isOnboarding,
 });
 
 export const applySnapshotOutput = (ctx: Context, output: SnapshotOutput) => {

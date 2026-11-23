@@ -325,6 +325,26 @@ describe('snapshotProject', () => {
       expect(testsQueryCalls(ctx)).toHaveLength(calls);
     });
 
+    // Under --exit-zero-on-changes, accepted and onboarding builds print the passed or welcome
+    // message, which lists no tests.
+    it.each([
+      ['ACCEPTED', false, 0],
+      ['PENDING', false, 1],
+      ['PENDING', true, 0],
+    ])(
+      'fetches the lists for a %s build under --exit-zero-on-changes (onboarding: %s): %i calls',
+      async (status, isOnboarding, calls) => {
+        const ctx = contextFor(status, () => ({ app: { build: { pendingTests } } }));
+        ctx.options = { exitZeroOnChanges: 'true' };
+        ctx.isOnboarding = isOnboarding;
+
+        await runSnapshot(ctx);
+
+        expect(testsQueryCalls(ctx)).toHaveLength(calls);
+        expect(ctx.exitCode).toBe(0);
+      }
+    );
+
     it('keeps the exit code and leaves the lists out when the index rejects the query', async () => {
       const ctx = contextFor('PENDING', () => {
         throw { name: 'GraphQLError', message: 'Cannot access those build fields' };

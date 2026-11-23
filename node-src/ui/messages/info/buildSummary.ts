@@ -15,16 +15,21 @@ const changesLine = (build: Context['build']) => {
   return summary ? `${summary}.` : 'No changes were found in this build.';
 };
 
+// Only clean, auto-accepted, accepted, and --exit-zero-on-changes builds reach this message, so
+// a build that did not pass is here because of the flag. Accepted changes count as passing:
+// they were reviewed, and the build exits 0 for them.
+const hasPassed = (build: Context['build']) =>
+  build.status === 'PASSED' || build.status === 'ACCEPTED' || build.autoAcceptChanges;
+
+// Whether this message is the result block, which lists tests. Onboarding builds keep the welcome.
+export const summaryListsTests = (build: Context['build'], isOnboarding: boolean) =>
+  !isOnboarding && !hasPassed(build);
+
 export default (ctx: Context) => {
   const { build, isOnboarding } = ctx;
   const url = isOnboarding ? build.app.setupUrl : build.webUrl;
   const ignoredLine = ignoredTests({ ignoredCount: build.ignoredCount, url, isOnboarding });
-
-  // Only clean, auto-accepted, accepted, and --exit-zero-on-changes builds reach this message, so
-  // a build that did not pass is here because of the flag. Accepted changes count as passing:
-  // they were reviewed, and the build exits 0 for them.
-  const passed =
-    build.status === 'PASSED' || build.status === 'ACCEPTED' || build.autoAcceptChanges;
+  const passed = hasPassed(build);
 
   if (isOnboarding) {
     const { snapshots, components, stories, e2eTests } = stats({ build });
@@ -42,7 +47,7 @@ export default (ctx: Context) => {
     `);
   }
 
-  if (!passed) {
+  if (summaryListsTests(build, isOnboarding)) {
     return buildResults(build, false, success);
   }
 
