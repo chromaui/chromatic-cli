@@ -42,8 +42,8 @@ type TraceWithV2Result = TraceChangedFilesResult & { hashBased?: HashBasedTurboS
  * @returns The trace result: skipped, bailed, or traced with the affected story files, plus which
  * TurboSnap decides the build.
  *
- * @throws {Error} If v1 is enabled without a stats path, or if reading or parsing the stats file
- * or v1 tracing fails.
+ * @throws {Error} If v1 is enabled without a stats path, or if v1 traces and reading the stats file
+ * or tracing fails.
  */
 export async function traceChangedFiles(
   input: TurboSnapInput,
@@ -92,15 +92,30 @@ async function traceWithBothGenerations(
 
   await logUntracedStorybookConfig(input);
 
-  const stats = await readStatsFile(statsPath);
-  // V2 never affects the v1 decision; it only reports whether the Index applies v2 to this build.
-  const hashBased = collectHashes ? await runTurboSnapV2(input, stats, buildId) : undefined;
-
   if (!traceWithV1) {
+    const hashBased = collectHashes
+      ? await collectHashesWithoutV1(input, statsPath, buildId)
+      : undefined;
     return { status: 'skipped', ...(hashBased && { hashBased }) };
   }
 
+  const stats = await readStatsFile(statsPath);
+  // V2 never affects the v1 decision; it only reports whether the Index applies v2 to this build.
+  const hashBased = collectHashes ? await runTurboSnapV2(input, stats, buildId) : undefined;
   return runTurboSnapV1(input, stats, statsPath, { hashBased, onTraceWithV1 });
+}
+
+// Without v1 tracing, the stats only feed hash collection, which never fails the build, so an
+// unreadable stats file skips it instead.
+async function collectHashesWithoutV1(input: TurboSnapInput, statsPath: string, buildId: string) {
+  const stats = await readStatsFile(statsPath).catch((error: unknown) => {
+    input.log[input.turboSnap ? 'warn' : 'debug'](
+      'Failed to read the stats file, so TurboSnap 2.0 skipped this build',
+      error
+    );
+    return undefined;
+  });
+  return stats && runTurboSnapV2(input, stats, buildId);
 }
 
 // Playwright and Cypress report no module graph, so their generated story files reach no tracked

@@ -35,6 +35,9 @@ beforeEach(() => {
     './stats.json/preview-stats.json': JSON.stringify(trimmedFile),
     './small/preview-stats.json': JSON.stringify(smallStats),
     './no-extension/preview-stats': JSON.stringify(smallStats),
+    './missing-modules/preview-stats.json': JSON.stringify({ children: [smallStats] }),
+    './object-modules/preview-stats.json': JSON.stringify({ modules: {} }),
+    './null/preview-stats.json': 'null',
   });
 });
 
@@ -96,6 +99,16 @@ describe('Trim Stats File', () => {
   it('fails when the input cannot be read', async () => {
     await expect(main(['./nope.json'])).rejects.toThrow('ENOENT');
   });
+
+  it.each(['missing-modules', 'object-modules', 'null'])(
+    'fails with the file path when the input has no modules array (%s)',
+    async (directory) => {
+      await expect(main([`./${directory}/preview-stats.json`])).rejects.toThrow(
+        `./${directory}/preview-stats.json must contain a top-level modules array.`
+      );
+      expect(existsSync(`./${directory}/preview-stats.trimmed.json`)).toBe(false);
+    }
+  );
 
   it('rejects unknown flags instead of treating the next argument as their value', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
