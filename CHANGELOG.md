@@ -1,3 +1,29 @@
+# v18.15.2 (Mon Nov 23 2026)
+
+#### 🐛 Bug Fix
+
+- Resolve the Storybook version and builder from the config directory [#1722](https://github.com/chromaui/chromatic-cli/pull/1722) ([@codykaup](https://github.com/codykaup))
+- Return TurboSnap results from prepare and upload instead of Context [#1720](https://github.com/chromaui/chromatic-cli/pull/1720) ([@codykaup](https://github.com/codykaup))
+- Correct verify-chromatic-cli recipes found stale in a live pass [#1725](https://github.com/chromaui/chromatic-cli/pull/1725) ([@codykaup](https://github.com/codykaup))
+- Move installed-package lookups into a shared module [#1721](https://github.com/chromaui/chromatic-cli/pull/1721) ([@codykaup](https://github.com/codykaup))
+- Check storybook.app can run on an iPhone simulator before upload [#1726](https://github.com/chromaui/chromatic-cli/pull/1726) ([@jmhobbs](https://github.com/jmhobbs))
+- Bump string-argv from 0.3.2 to 0.4.0 [#1735](https://github.com/chromaui/chromatic-cli/pull/1735) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump the storybook group with 4 updates [#1733](https://github.com/chromaui/chromatic-cli/pull/1733) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump zen-observable from 0.8.15 to 0.10.0 [#1734](https://github.com/chromaui/chromatic-cli/pull/1734) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Bump cross-env from 7.0.3 to 10.1.0 [#1736](https://github.com/chromaui/chromatic-cli/pull/1736) ([@dependabot[bot]](https://github.com/dependabot[bot]))
+- Run the packed CLI against the e2e fixtures in the merge queue [#1727](https://github.com/chromaui/chromatic-cli/pull/1727) ([@codykaup](https://github.com/codykaup))
+- Bump vite to 8.3.8 in the dev setup, e2e fixtures, and smoke tests [#1717](https://github.com/chromaui/chromatic-cli/pull/1717) ([@codykaup](https://github.com/codykaup))
+- Recapture every snapshot when an E2E build's own package changes [#1724](https://github.com/chromaui/chromatic-cli/pull/1724) ([@codykaup](https://github.com/codykaup))
+- Report only unsupported builders when TurboSnap 2.0 finds no story files [#1713](https://github.com/chromaui/chromatic-cli/pull/1713) ([@codykaup](https://github.com/codykaup))
+
+#### Authors: 3
+
+- [@dependabot[bot]](https://github.com/dependabot[bot])
+- Cody Kaup ([@codykaup](https://github.com/codykaup))
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v18.15.1 (Thu Nov 19 2026)
 
 #### 🐛 Bug Fix
