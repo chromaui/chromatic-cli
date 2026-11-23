@@ -2,12 +2,19 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { stripVTControlCharacters } from 'node:util';
 
+import * as clack from '@clack/prompts';
 import { execa } from 'execa';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { Check } from './checks';
-import { applyFixes, doctorCommand } from './report';
+import { applyFixes, doctorCommand, showEdits } from './report';
+
+vi.mock('@clack/prompts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@clack/prompts')>()),
+  note: vi.fn(),
+}));
 
 vi.mock('execa', () => ({ execa: vi.fn() }));
 
@@ -110,5 +117,82 @@ describe('doctorCommand', () => {
     expect(doctorCommand(['-yc', 'a.json'], ['--fix'])).toBe(
       'npx chromatic doctor -c a.json --fix'
     );
+  });
+});
+
+describe('showEdits', () => {
+  it('masks project tokens in package scripts', () => {
+    root = mkdtempSync(path.join(tmpdir(), 'chromatic-edits-'));
+    const file = path.join(root, 'package.json');
+    const scripts = {
+      a: 'chromatic --project-token=legacy0token9876',
+      b: 'chromatic -t chpt_a1b2c3d4e5f6',
+    };
+    writeFileSync(file, JSON.stringify({ scripts }));
+
+    showEdits(
+      'Add chromatic',
+      [{ file, content: JSON.stringify({ scripts, devDependencies: {} }) }],
+      root
+    );
+
+    const preview = vi.mocked(clack.note).mock.calls[0][0];
+    expect(preview).not.toContain('legacy0token9876');
+    expect(preview).not.toContain('chpt_a1b2c3d4e5f6');
+    expect(preview).toContain('--project-token=…9876');
+    expect(preview).toContain('-t …e5f6');
+  });
+
+  it('shows an added line in place: its parent key, the line before it and the closing brace', () => {
+    root = mkdtempSync(path.join(tmpdir(), 'chromatic-edits-'));
+    const file = path.join(root, 'package.json');
+    writeFileSync(
+      file,
+      '{\n  "scripts": {\n    "build": "vite build",\n    "test": "vitest"\n  }\n}\n'
+    );
+    const content =
+      '{\n  "scripts": {\n    "build": "vite build",\n    "test": "vitest",\n    "chromatic": "chromatic"\n  }\n}\n';
+
+    showEdits('Add a script', [{ file, content }], root);
+
+    const preview = stripVTControlCharacters(vi.mocked(clack.note).mock.calls.at(-1)?.[0] ?? '');
+    expect(preview).toBe(
+      [
+        'package.json',
+        '    "scripts": {',
+        '      ...',
+        '      "test": "vitest",',
+        '+     "chromatic": "chromatic"',
+        '    }',
+      ].join('\n')
+    );
+  });
+
+  it('shows no line with a value as context, and a comma outside JSON as a change', () => {
+    root = mkdtempSync(path.join(tmpdir(), 'chromatic-edits-'));
+    const config = path.join(root, 'chromatic.config.jsonc');
+    writeFileSync(
+      config,
+      '{\n  "buildCommand": "KEY=secret9876 build", "untraced": [\n    "a"\n  ]\n}\n'
+    );
+    const environment = path.join(root, '.env');
+    writeFileSync(environment, 'CHROMATIC_PROJECT_TOKEN=abcd1234\n');
+
+    showEdits(
+      'Fix',
+      [
+        {
+          file: config,
+          content: '{\n  "buildCommand": "KEY=secret9876 build", "untraced": [\n    "b"\n  ]\n}\n',
+        },
+        { file: environment, content: 'CHROMATIC_PROJECT_TOKEN=abcd1234,\n' },
+      ],
+      root
+    );
+
+    const preview = stripVTControlCharacters(vi.mocked(clack.note).mock.calls.at(-1)?.[0] ?? '');
+    expect(preview).not.toContain('secret9876');
+    expect(preview).toContain('- CHROMATIC_PROJECT_TOKEN=');
+    expect(preview).toContain('+ CHROMATIC_PROJECT_TOKEN=');
   });
 });

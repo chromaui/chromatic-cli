@@ -20,8 +20,17 @@ import {
   Project,
 } from './detect';
 import { pickProject } from './project';
-import { applyFixes, printChecks, summarize } from './report';
-import { color, FileWriter, git, gitignoreAdditions, relativeOrDot, rewriteJson } from './shared';
+import { applyFixes, printChecks, showEdits, summarize } from './report';
+import {
+  answered,
+  color,
+  FileWriter,
+  git,
+  gitignoreAdditions,
+  isEditableJson,
+  relativeOrDot,
+  rewriteJson,
+} from './shared';
 import { Session, tokenStep } from './token';
 
 const HELP = `
@@ -38,7 +47,8 @@ const HELP = `
       --project-token, -t <token>      Use this token instead of asking. Or set CHROMATIC_PROJECT_TOKEN.
       --skip-install                   Edit package.json but don't run the install.
       --dry-run                        Show what would change without writing anything.
-      --yes, -y                        Accept every default without asking.
+      --yes, -y                        Accept every default and change without asking, except fixes
+                                       that ask how CI runs Chromatic.
 `;
 
 const GITIGNORE_ENTRIES = [
@@ -68,18 +78,34 @@ function existingConfig(directory: string) {
   } catch {
     // The user's to fix; doctor reports it.
   }
-  // Rewriting JSONC or JSON5 as JSON would drop the comments, so only plain JSON is editable.
-  const editable = file.endsWith('.json') && parsed !== undefined && isPlainJson(previous);
+  // JSON and JSONC are edited in place, keeping comments; other JSON5 syntax can't be.
+  const editable = parsed !== undefined && isEditableJson(previous);
   return { file, previous, parsed, json: editable ? parsed : undefined };
 }
 
-function isPlainJson(text: string) {
-  try {
-    JSON.parse(text);
-    return true;
-  } catch {
-    return false;
-  }
+/**
+ * Shows a change to a file the user already has and asks before making it. A new file, or a run
+ * without a terminal, with --yes, or in a dry run, doesn't ask.
+ *
+ * @param session The setup session.
+ * @param title What the change does.
+ * @param edit The file and its new content.
+ * @param edit.file The file.
+ * @param edit.content Its new content.
+ * @param question What to ask.
+ *
+ * @returns Whether to make the change.
+ */
+async function confirmEdit(
+  session: Session,
+  title: string,
+  edit: { file: string; content: string },
+  question: string
+) {
+  if (!session.interactive || session.flags.dryRun || !existsSync(edit.file)) return true;
+  if (readFileSync(edit.file, 'utf8') === edit.content) return true;
+  showEdits(title, [edit], process.cwd());
+  return answered(await clack.confirm({ message: question }));
 }
 
 const describe = (keys: string[], values: Record<string, any>) =>
@@ -97,14 +123,14 @@ function explainUnedited(
     );
   } else if (missing.length > 0) {
     clack.log.warn(
-      `Set ${describe(missing, wanted)} in ${file}. init only edits plain JSON, so it left the file as it is.`
+      `Set ${describe(missing, wanted)} in ${file}. init can't edit JSON5 syntax such as unquoted keys, so it left the file as it is.`
     );
   } else {
     clack.log.success(`${file} already has what Chromatic needs`);
   }
 }
 
-function configStep(session: Session, project: Project) {
+async function configStep(session: Session, project: Project) {
   const { writer } = session;
   const { file, previous, parsed, json: existing } = existingConfig(project.directory);
   // TurboSnap comes from doctor's fix in the closing check, which asks how CI runs Chromatic
@@ -121,8 +147,20 @@ function configStep(session: Session, project: Project) {
   };
   // The framework flag init picked wins over one the config already sets to false.
   Object.assign(next, wanted);
-  const changed = writer.write(file, rewriteJson(next, previous));
+  const content = rewriteJson(next, previous);
   const added = Object.keys(next).filter((key) => key !== '$schema' && !(key in existing));
+  if (
+    !(await confirmEdit(
+      session,
+      `Update ${writer.display(file)}`,
+      { file, content },
+      'Apply this change?'
+    ))
+  ) {
+    clack.log.info(`Left ${writer.display(file)} as it is.`);
+    return;
+  }
+  const changed = writer.write(file, content);
   clack.log.success(
     changed
       ? `${writer.say(previous ? 'Updated' : 'Wrote', previous ? 'update' : 'write')} ${writer.display(file)}${added.length > 0 ? ` ${color.muted(`(${describe(added, next)})`)}` : ''}`
@@ -160,13 +198,22 @@ async function packageStep(session: Session, project: Project, framework: Framew
   if (addScript) json.scripts = { ...json.scripts, chromatic: 'chromatic' };
   if (missing.length === 0 && !addScript) {
     clack.log.success(`${writer.display(file)} already has chromatic and its script`);
-    return;
+    return true;
   }
-  writer.write(file, rewriteJson(json, previous));
+  const content = rewriteJson(json, previous);
   const what = [addScript && 'a "chromatic" script', missing.length > 0 && missing.join(' and ')]
     .filter(Boolean)
     .join(' and ');
+  const question = `Add ${what} to ${writer.display(file)}${session.flags.skipInstall ? '' : ', then install'}?`;
+  if (!(await confirmEdit(session, `Add ${what}`, { file, content }, question))) {
+    clack.log.info(
+      `Left ${writer.display(file)} as it is. Add ${what} yourself, then install, to run Chromatic.`
+    );
+    return false;
+  }
+  writer.write(file, content);
   clack.log.success(`${writer.say('Added', 'add')} ${what} to ${writer.display(file)}`);
+  return true;
 }
 
 const INSTALL_MUTABLE: Partial<Record<string, string[]>> = {
@@ -269,10 +316,11 @@ export async function main(argv: string[]) {
 
   // 3. Token, 4. config file, 5. package.json and one install
   await tokenStep(session, project);
-  configStep(session, project);
-  await packageStep(session, project, project.framework);
+  await configStep(session, project);
   // Install even when package.json already had everything: an earlier run's install may have failed.
-  await installStep(session, project, packageManager);
+  if (await packageStep(session, project, project.framework)) {
+    await installStep(session, project, packageManager);
+  }
 
   // 6. .gitignore
   const gitignore = gitignoreAdditions(gitRoot, GITIGNORE_ENTRIES);
