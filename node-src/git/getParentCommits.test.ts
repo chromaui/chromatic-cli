@@ -1026,7 +1026,7 @@ describe('getParentCommits with unusual git output', () => {
     const { execGitCommand } = execGit;
     vi.spyOn(execGit, 'execGitCommand').mockImplementation(async (deps, command, options) => {
       const output = await execGitCommand(deps, command, options);
-      return command.startsWith('git rev-list') ? `warning: something\n${output}` : output;
+      return String(command).startsWith('git rev-list') ? `warning: something\n${output}` : output;
     });
     const client = createClient({ repository, builds: [['B', 'main']] });
     const git = { branch: 'main', ...(await getCommit(ctx)) };

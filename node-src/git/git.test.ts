@@ -1,4 +1,6 @@
 /* eslint-disable max-lines */
+import { existsSync } from 'fs';
+import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -91,6 +93,21 @@ gpg: Can't check signature: No public key
       committerName: 'Gert Hengeveld',
     });
   });
+
+  it('passes the revision to git as one argument, without a shell', async () => {
+    const actualExecGit = await vi.importActual<typeof execGit>('./execGit');
+    execGitCommand.mockImplementation(actualExecGit.execGitCommand);
+    const markerPrefix = path.join(os.tmpdir(), `chromatic-getcommit-${process.pid}`);
+    const substitutionMarker = `${markerPrefix}-substitution`;
+    const redirectMarker = `${markerPrefix}-redirect`;
+
+    // A valid branch name, so it can arrive through GITHUB_HEAD_REF.
+    const revision = `evil$(touch\${IFS}${substitutionMarker});echo>${redirectMarker}`;
+
+    await expect(getCommit(ctx, revision)).rejects.toThrow(/ambiguous argument 'evil\$\(touch/);
+    expect(existsSync(substitutionMarker)).toBe(false);
+    expect(existsSync(redirectMarker)).toBe(false);
+  });
 });
 
 describe('getBranch', () => {
@@ -160,7 +177,7 @@ describe('getUncommittedHash', () => {
       'git hash-object --stdin-paths': 'a\nb\nc\nd\n',
       'git hash-object --stdin': 'abc123\n',
     };
-    execGitCommand.mockImplementation(async (_, command) => outputs[command]);
+    execGitCommand.mockImplementation(async (_, command) => outputs[String(command)]);
     stat.mockImplementation(async (filePath) => {
       if (filePath === path.join(root, 'src/vanished.ts')) throw new Error('ENOENT');
       // A submodule and an untracked nested repository are directories.
