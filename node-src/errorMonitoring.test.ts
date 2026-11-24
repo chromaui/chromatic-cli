@@ -7,6 +7,8 @@ import { tmpdir } from 'os';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 
+import { exitCodes, TaskFailure } from './lib/setExitCode';
+
 // The filters are tested through the options the module passes to `Sentry.init`.
 const { beforeBreadcrumb, beforeSend } = Sentry.getClient()?.getOptions() ?? {};
 const filterErrorEvent = (event: Sentry.ErrorEvent, hint: Sentry.EventHint = {}) =>
@@ -34,6 +36,28 @@ describe('filterErrorEvent', () => {
     } as Sentry.ErrorEvent);
     expect(actual.exception?.values?.[0].value).toBe('error');
     expect(actual.exception?.values?.[1].value).toBe('error');
+  });
+
+  it('drops task failures the user has to fix and keeps the rest', () => {
+    const event = { exception: { values: [{ value: 'Command failed' }] } } as Sentry.ErrorEvent;
+    const exitCode = exitCodes.NPM_BUILD_STORYBOOK_FAILED;
+    // An invalid project token is a user error too, but keeps `userError` false so its message
+    // prints in interactive terminals.
+    const invalidToken = new TaskFailure('Invalid project token', {
+      exitCode: exitCodes.GRAPHQL_ERROR,
+    });
+
+    expect(
+      filterErrorEvent(event, {
+        originalException: new TaskFailure('Command failed', { exitCode, userError: true }),
+      })
+    ).toBeNull();
+    expect(
+      filterErrorEvent(event, {
+        originalException: new TaskFailure('Command failed', { exitCode }),
+      })
+    ).toBe(event);
+    expect(filterErrorEvent(event, { originalException: invalidToken })).toBe(event);
   });
 
   it('groups a git command killed by a signal with one whose shell exited 143', async () => {

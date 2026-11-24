@@ -2,6 +2,8 @@ import * as Sentry from '@sentry/node';
 import { ExecaError, parseCommandString } from 'execa';
 import stripAnsi from 'strip-ansi';
 
+import { TaskFailure } from './lib/setExitCode';
+
 /**
  * Groups a failed git command by its subcommand and how it failed, rather than by its message.
  * The message holds the full command line and exit code or signal, so Sentry would otherwise open a
@@ -33,14 +35,21 @@ function gitCommandFingerprint(error: unknown): string[] | undefined {
 }
 
 /**
- * Remove ANSI escape codes from Sentry ErrorEvents, and group failed git commands by subcommand.
+ * Drop failures the user has to fix, remove ANSI escape codes from Sentry ErrorEvents, and group
+ * failed git commands by subcommand.
  *
  * @param event An event containing a captured exception.
  * @param hint The event hint, which holds the original exception.
  *
- * @returns The modified event.
+ * @returns The modified event, or `null` when it should not be sent.
  */
 function filterErrorEvent(event: Sentry.ErrorEvent, hint: Sentry.EventHint) {
+  // A user error, such as a failing Storybook build or a dirty workspace, is the user's to fix and
+  // already explained in the output, so reporting it only buries our own bugs.
+  if (hint.originalException instanceof TaskFailure && hint.originalException.userError) {
+    // eslint-disable-next-line unicorn/no-null
+    return null;
+  }
   // A fingerprint set where the error was captured is more specific, so keep it.
   event.fingerprint ??= gitCommandFingerprint(hint.originalException);
   // Remove ANSI escape codes from error messages
