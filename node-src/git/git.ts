@@ -117,11 +117,22 @@ function safeDecode(value: string) {
  * @returns Commit details from Git.
  */
 export async function getCommit(deps: GitDeps, revision = '') {
-  const result = await execGitCommand(
-    deps,
+  // The revision can be a branch name from the environment (GITHUB_HEAD_REF), so pass it as its own
+  // argument rather than through a shell, and never as an option. `--end-of-options` would do the
+  // latter, but needs git 2.24.
+  if (revision.startsWith('-')) {
+    throw new Error(`Invalid revision '${revision}'`);
+  }
+  const result = await execGitCommand(deps, [
+    'git',
+    '--no-pager',
+    'log',
+    '-n',
+    '1',
     // Technically this yields the author info, not committer info
-    `git --no-pager log -n 1 --format="%H ## %ct ## %ae ## %an" ${revision}`
-  );
+    '--format=%H ## %ct ## %ae ## %an',
+    ...(revision ? [revision] : []),
+  ]);
 
   // Ignore lines that don't match the expected format (e.g. gpg signature info)
   const format = new RegExp('^[a-f0-9]+ ## ');

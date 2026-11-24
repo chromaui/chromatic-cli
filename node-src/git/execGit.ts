@@ -32,6 +32,23 @@ const defaultOptions = {
 } satisfies Options;
 
 /**
+ * Describe a command for logs and error messages. An argv array is shell-quoted where needed, so
+ * argument boundaries stay visible and the line can be pasted into a terminal.
+ *
+ * @param command The command, as a string or an argv array.
+ *
+ * @returns The command as one line.
+ */
+function describeCommand(command: string | [string, ...string[]]) {
+  if (typeof command === 'string') return command;
+  return command
+    .map((argument) =>
+      /^[\w@%+=:,./-]+$/.test(argument) ? argument : `'${argument.replaceAll("'", `'\\''`)}'`
+    )
+    .join(' ');
+}
+
+/**
  * Retrieve the git timeout in milliseconds.
  *
  * @param depOptions The options object for the Git command (this contains the `gitTimeout` property if it's set).
@@ -48,7 +65,8 @@ export function getGitTimeout(depOptions: GitDeps['options']): number {
  * @param deps Standard context object.
  * @param deps.log Standard context logger.
  * @param deps.options Options object for the Git command.
- * @param command The command to execute.
+ * @param command The command to execute. Pass an argv array, which runs without a shell, when it
+ * includes a value from outside the CLI, such as a branch name.
  * @param options Execa options, plus `logResult`; see `ExecGitOptions`.
  * @param options.logResult Whether to write the command's output to the debug log.
  *
@@ -56,11 +74,12 @@ export function getGitTimeout(depOptions: GitDeps['options']): number {
  */
 export async function execGitCommand(
   { log, options: depOptions }: GitDeps,
-  command: string,
+  command: string | [string, ...string[]],
   { logResult = true, ...options }: ExecGitOptions = {}
 ) {
+  const description = describeCommand(command);
   try {
-    log.debug(`execGitCommand: ${command}`);
+    log.debug(`execGitCommand: ${description}`);
     const timeout = getGitTimeout(depOptions);
     const { stdout, stderr } = await runCommand(command, {
       timeout,
@@ -69,7 +88,7 @@ export async function execGitCommand(
     });
 
     if (stdout === undefined) {
-      throw new Error(`Unexpected missing git command output for command: '${command}'`);
+      throw new Error(`Unexpected missing git command output for command: '${description}'`);
     }
 
     const result = stdout.toString();
@@ -81,7 +100,7 @@ export async function execGitCommand(
     }
     return result;
   } catch (error) {
-    throw translateGitError(log, command, error);
+    throw translateGitError(log, description, error);
   }
 }
 
@@ -103,7 +122,7 @@ export async function* execGitCommandEntries(
   command: string | [string, ...string[]],
   options?: Options
 ): AsyncGenerator<string> {
-  const description = typeof command === 'string' ? command : JSON.stringify(command);
+  const description = describeCommand(command);
   log.debug(`execGitCommandEntries: ${description}`);
   const timeout = getGitTimeout(depOptions);
   const process = runCommand(command, {
