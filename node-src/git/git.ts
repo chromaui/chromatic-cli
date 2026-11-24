@@ -118,7 +118,11 @@ function safeDecode(value: string) {
  */
 export async function getCommit(deps: GitDeps, revision = '') {
   // The revision can be a branch name from the environment (GITHUB_HEAD_REF), so pass it as its own
-  // argument rather than through a shell.
+  // argument rather than through a shell, and never as an option. `--end-of-options` would do the
+  // latter, but needs git 2.24.
+  if (revision.startsWith('-')) {
+    throw new Error(`Invalid revision '${revision}'`);
+  }
   const result = await execGitCommand(deps, [
     'git',
     '--no-pager',

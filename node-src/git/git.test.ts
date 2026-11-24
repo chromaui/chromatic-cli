@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { existsSync } from 'fs';
+import { existsSync, mkdtempSync, rmSync } from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -94,19 +94,38 @@ gpg: Can't check signature: No public key
     });
   });
 
-  it('passes the revision to git as one argument, without a shell', async () => {
-    const actualExecGit = await vi.importActual<typeof execGit>('./execGit');
-    execGitCommand.mockImplementation(actualExecGit.execGitCommand);
-    const markerPrefix = path.join(os.tmpdir(), `chromatic-getcommit-${process.pid}`);
-    const substitutionMarker = `${markerPrefix}-substitution`;
-    const redirectMarker = `${markerPrefix}-redirect`;
+  describe('with a revision from outside the CLI', () => {
+    let markerDirectory: string;
 
-    // A valid branch name, so it can arrive through GITHUB_HEAD_REF.
-    const revision = `evil$(touch\${IFS}${substitutionMarker});echo>${redirectMarker}`;
+    beforeEach(async () => {
+      const actualExecGit = await vi.importActual<typeof execGit>('./execGit');
+      execGitCommand.mockImplementation(actualExecGit.execGitCommand);
+      markerDirectory = mkdtempSync(path.join(os.tmpdir(), 'chromatic-getcommit-'));
+    });
 
-    await expect(getCommit(ctx, revision)).rejects.toThrow(/ambiguous argument 'evil\$\(touch/);
-    expect(existsSync(substitutionMarker)).toBe(false);
-    expect(existsSync(redirectMarker)).toBe(false);
+    afterEach(() => {
+      execGitCommand.mockReset();
+      rmSync(markerDirectory, { recursive: true, force: true });
+    });
+
+    it('passes the revision to git as one argument, without a shell', async () => {
+      const substitutionMarker = path.join(markerDirectory, 'substitution');
+      const redirectMarker = path.join(markerDirectory, 'redirect');
+
+      // A valid branch name, so it can arrive through GITHUB_HEAD_REF.
+      const revision = `evil$(touch\${IFS}${substitutionMarker});echo>${redirectMarker}`;
+
+      await expect(getCommit(ctx, revision)).rejects.toThrow(/ambiguous argument 'evil\$\(touch/);
+      expect(existsSync(substitutionMarker)).toBe(false);
+      expect(existsSync(redirectMarker)).toBe(false);
+    });
+
+    it('does not let the revision pass options to git', async () => {
+      const outputMarker = path.join(markerDirectory, 'output');
+
+      await expect(getCommit(ctx, `--output=${outputMarker}`)).rejects.toThrow('Invalid revision');
+      expect(existsSync(outputMarker)).toBe(false);
+    });
   });
 });
 

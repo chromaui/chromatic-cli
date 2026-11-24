@@ -60,7 +60,8 @@ export async function execGitCommand(
   command: string | [string, ...string[]],
   { logResult = true, ...options }: ExecGitOptions = {}
 ) {
-  const description = typeof command === 'string' ? command : JSON.stringify(command);
+  // Error messages show this to users, so keep it as readable as the string form.
+  const description = typeof command === 'string' ? command : command.join(' ');
   try {
     log.debug(`execGitCommand: ${description}`);
     const timeout = getGitTimeout(depOptions);
