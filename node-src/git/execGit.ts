@@ -32,6 +32,23 @@ const defaultOptions = {
 } satisfies Options;
 
 /**
+ * Describe a command for logs and error messages. An argv array is shell-quoted where needed, so
+ * argument boundaries stay visible and the line can be pasted into a terminal.
+ *
+ * @param command The command, as a string or an argv array.
+ *
+ * @returns The command as one line.
+ */
+function describeCommand(command: string | [string, ...string[]]) {
+  if (typeof command === 'string') return command;
+  return command
+    .map((argument) =>
+      /^[\w@%+=:,./-]+$/.test(argument) ? argument : `'${argument.replaceAll("'", `'\\''`)}'`
+    )
+    .join(' ');
+}
+
+/**
  * Retrieve the git timeout in milliseconds.
  *
  * @param depOptions The options object for the Git command (this contains the `gitTimeout` property if it's set).
@@ -60,8 +77,7 @@ export async function execGitCommand(
   command: string | [string, ...string[]],
   { logResult = true, ...options }: ExecGitOptions = {}
 ) {
-  // Error messages show this to users, so keep it as readable as the string form.
-  const description = typeof command === 'string' ? command : command.join(' ');
+  const description = describeCommand(command);
   try {
     log.debug(`execGitCommand: ${description}`);
     const timeout = getGitTimeout(depOptions);
@@ -106,7 +122,7 @@ export async function* execGitCommandEntries(
   command: string | [string, ...string[]],
   options?: Options
 ): AsyncGenerator<string> {
-  const description = typeof command === 'string' ? command : JSON.stringify(command);
+  const description = describeCommand(command);
   log.debug(`execGitCommandEntries: ${description}`);
   const timeout = getGitTimeout(depOptions);
   const process = runCommand(command, {

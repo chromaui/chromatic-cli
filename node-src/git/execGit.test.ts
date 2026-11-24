@@ -65,6 +65,16 @@ describe('execGitCommand', () => {
     ).rejects.toThrow(gitNotInitialized({ command }));
   });
 
+  it('shows an argv command with its argument boundaries in errors', async () => {
+    execa.mockRejectedValue(new Error('git not found'));
+
+    await expect(
+      execGitCommand(ctx, ['git', 'log', '--format=%H ## %an', "it's-a-branch"])
+    ).rejects.toThrow(
+      gitNotInstalled({ command: `git log '--format=%H ## %an' 'it'\\''s-a-branch'` })
+    );
+  });
+
   it('handles git not found error', async () => {
     execa.mockRejectedValue(new Error('git not found'));
 
