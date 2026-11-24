@@ -1,3 +1,15 @@
+# v18.15.3 (Tue Nov 24 2026)
+
+#### 🐛 Bug Fix
+
+- Pass getCommit's revision to git without a shell [#1739](https://github.com/chromaui/chromatic-cli/pull/1739) ([@jmhobbs](https://github.com/jmhobbs))
+
+#### Authors: 1
+
+- John Hobbs ([@jmhobbs](https://github.com/jmhobbs))
+
+---
+
 # v18.15.2 (Mon Nov 23 2026)
 
 #### 🐛 Bug Fix
