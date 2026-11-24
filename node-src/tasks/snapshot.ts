@@ -136,7 +136,6 @@ export interface SnapshotInput {
   uploadedBytes?: number;
   matchesBranch: Context['git']['matchesBranch'];
   turboSnapOutcome?: Context['turboSnapOutcome'];
-  isOnboarding: Context['isOnboarding'];
 }
 
 export type SnapshotDeps = Pick<Deps, 'client' | 'log' | 'env' | 'options' | 'report'>;
@@ -157,7 +156,7 @@ export async function snapshotProject(
   input: SnapshotInput
 ): Promise<TaskResult<SnapshotOutput>> {
   const { client, log, env, options } = deps;
-  const { skipSnapshots, uploadedBytes, matchesBranch, turboSnapOutcome, isOnboarding } = input;
+  const { skipSnapshots, uploadedBytes, matchesBranch, turboSnapOutcome } = input;
 
   if (skipSnapshots || options.dryRun) {
     return { kind: 'skip-self' };
@@ -220,7 +219,7 @@ export async function snapshotProject(
   }
 
   const output = completedOutput(await getCompletedBuild(), options, matchesBranch);
-  if (listsTests(output, isOnboarding)) {
+  if (listsTests(output)) {
     output.build = { ...output.build, ...(await getResultTests(deps, number, reportToken)) };
   }
   return { kind: 'continue', output };
@@ -283,10 +282,8 @@ function completedOutput(
 // Outcomes whose message is the result block, which lists tests. The errors and changes messages
 // always are; the passed message is only for a build that passed because of
 // --exit-zero-on-changes.
-const listsTests = ({ log, build }: SnapshotOutput, isOnboarding: boolean) =>
-  log === 'errors' ||
-  log === 'changes' ||
-  (log === 'passed' && summaryListsTests(build, isOnboarding));
+const listsTests = ({ log, build }: SnapshotOutput) =>
+  log === 'errors' || log === 'changes' || (log === 'passed' && summaryListsTests(build));
 
 // The poll's counts already decided the exit code, so a failed fetch keeps them and leaves the
 // lists out instead of failing a completed build.
@@ -351,7 +348,6 @@ export const extractSnapshotInput = (ctx: Context): SnapshotInput => ({
   uploadedBytes: ctx.uploadedBytes,
   matchesBranch: ctx.git.matchesBranch,
   turboSnapOutcome: ctx.turboSnapOutcome,
-  isOnboarding: ctx.isOnboarding,
 });
 
 export const applySnapshotOutput = (ctx: Context, output: SnapshotOutput) => {

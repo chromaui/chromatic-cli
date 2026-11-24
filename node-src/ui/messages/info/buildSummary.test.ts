@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { Context } from '../../../types';
+import { buildTests } from '../../components/__fixtures__/buildTests';
 import { info, success } from '../../components/icons';
 import buildSummary from './buildSummary';
 
@@ -136,16 +137,19 @@ describe('buildSummary while onboarding', () => {
     ]);
   });
 
-  it('welcomes the user without claiming a pass when changes must be reviewed', () => {
+  // Under --exit-zero-on-changes: the same result block as exit 1, with the setup link.
+  it('lists the changes that must be reviewed, with the setup link', () => {
     const output = message(
-      { ...onboarding, status: 'PENDING', pendingCount: 1 },
+      { ...onboarding, status: 'PENDING', pendingCount: 1, pendingTests: buildTests('Form', 1) },
       { isOnboarding: true }
     );
 
     expect(output.split('\n')).toEqual([
-      `${success} Build completed. Welcome to Chromatic!`,
-      'We found 5 components with 8 stories and captured 20 snapshots.',
-      `${info} Please continue setup at ${setupUrl}`,
+      `${success} 1 change needs review`,
+      `Continue setup at ${setupUrl}`,
+      '',
+      'Need review:',
+      '  Form › Primary',
     ]);
   });
 

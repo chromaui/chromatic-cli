@@ -21,34 +21,28 @@ const changesLine = (build: Context['build']) => {
 const hasPassed = (build: Context['build']) =>
   build.status === 'PASSED' || build.status === 'ACCEPTED' || build.autoAcceptChanges;
 
-// Whether this message is the result block, which lists tests. Onboarding builds keep the welcome.
-export const summaryListsTests = (build: Context['build'], isOnboarding: boolean) =>
-  !isOnboarding && !hasPassed(build);
+// Whether this message is the result block, which lists tests, rather than a pass or welcome.
+export const summaryListsTests = (build: Context['build']) => !hasPassed(build);
 
 export default (ctx: Context) => {
   const { build, isOnboarding } = ctx;
   const url = isOnboarding ? build.app.setupUrl : build.webUrl;
   const ignoredLine = ignoredTests({ ignoredCount: build.ignoredCount, url, isOnboarding });
-  const passed = hasPassed(build);
+
+  if (summaryListsTests(build)) {
+    return buildResults(build, isOnboarding, success);
+  }
 
   if (isOnboarding) {
     const { snapshots, components, stories, e2eTests } = stats({ build });
     const foundString = isE2EBuild(ctx.options)
       ? `We found ${e2eTests} and captured ${snapshots}.`
       : `We found ${components} with ${stories} and captured ${snapshots}.`;
-    const headline = passed
-      ? 'Build passed. Welcome to Chromatic!'
-      : 'Build completed. Welcome to Chromatic!';
-
     return dedent(chalk`
-      ${success} {bold ${headline}}
+      ${success} {bold Build passed. Welcome to Chromatic!}
       ${[foundString, ignoredLine].filter(Boolean).join('\n')}
       ${info} Please continue setup at ${link(build.app.setupUrl)}
     `);
-  }
-
-  if (summaryListsTests(build, isOnboarding)) {
-    return buildResults(build, false, success);
   }
 
   return dedent(chalk`

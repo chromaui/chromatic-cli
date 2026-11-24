@@ -81,6 +81,6 @@ export const FirstBuildPassedWithIgnoredTests = story(
 );
 
 export const FirstBuildCompletedViaExitZeroWithPendingChanges = story(
-  { ...firstBuild, status: 'PENDING', pendingCount: 1 },
+  { ...firstBuild, status: 'PENDING', pendingCount: 1, pendingTests: buildTests('Form', 1) },
   { isOnboarding: true }
 );

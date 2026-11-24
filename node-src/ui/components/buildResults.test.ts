@@ -14,12 +14,13 @@ const headline = (build: object) => results(build).split('\n')[0].replace(`${err
 
 describe('buildResults headline', () => {
   it.each([
-    [{ errorCount: 1 }, '1 error'],
+    [{ errorCount: 1 }, '1 test failed'],
+    [{ errorCount: 2, pendingCount: 3 }, '2 tests failed and 3 changes need review'],
     [{ pendingCount: 1 }, '1 change needs review'],
     [{ deniedCount: 2, pendingCount: 3 }, '2 changes denied and 3 changes need review'],
     [
       { errorCount: 6, deniedCount: 3, pendingCount: 3 },
-      '6 errors, 3 changes denied, and 3 changes need review',
+      '6 tests failed, 3 changes denied, and 3 changes need review',
     ],
   ])('counts %o as "%s"', (build, expected) => {
     expect(headline(build)).toBe(expected);

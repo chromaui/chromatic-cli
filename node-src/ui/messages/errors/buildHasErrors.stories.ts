@@ -49,6 +49,15 @@ export const BuildHasErrorsWithMoreThanFiftyFailingTests = story({
   renderFailureTests: buildTests('Icon', 50),
 });
 
+// Two findings: each keeps its own verb.
+export const BuildHasErrorsAndPendingChanges = story({
+  errorCount: 2,
+  renderFailureCount: 2,
+  renderFailureTests: buildTests('Icon', 2),
+  pendingCount: 3,
+  pendingTests: buildTests('Form', 3),
+});
+
 export const BuildHasErrorsAndChanges = story({
   errorCount: 6,
   interactionFailureCount: 3,

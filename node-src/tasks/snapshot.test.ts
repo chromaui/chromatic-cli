@@ -325,12 +325,12 @@ describe('snapshotProject', () => {
       expect(testsQueryCalls(ctx)).toHaveLength(calls);
     });
 
-    // Under --exit-zero-on-changes, accepted and onboarding builds print the passed or welcome
-    // message, which lists no tests.
+    // Under --exit-zero-on-changes, an accepted build prints the passed message, which lists no
+    // tests. Pending builds print the result block, while onboarding too.
     it.each([
       ['ACCEPTED', false, 0],
       ['PENDING', false, 1],
-      ['PENDING', true, 0],
+      ['PENDING', true, 1],
     ])(
       'fetches the lists for a %s build under --exit-zero-on-changes (onboarding: %s): %i calls',
       async (status, isOnboarding, calls) => {

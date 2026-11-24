@@ -37,9 +37,11 @@ const changes = (count: number) => pluralize('change', count, true);
 const finding = (count: number | undefined, describe: (count: number) => string) =>
   count ? describe(count) : undefined;
 
+// Each finding carries its own verb, so that joining two of them doesn't read as if the last verb
+// applied to both, as in "2 errors and 3 changes need review".
 const headline = (build: ResultsBuild) => {
   const findings = [
-    finding(build.errorCount, (count) => pluralize('error', count, true)),
+    finding(build.errorCount, (count) => `${pluralize('test', count, true)} failed`),
     finding(build.deniedCount, (count) => `${changes(count)} denied`),
     finding(
       build.pendingCount,
