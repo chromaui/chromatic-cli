@@ -57,8 +57,9 @@ export async function uploadFiles(
                 { retries: 0 } // already retrying the whole operation
               );
               ctx.log.debug(`Uploaded ${filePath} (${filesize(contentLength)})`);
-            } catch {
-              throw new Error(localPath);
+            } catch (err) {
+              // Callers find the failed file by the message, so the original error goes in `cause`.
+              throw new Error(localPath, { cause: err });
             }
           },
           {

@@ -133,6 +133,49 @@ describe('uploadProject', () => {
     expect(ctx.uploadedFiles).toBe(2);
   });
 
+  it('fails with the file that did not upload, keeping the upload error as the cause', async () => {
+    const client = { runQuery: vi.fn() };
+    client.runQuery.mockReturnValue({
+      uploadBuild: {
+        info: {
+          sentinelUrls: [],
+          targets: [
+            {
+              contentType: 'text/html',
+              filePath: 'index.html',
+              formAction: 'https://s3.amazonaws.com/presigned?index.html',
+              formFields: {},
+            },
+          ],
+        },
+        userErrors: [],
+      },
+    });
+    createReadStreamMock.mockReturnValue({ pipe: vi.fn() } as any);
+    const uploadError = new Error('socket hang up');
+    const failingHttp = { fetch: vi.fn().mockRejectedValue(uploadError) };
+
+    const ctx = {
+      client,
+      env: { ...environment, CHROMATIC_RETRIES: 0 },
+      log,
+      http: failingHttp,
+      sourceDir: '/static/',
+      options: {},
+      fileInfo: {
+        lengths: [{ knownAs: 'index.html', contentLength: 42 }],
+        paths: ['index.html'],
+        total: 42,
+      },
+      announcedBuild: { id: '1' },
+    } as any;
+
+    await expect(runUpload(ctx)).rejects.toMatchObject({
+      message: 'Failed to upload /static/index.html',
+      cause: uploadError,
+    });
+  });
+
   it('calls experimental_onTaskProgress with progress', async () => {
     const client = { runQuery: vi.fn() };
     client.runQuery.mockReturnValue({

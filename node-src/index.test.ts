@@ -916,7 +916,7 @@ it('should upload metadata files if --upload-metadata is passed', async () => {
     '--only-changed',
   ]);
   await runAll(ctx);
-  expect(upload.mock.calls.at(-1)?.[1]).toEqual(
+  expect(upload.mock.calls.flatMap(([, targets]) => targets)).toEqual(
     expect.arrayContaining([
       {
         contentLength: expect.any(Number),
