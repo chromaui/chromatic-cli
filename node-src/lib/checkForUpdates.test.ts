@@ -64,29 +64,39 @@ describe('checkForUpdates', () => {
   });
 
   describe('registry fetch errors', () => {
-    it('does not report invalid URL errors', async () => {
+    const rejectFetch = (error: Error) => http.fetch.mockRejectedValue(error);
+    const rejectBody = (error: Error) =>
+      http.fetch.mockResolvedValue({ json: () => Promise.reject(error) });
+
+    it.each([
+      ['a reset connection', rejectFetch, new Error('read ECONNRESET')],
+      ['an untrusted certificate', rejectFetch, new Error('self-signed certificate in chain')],
+      ['an HTTP error status', rejectFetch, new Error('HTTPClient failed to fetch, got 401')],
+      ['an aborted response body', rejectBody, new Error('Invalid response body: Premature close')],
+    ])('warns without reporting to Sentry on %s', async (_, fail, error) => {
+      const ctx = getContext();
+      mockedSpawn.mockResolvedValue('https://registry.npmjs.org/');
+      fail(error);
+      await checkForUpdates(ctx as any);
+      expect(ctx.log.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Could not retrieve package info from registry')
+      );
+      expect(ctx.log.warn).toHaveBeenCalledWith(error);
+      expect(Sentry.captureException).not.toHaveBeenCalled();
+    });
+
+    it('warns without reporting to Sentry on an invalid registry URL', async () => {
       const ctx = getContext();
       mockedSpawn.mockResolvedValue('invalid-url');
       await checkForUpdates(ctx as any);
-      // it should throw before the fetch
       expect(ctx.http.fetch).not.toHaveBeenCalled();
-      // but it should not report to Sentry
-      expect(Sentry.captureException).not.toHaveBeenCalled();
-      // http.fetch.mockRejectedValue(new Error('fetch failed'));
-    });
-
-    it('does not report HTTP fetch errors', async () => {
-      const ctx = getContext();
-      http.fetch.mockRejectedValue(
-        new Error(
-          'HTTPClient failed to fetch https://npm.example.com/repository/npm/chromatic, got 401/Unauthorized'
-        )
+      expect(ctx.log.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Could not retrieve package info from registry')
       );
-      await checkForUpdates(ctx as any);
       expect(Sentry.captureException).not.toHaveBeenCalled();
     });
 
-    it('does not crash when the registry fetch times out', async () => {
+    it('warns without reporting to Sentry when the registry fetch times out', async () => {
       vi.useFakeTimers();
       try {
         const ctx = getContext();
@@ -98,6 +108,7 @@ describe('checkForUpdates', () => {
         expect(ctx.log.warn).toHaveBeenCalledWith(
           expect.objectContaining({ message: expect.stringContaining('Timed out after 5000ms') })
         );
+        expect(Sentry.captureException).not.toHaveBeenCalled();
       } finally {
         vi.useRealTimers();
       }
