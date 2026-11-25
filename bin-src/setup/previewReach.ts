@@ -11,6 +11,7 @@ import type { Check } from './checks';
 import type { DoctorInput } from './doctorInput';
 import { previewStats } from './previewStats';
 import { git, relativeOrDot } from './shared';
+import { unseenFileChecks } from './unseenFiles';
 
 const HISTORY_DAYS = 90;
 const IMPORTS_SHOWN = 5;
@@ -282,14 +283,16 @@ function missingStatsCheck(shown: string, build?: Check['build']): Check {
 
 /**
  * Shows what the Storybook preview pulls in, from a stats file: with TurboSnap, a change to any of
- * those files recaptures every story. Read-only, with no fix: it changes no hash or capture
- * decision.
+ * those files recaptures every story. The preview checks are read-only, with no fix: they change no
+ * hash or capture decision. With a stats file, it also lists the files TurboSnap can't see, which
+ * --fix can add to externals; see `unseenFileChecks`.
  *
  * @param input What loadDoctorInput read.
  * @param statsDirectory A temporary folder doctor builds Storybook into with stats, as a TurboSnap
  * build does, so a stale storybook-static never stands in for that build.
  *
- * @returns One check per preview file, or one that says how to make a stats file.
+ * @returns One check per preview file and the unseen-file check when there are such files, or one
+ * check that says how to make a stats file.
  */
 export async function previewReachChecks(
   input: DoctorInput,
@@ -328,15 +331,22 @@ export async function previewReachChecks(
       path.posix.dirname(file).replace(/^\.\//, '') === configKey &&
       PREVIEW_FILE.test(path.posix.basename(file))
   );
-  return previews.map((preview) =>
-    previewCheck(
-      { ...input, gitRoot },
-      manifest.files,
-      preview,
-      (key) => relativeOrDot(input.cwd, path.isAbsolute(key) ? key : absolute(key)),
-      (key) => relativeOrDot(gitRoot, absolute(key)),
-      shown,
-      new Set(manifest.skippedFiles.keys())
-    )
-  );
+  return [
+    ...previews.map((preview) =>
+      previewCheck(
+        { ...input, gitRoot },
+        manifest.files,
+        preview,
+        (key) => relativeOrDot(input.cwd, path.isAbsolute(key) ? key : absolute(key)),
+        (key) => relativeOrDot(gitRoot, absolute(key)),
+        shown,
+        new Set(manifest.skippedFiles.keys())
+      )
+    ),
+    ...(await unseenFileChecks(
+      input,
+      { gitRoot, projectRoot, buildDirectory: path.dirname(statsFile) },
+      manifest.files.keys()
+    )),
+  ];
 }

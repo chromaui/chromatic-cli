@@ -5,6 +5,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { matchesFile } from '../../node-src/lib/utilities';
 import type { DoctorInput } from './doctorInput';
 import { previewReachChecks } from './previewReach';
 
@@ -202,5 +203,95 @@ Imports`
     write('storybook-static/preview-stats.json', '{ "modules": [] }');
     const [existing] = await reach(input({ onlyChanged: true }));
     expect(existing.build?.statsFile).toBe(path.join(folder, 'preview-stats.json'));
+  });
+});
+
+describe('files TurboSnap cannot see', () => {
+  it('lists project stylesheets and assets outside the graph and staticDirs, from the repository root', async () => {
+    root = mkdtempSync(path.join(tmpdir(), 'chromatic-unseen-'));
+    execFileSync('git', ['init', '-q'], { cwd: root });
+    write('.gitignore', 'node_modules\nstorybook-static\n');
+    const ui = 'packages/ui';
+    write('node_modules/storybook/package.json', '{ "name": "storybook", "version": "9.1.0" }');
+    write(`${ui}/.storybook/main.js`, "module.exports = { staticDirs: ['../public'] };\n");
+    // The preview imports a stylesheet; a story imports a component, which imports an icon.
+    const imports: Record<string, string[]> = {
+      '.storybook/preview.ts': ['src/styles.scss'],
+      'src/Button.stories.tsx': ['src/Button.tsx'],
+      'src/Button.tsx': ['src/icon.svg'],
+    };
+    const inGraph = [
+      ...new Set(Object.entries(imports).flatMap(([file, deps]) => [file, ...deps])),
+    ];
+    const others = [
+      // Seen: in a static dir, named by externals or untraced, not an asset, or in another package.
+      `${ui}/public/logo.png`,
+      `${ui}/src/legacy.css`,
+      `${ui}/src/generated.css`,
+      `${ui}/src/Button.test.ts`,
+      'packages/other/src/other.css',
+      // Unseen: a Sass partial, an image, and a stylesheet whose name has glob characters.
+      `${ui}/src/_partial.scss`,
+      `${ui}/src/assets/hero.png`,
+      `${ui}/src/[theme].scss`,
+    ];
+    for (const file of [...inGraph.map((f) => `${ui}/${f}`), ...others]) write(file, '');
+    const entries: Record<string, string> = {
+      '.storybook/preview.ts': './storybook-config-entry.js',
+      'src/Button.stories.tsx': './storybook-stories.js',
+    };
+    const modules = inGraph.map((file, id) => ({
+      id,
+      name: path.join(root ?? '', ui, file),
+      reasons: [
+        entries[file],
+        ...Object.keys(imports)
+          .filter((parent) => imports[parent].includes(file))
+          .map((parent) => path.join(root ?? '', ui, parent)),
+      ]
+        .filter(Boolean)
+        .map((moduleName) => ({ moduleName })),
+    }));
+    write(`${ui}/storybook-static/preview-stats.json`, JSON.stringify({ modules }));
+    const cwd = path.join(root, ui);
+    const input = {
+      ...inputFor(cwd, 'storybook-static'),
+      gitRoot: root,
+      options: {
+        storybookBuildDir: 'storybook-static',
+        storybookBaseDir: ui,
+        externals: [`${ui}/src/legacy.css`],
+        untraced: [`${ui}/src/generated.css`],
+      },
+      // Uploads a prebuilt Storybook, so a build never runs this script or reads its static dir.
+      packageJson: { scripts: { 'build-storybook': 'storybook build -s src' } },
+      configEditable: true,
+      configKeys: new Set<string>(),
+      flagKeys: new Set<string>(),
+    } as DoctorInput;
+
+    const all = await reach(input);
+    const unseen = all.find((check) => check.title.includes('staticDirs'));
+
+    expect(unseen).toMatchObject({
+      status: 'info',
+      title: '3 stylesheets, images and fonts outside the module graph and staticDirs',
+      fix: { question: 'Does Storybook read these files when it builds?' },
+    });
+    expect(unseen?.detail).toContain(
+      `- ${ui}/src/[theme].scss\n- ${ui}/src/_partial.scss\n- ${ui}/src/assets/hero.png`
+    );
+    const [edit] = unseen?.fix?.edits ?? [];
+    expect(edit.file).toBe(path.join(cwd, 'chromatic.config.json'));
+    const { externals } = JSON.parse(edit.content);
+    // One glob per file, from the repository root, as TurboSnap matches externals.
+    expect(externals).toEqual([
+      String.raw`packages/ui/src/\[theme\].scss`,
+      'packages/ui/src/_partial.scss',
+      'packages/ui/src/assets/hero.png',
+    ]);
+    // Glob characters in a name are escaped, so the glob matches that file and no other.
+    expect(matchesFile(externals[0], `${ui}/src/[theme].scss`)).toBe(true);
+    expect(matchesFile(externals[0], `${ui}/src/t.scss`)).toBe(false);
   });
 });
