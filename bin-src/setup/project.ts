@@ -95,3 +95,22 @@ export async function pickProject(session: Session, projects: Project[]): Promis
     })
   );
 }
+
+/**
+ * The values init writes to the project's config file.
+ *
+ * @param project The project init sets up.
+ * @param parsed The config file as it is, if it parses.
+ *
+ * @returns The E2E framework flag, and for a project in a package, storybookBaseDir. It points
+ * TurboSnap at the package even when CI runs Chromatic from the root, and is harmless when CI runs
+ * it from the package. A storybookBaseDir the config already has is the user's.
+ */
+export function configValues(project: Project, parsed?: Record<string, any>): Record<string, any> {
+  const values: Record<string, any> =
+    project.framework === 'storybook' ? {} : { [project.framework]: true };
+  if (project.relative !== '.' && parsed?.storybookBaseDir === undefined) {
+    values.storybookBaseDir = project.relative;
+  }
+  return values;
+}

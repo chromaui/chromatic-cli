@@ -18,7 +18,7 @@ import {
   PACKAGE_MANAGER_COMMANDS,
   Project,
 } from './detect';
-import { pickProject } from './project';
+import { configValues, pickProject } from './project';
 import { applyFixes, printChecks, showEdits, summarize } from './report';
 import {
   answered,
@@ -136,8 +136,7 @@ async function configStep(session: Session, project: Project) {
   const { file, previous, parsed, json: existing } = existingConfig(project.directory);
   // TurboSnap comes from doctor's fix in the closing check, which asks how CI runs Chromatic
   // first: a prebuilt Storybook may have no stats file, and TurboSnap fails the build without one.
-  const wanted: Record<string, any> =
-    project.framework === 'storybook' ? {} : { [project.framework]: true };
+  const wanted = configValues(project, parsed);
   if (!existing) {
     explainUnedited(writer.display(file), parsed, wanted);
     return;
