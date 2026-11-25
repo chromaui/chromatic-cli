@@ -172,11 +172,10 @@ function configDirectoryChecks(input: DoctorInput): Check[] {
 }
 
 function baseDirectoryChecks(input: DoctorInput): Check[] {
-  const { cwd, gitRoot, options } = input;
+  const { gitRoot, options } = input;
   const value = options.storybookBaseDir;
   if (value === undefined || !gitRoot) return [];
-  const target = path.resolve(gitRoot, value);
-  if (!existsSync(target)) {
+  if (!existsSync(path.resolve(gitRoot, value))) {
     return [
       {
         group: 'Values',
@@ -186,29 +185,8 @@ function baseDirectoryChecks(input: DoctorInput): Check[] {
       },
     ];
   }
-  if (target === cwd) {
-    return [
-      {
-        group: 'Values',
-        status: 'warn',
-        title: 'storybookBaseDir repeats the default',
-        detail:
-          'Chromatic already uses the directory it runs from. If CI runs Chromatic from somewhere else, keep it.',
-        // Only when CI runs Chromatic from here too; from the root, the value isn't the default.
-        fix: withQuestion(
-          configFix(
-            input,
-            'storybookBaseDir',
-            'Remove storybookBaseDir from the config file',
-            (json) => {
-              delete json.storybookBaseDir;
-            }
-          ),
-          runsHereQuestion(input)
-        ),
-      },
-    ];
-  }
+  // Naming this project's own package is correct: redundant when CI runs Chromatic from here,
+  // and the only thing that points TurboSnap at the package when CI runs it from the root.
   return [{ group: 'Values', status: 'pass', title: `storybookBaseDir ${value} exists` }];
 }
 
