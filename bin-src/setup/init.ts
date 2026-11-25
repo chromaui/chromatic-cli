@@ -20,7 +20,7 @@ import {
   releaseAgeFailure,
 } from './install';
 import { configValues, pickProject } from './project';
-import { applyFixes, printChecks, showEdits, summarize } from './report';
+import { applyFixes, printChecks, showEdits, skillsHint, summarize } from './report';
 import {
   answered,
   chromaticScript,
@@ -474,7 +474,10 @@ export async function main(argv: string[]) {
       '',
       `Run ${color.cta(runFrom === '.' ? run : `cd ${runFrom} && ${run}`)} to create your first baselines.`,
       `Then run it in CI on every push, with the token as CHROMATIC_PROJECT_TOKEN: ${color.cta('https://www.chromatic.com/docs/ci')}`,
-    ].join('\n')
+      skillsHint(failed),
+    ]
+      .filter((line) => line !== undefined)
+      .join('\n')
   );
   // Exit like doctor, so CI doesn't take a setup that can't build for a working one.
   if (failed) throw new SubcommandFailure('Some checks failed', { exitCode: 1 });
