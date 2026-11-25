@@ -21,7 +21,7 @@ import {
   TEST_FRAMEWORKS,
 } from './setup/detect';
 import { loadDoctorInput } from './setup/doctorInput';
-import { applyFixes, doctorCommand, printChecks, summarize } from './setup/report';
+import { applyFixes, doctorCommand, printChecks, skillsHint, summarize } from './setup/report';
 import { answered, color, git, readJson, relativeOrDot } from './setup/shared';
 import { SubcommandFailure } from './subcommandFailure';
 
@@ -402,10 +402,13 @@ export async function main(argv: string[]) {
     clack.outro(color.warning('No project has Chromatic set up yet.'));
     return;
   }
+  const failed = all.some((c) => c.status === 'fail');
+  const skills = skillsHint(failed);
+  if (skills) clack.log.info(skills);
   clack.outro(
     `${multi ? `${targets.length} project${targets.length === 1 ? '' : 's'} · ` : ''}${summarize(all)}`
   );
-  if (all.some((c) => c.status === 'fail')) {
+  if (failed) {
     throw new SubcommandFailure('Some checks failed', { exitCode: 1 });
   }
 }

@@ -296,3 +296,16 @@ export function doctorCommand(argv: string[], extra: string[]) {
     ...[...kept, ...extra].map((argument) => shellQuote(argument)),
   ].join(' ');
 }
+
+/**
+ * The closing pointer to Chromatic's agent skills, for a run with nothing failed. Left out in CI,
+ * where the output is read for failures, and on failing runs, where it would crowd out the fix.
+ *
+ * @param failed Whether a check failed.
+ *
+ * @returns The line, or undefined when it shouldn't show.
+ */
+export function skillsHint(failed: boolean) {
+  if (failed || process.env.CI) return undefined;
+  return `Using an AI agent? Give it Chromatic's skills: ${color.cta('https://www.chromatic.com/docs/skills/')}`;
+}
