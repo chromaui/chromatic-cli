@@ -12,7 +12,7 @@ import { Check, runChecks } from './setup/checks';
 import { describeProject, findProjects, listProjectFiles, Project } from './setup/detect';
 import { loadDoctorInput } from './setup/doctorInput';
 import { applyFixes, doctorCommand, printChecks, summarize } from './setup/report';
-import { color, git, readJson, relativeOrDot } from './setup/shared';
+import { answered, color, git, readJson, relativeOrDot } from './setup/shared';
 import { SubcommandFailure } from './subcommandFailure';
 
 const CONFIG_FILES = ['chromatic.config.json', 'chromatic.config.jsonc', 'chromatic.config.json5'];
@@ -85,8 +85,8 @@ function packageDirectory(directory: string, gitRoot: string) {
 
 /**
  * Decides what to check. From a project (a config file or .storybook here, or path flags), check
- * it. From anywhere else, check every project in the repository that has Chromatic set up, like
- * storybook automigrate does for multi-project repos.
+ * it. From anywhere else, return every project in the repository that has Chromatic set up, as
+ * storybook automigrate does for multi-project repos; main asks which one when it can.
  *
  * @param cwd Where doctor runs.
  * @param flags doctor's own flags.
@@ -177,8 +177,8 @@ export async function main(argv: string[]) {
 
     Checks your Chromatic setup without starting a build: that the config loads, that each
     option's value matches what's on disk and in git, and the git history and token around it.
-    Run it from a project to check that project, or from anywhere else in a monorepo to check
-    every project with Chromatic set up.
+    Run it from a project to check that project. From anywhere else in a monorepo, it asks which
+    project with Chromatic set up to check, or checks them all without a terminal (in CI).
 
     Options
       --project <dir>     Check only this project.
@@ -211,9 +211,31 @@ export async function main(argv: string[]) {
   clack.intro(`Chromatic CLI v${pkg.version}`);
   clack.log.message(color.muted('doctor · checking your setup without starting a build'));
 
-  const { targets, notSetUp } = await chooseTargets(cwd, flags, mainFlags);
-  const multi = targets.length > 1 || notSetUp.length > 0;
-  if (multi) {
+  const found = await chooseTargets(cwd, flags, mainFlags);
+  const { notSetUp } = found;
+  // Like init, ask which project to check when there's a terminal; without one, check them all.
+  const targets =
+    interactive && found.targets.length > 1
+      ? [
+          answered(
+            await clack.select({
+              message: `Found ${found.targets.length} projects with Chromatic set up. Which one should doctor check?`,
+              // Description in the label, not a hint: Clack shows hints only on the highlighted option.
+              options: found.targets.map((target) => ({ value: target, label: target.label })),
+            })
+          ),
+        ]
+      : found.targets;
+  const picked = targets.length < found.targets.length;
+  // One project picked from several reads like a run from inside it, without per-project headers.
+  const multi = !picked && (targets.length > 1 || notSetUp.length > 0);
+  // The closing hints check the same project without asking again.
+  const hintArgv = picked ? [...argv, '--project', relativeOrDot(cwd, targets[0].directory)] : argv;
+  if (picked) {
+    clack.log.info(
+      `Next time, pass ${color.cta(`--project ${relativeOrDot(cwd, targets[0].directory)}`)} to skip the question.`
+    );
+  } else if (multi) {
     clack.log.info(
       `Found ${targets.length + notSetUp.length} project${targets.length + notSetUp.length === 1 ? '' : 's'}; checking the ${targets.length} with Chromatic set up.`
     );
@@ -252,11 +274,11 @@ export async function main(argv: string[]) {
   }
   if (skippedFixes) {
     clack.log.warn(
-      `Didn't apply fixes: there's no terminal to confirm them (CI or piped input).\nRun ${color.cta(doctorCommand(argv, ['--fix', '--yes']))} to apply them${questions ? ', except the ones that ask how your CI runs Chromatic, which need a terminal' : ''}.`
+      `Didn't apply fixes: there's no terminal to confirm them (CI or piped input).\nRun ${color.cta(doctorCommand(hintArgv, ['--fix', '--yes']))} to apply them${questions ? ', except the ones that ask how your CI runs Chromatic, which need a terminal' : ''}.`
     );
   } else if (!flags.fix && all.some((c) => c.fix)) {
     clack.log.info(
-      `Run ${color.cta(doctorCommand(argv, ['--fix']))} to fix what's marked fixable.`
+      `Run ${color.cta(doctorCommand(hintArgv, ['--fix']))} to fix what's marked fixable.`
     );
   }
 
