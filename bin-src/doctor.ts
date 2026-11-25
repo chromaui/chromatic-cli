@@ -155,12 +155,45 @@ async function chooseTargets(cwd: string, flags: Record<string, any>, mainFlags:
         .filter((p) => isSetUp(p.directory))
         .map((p) => ({
           directory: p.directory,
-          label: `${p.relative} ${color.muted(`· ${describeProject(p)}`)}`,
+          // Relative to where doctor runs, so a label can be passed straight back as --project.
+          label: `${relativeOrDot(cwd, p.directory)} ${color.muted(`· ${describeProject(p)}`)}`,
         })),
-      ...configured.map((directory) => ({ directory, label: relativeOrDot(gitRoot, directory) })),
+      ...configured.map((directory) => ({ directory, label: relativeOrDot(cwd, directory) })),
     ],
     notSetUp: projects.filter((p) => !isSetUp(p.directory)),
   };
+}
+
+/**
+ * Lists the projects doctor could check and asks for one with --project. Without a terminal,
+ * doctor checks one project, so it never runs every project's checks when only one is needed.
+ *
+ * @param cwd The directory doctor runs from.
+ * @param found What chooseTargets found.
+ * @param found.targets Projects with Chromatic set up.
+ * @param found.notSetUp Projects init could set up.
+ *
+ * @returns The failure to throw: exit code 2, as `--json` will report "project-required".
+ */
+function projectRequired(
+  cwd: string,
+  { targets, notSetUp }: Awaited<ReturnType<typeof chooseTargets>>
+) {
+  if (targets.length > 0) {
+    clack.log.info(`Set up with Chromatic:\n${targets.map((target) => target.label).join('\n')}`);
+  }
+  if (notSetUp.length > 0) {
+    clack.log.info(
+      `Not set up with Chromatic:\n${notSetUp
+        .map((p) => `${relativeOrDot(cwd, p.directory)} ${color.muted(`· ${describeProject(p)}`)}`)
+        .join('\n')}\nRun ${color.cta('npx chromatic init --project <dir>')} to add one.`
+    );
+  }
+  const count = targets.length === 0 ? 'no projects' : `${targets.length} projects`;
+  return new SubcommandFailure(
+    `Found ${count} with Chromatic set up. Pass --project <directory> to check one.`,
+    { exitCode: 2 }
+  );
 }
 
 /**
@@ -178,7 +211,8 @@ export async function main(argv: string[]) {
     Checks your Chromatic setup without starting a build: that the config loads, that each
     option's value matches what's on disk and in git, and the git history and token around it.
     Run it from a project to check that project. From anywhere else in a monorepo, it asks which
-    project with Chromatic set up to check, or checks them all without a terminal (in CI).
+    project with Chromatic set up to check. Without a terminal (in CI), pass --project instead:
+    doctor lists the projects and exits 2 without checking any.
 
     Options
       --project <dir>     Check only this project.
@@ -213,7 +247,8 @@ export async function main(argv: string[]) {
 
   const found = await chooseTargets(cwd, flags, mainFlags);
   const { notSetUp } = found;
-  // Like init, ask which project to check when there's a terminal; without one, check them all.
+  if (!interactive && found.targets.length !== 1) throw projectRequired(cwd, found);
+  // Like init, ask which project to check when there's a terminal.
   const targets =
     interactive && found.targets.length > 1
       ? [
@@ -268,7 +303,7 @@ export async function main(argv: string[]) {
   if (notSetUp.length > 0) {
     clack.log.info(
       `Not set up with Chromatic:\n${notSetUp
-        .map((p) => `${p.relative} ${color.muted(`· ${describeProject(p)}`)}`)
+        .map((p) => `${relativeOrDot(cwd, p.directory)} ${color.muted(`· ${describeProject(p)}`)}`)
         .join('\n')}\nRun ${color.cta('npx chromatic init --project <dir>')} to add one.`
     );
   }
