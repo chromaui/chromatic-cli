@@ -14,6 +14,7 @@ import {
   BaselineCheckoutFailedError,
   LockFileParseFailedError,
   LockFileSizeExceededError,
+  LockFileUnresolvedError,
 } from './errors';
 import { findChangedDependencies as findChangedDependenciesDep } from './findChangedDependencies';
 import { findChangedPackageFiles as findChangedPackageFilesDep } from './findChangedPackageFiles';
@@ -382,6 +383,35 @@ describe('traceChangedFiles', () => {
       turboSnap: {}, // checking there is no bailReason set
     });
     expect(captureException).not.toHaveBeenCalled();
+  });
+
+  it('bails on the lockfile, without asking package.json or Sentry, when the lockfile parser cannot resolve a dependency', async () => {
+    findChangedDependencies.mockRejectedValue(
+      new LockFileUnresolvedError('web/packages/ui/package.json', 'web/package-lock.json')
+    );
+    // Only the lockfile changed, so the package.json fallback would find nothing.
+    findChangedPackageFiles.mockResolvedValue([]);
+
+    const packageMetadataChanges = [{ changedFiles: ['web/package-lock.json'], commit: 'abcdef' }];
+    const ctx = {
+      env: environment,
+      log,
+      http,
+      options: {},
+      sourceDir: '/static/',
+      fileInfo: { statsPath: '/static/preview-stats.json' },
+      git: { changedFiles: ['web/package-lock.json'], packageMetadataChanges },
+      turboSnap: {},
+    } as any;
+
+    const result = await traceChangedFiles(ctx);
+
+    expect(result).toMatchObject({
+      status: 'bailed',
+      turboSnap: { bailReason: { changedPackageFiles: ['web/package-lock.json'] } },
+    });
+    expect(captureException).not.toHaveBeenCalled();
+    expect(getDependentStoryFiles).not.toHaveBeenCalled();
   });
 
   it('bails without mutating ctx when package files changed', async () => {

@@ -18,7 +18,11 @@ import * as git from '../../../git/git';
 import * as treeAtReference from '../../../git/treeAtReference';
 import getEnvironment from '../../getEnvironment';
 import TestLogger from '../../testLogger';
-import { BaselineCheckoutFailedError, LockFileMissingError } from './errors';
+import {
+  BaselineCheckoutFailedError,
+  LockFileMissingError,
+  LockFileUnresolvedError,
+} from './errors';
 import { findChangedDependencies } from './findChangedDependencies';
 
 vi.mock('snyk-nodejs-lockfile-parser');
@@ -508,6 +512,35 @@ describe('findChangedDependencies', () => {
     expect(importers.toSorted()).toEqual(['.', '.', 'packages/ui', 'packages/ui']);
     expect(checkoutFile).toHaveBeenCalledWith(expect.anything(), 'A', 'web/pnpm-lock.yaml', tmpdir);
   });
+
+  // npm's parser keeps the declared range for a copy npm installs under the workspace, which
+  // hides an upgrade of that copy. pnpm and Yarn resolve such copies. Only HEAD decides, because a
+  // baseline range already differs from an exact HEAD version.
+  it.each([
+    ['package-lock.json', 'example-lib@^1.0.0', 'example-lib@^1.0.0', true],
+    ['package-lock.json', 'example-lib@^1.0.0', 'example-lib@1.0.0', true],
+    ['package-lock.json', 'example-lib@1.1.0', 'example-lib@^1.0.0', false],
+    ['package-lock.json', 'example-lib@1.1.0', 'example-lib@1.1.0', false],
+    ['yarn.lock', 'example-lib@^1.0.0', 'example-lib@^1.0.0', false],
+  ])(
+    'given %s resolving %s at HEAD and %s at the baseline, bails: %s',
+    async (lockfile, head, base, bails) => {
+      mockTrackedFiles(['web/package.json', `web/${lockfile}`, 'web/packages/ui/package.json']);
+      mockInspect(/* HEAD */ [head], /* Baseline A */ [base]);
+      mockChangedPackagesGraph([]);
+
+      const context = getContext({
+        git: {
+          packageMetadataChanges: [{ changedFiles: ['web/packages/ui/package.json'], commit: 'A' }],
+        },
+      });
+
+      const result = findChangedDependencies(context, noStats);
+      await (bails
+        ? expect(result).rejects.toThrow(LockFileUnresolvedError)
+        : expect(result).resolves.toEqual([]));
+    }
+  );
 });
 
 // A fake dependency graph of a workspace, its own package plus its dependencies.
