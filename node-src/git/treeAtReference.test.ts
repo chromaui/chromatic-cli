@@ -18,9 +18,13 @@ describe('pathExistsAtReference', () => {
     execGitCommand.mockResolvedValueOnce(output);
 
     await expect(pathExistsAtReference(ctx, 'abc123', 'packages/ui')).resolves.toBe(expected);
-    expect(execGitCommand).toHaveBeenCalledWith(
-      ctx,
-      'git ls-tree --full-tree abc123 -- "packages/ui"'
-    );
+    expect(execGitCommand).toHaveBeenCalledWith(ctx, [
+      'git',
+      'ls-tree',
+      '--full-tree',
+      'abc123',
+      '--',
+      'packages/ui',
+    ]);
   });
 });

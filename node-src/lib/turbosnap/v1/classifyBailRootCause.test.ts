@@ -1,14 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  commitExists as commitExistsDep,
-  getChangedFilesWithStatus as getChangedFilesWithStatusDep,
-} from '../../../git/git';
+import { getChangedFilesWithStatus as getChangedFilesWithStatusDep } from '../../../git/getChangedFilesWithStatus';
+import { commitExists as commitExistsDep } from '../../../git/git';
 import TestLogger from '../../testLogger';
 import { classifyTagsFromError } from './classifyBailRootCause';
 import { BaselineCheckoutFailedError } from './errors';
 
 vi.mock('../../../git/git');
+vi.mock('../../../git/getChangedFilesWithStatus');
 const getChangedFilesWithStatus = vi.mocked(getChangedFilesWithStatusDep);
 const commitExists = vi.mocked(commitExistsDep);
 

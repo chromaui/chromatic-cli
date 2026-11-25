@@ -28,19 +28,23 @@ const defaultOptions = {
   // Only stdout is the result: git writes warnings to stderr even when it succeeds.
   // `execGitCommand` still puts a failure's stderr in its error message.
   all: false,
-  shell: true, // we'll deal with escaping ourselves (for now)
 } satisfies Options;
 
 /**
- * Describe a command for logs and error messages. An argv array is shell-quoted where needed, so
+ * A git command as an argv array, starting with `git`. It runs without a shell, so each value
+ * reaches git as one argument, whatever characters it contains.
+ */
+type GitCommand = readonly ['git', ...string[]];
+
+/**
+ * Describe a command for logs and error messages. Arguments are shell-quoted where needed, so
  * argument boundaries stay visible and the line can be pasted into a terminal.
  *
- * @param command The command, as a string or an argv array.
+ * @param command The command as an argv array.
  *
  * @returns The command as one line.
  */
-function describeCommand(command: string | [string, ...string[]]) {
-  if (typeof command === 'string') return command;
+function describeCommand(command: GitCommand) {
   return command
     .map((argument) =>
       /^[\w@%+=:,./-]+$/.test(argument) ? argument : `'${argument.replaceAll("'", `'\\''`)}'`
@@ -65,8 +69,7 @@ export function getGitTimeout(depOptions: GitDeps['options']): number {
  * @param deps Standard context object.
  * @param deps.log Standard context logger.
  * @param deps.options Options object for the Git command.
- * @param command The command to execute. Pass an argv array, which runs without a shell, when it
- * includes a value from outside the CLI, such as a branch name.
+ * @param command The command to execute.
  * @param options Execa options, plus `logResult`; see `ExecGitOptions`.
  * @param options.logResult Whether to write the command's output to the debug log.
  *
@@ -74,7 +77,7 @@ export function getGitTimeout(depOptions: GitDeps['options']): number {
  */
 export async function execGitCommand(
   { log, options: depOptions }: GitDeps,
-  command: string | [string, ...string[]],
+  command: GitCommand,
   { logResult = true, ...options }: ExecGitOptions = {}
 ) {
   const description = describeCommand(command);
@@ -105,6 +108,36 @@ export async function execGitCommand(
 }
 
 /**
+ * Execute a Git command and stream its stdout into a file, so output of any size, such as a large
+ * lockfile from `git show`, is never held in memory.
+ *
+ * @param deps Standard context object.
+ * @param deps.log Standard context logger.
+ * @param deps.options Options object for the Git command.
+ * @param command The command to execute.
+ * @param filePath The file to write stdout to. It is created or truncated before git runs.
+ */
+export async function execGitCommandToFile(
+  { log, options: depOptions }: GitDeps,
+  command: GitCommand,
+  filePath: string
+) {
+  const description = describeCommand(command);
+  try {
+    log.debug(`execGitCommandToFile: ${description} > ${filePath}`);
+    await runCommand(command, {
+      timeout: getGitTimeout(depOptions),
+      ...defaultOptions,
+      stdout: { file: filePath },
+      // Buffering would also keep stdout in memory, up to execa's `maxBuffer`.
+      buffer: { stdout: false },
+    });
+  } catch (error) {
+    throw translateGitError(log, description, error);
+  }
+}
+
+/**
  * Execute a Git command whose NUL-separated output may be too large to hold at once, such as a
  * listing of every file in a monorepo, yielding each entry as it arrives. Only stdout is read, so a
  * stderr warning can't masquerade as an entry, and nothing is written to the debug log.
@@ -119,7 +152,7 @@ export async function execGitCommand(
  */
 export async function* execGitCommandEntries(
   { log, options: depOptions }: GitDeps,
-  command: string | [string, ...string[]],
+  command: GitCommand,
   options?: Options
 ): AsyncGenerator<string> {
   const description = describeCommand(command);
@@ -182,10 +215,11 @@ export async function* execGitCommandEntries(
  */
 export async function execGitCommandOneLine(
   { log, options: depOptions }: GitDeps,
-  command: string,
+  command: GitCommand,
   options?: Options
 ) {
-  log.debug(`execGitCommandOneLine: ${command}`);
+  const description = describeCommand(command);
+  log.debug(`execGitCommandOneLine: ${description}`);
   const timeout = getGitTimeout(depOptions);
   const process = runCommand(command, {
     timeout,
@@ -199,7 +233,7 @@ export async function execGitCommandOneLine(
     (async () => {
       await process;
 
-      throw new Error(`Unexpected missing git command output for command: '${command}'`);
+      throw new Error(`Unexpected missing git command output for command: '${description}'`);
     })(),
     // We expect this promise to resolve first
     new Promise<string>((resolve, reject) => {
@@ -231,10 +265,10 @@ export async function execGitCommandOneLine(
  */
 export async function execGitCommandCountLines(
   { log, options: depOptions }: GitDeps,
-  command: string,
+  command: GitCommand,
   options?: Options
 ) {
-  log.debug(`execGitCommandCountLines: ${command}`);
+  log.debug(`execGitCommandCountLines: ${describeCommand(command)}`);
   const timeout = getGitTimeout(depOptions);
   const process = runCommand(command, {
     timeout,

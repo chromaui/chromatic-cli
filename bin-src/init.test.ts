@@ -99,7 +99,7 @@ describe('installArchiveDependencies', () => {
     const [cmd, ...args] = parseCommandString(installCommand);
 
     expect(execa).toHaveBeenCalledOnce();
-    expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
+    expect(execa).toHaveBeenCalledWith(cmd, args);
   });
 
   it('successfully installs list of dependencies for Cypress if SB package is not found and Essentials is not found', async () => {
@@ -110,7 +110,7 @@ describe('installArchiveDependencies', () => {
     const [cmd, ...args] = parseCommandString(installCommand);
 
     expect(execa).toHaveBeenCalledOnce();
-    expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
+    expect(execa).toHaveBeenCalledWith(cmd, args);
   });
 
   it('successfully installs list of dependencies for Vitest if SB package is not found and Essentials is not found', async () => {
@@ -121,7 +121,7 @@ describe('installArchiveDependencies', () => {
     const [cmd, ...args] = parseCommandString(installCommand);
 
     expect(execa).toHaveBeenCalledOnce();
-    expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
+    expect(execa).toHaveBeenCalledWith(cmd, args);
   });
 
   it('successfully installs list of dependencies if SB package is found and Essentials is not found', async () => {
@@ -136,8 +136,28 @@ describe('installArchiveDependencies', () => {
     const [cmd, ...args] = parseCommandString(installCommand);
 
     expect(execa).toHaveBeenCalledOnce();
-    expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
+    expect(execa).toHaveBeenCalledWith(cmd, args);
   });
+
+  it.each(['^7.0.0 || ^8.0.0', '1.0.0" --registry=http://example.invalid "'])(
+    'passes the Storybook version %j as part of one argument',
+    async (version) => {
+      await installArchiveDependencies(
+        // @ts-expect-error Ignore the intentionally missing properties
+        { devDependencies: { storybook: version } } as NormalizedPackageJson,
+        'playwright'
+      );
+
+      expect(execa).toHaveBeenCalledWith('yarn', [
+        'add',
+        '-D',
+        'chromatic',
+        '@chromatic-com/playwright',
+        `@storybook/addon-essentials@${version}`,
+        `@storybook/server-webpack5@${version}`,
+      ]);
+    }
+  );
 
   it('successfully installs list of dependencies if SB package is found and Essentials is found in devDependencies', async () => {
     await installArchiveDependencies(
@@ -153,7 +173,7 @@ describe('installArchiveDependencies', () => {
     const [cmd, ...args] = parseCommandString(installCommand);
 
     expect(execa).toHaveBeenCalledOnce();
-    expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
+    expect(execa).toHaveBeenCalledWith(cmd, args);
   });
 
   it('successfully installs list of dependencies if SB package is found and Essentials is found in dependencies', async () => {
@@ -170,7 +190,7 @@ describe('installArchiveDependencies', () => {
     const [cmd, ...args] = parseCommandString(installCommand);
 
     expect(execa).toHaveBeenCalledOnce();
-    expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
+    expect(execa).toHaveBeenCalledWith(cmd, args);
   });
 
   it('successfully installs list of dependencies if SB package is not found and Essentials is found in dependencies', async () => {
@@ -185,6 +205,6 @@ describe('installArchiveDependencies', () => {
     const [cmd, ...args] = parseCommandString(installCommand);
 
     expect(execa).toHaveBeenCalledOnce();
-    expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
+    expect(execa).toHaveBeenCalledWith(cmd, args);
   });
 });
