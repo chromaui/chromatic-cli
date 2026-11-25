@@ -3,7 +3,8 @@ import { stripVTControlCharacters } from 'node:util';
 
 import * as clack from '@clack/prompts';
 
-import type { Check, Group } from './checks';
+import type { Check, Fix, Group } from './checks';
+import { installDependencies } from './install';
 import { answered, color, relativeOrDot } from './shared';
 
 const GROUP_TITLES: Record<Group, string> = {
@@ -176,25 +177,25 @@ function maskTokens(text: string, secrets: string[]) {
 }
 
 /**
- * Offers fixes one at a time like storybook automigrate: show the change, ask, write, then check
- * again, so fixes to the same file build on each other.
+ * Offers each fix in turn and applies the ones accepted.
  *
  * @param recheck Runs the checks against the files as they are now.
  * @param options How to apply.
  * @param options.cwd Directory paths are shown relative to.
  * @param options.yes Apply every fix without asking, except those with a question.
  *
- * @returns The checks after the last fix.
+ * @returns The checks after the last fix, and the fixes applied.
  */
-export async function applyFixes(
+async function offerFixes(
   recheck: () => Promise<Check[]>,
   { cwd, yes }: { cwd: string; yes: boolean }
 ) {
   const skipped = new Set<string>();
+  const applied: Fix[] = [];
   for (;;) {
     const checks = await recheck();
     const next = checks.find((c) => c.fix && !skipped.has(c.fix.summary));
-    if (!next?.fix) return checks;
+    if (!next?.fix) return { checks, applied };
     const { fix } = next;
     skipped.add(fix.summary);
     if (fix.question && yes) {
@@ -213,8 +214,32 @@ export async function applyFixes(
     const ok = yes || answered(await clack.confirm({ message: fix.question ?? 'Apply this fix?' }));
     if (!ok) continue;
     for (const { file, content } of fix.edits) writeFileSync(file, content);
+    applied.push(fix);
     clack.log.success(`Applied: ${fix.summary}`);
   }
+}
+
+/**
+ * Offers fixes one at a time like storybook automigrate: show the change, ask, write, then check
+ * again, so fixes to the same file build on each other. When a fix changes dependencies, the
+ * project's install runs once at the end.
+ *
+ * @param recheck Runs the checks against the files as they are now.
+ * @param options How to apply.
+ * @param options.cwd Directory paths are shown relative to, and the install runs in.
+ * @param options.yes Apply every fix without asking, except those with a question.
+ *
+ * @returns The checks after the last fix, and the install's failure when there is one.
+ */
+export async function applyFixes(
+  recheck: () => Promise<Check[]>,
+  options: { cwd: string; yes: boolean }
+) {
+  const { checks, applied } = await offerFixes(recheck, options);
+  if (!applied.some((fix) => fix.install)) return checks;
+  // One install for every fix that changed dependencies, then check what it installed.
+  const failed = await installDependencies(options.cwd);
+  return [...(await recheck()), ...(failed ? [failed] : [])];
 }
 
 // Quotes an argument for a POSIX shell when it needs it.

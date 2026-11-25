@@ -1,11 +1,15 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { execa } from 'execa';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { Check } from './checks';
 import { applyFixes, doctorCommand } from './report';
+
+vi.mock('execa', () => ({ execa: vi.fn() }));
 
 let root: string | undefined;
 
@@ -42,6 +46,38 @@ describe('applyFixes', () => {
 
     expect(readFileSync(plain, 'utf8')).toBe('{}\n');
     expect(existsSync(asked)).toBe(false);
+  });
+});
+
+describe('applyFixes installs', () => {
+  it('once after the fixes that change dependencies, and fails a check when it fails', async () => {
+    root = mkdtempSync(path.join(tmpdir(), 'chromatic-install-'));
+    const directory = root;
+    const fix = (name: string) => ({
+      group: 'Loading' as const,
+      status: 'warn' as const,
+      title: name,
+      fix: {
+        summary: `Add ${name}`,
+        install: true,
+        edits: [{ file: path.join(directory, name), content: '' }],
+      },
+    });
+    const checks = [fix('a'), fix('b')];
+    // The lockfile says npm, whichever package manager runs the tests, even with TMPDIR inside
+    // another project's checkout: its own repository makes this folder the root detection reads.
+    writeFileSync(path.join(root, 'package-lock.json'), '{}');
+    execFileSync('git', ['init', '-q'], { cwd: root });
+
+    await applyFixes(async () => checks, { cwd: root, yes: true });
+    expect(execa).toHaveBeenCalledOnce();
+    expect(execa).toHaveBeenCalledWith('npm', ['install'], expect.objectContaining({ cwd: root }));
+
+    vi.mocked(execa).mockRejectedValueOnce(
+      Object.assign(new Error('x'), { all: 'E404 chromatic' })
+    );
+    const after = await applyFixes(async () => checks, { cwd: root, yes: true });
+    expect(after.at(-1)).toMatchObject({ status: 'fail', title: 'npm install failed' });
   });
 });
 

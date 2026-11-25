@@ -26,6 +26,11 @@ export interface Fix {
    * how CI runs Chromatic, which doctor can't see. --yes can't answer it, so it skips the fix.
    */
   question?: string;
+  /**
+   * Whether the fix changes dependencies in package.json. After the fixes, doctor runs the
+   * project's install once, so a CI that installs with a frozen lockfile doesn't fail on them.
+   */
+  install?: boolean;
 }
 
 export interface Check {
@@ -83,7 +88,8 @@ function loadingChecks(input: DoctorInput, configError?: string): Check[] {
           detail:
             'npx downloads the latest release on every run. Pin it with your package manager.',
           fix: {
-            summary: `Add chromatic ^${pkg.version} to devDependencies (then run your install)`,
+            summary: `Add chromatic ^${pkg.version} to devDependencies and install it`,
+            install: true,
             edits: [
               packageJsonEdit(packageJsonPath, (json) => {
                 json.devDependencies = { ...json.devDependencies, chromatic: `^${pkg.version}` };
