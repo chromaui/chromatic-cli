@@ -139,6 +139,23 @@ describe('installArchiveDependencies', () => {
     expect(execa).toHaveBeenCalledWith(cmd, args);
   });
 
+  it('passes a version range with spaces as one argument', async () => {
+    await installArchiveDependencies(
+      // @ts-expect-error Ignore the intentionally missing properties
+      { devDependencies: { storybook: '^7.0.0 || ^8.0.0' } } as NormalizedPackageJson,
+      'playwright'
+    );
+
+    expect(execa).toHaveBeenCalledWith('yarn', [
+      'add',
+      '-D',
+      'chromatic',
+      '@chromatic-com/playwright',
+      '@storybook/addon-essentials@^7.0.0 || ^8.0.0',
+      '@storybook/server-webpack5@^7.0.0 || ^8.0.0',
+    ]);
+  });
+
   it('successfully installs list of dependencies if SB package is found and Essentials is found in devDependencies', async () => {
     await installArchiveDependencies(
       // @ts-expect-error Ignore the intentionally missing properties
