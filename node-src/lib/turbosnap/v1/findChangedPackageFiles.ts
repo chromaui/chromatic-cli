@@ -1,4 +1,5 @@
 import { execGitCommand, GitDeps } from '../../../git/execGit';
+import { assertNotOption } from '../../../git/revisions';
 import { isPackageMetadataFile } from '../../utilities';
 
 // TODO: refactor this function
@@ -59,6 +60,7 @@ const readGitFile = async (
   fileName: string,
   commit = 'HEAD'
 ) => {
+  assertNotOption(commit);
   const key = `${commit}:${fileName}`;
   if (fileCache.has(key)) return fileCache.get(key);
   const contents = await execGitCommand(ctx, ['git', 'show', key]);

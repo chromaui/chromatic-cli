@@ -406,11 +406,17 @@ describe('with values from outside the CLI', () => {
     expect(existsSync(marker)).toBe(false);
   });
 
-  it('does not let a --patch-build branch pass options to git', async () => {
+  it('does not let a --patch-build branch run commands or pass options to git', async () => {
     const marker = path.join(markerDirectory, 'marker');
 
     await expect(findMergeBase(ctx, `--output=${marker}`, 'HEAD')).rejects.toThrow(
       'Invalid revision'
+    );
+    await expect(findMergeBase(ctx, 'HEAD', `--output=${marker}`)).rejects.toThrow(
+      'Invalid revision'
+    );
+    await expect(findMergeBase(ctx, `main;touch ${marker};#`, 'HEAD')).rejects.toThrow(
+      /Not a valid object name main;touch/
     );
     expect(existsSync(marker)).toBe(false);
   });

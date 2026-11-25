@@ -1,4 +1,5 @@
 import { execGitCommand, GitDeps } from './execGit';
+import { assertNotOption } from './revisions';
 
 const newline = /\r\n|\r|\n/; // Git may return \n even on Windows, so we can't use EOL
 
@@ -44,6 +45,7 @@ export async function getChangedFilesWithStatus(
   headCommit = '',
   pathspec = ''
 ): Promise<ChangedFileWithStatus[]> {
+  assertNotOption(baseCommit);
   const output = await execGitCommand(deps, [
     'git',
     '--no-pager',

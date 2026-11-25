@@ -25,6 +25,7 @@ import {
   getGitTimeout,
   GitDeps,
 } from './execGit';
+import { assertNotOption, isCommitSha } from './revisions';
 import { resolveSymlinkAtReference } from './treeAtReference';
 
 const newline = /\r\n|\r|\n/; // Git may return \n even on Windows, so we can't use EOL
@@ -283,31 +284,6 @@ export async function hasPreviousCommit(deps: GitDeps) {
   // Ignore lines that don't match the expected format (e.g. gpg signature info)
   const allhex = new RegExp('^[a-f0-9]+$');
   return result.split('\n').some((line: string) => allhex.test(line));
-}
-
-/**
- * Reject a value from outside the CLI, such as a branch name, that git would read as an option
- * (`--output=<file>`) rather than a revision. `--end-of-options` would do the same, but needs git
- * 2.24.
- *
- * @param revision The revision to check.
- */
-function assertNotOption(revision: string) {
-  if (revision.startsWith('-')) {
-    throw new Error(`Invalid revision '${revision}'`);
-  }
-}
-
-/**
- * Whether a value is a commit SHA, full or abbreviated. Commits read back from the index are only
- * passed to git when they are.
- *
- * @param commit The value to check.
- *
- * @returns True if the value is a hexadecimal SHA.
- */
-export function isCommitSha(commit: string) {
-  return /^[\da-f]+$/i.test(commit);
 }
 
 /**

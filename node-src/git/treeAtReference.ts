@@ -1,6 +1,7 @@
 import path from 'path';
 
 import { execGitCommand, GitDeps } from './execGit';
+import { assertNotOption } from './revisions';
 
 // Tree entry mode git assigns to symbolic links, as printed by `git ls-tree`
 // (regular files are 100644/100755, directories 040000, submodules 160000).
@@ -20,6 +21,7 @@ export async function pathExistsAtReference(
   reference: string,
   repositoryPath: string
 ) {
+  assertNotOption(reference);
   const entry = await execGitCommand(deps, [
     'git',
     'ls-tree',
@@ -48,6 +50,7 @@ export async function resolveSymlinkAtReference(
   reference: string,
   fileName: string
 ) {
+  assertNotOption(reference);
   const visited = new Set<string>();
   let current = fileName;
 
