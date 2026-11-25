@@ -1331,6 +1331,52 @@ describe('uploadProject', () => {
       expect(ctx.uploadedFiles).toBe(1);
       expect(ctx.uploadedBytes).toBe(42);
     });
+
+    it('fails as a user error without retrying when the index rejects the files', async () => {
+      const client = { runQuery: vi.fn() };
+      client.runQuery.mockReturnValue({
+        uploadBuild: {
+          userErrors: [
+            {
+              __typename: 'MaxFileCountExceededError',
+              message: 'Too many files',
+              maxFileCount: 1,
+              fileCount: 2,
+            },
+          ],
+        },
+      });
+
+      const ctx = {
+        client,
+        env: environment,
+        log: new TestLogger(),
+        http,
+        sourceDir: '/static/',
+        options: {},
+        fileInfo: {
+          lengths: [
+            { knownAs: 'iframe.html', contentLength: 42 },
+            { knownAs: 'index.html', contentLength: 42 },
+          ],
+          paths: ['iframe.html', 'index.html'],
+          hashes: { 'iframe.html': 'hash1', 'index.html': 'hash2' },
+          total: 84,
+        },
+        announcedBuild: { id: '1' },
+      } as any;
+
+      await expect(runUpload(ctx)).rejects.toMatchObject({
+        name: 'TaskFailure',
+        exitCode: 255,
+        userError: true,
+      });
+      expect(client.runQuery).toHaveBeenCalledTimes(1);
+      expect(ctx.log.errors).toEqual([
+        expect.stringContaining('Attempted to upload too many files'),
+      ]);
+      expect(ctx.log.warnings).toEqual([]);
+    });
   });
 });
 
