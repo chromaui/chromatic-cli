@@ -99,7 +99,10 @@ export const runAuth: TaskFunction<AuthInput, AuthOutput, AuthDeps> = async (dep
       throw new TaskFailure(invalidProjectId({ projectId }), failure);
     }
     if (message?.match('No app with code')) {
-      throw new TaskFailure(invalidProjectToken({ projectToken: input.projectToken }), failure);
+      // A user error skips the fatal error block and Sentry, so log the message here. The thrown
+      // message leaves out the token, which may be a secret pasted into the wrong option.
+      deps.log.error(invalidProjectToken({ projectToken: input.projectToken }));
+      throw new TaskFailure('Invalid project token', { ...failure, userError: true });
     }
     throw error;
   }

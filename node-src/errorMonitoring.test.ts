@@ -41,11 +41,6 @@ describe('filterErrorEvent', () => {
   it('drops task failures the user has to fix and keeps the rest', () => {
     const event = { exception: { values: [{ value: 'Command failed' }] } } as Sentry.ErrorEvent;
     const exitCode = exitCodes.NPM_BUILD_STORYBOOK_FAILED;
-    // An invalid project token is a user error too, but keeps `userError` false so its message
-    // prints in interactive terminals.
-    const invalidToken = new TaskFailure('Invalid project token', {
-      exitCode: exitCodes.GRAPHQL_ERROR,
-    });
 
     expect(
       filterErrorEvent(event, {
@@ -57,7 +52,6 @@ describe('filterErrorEvent', () => {
         originalException: new TaskFailure('Command failed', { exitCode }),
       })
     ).toBe(event);
-    expect(filterErrorEvent(event, { originalException: invalidToken })).toBe(event);
   });
 
   it('groups a git command killed by a signal with one whose shell exited 143', async () => {
