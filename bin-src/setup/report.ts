@@ -216,3 +216,58 @@ export async function applyFixes(
     clack.log.success(`Applied: ${fix.summary}`);
   }
 }
+
+// Quotes an argument for a POSIX shell when it needs it.
+const shellQuote = (argument: string) =>
+  /^[\w@%+=:,./-]+$/.test(argument) ? argument : `'${argument.replaceAll("'", String.raw`'\''`)}'`;
+
+// Doctor's own flags, which the rerun command sets itself, with dashes dropped: the parser also
+// takes camelCase, such as --projectToken.
+const RERUN_DROPPED = new Set(['fix', 'nofix', 'yes', 'noyes']);
+// The project token's long flag; its value is a secret, kept out of printed commands.
+const SECRET_FLAG = 'projecttoken';
+
+/**
+ * The command to run doctor again with the same arguments, such as --config-file, plus more, so a
+ * copied hint checks and fixes the same files. A project token is left out, since the hint is
+ * printed.
+ *
+ * @param argv The arguments doctor ran with.
+ * @param extra Arguments to add, such as --fix.
+ *
+ * @returns The command, quoted for a POSIX shell.
+ */
+export function doctorCommand(argv: string[], extra: string[]) {
+  const kept: string[] = [];
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index];
+    const [name] = argument.split('=');
+    if (name.startsWith('--')) {
+      const flag = name.replaceAll('-', '').toLowerCase();
+      if (RERUN_DROPPED.has(flag)) continue;
+      if (flag === SECRET_FLAG) {
+        // The value is the next argument unless it's attached with =.
+        if (!argument.includes('=')) index += 1;
+        continue;
+      }
+    } else if (/^-[a-z]/i.test(argument)) {
+      // Short flags can be grouped, as in -yt <token>. Everything after -t is its value, else the
+      // next argument is. A group with -t is left out whole.
+      const letters = argument.slice(1);
+      if (letters.includes('t')) {
+        if (letters.indexOf('t') === letters.length - 1) index += 1;
+        continue;
+      }
+      // -y goes, even grouped as in -yc, since the rerun adds what it needs.
+      const rest = letters.replaceAll('y', '');
+      if (!rest) continue;
+      kept.push(`-${rest}`);
+      continue;
+    }
+    kept.push(argument);
+  }
+  return [
+    'npx chromatic doctor',
+    ...[...kept, ...extra].map((argument) => shellQuote(argument)),
+  ].join(' ');
+}

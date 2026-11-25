@@ -251,6 +251,30 @@ function globChecks(input: DoctorInput): Check[] {
 }
 
 /**
+ * A glob near an unmatched one that matches files: the same glob from this project's folder, or
+ * from the one folder all its matches anywhere in the repository are in.
+ *
+ * @param input What doctor read.
+ * @param glob The glob that matches nothing.
+ *
+ * @returns The suggestion, how many files it matches, and the folders when they are several.
+ */
+function globSuggestion(input: DoctorInput, glob: string) {
+  const { globMatches, globFolders, cwd, gitRoot } = input;
+  const prefix = gitRoot ? relativeOrDot(gitRoot, cwd) : '.';
+  const found = globSuggestions(glob, prefix).find((c) => (globMatches.get(c) ?? 0) > 0);
+  if (!found) return undefined;
+  const count = globMatches.get(found) ?? 0;
+  if (!found.startsWith('**/')) return { glob: found, count };
+  // A `**/` glob matches in every folder, which in a monorepo includes other packages, such as
+  // shared code whose changes should recapture stories. When every match is in one folder, that
+  // folder's path is the suggestion; otherwise doctor names the folders but doesn't make the change.
+  const folders = [...(globFolders.get(found) ?? [])].sort();
+  if (folders.length === 1) return { glob: `${folders[0]}/${found.slice(3)}`, count };
+  return { glob: found, count, folders };
+}
+
+/**
  * The warning for a glob that matches no files, with a glob that does if there is one.
  *
  * @param input What doctor read.
@@ -264,22 +288,21 @@ function unmatchedGlobCheck(
   key: 'untraced' | 'externals',
   glob: string
 ): Check {
-  const { globMatches, cwd, gitRoot } = input;
-  const countMatches = (candidate: string) => globMatches.get(candidate) ?? 0;
-  const prefix = gitRoot ? relativeOrDot(gitRoot, cwd) : '.';
-  const suggestion = globSuggestions(glob, prefix).find((c) => countMatches(c) > 0);
-  // A `**/` glob matches in every folder, which in a monorepo includes other packages, such as
-  // shared code whose changes should recapture stories, so doctor suggests it but doesn't make it.
-  const anywhere = suggestion?.startsWith('**/');
+  const suggestion = globSuggestion(input, glob);
+  const folders = suggestion?.folders;
+  const shown = folders?.slice(0, 3).join(', ');
+  const where = folders
+    ? `, in ${folders.length > 3 ? `${shown} and ${folders.length - 3} more folders` : shown}`
+    : '';
   return {
     group: 'Values',
     status: 'warn',
     title: `${key} ${glob} matches no files`,
-    detail: `Globs are matched from the repository root.${suggestion ? ` ${suggestion} matches ${countMatches(suggestion)}${anywhere ? ', in any folder' : ''}.` : ''}`,
+    detail: `Globs are matched from the repository root.${suggestion ? ` ${suggestion.glob} matches ${suggestion.count}${where}.` : ''}`,
     fix:
-      suggestion && !anywhere
-        ? configFix(input, key, `Change ${key} ${glob} to ${suggestion}`, (json) => {
-            json[key] = json[key].map((g: string) => (g === glob ? suggestion : g));
+      suggestion && !folders
+        ? configFix(input, key, `Change ${key} ${glob} to ${suggestion.glob}`, (json) => {
+            json[key] = json[key].map((g: string) => (g === glob ? suggestion.glob : g));
           })
         : undefined,
   };

@@ -11,7 +11,7 @@ import pkg from '../package.json';
 import { Check, runChecks } from './setup/checks';
 import { describeProject, findProjects, listProjectFiles, Project } from './setup/detect';
 import { loadDoctorInput } from './setup/doctorInput';
-import { applyFixes, printChecks, summarize } from './setup/report';
+import { applyFixes, doctorCommand, printChecks, summarize } from './setup/report';
 import { color, git, readJson, relativeOrDot } from './setup/shared';
 import { SubcommandFailure } from './subcommandFailure';
 
@@ -252,10 +252,12 @@ export async function main(argv: string[]) {
   }
   if (skippedFixes) {
     clack.log.warn(
-      `Didn't apply fixes: there's no terminal to confirm them (CI or piped input).\nRun ${color.cta('npx chromatic doctor --fix --yes')} to apply them${questions ? ', except the ones that ask how your CI runs Chromatic, which need a terminal' : ''}.`
+      `Didn't apply fixes: there's no terminal to confirm them (CI or piped input).\nRun ${color.cta(doctorCommand(argv, ['--fix', '--yes']))} to apply them${questions ? ', except the ones that ask how your CI runs Chromatic, which need a terminal' : ''}.`
     );
   } else if (!flags.fix && all.some((c) => c.fix)) {
-    clack.log.info(`Run ${color.cta('npx chromatic doctor --fix')} to fix what's marked fixable.`);
+    clack.log.info(
+      `Run ${color.cta(doctorCommand(argv, ['--fix']))} to fix what's marked fixable.`
+    );
   }
 
   if (targets.length === 0) {

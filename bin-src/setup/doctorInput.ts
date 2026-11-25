@@ -32,6 +32,8 @@ export interface DoctorInput {
   gitRoot?: string;
   /** How many repository files each untraced and externals glob matches, and each suggestion. */
   globMatches: Map<string, number>;
+  /** For each `**\/` suggestion, the folders its matches are in, where the rest of the glob starts. */
+  globFolders: Map<string, Set<string>>;
   branch?: string;
   configFile?: string;
   /** The config file's raw contents, so fixes can rewrite it. */
@@ -169,7 +171,7 @@ export async function loadDoctorInput(input: {
     doctorInput: {
       cwd,
       gitRoot: input.gitRoot,
-      globMatches: await countGlobMatches(input.gitRoot, cwd, options),
+      ...(await countGlobMatches(input.gitRoot, cwd, options)),
       branch: input.branch,
       configFile: config.configFile,
       configJson: config.configJson,
@@ -224,7 +226,7 @@ export function globSuggestions(glob: string, prefix: string) {
  * @param cwd Working directory Chromatic runs from.
  * @param options The options a build would see.
  *
- * @returns Each glob's count.
+ * @returns Each glob's count, and the folders each `**\/` suggestion matches in.
  */
 async function countGlobMatches(gitRoot: string | undefined, cwd: string, options: CheckedOptions) {
   const prefix = gitRoot ? relativeOrDot(gitRoot, cwd) : '.';
@@ -233,13 +235,37 @@ async function countGlobMatches(gitRoot: string | undefined, cwd: string, option
     ...globSuggestions(glob, prefix),
   ]);
   const counts = new Map(globs.map((glob) => [glob, 0]));
-  if (!gitRoot || globs.length === 0) return counts;
+  const folders = new Map<string, Set<string>>();
+  if (!gitRoot || globs.length === 0) return { globMatches: counts, globFolders: folders };
   await forEachRepoFile(gitRoot, (file) => {
     for (const glob of counts.keys()) {
-      if (matchesFile(glob, file)) counts.set(glob, (counts.get(glob) ?? 0) + 1);
+      if (!matchesFile(glob, file)) continue;
+      counts.set(glob, (counts.get(glob) ?? 0) + 1);
+      if (glob.startsWith('**/')) {
+        const folder = matchFolder(glob.slice(3), file);
+        if (folder) folders.set(glob, (folders.get(glob) ?? new Set()).add(folder));
+      }
     }
   });
-  return counts;
+  return { globMatches: counts, globFolders: folders };
+}
+
+/**
+ * The shallowest folder from which a glob matches a file, such as packages for styles/*.css and
+ * packages/styles/a.css.
+ *
+ * @param glob The glob without its leading `**\/`.
+ * @param file Repository-relative path.
+ *
+ * @returns The folder, or undefined when there's none.
+ */
+function matchFolder(glob: string, file: string) {
+  const parts = file.split('/');
+  for (let depth = 1; depth < parts.length; depth += 1) {
+    const folder = parts.slice(0, depth).join('/');
+    if (matchesFile(`${folder}/${glob}`, file)) return folder;
+  }
+  return undefined;
 }
 
 /**

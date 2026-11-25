@@ -308,7 +308,9 @@ function environmentChecks(input: DoctorInput): Check[] {
       group: 'Environment',
       status: 'warn',
       title: 'No project token in this environment',
-      detail: 'Set CHROMATIC_PROJECT_TOKEN, or put it in a gitignored .env for local runs.',
+      // Doctor doesn't read CI, so it can't tell whether CI sets the token.
+      detail:
+        "Doctor doesn't read your CI. If CI sets CHROMATIC_PROJECT_TOKEN or passes --project-token, builds there are fine. To run Chromatic here, set CHROMATIC_PROJECT_TOKEN, or put it in a gitignored .env.",
     });
   }
 

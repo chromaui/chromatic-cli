@@ -5,7 +5,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { Check } from './checks';
-import { applyFixes } from './report';
+import { applyFixes, doctorCommand } from './report';
 
 let root: string | undefined;
 
@@ -42,5 +42,37 @@ describe('applyFixes', () => {
 
     expect(readFileSync(plain, 'utf8')).toBe('{}\n');
     expect(existsSync(asked)).toBe(false);
+  });
+});
+
+describe('doctorCommand', () => {
+  it('repeats the arguments doctor ran with, without its own flags or a token', () => {
+    expect(
+      doctorCommand(
+        ['--config-file', 'my config.json', '-t', 'chpt_secret', '--only-changed=release/*', '-y'],
+        ['--fix']
+      )
+    ).toBe("npx chromatic doctor --config-file 'my config.json' '--only-changed=release/*' --fix");
+    expect(
+      doctorCommand(['--project-token=chpt_secret', '--fix', '-c', "it's.json"], ['--fix'])
+    ).toBe(String.raw`npx chromatic doctor -c 'it'\''s.json' --fix`);
+  });
+
+  it('leaves out a token in every form the parser takes', () => {
+    for (const argv of [
+      ['--projectToken', 'chpt_secret'],
+      ['--projectToken=chpt_secret'],
+      ['-yt', 'chpt_secret'],
+      ['-tchpt_secret'],
+      ['-tchpt_secrett'],
+      ['-y'],
+    ]) {
+      expect(doctorCommand([...argv, '--project', 'ui'], ['--fix'])).toBe(
+        'npx chromatic doctor --project ui --fix'
+      );
+    }
+    expect(doctorCommand(['-yc', 'a.json'], ['--fix'])).toBe(
+      'npx chromatic doctor -c a.json --fix'
+    );
   });
 });
