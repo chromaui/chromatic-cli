@@ -11,7 +11,7 @@
 - `ts-trace-changed` prints the changed-file-to-story trace during the build (`--trace-changed`).
 - `ts-metadata` uploads metadata files to `<storybookUrl>.chromatic/` on every `--only-changed` run that applies to the current branch (a `--only-changed <glob>` must match it) and publishes a build, including ones where TurboSnap was then disabled, unless `--no-upload-metadata` is set.
 - `ts-rebuild` disables TurboSnap 1.0 when the commit and branch match a build that didn't pass; on TurboSnap 1.0 that is a full build.
-- `ts-dependency-scope` ignores a dependency that a workspace the Storybook doesn't load adds or bumps, when the Storybook's workspaces that import it declare it themselves (CAP-5305).
+- `ts-dependency-scope` ignores a dependency that a workspace the Storybook doesn't load adds or bumps, when the Storybook's workspaces that import it declare it themselves (CAP-5305). With npm, a changed `package-lock.json` pair whose parsed graph has a version that isn't exact, such as the range of a copy installed under a workspace or a versionless workspace link (`"@myorg/shared": "*"` to a package with no `version`), bails instead with `Found a package file change in <lockfile>` (CAP-5914).
 
 ## How to get to it (user POV)
 

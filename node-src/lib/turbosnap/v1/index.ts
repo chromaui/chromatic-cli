@@ -7,6 +7,7 @@ import { TraceChangedFilesResult, TurboSnapV1Input } from '../types';
 import { captureBailException } from './captureBailException';
 import { classifyChangedPackageFilesDetail } from './classifyBailDetail';
 import { classifyTagsFromError } from './classifyBailRootCause';
+import { LockFileUnresolvedError } from './errors';
 import { findChangedDependencies } from './findChangedDependencies';
 import { findChangedPackageFiles } from './findChangedPackageFiles';
 import { getDependentStoryFiles } from './getDependentStoryFiles';
@@ -22,7 +23,7 @@ import { isPreviewConfigInStats } from './previewConfigInStats';
  *
  * @returns The trace result: skipped, bailed, or traced with the affected story files.
  */
-// eslint-disable-next-line complexity
+// eslint-disable-next-line complexity,max-statements
 export async function traceChangedFiles(
   ctx: TurboSnapV1Input,
   stats: Stats,
@@ -71,6 +72,16 @@ export async function traceChangedFiles(
         ctx.log.warn(bailE2EPackage({ packageName: e2ePackage }));
         return { status: 'bailed', turboSnap };
       }
+    } else if (pendingError instanceof LockFileUnresolvedError) {
+      // The package.json fallback can't see an upgrade that only changes the lockfile, and this
+      // is a known parser limit rather than a bug to report.
+      const turboSnap: TurboSnap = {
+        ...ctx.turboSnap,
+        bailReason: { changedPackageFiles: [pendingError.lockfilePath] },
+        previewConfigInStats,
+      };
+      ctx.log.warn(bailFile({ turboSnap }));
+      return { status: 'bailed', turboSnap };
     } else {
       ctx.log.warn(`Could not retrieve dependency changes from lockfiles; checking package.json`);
 

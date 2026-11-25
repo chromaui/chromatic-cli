@@ -12,11 +12,16 @@ import { matchesFile, SUPPORTED_LOCK_FILES } from '../../utilities';
 import { getStatsProjectRoot } from '../statsPaths';
 import { TurboSnapV1Input } from '../types';
 import { compareBaseline } from './compareBaseline';
-import { BaselineCheckoutFailedError, LockFileMissingError } from './errors';
+import {
+  BaselineCheckoutFailedError,
+  LockFileMissingError,
+  LockFileUnresolvedError,
+} from './errors';
 import { getDependencies, getWorkspaceName } from './getDependencies';
 import { getStatsScope } from './getStatsScope';
 
 const PACKAGE_JSON = 'package.json';
+const PACKAGE_LOCK = 'package-lock.json';
 
 // Yields a list of dependency names which have changed since the baseline.
 // E.g. ['react', 'react-dom', '@storybook/react']
@@ -148,6 +153,20 @@ export const findChangedDependencies = async (ctx: TurboSnapV1Input, stats: Stat
 
         ctx.log.debug({ manifestPath, lockfilePath }, `Found HEAD dependencies`);
         headGraphs.set(manifestPath, headDependencies);
+
+        // The npm parser keeps the declared range for a dependency it can't resolve, such as a copy
+        // npm installs under a workspace rather than hoisting. The range stays the same however
+        // that copy changes, so it would hide an upgrade. Bail rather than trace nothing.
+        if (path.posix.basename(lockfilePath) === PACKAGE_LOCK) {
+          const unresolved = headDependencies.getDepPkgs().filter((p) => !semver.valid(p.version));
+          if (unresolved.length > 0) {
+            ctx.log.debug(
+              { manifestPath, unresolved },
+              'Found dependencies with unresolved versions'
+            );
+            throw new LockFileUnresolvedError(manifestPath, lockfilePath);
+          }
+        }
 
         // Retrieve the union of dependencies which changed compared to each baseline.
         await Promise.all(
@@ -369,7 +388,7 @@ async function getBaselineChanges(
   }
 }
 
-// Whether a graph resolves every copy of a package to an exact version. When the parser can't
+// Whether every entry the graph returns for a package has an exact version. When the parser can't
 // place a copy in the lockfile, it keeps the range the manifest declares instead.
 const isExact = (graph: DepGraph, name: string) => {
   const pkgs = graph.getDepPkgs().filter((pkg) => pkg.name === name);

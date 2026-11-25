@@ -25,6 +25,21 @@ export class LockFileMissingError extends Error {
 }
 
 /**
+ * Error thrown when the npm lockfile parser returns a dependency without an exact version, such as
+ * the declared range of a copy it can't place or a versionless workspace link. A change to what is
+ * installed can't be seen through such an entry.
+ */
+export class LockFileUnresolvedError extends Error {
+  constructor(
+    public manifestPath: string,
+    public lockfilePath: string
+  ) {
+    super(`Could not resolve every dependency of ${manifestPath} in ${lockfilePath}`);
+    this.name = 'LockFileUnresolvedError';
+  }
+}
+
+/**
  * Error thrown when the lockfile parser fails to produce a dependency graph.
  */
 export class LockFileParseFailedError extends Error {
