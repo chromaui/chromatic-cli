@@ -3,7 +3,7 @@ import { exec } from 'child_process';
 import process from 'process';
 import tmp from 'tmp-promise';
 import { promisify } from 'util';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import * as execGit from './execGit';
 import generateGitRepository from './generateGitRepository';
@@ -837,12 +837,11 @@ describe('getParentCommits', () => {
       //  [A]- C -<(D)> [main]
       const repository = repositories.twoRoots;
       await checkoutCommit('D', 'main', repository);
-      const missingHash = 'f00dfeed'.repeat(5);
       const client = createClient({
         repository,
         builds: [
           ['A', 'main'],
-          [missingHash, 'branch'],
+          ['MISSING', 'branch'],
         ],
         // Talking to GH (etc) tells us that commit D is the merge commit for "branch" (which no longer exists)
         prs: [['D', 'branch']],
@@ -853,20 +852,37 @@ describe('getParentCommits', () => {
         { client, log, options } as any,
         withGit(git)
       );
-      expectCommitsToEqualNames(parentCommits, [missingHash, 'A'], repository);
+      expectCommitsToEqualNames(parentCommits, ['MISSING', 'A'], repository);
     });
 
-    it(`ignores a build commit from the index that is not a SHA`, async () => {
-      // As above, but the index returns a commit that git could read as shell syntax or an option.
+    it(`keeps build commits from the index that are not SHAs out of git`, async () => {
+      // As above, but the index returns commits that git could read as shell syntax or options.
       const repository = repositories.twoRoots;
       await checkoutCommit('D', 'main', repository);
+      const notASha = '$(exit 1)--output=x';
       const client = createClient({
         repository,
         builds: [
           ['A', 'main'],
-          ['$(exit 1)--output=x', 'branch'],
+          [notASha, 'branch'],
         ],
         prs: [['D', 'branch']],
+      });
+      const { runQuery } = client;
+      client.runQuery = async (query, variables) => {
+        const result = await runQuery(query, variables);
+        return query.includes('HasBuildsWithCommitsQuery')
+          ? { app: { hasBuildsWithCommits: [...result.app.hasBuildsWithCommits, '--all'] } }
+          : result;
+      };
+      const gitArguments: string[] = [];
+      const { execGitCommand } = execGit;
+      onTestFinished(() => {
+        vi.restoreAllMocks();
+      });
+      vi.spyOn(execGit, 'execGitCommand').mockImplementation(async (deps, command, options) => {
+        gitArguments.push(...command);
+        return execGitCommand(deps, command, options);
       });
       const git = { branch: 'main', ...(await getCommit(ctx)) };
 
@@ -874,7 +890,10 @@ describe('getParentCommits', () => {
         { client, log, options } as any,
         withGit(git)
       );
-      expectCommitsToEqualNames(parentCommits, ['A'], repository);
+      // Like a commit that isn't in the repository, it still goes to the index as a parent.
+      expectCommitsToEqualNames(parentCommits, [notASha, 'A'], repository);
+      expect(gitArguments).not.toContain(notASha);
+      expect(gitArguments).not.toContain('--all');
     });
 
     // We could support this situation via recursing and doing a second (etc) check for squash merge commits,

@@ -3,7 +3,8 @@ import gql from 'fake-tag';
 import { localBuildsSpecifier } from '../lib/localBuildsSpecifier';
 import { Deps, Git, VisitedCommit } from '../types';
 import { execGitCommand, GitDeps } from './execGit';
-import { commitExists, commitsExist, getVisitedCommitDetails, isCommitSha } from './git';
+import { commitExists, commitsExist, getVisitedCommitDetails } from './git';
+import { isCommitSha } from './revisions';
 
 const FETCH_N_INITIAL_BUILD_COMMITS = 20;
 
@@ -249,10 +250,8 @@ export async function getParentCommits(
     { branch, localBuilds: localBuildsSpecifier({ options }, git) },
     { retries: 5 } // This query requires a request to an upstream provider which may fail
   );
-  const { firstBuild } = app;
-  // Commits read back from the index are passed to git, so ignore any that isn't a SHA.
-  const lastBuild = app.lastBuild && isCommitSha(app.lastBuild.commit) ? app.lastBuild : undefined;
-  log.debug(`App firstBuild: %o, lastBuild: %o`, firstBuild, app.lastBuild);
+  const { firstBuild, lastBuild } = app;
+  log.debug(`App firstBuild: %o, lastBuild: %o`, firstBuild, lastBuild);
 
   if (!firstBuild) {
     log.debug('App has no builds, returning []');
@@ -328,7 +327,7 @@ export async function getParentCommits(
     // during our ancestor selection that was the merge commit for that PR.
     // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
     const lastHeadBuildCommit = pullRequest.lastHeadBuild?.commit;
-    if (lastHeadBuildCommit && isCommitSha(lastHeadBuildCommit)) {
+    if (lastHeadBuildCommit) {
       if (existingHeadBuildCommits.has(lastHeadBuildCommit)) {
         log.debug(`Adding merged PR build commit ${lastHeadBuildCommit} to commits with builds`);
         commitsWithBuilds.push(lastHeadBuildCommit);
