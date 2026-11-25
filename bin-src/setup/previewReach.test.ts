@@ -72,6 +72,10 @@ function writeProject(imports: Record<string, string[]>) {
   write('storybook-static/preview-stats.json', JSON.stringify({ modules }));
 }
 
+// Doctor's temporary build folder, which these tests leave empty unless they say otherwise.
+const reach = (input: DoctorInput) =>
+  previewReachChecks(input, path.join(input.cwd, '.doctor-stats'));
+
 describe('previewReachChecks', () => {
   it('reports what preview reaches, by import, and how often it changed', async () => {
     writeProject(graph);
@@ -85,7 +89,7 @@ describe('previewReachChecks', () => {
     write('src/Button.stories.tsx', '// changed\n');
     commit('Change only a story', 1);
 
-    const [check, ...others] = await previewReachChecks(inputFor(root ?? ''));
+    const [check, ...others] = await reach(inputFor(root ?? ''));
 
     expect(others).toEqual([]);
     expect(check).toMatchObject({
@@ -107,7 +111,7 @@ Imports`
     expect(check.detail).toContain('- node_modules/pkg/index.js: 0 project and 1 package file');
 
     // An untraced file recaptures nothing, so neither it nor the commits that changed only it count.
-    const [untraced] = await previewReachChecks({
+    const [untraced] = await reach({
       ...inputFor(root ?? ''),
       options: { untraced: ['src/b.ts'] },
     });
@@ -123,7 +127,7 @@ Imports`
     });
     commit('Add everything', 200);
 
-    const [check] = await previewReachChecks(inputFor(root ?? ''));
+    const [check] = await reach(inputFor(root ?? ''));
 
     expect(check.detail).toContain(
       '- src/index.ts: 3 project and 0 package files (only through it: 2 and 0)'
@@ -143,7 +147,7 @@ Imports`
     const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: directory, encoding: 'utf8' });
     writeFileSync(path.join(directory, '.git', 'shallow'), head);
 
-    const [check] = await previewReachChecks(inputFor(directory));
+    const [check] = await reach(inputFor(directory));
 
     expect(check.status).toBe('info');
     expect(check.detail).toContain(
@@ -154,14 +158,14 @@ Imports`
   it('says how to make a stats file when there is none', async () => {
     root = mkdtempSync(path.join(tmpdir(), 'chromatic-reach-'));
 
-    const checks = await previewReachChecks(inputFor(root, 'out'));
+    const checks = await reach(inputFor(root, 'out'));
 
     expect(checks).toMatchObject([
       { status: 'info', title: 'No out/preview-stats.json to show what preview imports' },
     ]);
   });
 
-  it('offers to build Storybook with stats only when TurboSnap is on and Chromatic builds it', async () => {
+  it('builds Storybook with stats into its own folder only when TurboSnap is on and Chromatic runs the build script', async () => {
     root = mkdtempSync(path.join(tmpdir(), 'chromatic-reach-'));
     const packageJson = {
       scripts: { 'build-storybook': 'storybook build' },
@@ -174,26 +178,29 @@ Imports`
       packageJson,
     });
 
-    const [on] = await previewReachChecks(input({ onlyChanged: true }));
-    const [off] = await previewReachChecks(input({}));
-    const [otherBranch] = await previewReachChecks(input({ onlyChanged: 'release/*' }));
-    const [prebuilt] = await previewReachChecks(
-      input({ onlyChanged: true, storybookBuildDir: 'out' })
-    );
+    const [on] = await reach(input({ onlyChanged: true }));
+    const [off] = await reach(input({}));
+    const [otherBranch] = await reach(input({ onlyChanged: 'release/*' }));
+    const [prebuilt] = await reach(input({ onlyChanged: true, storybookBuildDir: 'out' }));
+    // A custom command writes wherever it writes, which doctor can't redirect.
+    const [custom] = await reach(input({ onlyChanged: true, buildCommand: 'npm run build' }));
 
+    const folder = path.join(root, '.doctor-stats');
     expect(on.build).toEqual({
-      command: expect.stringMatching(
-        /build-storybook .*--output-dir=storybook-static --stats-json=storybook-static$/
+      command: expect.stringContaining(
+        `build-storybook --output-dir=${folder} --stats-json=${folder}`
       ),
-      statsFile: path.join(root, 'storybook-static', 'preview-stats.json'),
+      statsFile: path.join(folder, 'preview-stats.json'),
     });
     expect(off.build).toBeUndefined();
     expect(otherBranch.build).toBeUndefined();
     expect(prebuilt.build).toBeUndefined();
+    expect(custom.build).toBeUndefined();
 
-    // Storybook empties its output folder, so doctor never builds over one that's there.
-    write('storybook-static/index.html', '');
-    const [existing] = await previewReachChecks(input({ onlyChanged: true }));
-    expect(existing.build).toBeUndefined();
+    // Like a TurboSnap build, doctor builds into its own folder, so a stale storybook-static, stats
+    // and all, never stands in for that build.
+    write('storybook-static/preview-stats.json', '{ "modules": [] }');
+    const [existing] = await reach(input({ onlyChanged: true }));
+    expect(existing.build?.statsFile).toBe(path.join(folder, 'preview-stats.json'));
   });
 });

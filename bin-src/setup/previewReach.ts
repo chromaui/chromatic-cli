@@ -1,18 +1,15 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
-import { findBuildScriptName } from '../../node-src/lib/getOptions';
 import { getStorybookProjectRoot } from '../../node-src/lib/getStorybookProjectRoot';
 import { createLogger } from '../../node-src/lib/log';
 import { buildManifest } from '../../node-src/lib/turbosnap/v2/manifest';
 import { isInstalledPackagePath, isSyntheticFile } from '../../node-src/lib/turbosnap/v2/paths';
 import { realProjectFiles } from '../../node-src/lib/turbosnap/v2/projectFiles';
-import { setBuildCommand } from '../../node-src/tasks/build/setBuildCommand';
 import { readStatsFile } from '../../node-src/tasks/readStatsFile';
-import type { Context, Options } from '../../node-src/types';
-import { type Check, matchesBranch } from './checks';
-import { versionOf } from './detect';
+import type { Check } from './checks';
 import type { DoctorInput } from './doctorInput';
+import { previewStats } from './previewStats';
 import { git, relativeOrDot } from './shared';
 
 const HISTORY_DAYS = 90;
@@ -264,104 +261,47 @@ async function readManifest(
 }
 
 /**
- * Where `storybook build --stats-json` writes the stats file: the prebuilt folder, else the
- * default output folder.
+ * The check when there's no stats file yet: the build doctor runs to make one, or how to make one.
  *
- * @param input What loadDoctorInput read.
+ * @param shown The stats file, as shown.
+ * @param build The build doctor runs, when it builds.
  *
- * @returns The absolute path.
+ * @returns The check.
  */
-function statsFileFor(input: DoctorInput) {
-  const folder = input.options.storybookBuildDir || 'storybook-static';
-  return path.join(path.resolve(input.cwd, folder), 'preview-stats.json');
+function missingStatsCheck(shown: string, build?: Check['build']): Check {
+  return {
+    group: 'Values',
+    status: 'info',
+    title: `No ${build ? 'stats file' : shown} to show what preview imports`,
+    detail: build
+      ? `With TurboSnap, a change to any file preview imports recaptures every story. Building Storybook with stats shows which files those are: ${build.command}`
+      : `Build Storybook into ${path.dirname(shown)} with --stats-json, then run doctor again. With TurboSnap, a change to any file preview imports recaptures every story.`,
+    build,
+  };
 }
 
 /**
- * Whether doctor may build Storybook for the stats file: TurboSnap is on for this branch, as in a
- * build, Chromatic builds Storybook itself, and the output folder doesn't exist yet, since Storybook
- * empties it.
+ * Shows what the Storybook preview pulls in, from a stats file: with TurboSnap, a change to any of
+ * those files recaptures every story. Read-only, with no fix: it changes no hash or capture
+ * decision.
  *
  * @param input What loadDoctorInput read.
- * @param statsFile Where the stats file goes.
- *
- * @returns True when doctor may build.
- */
-function buildsHere(input: DoctorInput, statsFile: string) {
-  const { branch, options } = input;
-  if (!branch || !matchesBranch(branch, options.onlyChanged ?? false)) return false;
-  return !options.storybookBuildDir && !existsSync(path.dirname(statsFile));
-}
-
-/**
- * The command a TurboSnap build runs to build Storybook, writing the stats file where doctor reads
- * it. Only when TurboSnap is on and Chromatic builds Storybook itself: a prebuilt Storybook comes
- * from the user's own build.
- *
- * @param input What loadDoctorInput read.
- * @param statsFile Where the stats file goes.
- *
- * @returns The command, or undefined when doctor shouldn't build.
- */
-async function statsBuildFor(input: DoctorInput, statsFile: string) {
-  const { options, gitRoot } = input;
-  if (!gitRoot || !buildsHere(input, statsFile)) return undefined;
-  const scripts: Record<string, string> = input.packageJson?.scripts ?? {};
-  const buildScriptName = findBuildScriptName(scripts, options.buildScriptName);
-  // Without the script, the build would fail; the build script check already says so.
-  if (!options.buildCommand && !scripts[buildScriptName]) return undefined;
-  const version = versionOf(input.cwd, gitRoot, 'storybook');
-  try {
-    const command = await setBuildCommand(
-      {
-        options: { ...options, buildScriptName } as Options,
-        log: createLogger({}, { logLevel: 'silent' }),
-        env: {} as Context['env'],
-      },
-      {
-        sourceDir: relativeOrDot(input.cwd, path.dirname(statsFile)),
-        flags: {},
-        storybook: { version } as Context['storybook'],
-        // Asks for the stats flag, as --only-changed does.
-        turboSnap: {},
-      }
-    );
-    return command ? { command, statsFile } : undefined;
-  } catch {
-    // The package manager couldn't be found to run the script.
-    return undefined;
-  }
-}
-
-/**
- * Shows what the Storybook preview pulls in, from an existing stats file: with TurboSnap, a change
- * to any of those files recaptures every story. Read-only, with no fix: it changes no hash or
- * capture decision.
- *
- * @param input What loadDoctorInput read.
+ * @param statsDirectory A temporary folder doctor builds Storybook into with stats, as a TurboSnap
+ * build does, so a stale storybook-static never stands in for that build.
  *
  * @returns One check per preview file, or one that says how to make a stats file.
  */
-export async function previewReachChecks(input: DoctorInput): Promise<Check[]> {
+export async function previewReachChecks(
+  input: DoctorInput,
+  statsDirectory: string
+): Promise<Check[]> {
   const { gitRoot, options } = input;
   // TurboSnap doesn't apply to Playwright or Cypress, and Vitest's Storybook ships in a package.
   if (!gitRoot || options.playwright || options.cypress || options.vitest) return [];
-  const statsFile = statsFileFor(input);
+  const { statsFile, build } = await previewStats(input, statsDirectory);
   const relative = relativeOrDot(input.cwd, statsFile);
   const shown = relative.startsWith('..') ? statsFile : relative;
-  if (!existsSync(statsFile)) {
-    const build = await statsBuildFor(input, statsFile);
-    return [
-      {
-        group: 'Values',
-        status: 'info',
-        title: `No ${shown} to show what preview imports`,
-        detail: build
-          ? `With TurboSnap, a change to any file preview imports recaptures every story. Building Storybook with stats shows which files those are: ${build.command}`
-          : `Build Storybook into ${path.dirname(shown)} with --stats-json, then run doctor again. With TurboSnap, a change to any file preview imports recaptures every story.`,
-        build,
-      },
-    ];
-  }
+  if (!existsSync(statsFile)) return [missingStatsCheck(shown, build)];
 
   const projectRoot = getStorybookProjectRoot({
     storybookBaseDir: options.storybookBaseDir,

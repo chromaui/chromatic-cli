@@ -1,4 +1,5 @@
-import { existsSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import * as clack from '@clack/prompts';
@@ -34,16 +35,16 @@ const hasConfigFile = (directory: string) =>
   CONFIG_FILES.some((file) => existsSync(path.join(directory, file)));
 
 /**
- * Loads the options the way a build does and runs every check, without starting a build.
+ * Loads the options the way a build does and runs every check, without starting a Chromatic build.
  *
  * @param cwd Directory Chromatic runs from.
  * @param argv Arguments for the main command's parser; flags win over the config file.
- * @param withPreviewReach Whether to add what the Storybook preview reaches, which only doctor
- * shows, not init's closing check.
+ * @param statsDirectory Where doctor builds Storybook with stats to show what the Storybook preview
+ * reaches. Only doctor shows that, not init's closing check, so without it there's no such check.
  *
  * @returns The check results.
  */
-export async function collectChecks(cwd: string, argv: string[] = [], withPreviewReach = false) {
+export async function collectChecks(cwd: string, argv: string[] = [], statsDirectory?: string) {
   const flags = parseArguments(argv).flags;
   // --config-file names a file from where doctor runs, even when it checks another project.
   if (flags.configFile) flags.configFile = path.resolve(flags.configFile);
@@ -60,10 +61,10 @@ export async function collectChecks(cwd: string, argv: string[] = [], withPrevie
       flags,
     });
     const checks = runChecks(doctorInput, configError, optionsError);
-    if (!withPreviewReach || configError || optionsError) return checks;
+    if (!statsDirectory || configError || optionsError) return checks;
     // Like a build, read a Yarn Plug'n'Play project's packages through its runtime.
     allowPnpRuntime();
-    return [...checks, ...(await previewReachChecks(doctorInput))];
+    return [...checks, ...(await previewReachChecks(doctorInput, statsDirectory))];
   } finally {
     process.chdir(previous);
   }
@@ -311,12 +312,23 @@ async function buildStats(build: NonNullable<Check['build']>, cwd: string) {
       env: { CI: '1', NODE_ENV: process.env.STORYBOOK_NODE_ENV || 'production' },
     });
   } catch (err) {
+    // Stats from a build that failed don't describe the Storybook.
+    rmSync(build.statsFile, { force: true });
     const logFile = path.join(cwd, 'build-storybook.log');
     writeFileSync(logFile, String((err as { all?: string }).all ?? err));
     stop('Storybook build failed', true);
     return couldNotDetermine(
       `The Storybook build failed. See ${relativeOrDot(process.cwd(), logFile)} for its output. The rest of the report doesn't depend on it.`
     );
+  } finally {
+    // Keep only the stats file, which the trace hint points at; the rest of the build, including
+    // what a failed build left, isn't needed.
+    const folder = path.dirname(build.statsFile);
+    for (const entry of readdirSync(folder)) {
+      if (entry !== path.basename(build.statsFile)) {
+        rmSync(path.join(folder, entry), { recursive: true, force: true });
+      }
+    }
   }
   if (!existsSync(build.statsFile)) {
     const shown = relativeOrDot(process.cwd(), build.statsFile);
@@ -346,8 +358,10 @@ export async function main(argv: string[]) {
     Usage
       $ chromatic doctor [--fix] [options]
 
-    Checks your Chromatic setup without starting a build: that the config loads, that each
-    option's value matches what's on disk and in git, and the git history and token around it.
+    Checks your Chromatic setup without starting a Chromatic build: that the config loads, that
+    each option's value matches what's on disk and in git, and the git history and token around
+    it. With TurboSnap on, it builds Storybook with stats into a temporary folder, unless you
+    upload a prebuilt Storybook or set a build command, to show what preview pulls in.
     Run it from a project to check that project. From anywhere else in a monorepo, it asks which
     project with Chromatic set up to check. Without a terminal (in CI), pass --project instead:
     doctor lists the projects and exits 2 without checking any. In a folder with no Storybook,
@@ -361,8 +375,8 @@ export async function main(argv: string[]) {
       --yes, -y           With --fix, apply every fix without asking, except fixes that
                           ask how your CI runs Chromatic, which need a terminal.
 
-    With TurboSnap on and no stats file, doctor builds Storybook with stats first, the way a
-    TurboSnap build does, to show what the Storybook preview imports.
+    With TurboSnap on, doctor builds Storybook with stats into a temporary folder first, the
+    way a TurboSnap build does, to show what the Storybook preview imports.
 
     Every option chromatic takes, such as --config-file, --only-changed or --build-command, is
     read the same way as in a build, and flags win over the config file.
@@ -387,7 +401,7 @@ export async function main(argv: string[]) {
 
   // Same frame title as the main command, with what this command does on the line below.
   clack.intro(`Chromatic CLI v${pkg.version}`);
-  clack.log.message(color.muted('doctor · checking your setup without starting a build'));
+  clack.log.message(color.muted('doctor · checking your setup without starting a Chromatic build'));
 
   const found = await chooseTargets(cwd, flags, mainFlags);
   const { notSetUp } = found;
@@ -432,8 +446,9 @@ export async function main(argv: string[]) {
     // When the preview check needs a stats file, build Storybook first, then report. A failed
     // build replaces only that check, here and on every recheck after a fix.
     let buildFailure: Check | undefined;
+    const statsDirectory = mkdtempSync(path.join(tmpdir(), 'chromatic-doctor-'));
     const check = async () => {
-      const results = await collectChecks(target.directory, argv, true);
+      const results = await collectChecks(target.directory, argv, statsDirectory);
       return results.map((c) => (c.build && buildFailure ? buildFailure : c));
     };
     let checks = await check();
@@ -457,6 +472,8 @@ export async function main(argv: string[]) {
     }
     if (multi) clack.log.info(`${target.label}: ${summarize(checks)}`);
     all.push(...checks);
+    // Keep the folder only when it holds the stats file the trace hint points at.
+    if (readdirSync(statsDirectory).length === 0) rmSync(statsDirectory, { recursive: true });
   }
 
   if (notSetUp.length > 0) {
