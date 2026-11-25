@@ -39,7 +39,13 @@ export const Validating = () => captureTask(validating(ctx));
 export const Invalid = () =>
   failure(invalid({ ...ctx, sourceDir: sourceDirectory, buildLogFile }).output);
 
-export const InvalidAndroidArtifact = () => rnFailure(invalidAndroidArtifact().output);
+export const InvalidAndroidArtifact = () => rnFailure(invalidAndroidArtifact('noX86_64').output);
+
+export const InvalidAndroidArtifactAppBundle = () =>
+  rnFailure(invalidAndroidArtifact('appBundle').output);
+
+export const InvalidAndroidArtifactNotAnApk = () =>
+  rnFailure(invalidAndroidArtifact({ unreadable: 'it has no AndroidManifest.xml' }).output);
 
 export const InvalidIosArtifactDeviceBuild = () =>
   rnFailure(invalidIosArtifact({ platform: 'iPhoneOS' }).output);
