@@ -216,14 +216,15 @@ async function run() {
       setFailed('non-zero exit code');
     }
 
-    process.exit(output.code);
+    // Set the exit code instead of exiting, so the Sentry flush below can send queued events.
+    process.exitCode = output.code;
   } catch (error_) {
     if (error_.message) error(error_.message);
     if (error_.stack) error(error_.stack);
     if (error_.description) error(error_.description);
 
     setFailed(error_.message);
-    process.exit(1);
+    process.exitCode = 1;
   }
 }
 
