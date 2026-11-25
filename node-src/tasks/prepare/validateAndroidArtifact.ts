@@ -47,7 +47,11 @@ export async function validateAndroidArtifact(input: ValidateAndroidArtifactInpu
 
   const entryNames = readEntryNames(path.join(input.sourceDir, 'storybook.apk'));
 
-  if (entryNames.some((name) => APP_BUNDLE_ENTRIES.has(name))) {
+  // An APK can carry Java resources at these paths too, so its root manifest rules out a bundle.
+  if (
+    !entryNames.includes('AndroidManifest.xml') &&
+    entryNames.some((name) => APP_BUNDLE_ENTRIES.has(name))
+  ) {
     throw new Error(invalidAndroidArtifact('appBundle').output);
   }
 
