@@ -6,6 +6,7 @@ import meow from 'meow';
 
 import { findBuildScriptName } from '../node-src/lib/getOptions';
 import { findConfigFlags } from '../node-src/lib/getStorybookMetadata';
+import { allowPnpRuntime } from '../node-src/lib/installedPackages';
 import { meowImportMeta } from '../node-src/lib/meowImportMeta';
 import parseArguments from '../node-src/lib/parseArguments';
 import type { Flags } from '../node-src/types';
@@ -21,6 +22,7 @@ import {
   TEST_FRAMEWORKS,
 } from './setup/detect';
 import { loadDoctorInput } from './setup/doctorInput';
+import { previewReachChecks } from './setup/previewReach';
 import { applyFixes, doctorCommand, printChecks, skillsHint, summarize } from './setup/report';
 import { answered, color, git, readJson, relativeOrDot } from './setup/shared';
 import { SubcommandFailure } from './subcommandFailure';
@@ -34,10 +36,12 @@ const hasConfigFile = (directory: string) =>
  *
  * @param cwd Directory Chromatic runs from.
  * @param argv Arguments for the main command's parser; flags win over the config file.
+ * @param withPreviewReach Whether to add what the Storybook preview reaches, which only doctor
+ * shows, not init's closing check.
  *
  * @returns The check results.
  */
-export async function collectChecks(cwd: string, argv: string[] = []) {
+export async function collectChecks(cwd: string, argv: string[] = [], withPreviewReach = false) {
   const flags = parseArguments(argv).flags;
   // --config-file names a file from where doctor runs, even when it checks another project.
   if (flags.configFile) flags.configFile = path.resolve(flags.configFile);
@@ -53,7 +57,11 @@ export async function collectChecks(cwd: string, argv: string[] = []) {
       argv,
       flags,
     });
-    return runChecks(doctorInput, configError, optionsError);
+    const checks = runChecks(doctorInput, configError, optionsError);
+    if (!withPreviewReach || configError || optionsError) return checks;
+    // Like a build, read a Yarn Plug'n'Play project's packages through its runtime.
+    allowPnpRuntime();
+    return [...checks, ...(await previewReachChecks(doctorInput))];
   } finally {
     process.chdir(previous);
   }
@@ -363,7 +371,7 @@ export async function main(argv: string[]) {
   let questions = false;
   for (const target of targets) {
     if (multi) clack.log.step(color.bold(color.cta(`Project ${target.label}`)));
-    const check = () => collectChecks(target.directory, argv);
+    const check = () => collectChecks(target.directory, argv, true);
     let checks = await check();
     printChecks(checks);
 
