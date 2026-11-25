@@ -348,6 +348,7 @@ export async function main(argv: string[]) {
   const { flags } = meow(HELP, {
     importMeta: meowImportMeta,
     argv,
+    description: 'Set up Chromatic in your project, step by step',
     flags: {
       project: { type: 'string' },
       framework: {
