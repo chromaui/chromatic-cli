@@ -137,7 +137,7 @@ async function configStep(session: Session, project: Project) {
   const { file, previous, parsed, json: existing } = existingConfig(project.directory);
   // TurboSnap comes from doctor's fix in the closing check, which asks how CI runs Chromatic
   // first: a prebuilt Storybook may have no stats file, and TurboSnap fails the build without one.
-  const wanted = configValues(project, parsed);
+  const wanted = configValues(project, session.gitRoot, parsed);
   if (!existing) {
     explainUnedited(writer.display(file), parsed, wanted);
     return;

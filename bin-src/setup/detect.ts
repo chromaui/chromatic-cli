@@ -94,19 +94,18 @@ export function findTestConfig(framework: TestFramework, directory: string, gitR
 /**
  * The nearest folder above a project where its tests or Storybook run, such as a repo-root
  * Playwright config or .storybook that covers every package. With a test framework's flag, only
- * that framework counts.
+ * that framework counts; with Storybook, only a .storybook.
  *
  * @param directory The folder doctor would check.
  * @param gitRoot The repository root.
- * @param flagged The test framework the options name, if any.
+ * @param flagged The framework the options name, if any.
  *
  * @returns The folder and what runs there, or undefined.
  */
-export function runsAbove(directory: string, gitRoot: string | undefined, flagged?: TestFramework) {
+export function runsAbove(directory: string, gitRoot: string | undefined, flagged?: Framework) {
   for (const folder of foldersUp(directory, gitRoot).slice(1)) {
-    const framework = (flagged ? [flagged] : TEST_FRAMEWORKS).find((f) =>
-      findTestConfig(f, folder)
-    );
+    const tests = flagged ? TEST_FRAMEWORKS.filter((f) => f === flagged) : TEST_FRAMEWORKS;
+    const framework = tests.find((f) => findTestConfig(f, folder));
     if (framework) {
       const config = findTestConfig(framework, folder) ?? folder;
       return {
@@ -118,7 +117,7 @@ export function runsAbove(directory: string, gitRoot: string | undefined, flagge
     }
     const storybook = path.join(folder, '.storybook');
     if (
-      !flagged &&
+      (!flagged || flagged === 'storybook') &&
       existsSync(storybook) &&
       readdirSync(storybook).some((f) => MAIN_CONFIG_PATTERN.test(f))
     ) {

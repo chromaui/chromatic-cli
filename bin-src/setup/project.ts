@@ -4,7 +4,7 @@ import path from 'node:path';
 import * as clack from '@clack/prompts';
 
 import { SubcommandFailure } from '../subcommandFailure';
-import { describeProject, Framework, Project } from './detect';
+import { describeProject, findTestConfig, Framework, Project, runsAbove } from './detect';
 import { answered, color, readJson, relativeOrDot } from './shared';
 import type { Session } from './token';
 
@@ -40,6 +40,43 @@ function matchFlags({ flags, gitRoot }: Session, projects: Project[]): Project[]
 }
 
 /**
+ * Stops init when --project names a folder whose tests or Storybook run from a folder above it,
+ * such as a repo-root Vitest config with test.projects, and points to that folder. Chromatic has to
+ * run where the framework runs to find its archives or Storybook, so setting up the package
+ * wouldn't work.
+ *
+ * @param session The init session.
+ * @param session.flags Its flags, for --project and --framework.
+ * @param session.gitRoot The repository root.
+ * @param projects Every project detection found.
+ */
+function pointAbove({ flags, gitRoot }: Session, projects: Project[]) {
+  const cwd = process.cwd();
+  const wanted = flags.project ? path.resolve(cwd, flags.project) : undefined;
+  if (!wanted || !existsSync(wanted) || projects.some((p) => p.directory === wanted)) return;
+  const framework = flags.framework as Framework | undefined;
+  const above = runsAbove(wanted, gitRoot, framework);
+  if (!above) return;
+  throw ranAbove(above, gitRoot, flags.project);
+}
+
+function ranAbove(
+  above: NonNullable<ReturnType<typeof runsAbove>>,
+  gitRoot: string,
+  project: string
+) {
+  const cwd = process.cwd();
+  const there = relativeOrDot(cwd, above.folder);
+  const place = above.folder === gitRoot ? 'the repository root' : there;
+  const command = there === '.' ? 'npx chromatic init' : `npx chromatic init --project ${there}`;
+  clack.log.error(
+    `${above.what} from ${place} (${above.file}), so Chromatic has to run there to find ${above.framework === 'storybook' ? 'the Storybook' : 'its archives'}.`
+  );
+  clack.log.info(`Run ${color.cta(command)} to set it up there.`);
+  return new SubcommandFailure(`Nothing to set up in ${project}`, { exitCode: 1 });
+}
+
+/**
  * Picks the project to set up: the only one, the one init ran in, or the user's choice.
  *
  * @param session The init session.
@@ -49,6 +86,7 @@ function matchFlags({ flags, gitRoot }: Session, projects: Project[]): Project[]
  */
 export async function pickProject(session: Session, projects: Project[]): Promise<Project> {
   const { flags, interactive } = session;
+  pointAbove(session, projects);
   const candidates = matchFlags(session, projects);
   if (candidates.length === 0) {
     clack.log.error(
@@ -100,17 +138,28 @@ export async function pickProject(session: Session, projects: Project[]): Promis
  * The values init writes to the project's config file.
  *
  * @param project The project init sets up.
+ * @param gitRoot The repository root.
  * @param parsed The config file as it is, if it parses.
  *
- * @returns The E2E framework flag, and for a project in a package, storybookBaseDir. It points
- * TurboSnap at the package even when CI runs Chromatic from the root, and is harmless when CI runs
- * it from the package. A storybookBaseDir the config already has is the user's.
+ * @returns The E2E framework flag, and for a project in a package, storybookBaseDir: the package,
+ * or for Vitest the folder Vitest runs from. It points TurboSnap at the package even when CI runs
+ * Chromatic from the root, and is harmless when CI runs it from the package. A storybookBaseDir the config already has is the user's.
  */
-export function configValues(project: Project, parsed?: Record<string, any>): Record<string, any> {
+export function configValues(
+  project: Project,
+  gitRoot: string,
+  parsed?: Record<string, any>
+): Record<string, any> {
   const values: Record<string, any> =
     project.framework === 'storybook' ? {} : { [project.framework]: true };
-  if (project.relative !== '.' && parsed?.storybookBaseDir === undefined) {
-    values.storybookBaseDir = project.relative;
+  // Vitest names files from the folder it runs in, which TurboSnap has to match.
+  const vitestConfig =
+    project.framework === 'vitest'
+      ? findTestConfig('vitest', project.directory, gitRoot)
+      : undefined;
+  const base = vitestConfig ? relativeOrDot(gitRoot, path.dirname(vitestConfig)) : project.relative;
+  if (base !== '.' && parsed?.storybookBaseDir === undefined) {
+    values.storybookBaseDir = base;
   }
   return values;
 }
