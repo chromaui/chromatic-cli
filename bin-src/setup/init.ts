@@ -11,13 +11,8 @@ import pkg from '../../package.json';
 import { collectChecks } from '../doctor';
 import { SubcommandFailure } from '../subcommandFailure';
 import type { Check } from './checks';
-import {
-  detectPackageManager,
-  findProjects,
-  listProjectFiles,
-  PACKAGE_MANAGER_COMMANDS,
-  Project,
-} from './detect';
+import { findProjects, listProjectFiles, PACKAGE_MANAGER_COMMANDS, Project } from './detect';
+import { detectPackageManager, installCommand, PackageManager } from './install';
 import { configValues, pickProject } from './project';
 import { applyFixes, printChecks, showEdits, summarize } from './report';
 import {
@@ -314,19 +309,8 @@ async function packageStep(session: Session, project: Project, dlx: string) {
   return false;
 }
 
-const INSTALL_MUTABLE: Partial<Record<string, string[]>> = {
-  pnpm: ['--no-frozen-lockfile'],
-  yarn: ['--no-immutable'],
-};
-
-async function installStep(
-  session: Session,
-  project: Project,
-  packageManager: keyof typeof PACKAGE_MANAGER_COMMANDS
-) {
-  const command = packageManager === 'yarn-classic' ? 'yarn' : packageManager;
-  // CI defaults pnpm and Yarn Berry to a frozen lockfile, which rejects the dependency init adds.
-  const args = ['install', ...(INSTALL_MUTABLE[packageManager] ?? [])];
+async function installStep(session: Session, project: Project, packageManager: PackageManager) {
+  const { command, args } = installCommand(packageManager);
   if (session.flags.skipInstall || session.flags.dryRun) {
     clack.log.info(`Skipped installing. Run ${color.cta(`${command} ${args.join(' ')}`)} later.`);
     return;
