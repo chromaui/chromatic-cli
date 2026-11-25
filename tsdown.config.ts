@@ -1,5 +1,12 @@
 import { defineConfig } from 'tsdown';
 
+// Keep class names through minification. Dependencies such as execa and node-fetch name their
+// errors after their class (`error.name`), and Sentry titles issues by it, so mangled class names
+// made unreadable titles that changed whenever the bundle layout did. Function names are still
+// mangled: keeping them too would grow the bundle by about 9%, this by under 1%. `compress` needs
+// it as well as `mangle`, or the compressor turns some named classes into anonymous ones.
+const keepClassNames = { function: false, class: true };
+
 export default defineConfig((options) => [
   {
     entry: {
@@ -7,7 +14,10 @@ export default defineConfig((options) => [
       node: 'node-src/index.ts',
     },
     splitting: true,
-    minify: !options.watch,
+    minify: !options.watch && {
+      compress: { keepNames: keepClassNames },
+      mangle: { keepNames: keepClassNames },
+    },
     format: ['cjs'],
     treeshake: true,
     sourcemap: true,
@@ -28,7 +38,10 @@ export default defineConfig((options) => [
     entry: ['action-src/register.js'],
     outDir: 'action',
     splitting: false,
-    minify: !options.watch,
+    minify: !options.watch && {
+      compress: { keepNames: keepClassNames },
+      mangle: { keepNames: keepClassNames },
+    },
     format: ['cjs'],
     treeshake: true,
     sourcemap: true,
