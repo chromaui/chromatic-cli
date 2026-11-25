@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/node';
 import { isE2EBuild } from '../lib/e2eUtils';
 import getStorybookInfo from '../lib/getStorybookInfo';
 import { getStorybookProjectRoot } from '../lib/getStorybookProjectRoot';
+import { exitCodes, TaskFailure } from '../lib/setExitCode';
 import { AbsolutePath, Context, Deps, Storybook, TaskFunction } from '../types';
 import missingBuildScriptName from '../ui/messages/errors/missingBuildScriptName';
 
@@ -45,7 +46,11 @@ export const setStorybookInfo: TaskFunction<
     const { buildScriptName } = deps.options;
     const scripts = (deps.packageJson.scripts ?? {}) as Record<string, string>;
     if (!buildScriptName || !scripts[buildScriptName]) {
-      throw new Error(missingBuildScriptName(buildScriptName ?? ''));
+      deps.log.error(missingBuildScriptName(buildScriptName ?? ''));
+      throw new TaskFailure(`Build script "${buildScriptName ?? ''}" not found in package.json`, {
+        exitCode: exitCodes.INVALID_OPTIONS,
+        userError: true,
+      });
     }
   }
 

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import storybookInfo from '../lib/getStorybookInfo';
 import { getStorybookProjectRoot } from '../lib/getStorybookProjectRoot';
+import { exitCodes, TaskFailure } from '../lib/setExitCode';
 import { Storybook } from '../types';
 import { applyStorybookInfoOutput, setStorybookInfo, StorybookInfoDeps } from './storybookInfo';
 
@@ -103,16 +104,25 @@ describe('setStorybookInfo', () => {
     ).resolves.not.toThrow();
   });
 
-  it('throws missingBuildScriptName when the build script is absent and app is not react-native', async () => {
-    await expect(
-      setStorybookInfo(
-        buildDeps({
-          options: { buildScriptName: 'build-storybook' } as any,
-          packageJson: { scripts: {} },
-        }),
-        { gitRootPath: '/repo/root', isReactNativeApp: false }
-      )
-    ).rejects.toThrow(/build-storybook/);
+  it('logs missingBuildScriptName and fails as an invalid option when the build script is absent', async () => {
+    const deps = buildDeps({
+      options: { buildScriptName: 'build-sb' } as any,
+      packageJson: { scripts: { 'build-storybook': 'storybook build' } },
+    });
+
+    const error = await setStorybookInfo(deps, {
+      gitRootPath: '/repo/root',
+      isReactNativeApp: false,
+    }).catch((error_) => error_);
+
+    expect(error).toBeInstanceOf(TaskFailure);
+    expect(error).toMatchObject({
+      message: 'Build script "build-sb" not found in package.json',
+      exitCode: exitCodes.INVALID_OPTIONS,
+      userError: true,
+    });
+    expect(deps.log.error).toHaveBeenCalledWith(expect.stringContaining('--build-script-name'));
+    expect(deps.log.error).toHaveBeenCalledWith(expect.stringContaining('"build-sb"'));
   });
 });
 
