@@ -110,7 +110,7 @@ async function traceWithBothGenerations(
 async function collectHashesWithoutV1(input: TurboSnapInput, statsPath: string, buildId: string) {
   const stats = await readStatsFile(statsPath).catch((error: unknown) => {
     input.log[input.turboSnap ? 'warn' : 'debug'](
-      'Failed to read the stats file, so TurboSnap 2.0 skipped this build',
+      "Failed to read the stats file, so TurboSnap 2.0 didn't collect hashes for this build",
       error
     );
     return undefined;
