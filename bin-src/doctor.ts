@@ -1,15 +1,23 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 import * as clack from '@clack/prompts';
 import meow from 'meow';
 
+import { findBuildScriptName } from '../node-src/lib/getOptions';
+import { findConfigFlags } from '../node-src/lib/getStorybookMetadata';
 import { meowImportMeta } from '../node-src/lib/meowImportMeta';
 import parseArguments from '../node-src/lib/parseArguments';
 import type { Flags } from '../node-src/types';
 import pkg from '../package.json';
 import { Check, runChecks } from './setup/checks';
-import { describeProject, findProjects, listProjectFiles, Project } from './setup/detect';
+import {
+  describeProject,
+  E2E_CONFIG,
+  findProjects,
+  listProjectFiles,
+  Project,
+} from './setup/detect';
 import { loadDoctorInput } from './setup/doctorInput';
 import { applyFixes, doctorCommand, printChecks, summarize } from './setup/report';
 import { answered, color, git, readJson, relativeOrDot } from './setup/shared';
@@ -60,6 +68,56 @@ function scriptRunsChromatic(directory: string) {
   const scripts: Record<string, string> =
     readJson(path.join(directory, 'package.json'))?.scripts ?? {};
   return Object.values(scripts).some((command) => /(^|[\s;&|])chromatic(\s|$)/.test(command));
+}
+
+// Flags that point doctor at a project's files, so the folder doctor runs in is the project.
+const hasPathFlags = (mainFlags: Flags) =>
+  !!(
+    mainFlags.configFile ||
+    mainFlags.storybookConfigDir ||
+    mainFlags.storybookBaseDir ||
+    mainFlags.storybookBuildDir?.length
+  );
+
+/**
+ * Whether a folder has anything for doctor to check: Chromatic set up (a config file, a script
+ * that runs chromatic, or path flags), a Storybook config directory, or a Vitest, Playwright or
+ * Cypress config. Reads the folder itself, so it works outside a git repository too.
+ *
+ * @param directory The folder doctor would check.
+ * @param mainFlags The main command's flags.
+ *
+ * @returns True when doctor should check it.
+ */
+function hasProject(directory: string, mainFlags: Flags) {
+  if (hasPathFlags(mainFlags) || hasConfigFile(directory) || scriptRunsChromatic(directory)) {
+    return true;
+  }
+  if (readdirSync(directory).some((file) => E2E_CONFIG.test(file))) return true;
+  const packageJson = readJson(path.join(directory, 'package.json')) ?? {};
+  const { configDir } = findConfigFlags({
+    buildScriptName: findBuildScriptName(packageJson.scripts),
+    packageJson,
+  });
+  return existsSync(path.join(directory, configDir ?? '.storybook'));
+}
+
+/**
+ * Stops doctor where there's nothing to check, and points to init instead. Every check would
+ * otherwise fail or offer fixes, such as adding chromatic, to a folder that isn't a project.
+ *
+ * @param cwd The directory doctor runs from.
+ * @param directory The folder doctor would check.
+ *
+ * @returns The failure to throw: exit code 2, as for --project.
+ */
+function noProject(cwd: string, directory: string) {
+  const relative = relativeOrDot(cwd, directory);
+  const init = relative === '.' ? 'npx chromatic init' : `npx chromatic init --project ${relative}`;
+  return new SubcommandFailure(
+    `No Storybook or test config found in ${relative === '.' ? 'this folder' : relative}. Run ${init} to set one up.`,
+    { exitCode: 2 }
+  );
 }
 
 // Whether a path is a folder or inside it.
@@ -117,12 +175,12 @@ async function chooseTargets(cwd: string, flags: Record<string, any>, mainFlags:
       throw new SubcommandFailure(`No directory at ${flags.project}`, { exitCode: 1 });
     return here(directory);
   }
-  const explicit =
-    mainFlags.configFile ||
-    mainFlags.storybookConfigDir ||
-    mainFlags.storybookBaseDir ||
-    mainFlags.storybookBuildDir?.length;
-  if (!gitRoot || explicit || hasConfigFile(cwd) || existsSync(path.join(cwd, '.storybook'))) {
+  if (
+    !gitRoot ||
+    hasPathFlags(mainFlags) ||
+    hasConfigFile(cwd) ||
+    existsSync(path.join(cwd, '.storybook'))
+  ) {
     return here(cwd);
   }
 
@@ -212,7 +270,8 @@ export async function main(argv: string[]) {
     option's value matches what's on disk and in git, and the git history and token around it.
     Run it from a project to check that project. From anywhere else in a monorepo, it asks which
     project with Chromatic set up to check. Without a terminal (in CI), pass --project instead:
-    doctor lists the projects and exits 2 without checking any.
+    doctor lists the projects and exits 2 without checking any. In a folder with no Storybook,
+    no Vitest, Playwright or Cypress config and no Chromatic setup, it points to init and exits 2.
 
     Options
       --project <dir>     Check only this project.
@@ -247,6 +306,10 @@ export async function main(argv: string[]) {
 
   const found = await chooseTargets(cwd, flags, mainFlags);
   const { notSetUp } = found;
+  // Several targets are all set up; one may be any folder, such as --project or a repo's root.
+  if (found.targets.length === 1 && !hasProject(found.targets[0].directory, mainFlags)) {
+    throw noProject(cwd, found.targets[0].directory);
+  }
   if (!interactive && found.targets.length !== 1) throw projectRequired(cwd, found);
   // Like init, ask which project to check when there's a terminal.
   const targets =

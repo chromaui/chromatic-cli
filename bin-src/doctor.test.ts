@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -69,6 +69,30 @@ describe('doctor without a terminal', () => {
       exitCode: 2,
       message: 'Found no projects with Chromatic set up. Pass --project <directory> to check one.',
     });
+  });
+});
+
+describe('doctor where there is no project', () => {
+  it('stops before any check and points to init', async () => {
+    mkdirSync(path.join(root, 'packages', 'lib'), { recursive: true });
+    writeFileSync(path.join(root, 'packages', 'lib', 'package.json'), '{ "name": "lib" }');
+    commit();
+    process.chdir(root);
+
+    await expect(main(['--project', 'packages/lib', '--fix', '--yes'])).rejects.toMatchObject({
+      exitCode: 2,
+      message:
+        'No Storybook or test config found in packages/lib. Run npx chromatic init --project packages/lib to set one up.',
+    });
+    expect(existsSync(path.join(root, 'packages', 'lib', 'chromatic.config.json'))).toBe(false);
+  });
+
+  it('still checks a set-up folder without a Storybook', async () => {
+    writeFileSync(path.join(root, 'chromatic.config.json'), '{}\n');
+    commit();
+    process.chdir(root);
+
+    await expect(main([])).rejects.toMatchObject({ exitCode: 1, message: 'Some checks failed' });
   });
 });
 
