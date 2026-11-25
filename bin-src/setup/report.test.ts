@@ -14,6 +14,7 @@ import { applyFixes, doctorCommand, showEdits } from './report';
 vi.mock('@clack/prompts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@clack/prompts')>()),
   note: vi.fn(),
+  select: vi.fn(),
 }));
 
 vi.mock('execa', () => ({ execa: vi.fn() }));
@@ -53,6 +54,51 @@ describe('applyFixes', () => {
 
     expect(readFileSync(plain, 'utf8')).toBe('{}\n');
     expect(existsSync(asked)).toBe(false);
+  });
+});
+
+describe('applyFixes with choices', () => {
+  it('applies the choice picked in a terminal, or nothing, and --yes applies the fix itself', async () => {
+    root = mkdtempSync(path.join(tmpdir(), 'chromatic-choices-'));
+    const file = path.join(root, 'package.json');
+    const update = (to: string) => ({ summary: `Update to ${to}`, edits: [{ file, content: to }] });
+    // Like the version check, it reads package.json again on each recheck. This one models a
+    // recheck where only the major is left after the update, as a fix with a question.
+    const recheck = async (): Promise<Check[]> => {
+      const now = existsSync(file) ? readFileSync(file, 'utf8') : 'old';
+      let fix: Check['fix'];
+      if (now === 'old') {
+        fix = {
+          ...update('minor'),
+          choices: ['major', 'minor', 'patch'].map((key) => ({
+            key,
+            label: key,
+            ...(key === 'major' && { warning: 'Read the release notes' }),
+            fix: update(key),
+          })),
+        };
+      } else if (now !== 'major') {
+        fix = { ...update('major'), question: 'Update across a major version?' };
+      }
+      return [{ group: 'Loading', status: 'warn', title: 'Behind', fix }];
+    };
+
+    vi.mocked(clack.select).mockResolvedValueOnce('patch');
+    await applyFixes(recheck, { cwd: root, yes: false });
+    expect(readFileSync(file, 'utf8')).toBe('patch');
+    // The select starts on the first choice without a warning, never on the major.
+    expect(clack.select).toHaveBeenCalledWith(expect.objectContaining({ initialValue: 'minor' }));
+    // The major, turned down in that choice, isn't offered again after the recheck.
+    expect(clack.select).toHaveBeenCalledOnce();
+
+    rmSync(file);
+    vi.mocked(clack.select).mockResolvedValueOnce('');
+    await applyFixes(recheck, { cwd: root, yes: false });
+    expect(existsSync(file)).toBe(false);
+
+    await applyFixes(recheck, { cwd: root, yes: true });
+    expect(readFileSync(file, 'utf8')).toBe('minor');
+    expect(clack.select).toHaveBeenCalledTimes(2);
   });
 });
 

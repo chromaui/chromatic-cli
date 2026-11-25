@@ -13,6 +13,7 @@ import parseArguments from '../node-src/lib/parseArguments';
 import type { Flags } from '../node-src/types';
 import pkg from '../package.json';
 import { Check, runChecks } from './setup/checks';
+import { readCliVersions } from './setup/cliVersion';
 import {
   describeProject,
   findProjects,
@@ -59,10 +60,14 @@ export async function collectChecks(cwd: string, argv: string[] = [], statsDirec
       argv,
       flags,
     });
+    if (statsDirectory) {
+      // Like a build, read a Yarn Plug'n'Play project's packages through its runtime.
+      allowPnpRuntime();
+      // Only doctor looks up the latest release, so init's closing check makes no network call.
+      doctorInput.cliVersions = await readCliVersions(doctorInput);
+    }
     const checks = runChecks(doctorInput, configError, optionsError);
     if (!statsDirectory || configError || optionsError) return checks;
-    // Like a build, read a Yarn Plug'n'Play project's packages through its runtime.
-    allowPnpRuntime();
     return [...checks, ...(await previewReachChecks(doctorInput, statsDirectory))];
   } finally {
     process.chdir(previous);
@@ -308,10 +313,14 @@ export async function main(argv: string[]) {
       --fix               Offer to fix what can be fixed, one change at a time.
                           Without a terminal (in CI), fixes are listed, not applied.
       --yes, -y           With --fix, apply every fix without asking, except fixes that
-                          ask how your CI runs Chromatic, which need a terminal.
+                          ask how your CI runs Chromatic or whether to update chromatic to a
+                          new major version, which need a terminal. When chromatic is behind,
+                          it updates to the newest release in the installed major.
 
     With TurboSnap on, doctor builds Storybook with stats into a temporary folder first, the
-    way a TurboSnap build does, to show what the Storybook preview imports.
+    way a TurboSnap build does, to show what the Storybook preview imports. It also asks your
+    npm registry for the latest chromatic release, to show how far behind the installed one is;
+    --skip-update-check skips that.
 
     Every option chromatic takes, such as --config-file, --only-changed or --build-command, is
     read the same way as in a build, and flags win over the config file.
@@ -420,7 +429,7 @@ export async function main(argv: string[]) {
   }
   if (skippedFixes) {
     clack.log.warn(
-      `Didn't apply fixes: there's no terminal to confirm them (CI or piped input).\nRun ${color.cta(doctorCommand(hintArgv, ['--fix', '--yes']))} to apply them${questions ? ', except the ones that ask how your CI runs Chromatic, which need a terminal' : ''}.`
+      `Didn't apply fixes: there's no terminal to confirm them (CI or piped input).\nRun ${color.cta(doctorCommand(hintArgv, ['--fix', '--yes']))} to apply them${questions ? ', except the ones that ask a question, which need a terminal' : ''}.`
     );
   } else if (!flags.fix && all.some((c) => c.fix)) {
     clack.log.info(

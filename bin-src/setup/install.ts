@@ -197,7 +197,7 @@ const RELEASE_AGES: Partial<
  * @returns The age in milliseconds, 0 when there's none, and the exempt versions. Remembered for
  * the run.
  */
-function minimumReleaseAge(cwd: string, name: string): Promise<ReleaseAge> {
+export function minimumReleaseAge(cwd: string, name: string): Promise<ReleaseAge> {
   return remember(`age\0${cwd}\0${name}`, async () => {
     const { packageManager } = await projectPackageManager(cwd);
     const { age, exempt } = (await RELEASE_AGES[packageManager]?.(cwd, name)) ?? {

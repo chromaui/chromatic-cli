@@ -4,6 +4,7 @@ import { stripVTControlCharacters } from 'node:util';
 import * as clack from '@clack/prompts';
 
 import type { Check, Fix, Group } from './checks';
+import { pickChoice } from './fixChoices';
 import { installDependencies } from './install';
 import { answered, color, relativeOrDot } from './shared';
 
@@ -328,6 +329,36 @@ export function showEdits(
 }
 
 /**
+ * Shows a fix's change and asks whether to apply it. For a fix with choices, it shows their
+ * warnings and asks which one to apply, or none, then shows that one's change.
+ *
+ * @param fix The fix.
+ * @param options How to apply.
+ * @param options.cwd Directory paths are shown relative to.
+ * @param options.yes Apply the fix itself without asking.
+ * @param options.title The check's title.
+ * @param options.skipped Summaries of fixes not to offer again, which gets the choices' too.
+ *
+ * @returns The fix to apply, or undefined.
+ */
+async function chooseFix(
+  fix: Fix,
+  options: { cwd: string; yes: boolean; title: string; skipped: Set<string> }
+) {
+  const { cwd, yes, title, skipped } = options;
+  if (yes || !fix.choices) {
+    showEdits(fix.summary, fix.edits, cwd, fix.secrets);
+    const ok = yes || answered(await clack.confirm({ message: fix.question ?? 'Apply this fix?' }));
+    return ok ? fix : undefined;
+  }
+  // A choice turned down isn't offered again when a recheck makes it the fix.
+  for (const choice of fix.choices) skipped.add(choice.fix.summary);
+  const chosen = await pickChoice(fix.choices, title);
+  if (chosen) showEdits(chosen.summary, chosen.edits, cwd, chosen.secrets);
+  return chosen;
+}
+
+/**
  * Offers each fix in turn and applies the ones accepted.
  *
  * @param recheck Runs the checks against the files as they are now.
@@ -355,12 +386,11 @@ async function offerFixes(
       );
       continue;
     }
-    showEdits(fix.summary, fix.edits, cwd, fix.secrets);
-    const ok = yes || answered(await clack.confirm({ message: fix.question ?? 'Apply this fix?' }));
-    if (!ok) continue;
-    for (const { file, content } of fix.edits) writeFileSync(file, content);
-    applied.push(fix);
-    clack.log.success(`Applied: ${fix.summary}`);
+    const chosen = await chooseFix(fix, { cwd, yes, title: next.title, skipped });
+    if (!chosen) continue;
+    for (const { file, content } of chosen.edits) writeFileSync(file, content);
+    applied.push(chosen);
+    clack.log.success(`Applied: ${chosen.summary}`);
   }
 }
 
