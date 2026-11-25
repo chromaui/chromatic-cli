@@ -382,7 +382,7 @@ const RELEASE_AGE_ERRORS = [
  *
  * @returns The check's title and detail, or undefined when something else failed.
  */
-function releaseAgeFailure(output: string, shown: string) {
+export function releaseAgeFailure(output: string, shown: string) {
   const known = RELEASE_AGE_ERRORS.find(({ marker }) => marker.test(output));
   if (!known) return undefined;
   const match = known.blocked.exec(output);

@@ -12,7 +12,13 @@ import { collectChecks } from '../doctor';
 import { SubcommandFailure } from '../subcommandFailure';
 import type { Check } from './checks';
 import { findProjects, listProjectFiles, PACKAGE_MANAGER_COMMANDS, Project } from './detect';
-import { detectPackageManager, installCommand, PackageManager } from './install';
+import {
+  detectPackageManager,
+  installableVersion,
+  installCommand,
+  PackageManager,
+  releaseAgeFailure,
+} from './install';
 import { configValues, pickProject } from './project';
 import { applyFixes, printChecks, showEdits, summarize } from './report';
 import {
@@ -163,18 +169,6 @@ async function configStep(session: Session, project: Project) {
   );
 }
 
-async function latestVersion(name: string) {
-  try {
-    const response = await fetch(`https://registry.npmjs.org/${name}/latest`, {
-      signal: AbortSignal.timeout(5000),
-    });
-    const latest = await response.json();
-    return `^${latest.version}`;
-  } catch {
-    return 'latest';
-  }
-}
-
 /**
  * Whether init should add a "chromatic" script: none of the scripts runs a build, and none is
  * called "chromatic" already. Init never replaces one that runs something else, such as
@@ -271,13 +265,10 @@ async function packageStep(session: Session, project: Project, dlx: string) {
   const display = writer.display(file);
   const previous = readFileSync(file, 'utf8');
   const json = JSON.parse(previous);
-  const wanted: Record<string, string> = { chromatic: `^${pkg.version}` };
-  if (project.framework !== 'storybook')
-    wanted[`@chromatic-com/${project.framework}`] = await latestVersion(
-      `@chromatic-com/${project.framework}`
-    );
+  const names = ['chromatic'];
+  if (project.framework !== 'storybook') names.push(`@chromatic-com/${project.framework}`);
   const present = { ...json.dependencies, ...json.devDependencies };
-  const missing = Object.keys(wanted).filter((name) => !present[name]);
+  const missing = names.filter((name) => !present[name]);
   const existingScript = chromaticScript(json.scripts);
   const addScript = needsScript(json.scripts, display);
   if (missing.length === 0) {
@@ -292,9 +283,18 @@ async function packageStep(session: Session, project: Project, dlx: string) {
   }
 
   // Install the packages first, with a script that runs the installed CLI.
+  // The newest release the package manager's minimum release age lets it install, as storybook
+  // init picks one; for chromatic, no newer than this CLI.
+  const versions = await Promise.all(
+    missing.map((name) =>
+      installableVersion(name, project.directory, name === 'chromatic' ? pkg.version : undefined)
+    )
+  );
   json.devDependencies = {
     ...json.devDependencies,
-    ...Object.fromEntries(missing.map((n) => [n, wanted[n]])),
+    ...Object.fromEntries(
+      missing.map((name, index) => [name, versions[index] ? `^${versions[index]}` : 'latest'])
+    ),
   };
   if (addScript) json.scripts = { ...json.scripts, chromatic: 'chromatic' };
   const content = rewriteJson(json, previous);
@@ -319,20 +319,21 @@ async function installStep(session: Session, project: Project, packageManager: P
   spinner.start(`Installing with ${command}`);
   try {
     // No stdin, so a package manager that wants to ask something fails instead of waiting.
-    await execa(command, args, { cwd: project.directory, stdin: 'ignore' });
+    await execa(command, args, { cwd: project.directory, stdin: 'ignore', all: true });
     spinner.stop(`Installed with ${command}`);
   } catch (err) {
+    // Yarn prints its errors to stdout.
+    const output = String(err.all ?? err.stderr ?? err);
+    const gate = releaseAgeFailure(output, `${command} ${args.join(' ')}`);
+    if (gate) {
+      spinner.error(gate.title);
+      clack.log.message(gate.detail);
+      throw new SubcommandFailure(gate.title, { exitCode: 1 });
+    }
     spinner.error(
       `${command} install failed; your package.json changes are kept. Run it yourself to see why.`
     );
-    clack.log.message(
-      color.muted(
-        String(err.stderr ?? err)
-          .split('\n')
-          .slice(-6)
-          .join('\n')
-      )
-    );
+    clack.log.message(color.muted(output.split('\n').slice(-6).join('\n')));
     throw new SubcommandFailure(`${command} install failed`, { exitCode: 1 });
   }
 }
