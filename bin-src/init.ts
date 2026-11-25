@@ -1,12 +1,11 @@
 import { getCliCommand, parseNi } from '@antfu/ni';
 import boxen from 'boxen';
-import { execa } from 'execa';
+import { execa, parseCommandString } from 'execa';
 import { Path, writeFile } from 'jsonfile';
 import meow from 'meow';
 import prompts from 'prompts';
 import type { NormalizedPackageJson } from 'read-package-up';
 import { readPackageUp } from 'read-package-up';
-import { parseArgsStringToArgv } from 'string-argv';
 
 import { meowImportMeta } from '../node-src/lib/meowImportMeta';
 import noPackageJson from '../node-src/ui/messages/errors/noPackageJson';
@@ -80,17 +79,16 @@ export const installArchiveDependencies = async (
   testFramework: TestFrameworkType
 ) => {
   const defaultInstallArguments = ['-D', 'chromatic', `@chromatic-com/${testFramework}`];
-  const sbPackages = getStorybookPackages(packageJson);
-  const installArguments = [...defaultInstallArguments, ...sbPackages];
-  const installCommand = await getPackageManagerInstallCommand(installArguments);
+  const installCommand = await getPackageManagerInstallCommand(defaultInstallArguments);
   if (!installCommand) {
     throw new Error('Could not determine package manager.');
   }
 
-  // ni double-quotes a version range with spaces in it, such as `^7.0.0 || ^8.0.0`, so the command
-  // needs a parser that reads quotes, unlike execa's `parseCommandString`.
-  const [cmd, ...args] = parseArgsStringToArgv(installCommand);
-  await execa(cmd, args);
+  // ni returns one command string, quoting any argument with a space in it. The Storybook specs
+  // carry versions from package.json, such as `^7.0.0 || ^8.0.0`, so append them as their own
+  // arguments rather than through that string. ni puts the packages last for every package manager.
+  const [cmd, ...args] = parseCommandString(installCommand);
+  await execa(cmd, [...args, ...getStorybookPackages(packageJson)]);
 };
 
 const intializeChromatic = async ({

@@ -139,22 +139,25 @@ describe('installArchiveDependencies', () => {
     expect(execa).toHaveBeenCalledWith(cmd, args);
   });
 
-  it('passes a version range with spaces as one argument', async () => {
-    await installArchiveDependencies(
-      // @ts-expect-error Ignore the intentionally missing properties
-      { devDependencies: { storybook: '^7.0.0 || ^8.0.0' } } as NormalizedPackageJson,
-      'playwright'
-    );
+  it.each(['^7.0.0 || ^8.0.0', '1.0.0" --registry=http://example.invalid "'])(
+    'passes the Storybook version %j as part of one argument',
+    async (version) => {
+      await installArchiveDependencies(
+        // @ts-expect-error Ignore the intentionally missing properties
+        { devDependencies: { storybook: version } } as NormalizedPackageJson,
+        'playwright'
+      );
 
-    expect(execa).toHaveBeenCalledWith('yarn', [
-      'add',
-      '-D',
-      'chromatic',
-      '@chromatic-com/playwright',
-      '@storybook/addon-essentials@^7.0.0 || ^8.0.0',
-      '@storybook/server-webpack5@^7.0.0 || ^8.0.0',
-    ]);
-  });
+      expect(execa).toHaveBeenCalledWith('yarn', [
+        'add',
+        '-D',
+        'chromatic',
+        '@chromatic-com/playwright',
+        `@storybook/addon-essentials@${version}`,
+        `@storybook/server-webpack5@${version}`,
+      ]);
+    }
+  );
 
   it('successfully installs list of dependencies if SB package is found and Essentials is found in devDependencies', async () => {
     await installArchiveDependencies(
