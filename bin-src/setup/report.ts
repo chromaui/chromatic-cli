@@ -3,7 +3,7 @@ import { stripVTControlCharacters } from 'node:util';
 
 import * as clack from '@clack/prompts';
 
-import type { Check, Fix, Group } from './checks';
+import { type Check, type Fix, fixIds, type Group } from './checks';
 import { pickChoice } from './fixChoices';
 import { installDependencies } from './install';
 import { lineDiff } from './lineDiff';
@@ -23,8 +23,8 @@ const MARKS: Record<Check['status'], string> = {
 };
 
 /**
- * Wraps text to a width, so long details stay inside their section's box. A list item's wrapped
- * lines line up under its text.
+ * Wraps text to a width, so long titles and details stay inside their section's box. A list item's
+ * wrapped lines line up under its text. Color codes don't count toward the width.
  *
  * @param text The text to wrap.
  * @param width The widest a line may be.
@@ -37,7 +37,7 @@ function wrap(text: string, width: number) {
     const lines: string[] = [];
     let current = '';
     for (const word of line.split(' ')) {
-      if (current && current.length + word.length + 1 > width) {
+      if (current && visible(current) + visible(word) + 1 > width) {
         lines.push(current);
         current = `${indent}${word}`;
       } else {
@@ -73,11 +73,15 @@ export function printChecks(checks: Check[]) {
     const inGroup = checks.filter((c) => c.group === group);
     if (inGroup.length === 0) return [];
     const lines = inGroup.flatMap((check) => {
-      const fixable = check.fix ? color.cta(' (fixable)') : '';
+      // A no-break space keeps the ID on the same line as "fixable:" when the title wraps.
+      const fixable = check.fix
+        ? ` ${color.cta(`(fixable:\u00A0${fixIds(check.fix).join(', ')})`)}`
+        : '';
+      const [first, ...rest] = wrap(`${check.title}${fixable}`, width - 2);
       const details = check.detail
         ? wrap(check.detail, width - 2).map((line) => `  ${color.muted(line)}`)
         : [];
-      return [`${MARKS[check.status]} ${check.title}${fixable}`, ...details];
+      return [`${MARKS[check.status]} ${first}`, ...rest.map((line) => `  ${line}`), ...details];
     });
     return [{ title: `${color.bold(GROUP_TITLES[group])}  ${summarize(inGroup)}`, lines }];
   });
@@ -170,7 +174,7 @@ export function showEdits(
  * @param options.cwd Directory paths are shown relative to.
  * @param options.yes Apply the fix itself without asking.
  * @param options.title The check's title.
- * @param options.skipped Summaries of fixes not to offer again, which gets the choices' too.
+ * @param options.skipped IDs of fixes not to offer again, which gets the choices' too.
  *
  * @returns The fix to apply, or undefined.
  */
@@ -185,9 +189,30 @@ async function chooseFix(
     return ok ? fix : undefined;
   }
   // A choice turned down isn't offered again when a recheck makes it the fix.
-  for (const choice of fix.choices) skipped.add(choice.fix.summary);
+  for (const choice of fix.choices) skipped.add(choice.fix.id);
   const chosen = await pickChoice(fix.choices, title);
   if (chosen) showEdits(chosen.summary, chosen.edits, cwd, chosen.secrets);
+  return chosen;
+}
+
+// The warning of the choice a fix applies, such as a major update's release notes, on its own lines.
+const choiceWarning = (fix: Fix) => {
+  const warning = fix.choices?.find((choice) => choice.fix.id === fix.id)?.warning;
+  return warning ? `${warning}\n` : '';
+};
+
+/**
+ * Shows the fix --apply named, or the choice of it that it named, and returns it to apply.
+ *
+ * @param fix The fix.
+ * @param apply The IDs named with --apply.
+ * @param cwd Directory paths are shown relative to.
+ *
+ * @returns The fix to apply.
+ */
+function pickNamed(fix: Fix, apply: Set<string>, cwd: string) {
+  const chosen = fix.choices?.find((choice) => apply.has(choice.fix.id))?.fix ?? fix;
+  showEdits(chosen.summary, chosen.edits, cwd, chosen.secrets);
   return chosen;
 }
 
@@ -198,28 +223,44 @@ async function chooseFix(
  * @param options How to apply.
  * @param options.cwd Directory paths are shown relative to.
  * @param options.yes Apply every fix without asking, except those with a question.
+ * @param options.apply IDs of fixes to apply without asking, as if their question was answered
+ * yes. When there are any, other fixes are only applied with yes.
+ * @param options.applyCommand The command that applies one fix by its ID, shown for a fix that yes
+ * skips because it asks a question.
  *
  * @returns The checks after the last fix, and the fixes applied.
  */
+// eslint-disable-next-line complexity -- one branch per way a fix is answered: --apply, --yes or a prompt
 async function offerFixes(
   recheck: () => Promise<Check[]>,
-  { cwd, yes }: { cwd: string; yes: boolean }
+  {
+    cwd,
+    yes,
+    apply = new Set(),
+    applyCommand,
+  }: { cwd: string; yes: boolean; apply?: Set<string>; applyCommand: (id: string) => string }
 ) {
-  const skipped = new Set<string>();
+  const offered = new Set<string>();
   const applied: Fix[] = [];
   for (;;) {
     const checks = await recheck();
-    const next = checks.find((c) => c.fix && !skipped.has(c.fix.summary));
+    const next = checks.find((c) => c.fix && !offered.has(c.fix.id));
     if (!next?.fix) return { checks, applied };
     const { fix } = next;
-    skipped.add(fix.summary);
-    if (fix.question && yes) {
+    offered.add(fix.id);
+    // Naming a fix answers its question. With names, only --yes applies the other fixes.
+    const named = fixIds(fix).some((id) => apply.has(id));
+    if (!named && apply.size > 0 && !yes) continue;
+    if (!named && fix.question && yes) {
       clack.log.warn(
-        `Skipped: ${fix.summary}. Run ${color.cta('npx chromatic doctor --fix')} in a terminal to answer: ${fix.question}`
+        `Skipped: ${fix.summary}. It asks: ${fix.question}\n${choiceWarning(fix)}If the answer is yes, run ${color.cta(applyCommand(fix.id))}`
       );
       continue;
     }
-    const chosen = await chooseFix(fix, { cwd, yes, title: next.title, skipped });
+    // A named choice, such as chromatic.update:major, is applied in place of the fix it belongs to.
+    const chosen = named
+      ? pickNamed(fix, apply, cwd)
+      : await chooseFix(fix, { cwd, yes, title: next.title, skipped: offered });
     if (!chosen) continue;
     for (const { file, content } of chosen.edits) writeFileSync(file, content);
     applied.push(chosen);
@@ -236,12 +277,14 @@ async function offerFixes(
  * @param options How to apply.
  * @param options.cwd Directory paths are shown relative to, and the install runs in.
  * @param options.yes Apply every fix without asking, except those with a question.
+ * @param options.apply IDs of fixes to apply without asking, as in offerFixes.
+ * @param options.applyCommand The command that applies one fix by its ID, as in offerFixes.
  *
  * @returns The checks after the last fix, and the install's failure when there is one.
  */
 export async function applyFixes(
   recheck: () => Promise<Check[]>,
-  options: { cwd: string; yes: boolean }
+  options: Parameters<typeof offerFixes>[1]
 ) {
   const { checks, applied } = await offerFixes(recheck, options);
   if (!applied.some((fix) => fix.install)) return checks;
@@ -254,11 +297,19 @@ export async function applyFixes(
 const shellQuote = (argument: string) =>
   /^[\w@%+=:,./-]+$/.test(argument) ? argument : `'${argument.replaceAll("'", String.raw`'\''`)}'`;
 
-// Doctor's own flags, which the rerun command sets itself, with dashes dropped: the parser also
-// takes camelCase, such as --projectToken.
-const RERUN_DROPPED = new Set(['fix', 'nofix', 'yes', 'noyes']);
-// The project token's long flag; its value is a secret, kept out of printed commands.
-const SECRET_FLAG = 'projecttoken';
+// Long flags the rerun command leaves out, with dashes dropped (the parser also takes camelCase,
+// such as --projectToken), and whether each takes a value: doctor's own flags, which the command
+// sets itself, and the project token, a secret kept out of printed commands.
+const RERUN_DROPPED = new Map([
+  ['fix', false],
+  ['nofix', false],
+  ['yes', false],
+  ['noyes', false],
+  ['projecttoken', true],
+]);
+
+// A long flag's name without dashes or case, as the parser matches it.
+const flagName = (argument: string) => argument.split('=')[0].replaceAll('-', '').toLowerCase();
 
 /**
  * The command to run doctor again with the same arguments, such as --config-file, plus more, so a
@@ -266,21 +317,28 @@ const SECRET_FLAG = 'projecttoken';
  * printed.
  *
  * @param argv The arguments doctor ran with.
- * @param extra Arguments to add, such as --fix.
+ * @param extra Arguments to add, such as --fix. A flag here replaces the same flag in argv, with its
+ * value, such as --project or --apply.
  *
  * @returns The command, quoted for a POSIX shell.
  */
 export function doctorCommand(argv: string[], extra: string[]) {
+  const dropped = new Map([
+    ...RERUN_DROPPED,
+    ...extra.flatMap((argument, index) =>
+      argument.startsWith('--')
+        ? [[flagName(argument), !(extra[index + 1] ?? '-').startsWith('-')] as const]
+        : []
+    ),
+  ]);
   const kept: string[] = [];
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
-    const [name] = argument.split('=');
-    if (name.startsWith('--')) {
-      const flag = name.replaceAll('-', '').toLowerCase();
-      if (RERUN_DROPPED.has(flag)) continue;
-      if (flag === SECRET_FLAG) {
+    if (argument.startsWith('--')) {
+      const takesValue = dropped.get(flagName(argument));
+      if (takesValue !== undefined) {
         // The value is the next argument unless it's attached with =.
-        if (!argument.includes('=')) index += 1;
+        if (takesValue && !argument.includes('=')) index += 1;
         continue;
       }
     } else if (/^-[a-z]/i.test(argument)) {

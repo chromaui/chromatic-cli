@@ -104,6 +104,7 @@ export async function unseenFileChecks(
   const fix = configFix(
     input,
     'externals',
+    'externals.addUnseen',
     `Add ${unseen.length === 1 ? 'it' : `these ${unseen.length} files`} to externals`,
     (json) => {
       json.externals = [...(json.externals ?? []), ...unseen.map((file) => asGlob(file))];

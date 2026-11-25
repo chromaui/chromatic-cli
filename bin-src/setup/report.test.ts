@@ -8,6 +8,7 @@ import * as clack from '@clack/prompts';
 import { execa } from 'execa';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { skippedFixesMessage } from './apply';
 import type { Check } from './checks';
 import { applyFixes, doctorCommand, showEdits } from './report';
 
@@ -20,6 +21,7 @@ vi.mock('@clack/prompts', async (importOriginal) => ({
 vi.mock('execa', () => ({ execa: vi.fn() }));
 
 let root: string | undefined;
+const applyCommand = (id: string) => `npx chromatic doctor --apply ${id}`;
 
 afterEach(() => {
   if (root) rmSync(root, { recursive: true, force: true });
@@ -27,7 +29,7 @@ afterEach(() => {
 });
 
 describe('applyFixes', () => {
-  it('applies fixes with --yes, but not one that asks how CI runs Chromatic', async () => {
+  it('applies fixes with --yes, but not one that asks a question', async () => {
     root = mkdtempSync(path.join(tmpdir(), 'chromatic-fixes-'));
     const plain = path.join(root, 'plain.json');
     const asked = path.join(root, 'asked.json');
@@ -37,6 +39,7 @@ describe('applyFixes', () => {
         status: 'warn',
         title: 'Needs a question',
         fix: {
+          id: 'asked.change',
           summary: 'Change asked.json',
           edits: [{ file: asked, content: '{}\n' }],
           question: 'Does CI run Chromatic from packages/ui?',
@@ -46,14 +49,35 @@ describe('applyFixes', () => {
         group: 'Values',
         status: 'warn',
         title: 'Plain',
-        fix: { summary: 'Change plain.json', edits: [{ file: plain, content: '{}\n' }] },
+        fix: {
+          id: 'plain.change',
+          summary: 'Change plain.json',
+          edits: [{ file: plain, content: '{}\n' }],
+        },
       },
     ];
 
-    await applyFixes(async () => checks, { cwd: root, yes: true });
+    const warn = vi.spyOn(clack.log, 'warn');
+
+    await applyFixes(async () => checks, { cwd: root, yes: true, applyCommand });
 
     expect(readFileSync(plain, 'utf8')).toBe('{}\n');
     expect(existsSync(asked)).toBe(false);
+    expect(stripVTControlCharacters(String(warn.mock.calls[0][0]))).toContain(
+      'run npx chromatic doctor --apply asked.change'
+    );
+
+    rmSync(plain);
+    await applyFixes(async () => checks, {
+      cwd: root,
+      yes: false,
+      apply: new Set(['asked.change']),
+      applyCommand,
+    });
+
+    // Naming a fix answers its question; without --yes, nothing else is applied.
+    expect(readFileSync(asked, 'utf8')).toBe('{}\n');
+    expect(existsSync(plain)).toBe(false);
   });
 });
 
@@ -61,7 +85,17 @@ describe('applyFixes with choices', () => {
   it('applies the choice picked in a terminal, or nothing, and --yes applies the fix itself', async () => {
     root = mkdtempSync(path.join(tmpdir(), 'chromatic-choices-'));
     const file = path.join(root, 'package.json');
-    const update = (to: string) => ({ summary: `Update to ${to}`, edits: [{ file, content: to }] });
+    const update = (to: string) => ({
+      id: `update:${to}`,
+      summary: `Update to ${to}`,
+      edits: [{ file, content: to }],
+    });
+    const major = {
+      key: 'major',
+      label: 'Major',
+      warning: 'Read the release notes',
+      fix: update('major'),
+    };
     // Like the version check, it reads package.json again on each recheck. This one models a
     // recheck where only the major is left after the update, as a fix with a question.
     const recheck = async (): Promise<Check[]> => {
@@ -70,22 +104,34 @@ describe('applyFixes with choices', () => {
       if (now === 'old') {
         fix = {
           ...update('minor'),
-          choices: ['major', 'minor', 'patch'].map((key) => ({
-            key,
-            label: key,
-            ...(key === 'major' && { warning: 'Read the release notes' }),
-            fix: update(key),
-          })),
+          choices: [
+            major,
+            ...['minor', 'patch'].map((key) => ({ key, label: key, fix: update(key) })),
+          ],
         };
       } else if (now !== 'major') {
-        fix = { ...update('major'), question: 'Update across a major version?' };
+        fix = { ...major.fix, question: 'Update across a major version?', choices: [major] };
       }
       return [{ group: 'Loading', status: 'warn', title: 'Behind', fix }];
     };
 
+    // Without a terminal, the major that --yes never picks is listed with its warning and command;
+    // the minor and patch updates aren't, as --fix --yes applies them.
+    const listed = async () =>
+      stripVTControlCharacters(skippedFixesMessage(await recheck(), 'rerun', applyCommand));
+    expect(await listed()).toContain(
+      '- Major?\n  Read the release notes\n  npx chromatic doctor --apply update:major'
+    );
+    expect(await listed()).not.toMatch(/update:(minor|patch)/);
+
     vi.mocked(clack.select).mockResolvedValueOnce('patch');
-    await applyFixes(recheck, { cwd: root, yes: false });
+    await applyFixes(recheck, { cwd: root, yes: false, applyCommand });
     expect(readFileSync(file, 'utf8')).toBe('patch');
+    // With only the major left, it's listed once, as the question, still with its warning.
+    expect(await listed()).toContain(
+      '- Update across a major version?\n  Read the release notes\n  npx chromatic doctor --apply update:major'
+    );
+    expect(await listed()).not.toContain('- Major?');
     // The select starts on the first choice without a warning, never on the major.
     expect(clack.select).toHaveBeenCalledWith(expect.objectContaining({ initialValue: 'minor' }));
     // The major, turned down in that choice, isn't offered again after the recheck.
@@ -93,11 +139,29 @@ describe('applyFixes with choices', () => {
 
     rmSync(file);
     vi.mocked(clack.select).mockResolvedValueOnce('');
-    await applyFixes(recheck, { cwd: root, yes: false });
+    await applyFixes(recheck, { cwd: root, yes: false, applyCommand });
     expect(existsSync(file)).toBe(false);
 
-    await applyFixes(recheck, { cwd: root, yes: true });
+    const warn = vi.spyOn(clack.log, 'warn').mockClear();
+    await applyFixes(recheck, { cwd: root, yes: true, applyCommand });
     expect(readFileSync(file, 'utf8')).toBe('minor');
+    expect(clack.select).toHaveBeenCalledTimes(2);
+    // --yes skips the major left after the recheck, and prints its warning and command.
+    expect(stripVTControlCharacters(String(warn.mock.calls.at(-1)?.[0]))).toContain(
+      'Read the release notes\nIf the answer is yes, run npx chromatic doctor --apply update:major'
+    );
+
+    // --apply names a choice by its ID and applies only it, without the select.
+    rmSync(file);
+    const success = vi.spyOn(clack.log, 'success').mockClear();
+    await applyFixes(recheck, {
+      cwd: root,
+      yes: false,
+      apply: new Set(['update:major']),
+      applyCommand,
+    });
+    expect(readFileSync(file, 'utf8')).toBe('major');
+    expect(success.mock.calls.map(([message]) => message)).toEqual(['Applied: Update to major']);
     expect(clack.select).toHaveBeenCalledTimes(2);
   });
 });
@@ -111,6 +175,7 @@ describe('applyFixes installs', () => {
       status: 'warn' as const,
       title: name,
       fix: {
+        id: `${name}.add`,
         summary: `Add ${name}`,
         install: true,
         edits: [{ file: path.join(directory, name), content: '' }],
@@ -122,15 +187,25 @@ describe('applyFixes installs', () => {
     writeFileSync(path.join(root, 'package-lock.json'), '{}');
     execFileSync('git', ['init', '-q'], { cwd: root });
 
-    await applyFixes(async () => checks, { cwd: root, yes: true });
+    await applyFixes(async () => checks, { cwd: root, yes: true, applyCommand });
     expect(execa).toHaveBeenCalledOnce();
     expect(execa).toHaveBeenCalledWith('npm', ['install'], expect.objectContaining({ cwd: root }));
 
     vi.mocked(execa).mockRejectedValueOnce(
       Object.assign(new Error('x'), { all: 'E404 chromatic' })
     );
-    const after = await applyFixes(async () => checks, { cwd: root, yes: true });
+    const after = await applyFixes(async () => checks, { cwd: root, yes: true, applyCommand });
     expect(after.at(-1)).toMatchObject({ status: 'fail', title: 'npm install failed' });
+
+    // A fix named with --apply installs too.
+    vi.mocked(execa).mockClear();
+    await applyFixes(async () => checks, {
+      cwd: root,
+      yes: false,
+      apply: new Set(['b.add']),
+      applyCommand,
+    });
+    expect(execa).toHaveBeenCalledOnce();
   });
 });
 
@@ -145,6 +220,15 @@ describe('doctorCommand', () => {
     expect(
       doctorCommand(['--project-token=chpt_secret', '--fix', '-c', "it's.json"], ['--fix'])
     ).toBe(String.raw`npx chromatic doctor -c 'it'\''s.json' --fix`);
+  });
+
+  it('replaces the flags it adds, with their values', () => {
+    expect(
+      doctorCommand(
+        ['--project', 'ui', '--apply', 'a.fix', '--apply=b.fix', '-c', 'x.json', '--yes'],
+        ['--project', '.', '--apply', 'c.fix']
+      )
+    ).toBe('npx chromatic doctor -c x.json --project . --apply c.fix');
   });
 
   it('leaves out a token in every form the parser takes', () => {

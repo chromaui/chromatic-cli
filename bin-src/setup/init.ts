@@ -20,7 +20,7 @@ import {
   releaseAgeFailure,
 } from './install';
 import { configValues, pickProject } from './project';
-import { applyFixes, printChecks, showEdits, skillsHint, summarize } from './report';
+import { applyFixes, doctorCommand, printChecks, showEdits, skillsHint, summarize } from './report';
 import {
   answered,
   chromaticScript,
@@ -418,6 +418,7 @@ export async function main(argv: string[]) {
     );
   }
 
+  const runFrom = relativeOrDot(startDirectory, project.directory);
   // 7. Check the result, as storybook add runs doctor
   let failed = false;
   if (flags.dryRun) {
@@ -446,7 +447,11 @@ export async function main(argv: string[]) {
         `Run ${color.cta('npx chromatic doctor --fix')} in a terminal to apply the fixes.`
       );
     } else if (checks.some((c) => c.fix)) {
-      checks = await applyFixes(recheck, { cwd: project.directory, yes: !!flags.yes });
+      checks = await applyFixes(recheck, {
+        cwd: project.directory,
+        yes: !!flags.yes,
+        applyCommand: (id) => doctorCommand([], ['--project', runFrom, '--apply', id]),
+      });
       const left = problemsIn(checks);
       clack.log.step(`Checked again: ${summarize(checks)}`);
       printChecks(left);
@@ -455,7 +460,6 @@ export async function main(argv: string[]) {
   }
 
   // 8. Next steps
-  const runFrom = relativeOrDot(startDirectory, project.directory);
   // The script that runs Chromatic, whatever it's called; without one, such as after a no to
   // adding one, run the CLI directly.
   const commands = PACKAGE_MANAGER_COMMANDS[packageManager];

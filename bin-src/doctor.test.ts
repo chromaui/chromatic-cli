@@ -1,13 +1,16 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { stripVTControlCharacters } from 'node:util';
 
+import * as clack from '@clack/prompts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { collectChecks, main } from './doctor';
 
 let root: string;
+const uiConfig = () => path.join(root, 'packages', 'ui', 'chromatic.config.json');
 const previous = process.cwd();
 
 function writePackage(name: string, setUp: boolean) {
@@ -185,5 +188,79 @@ describe('TurboSnap without a project', () => {
       expect(check?.title).toBe("TurboSnap isn't on here");
       expect(check?.fix).toBeUndefined();
     }
+  });
+});
+
+describe('doctor --apply', () => {
+  it('applies a fix that asks a question, without a terminal', async () => {
+    writePackage('ui', true);
+    commit();
+    process.chdir(root);
+
+    await main([
+      '--project',
+      'packages/ui',
+      '--apply',
+      'onlyChanged.enable',
+      '--skip-update-check',
+    ]);
+
+    expect(JSON.parse(readFileSync(uiConfig(), 'utf8'))).toMatchObject({ onlyChanged: true });
+    // Only the named fix: chromatic.addDependency is offered too, but needs --yes.
+    expect(readFileSync(path.join(root, 'packages', 'ui', 'package.json'), 'utf8')).not.toContain(
+      'devDependencies'
+    );
+  });
+
+  it('names the fixes the applied ones made available, with their commands', async () => {
+    writePackage('ui', true);
+    writeFileSync(uiConfig(), '{ "storybookConfigDir": "packages/ui/.storybook" }\n');
+    commit();
+    process.chdir(root);
+    const info = vi.spyOn(clack.log, 'info');
+
+    await main([
+      '--project',
+      'packages/ui',
+      '--apply',
+      'storybookConfigDir.rebase',
+      '--skip-update-check',
+    ]);
+
+    // TurboSnap is offered only once doctor finds the Storybook, so this run can't apply it.
+    expect(JSON.parse(readFileSync(uiConfig(), 'utf8'))).toEqual({
+      storybookConfigDir: '.storybook',
+    });
+    const printed = info.mock.calls.map(([message]) => stripVTControlCharacters(String(message)));
+    expect(printed).toContainEqual(
+      expect.stringContaining(
+        'npx chromatic doctor --skip-update-check --project packages/ui --apply onlyChanged.enable'
+      )
+    );
+    expect(printed.join('\n')).not.toContain('--apply chromatic.addDependency');
+  });
+
+  it("exits 2 and applies nothing when a named fix isn't offered", async () => {
+    writePackage('ui', true);
+    commit();
+    process.chdir(root);
+
+    await expect(
+      main([
+        '--project',
+        'packages/ui',
+        '--apply',
+        'onlyChanged.enable',
+        '--apply',
+        'storybookConfigDir.rebase',
+        '--skip-update-check',
+      ])
+    ).rejects.toMatchObject({
+      exitCode: 2,
+      message: expect.stringContaining(
+        "doesn't offer storybookConfigDir.rebase yet. It offers chromatic.addDependency, onlyChanged.enable. Some fixes appear only after another is applied. Apply onlyChanged.enable first with npx chromatic doctor --skip-update-check --project packages/ui --apply onlyChanged.enable, then run doctor again"
+      ),
+    });
+    expect(readFileSync(uiConfig(), 'utf8')).toBe('{}\n');
   });
 });

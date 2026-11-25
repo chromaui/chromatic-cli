@@ -83,6 +83,7 @@ function turnOnFix(input: DoctorInput) {
   const fix = configFix(
     input,
     'onlyChanged',
+    'onlyChanged.enable',
     'Turn on TurboSnap with "onlyChanged": true',
     (json) => {
       json.onlyChanged = true;
@@ -135,9 +136,15 @@ function onlyChangedChecks(input: DoctorInput): Check[] {
         status: 'warn',
         title: `onlyChanged has no effect on ${playwright ? 'Playwright' : 'Cypress'} tests`,
         detail: 'TurboSnap only works with Storybook and Vitest.',
-        fix: configFix(input, 'onlyChanged', 'Remove onlyChanged from the config file', (json) => {
-          delete json.onlyChanged;
-        }),
+        fix: configFix(
+          input,
+          'onlyChanged',
+          'onlyChanged.remove',
+          'Remove onlyChanged from the config file',
+          (json) => {
+            delete json.onlyChanged;
+          }
+        ),
       },
     ];
   }
@@ -176,6 +183,7 @@ function onlyChangedChecks(input: DoctorInput): Check[] {
           fix: configFix(
             input,
             'onlyChanged',
+            'onlyChanged.setBoolean',
             `Set "onlyChanged": ${trimmed} in the config file`,
             (json) => {
               json.onlyChanged = trimmed === 'true';
@@ -241,6 +249,7 @@ function configDirectoryChecks(input: DoctorInput): Check[] {
             configFix(
               input,
               'storybookConfigDir',
+              'storybookConfigDir.rebase',
               `Set storybookConfigDir to ${rebased}`,
               (json) => {
                 json.storybookConfigDir = rebased;
@@ -361,9 +370,15 @@ function unmatchedGlobCheck(
     detail: `Globs are matched from the repository root.${suggestion ? ` ${suggestion.glob} matches ${suggestion.count}${where}.` : ''}`,
     fix:
       suggestion && !folders
-        ? configFix(input, key, `Change ${key} ${glob} to ${suggestion.glob}`, (json) => {
-            json[key] = json[key].map((g: string) => (g === glob ? suggestion.glob : g));
-          })
+        ? configFix(
+            input,
+            key,
+            `${key}.retarget:${glob}`,
+            `Change ${key} ${glob} to ${suggestion.glob}`,
+            (json) => {
+              json[key] = json[key].map((g: string) => (g === glob ? suggestion.glob : g));
+            }
+          )
         : undefined,
   };
 }
@@ -383,6 +398,7 @@ function moveTokenFix(input: DoctorInput) {
   const removal = configFix(
     input,
     'projectToken',
+    'projectToken.moveToEnv',
     'Move the token to a gitignored .env and remove it from the config file',
     (json) => {
       delete json.projectToken;

@@ -12,6 +12,7 @@ import { meowImportMeta } from '../node-src/lib/meowImportMeta';
 import parseArguments from '../node-src/lib/parseArguments';
 import type { Flags } from '../node-src/types';
 import pkg from '../package.json';
+import { notOfferedFailure, skippedFixesMessage, unlockedFixesMessage } from './setup/apply';
 import { Check, runChecks } from './setup/checks';
 import { readCliVersions } from './setup/cliVersion';
 import {
@@ -296,7 +297,7 @@ export async function main(argv: string[]) {
   const { flags } = meow(
     `
     Usage
-      $ chromatic doctor [--fix] [options]
+      $ chromatic doctor [--fix] [--apply <id>] [options]
 
     Checks your Chromatic setup without starting a Chromatic build: that the config loads, that
     each option's value matches what's on disk and in git, and the git history and token around
@@ -313,9 +314,12 @@ export async function main(argv: string[]) {
       --fix               Offer to fix what can be fixed, one change at a time.
                           Without a terminal (in CI), fixes are listed, not applied.
       --yes, -y           With --fix, apply every fix without asking, except fixes that
-                          ask how your CI runs Chromatic or whether to update chromatic to a
-                          new major version, which need a terminal. When chromatic is behind,
-                          it updates to the newest release in the installed major.
+                          ask a question doctor can't answer from your files, such as how
+                          CI runs Chromatic or whether to update chromatic to a new major.
+                          When chromatic is behind, it updates within the installed major.
+      --apply <id>        Apply the fix with this ID from the report, answering yes to its
+                          question. Implies --fix; repeatable. Exits 2 if it isn't offered.
+                          With --apply but not --yes, doctor applies no other fixes.
 
     With TurboSnap on, doctor builds Storybook with stats into a temporary folder first, the
     way a TurboSnap build does, to show what the Storybook preview imports. It also asks your
@@ -333,6 +337,7 @@ export async function main(argv: string[]) {
         project: { type: 'string' },
         fix: { type: 'boolean' },
         yes: { type: 'boolean', shortFlag: 'y' },
+        apply: { type: 'string', isMultiple: true },
       },
     }
   );
@@ -347,13 +352,22 @@ export async function main(argv: string[]) {
   clack.intro(`Chromatic CLI v${pkg.version}`);
   clack.log.message(color.muted('doctor · checking your setup without starting a Chromatic build'));
 
+  const apply = flags.apply ?? [];
+  const fix = flags.fix || apply.length > 0;
+
   const found = await chooseTargets(cwd, flags, mainFlags);
   const { notSetUp } = found;
   // Several targets are all set up; one may be any folder, such as --project or a repo's root.
   if (found.targets.length === 1 && !hasProject(found.targets[0].directory, mainFlags)) {
     throw noProject(cwd, found.targets[0].directory, mainFlags);
   }
-  if (!interactive && found.targets.length !== 1) throw projectRequired(cwd, found);
+  // Without a terminal to ask which project, doctor checks one; --apply needs one to apply to.
+  if (
+    (!interactive && found.targets.length !== 1) ||
+    (apply.length > 0 && found.targets.length === 0)
+  ) {
+    throw projectRequired(cwd, found);
+  }
   // Like init, ask which project to check when there's a terminal.
   const targets =
     interactive && found.targets.length > 1
@@ -383,8 +397,8 @@ export async function main(argv: string[]) {
   }
 
   const all: Check[] = [];
-  let skippedFixes = false;
-  let questions = false;
+  // Without a terminal, which checks one project, what to say about the fixes it didn't apply.
+  let skipped: string | undefined;
   for (const target of targets) {
     if (multi) clack.log.step(color.bold(color.cta(`Project ${target.label}`)));
     // When the preview check needs a stats file, build Storybook first, then report. A failed
@@ -403,21 +417,46 @@ export async function main(argv: string[]) {
     }
     printChecks(checks);
 
-    if (flags.fix && checks.some((c) => c.fix)) {
-      if (flags.yes || interactive) {
+    const applyCommand = (...ids: string[]) =>
+      doctorCommand(argv, [
+        '--project',
+        relativeOrDot(cwd, target.directory),
+        ...ids.flatMap((id) => ['--apply', id]),
+      ]);
+    const notOffered = notOfferedFailure(
+      checks,
+      apply,
+      relativeOrDot(cwd, target.directory),
+      applyCommand
+    );
+    if (fix && !notOffered && checks.some((c) => c.fix)) {
+      if (flags.yes || interactive || apply.length > 0) {
         clack.log.step(color.bold('Fixes'));
-        checks = await applyFixes(check, { cwd: target.directory, yes: !!flags.yes });
+        const before = checks;
+        checks = await applyFixes(check, {
+          cwd: target.directory,
+          yes: !!flags.yes,
+          apply: new Set(apply),
+          applyCommand,
+        });
         clack.log.step(color.bold('After fixes'));
         printChecks(checks);
+        // --fix and --yes offer the fixes the applied ones unlocked; --apply names them next time.
+        const unlocked =
+          apply.length > 0 && !flags.yes
+            ? unlockedFixesMessage(before, checks, applyCommand)
+            : undefined;
+        if (unlocked) clack.log.info(unlocked);
       } else {
-        skippedFixes = true;
-        questions ||= checks.some((c) => c.fix?.question);
+        const rerun = doctorCommand(hintArgv, ['--fix', '--yes']);
+        skipped = skippedFixesMessage(checks, rerun, applyCommand);
       }
     }
     if (multi) clack.log.info(`${target.label}: ${summarize(checks)}`);
     all.push(...checks);
     // Keep the folder only when it holds the stats file the trace hint points at.
     if (readdirSync(statsDirectory).length === 0) rmSync(statsDirectory, { recursive: true });
+    if (notOffered) throw notOffered;
   }
 
   if (notSetUp.length > 0) {
@@ -427,11 +466,9 @@ export async function main(argv: string[]) {
         .join('\n')}\nRun ${color.cta('npx chromatic init --project <dir>')} to add one.`
     );
   }
-  if (skippedFixes) {
-    clack.log.warn(
-      `Didn't apply fixes: there's no terminal to confirm them (CI or piped input).\nRun ${color.cta(doctorCommand(hintArgv, ['--fix', '--yes']))} to apply them${questions ? ', except the ones that ask a question, which need a terminal' : ''}.`
-    );
-  } else if (!flags.fix && all.some((c) => c.fix)) {
+  if (skipped) {
+    clack.log.warn(skipped);
+  } else if (!fix && all.some((c) => c.fix)) {
     clack.log.info(
       `Run ${color.cta(doctorCommand(hintArgv, ['--fix']))} to fix what's marked fixable.`
     );

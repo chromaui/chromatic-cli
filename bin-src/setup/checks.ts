@@ -24,6 +24,11 @@ type Status = 'pass' | 'warn' | 'fail' | 'info';
 export type Group = 'Loading' | 'Values' | 'Environment';
 
 export interface Fix {
+  /**
+   * Names the fix for --apply, such as "onlyChanged.enable". Stable across releases and unique
+   * within a project; a fix that can repeat adds the value it's about.
+   */
+  id: string;
   /** What --fix will do, in one line. */
   summary: string;
   /** The file it changes and its new content. */
@@ -57,6 +62,17 @@ export interface FixChoice {
   warning?: string;
   fix: Fix;
 }
+
+/**
+ * The IDs --apply takes for a fix: its own, and its choices'.
+ *
+ * @param fix The fix.
+ *
+ * @returns The IDs, without repeats.
+ */
+export const fixIds = (fix: Fix) => [
+  ...new Set([fix.id, ...(fix.choices ?? []).map((choice) => choice.fix.id)]),
+];
 
 export interface Check {
   group: Group;
@@ -118,6 +134,7 @@ function loadingChecks(input: DoctorInput, configError?: string): Check[] {
               : ` ${pkg.version} is newer than your package manager's minimum release age allows, so the fix adds ${input.chromaticVersion}.`
           }`,
           fix: {
+            id: 'chromatic.addDependency',
             summary: `Add chromatic ^${input.chromaticVersion} to devDependencies and install it`,
             install: true,
             edits: [
@@ -334,6 +351,7 @@ function noStorybookCheck(input: DoctorInput): Check {
     fix: configFix(
       input,
       e2e,
+      `${e2e}.enable`,
       `Set "${e2e}": true in the config file`,
       (json) => {
         json[e2e] = true;
@@ -374,6 +392,7 @@ function buildScriptCheck(
       fix: configFix(
         input,
         'buildScriptName',
+        'buildScriptName.set',
         `Set buildScriptName to "${other}"`,
         (json) => {
           json.buildScriptName = other;
@@ -388,6 +407,7 @@ function buildScriptCheck(
     // storybook init adds the same script.
     fix: hasStorybook
       ? {
+          id: 'buildScript.add',
           summary: `Add "${scriptName}": "storybook build" to package.json`,
           edits: [
             packageJsonEdit(packageJsonPath, (json) => {
