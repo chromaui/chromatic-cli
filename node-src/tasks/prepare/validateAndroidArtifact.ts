@@ -27,7 +27,7 @@ function readEntryNames(apkPath: string) {
   try {
     return new AdmZip(apkPath).getEntries().map((entry) => entry.entryName);
   } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
+    const reason = (err instanceof Error ? err.message : String(err)).replace(/^ADM-ZIP: /, '');
     throw new Error(invalidAndroidArtifact({ unreadable: reason }).output);
   }
 }

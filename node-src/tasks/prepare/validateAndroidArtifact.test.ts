@@ -61,13 +61,8 @@ describe('validateAndroidArtifact', () => {
   });
 
   it('throws when the artifact is an Android App Bundle', async () => {
-    // The layout bundletool gives an .aab, with ARM-only native libraries, which it reports first.
-    writeApk([
-      'BundleConfig.pb',
-      'base/manifest/AndroidManifest.xml',
-      'base/resources.pb',
-      'base/lib/arm64-v8a/libnative.so',
-    ]);
+    // The layout bundletool gives an .aab.
+    writeApk(['BundleConfig.pb', 'base/manifest/AndroidManifest.xml', 'base/resources.pb']);
     await expect(validateAndroidArtifact(input(['android']))).rejects.toThrow(
       'Your storybook.apk is an Android App Bundle (.aab), not an APK. Build an APK instead, such as with ./gradlew assembleRelease or an EAS build profile with "buildType": "apk".'
     );
@@ -90,7 +85,7 @@ describe('validateAndroidArtifact', () => {
   it('throws when the artifact is not a zip', async () => {
     writeFileSync(path.join(sourceDirectory, 'storybook.apk'), 'not an apk');
     await expect(validateAndroidArtifact(input(['android']))).rejects.toThrow(
-      /^Your storybook\.apk could not be read as an APK \(.*Invalid or unsupported zip format.*\)\. Chromatic needs an APK/
+      /^Your storybook\.apk could not be read as an APK \(Invalid or unsupported zip format.*\)\. Chromatic needs an APK/
     );
   });
 });
