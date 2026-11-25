@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { TaskFailure } from '../lib/setExitCode';
 import { AuthDeps, AuthInput, runAuth } from './auth';
 
 const buildDeps = (overrides: Partial<AuthDeps> = {}): AuthDeps => ({
@@ -86,7 +87,7 @@ describe('runAuth', () => {
     };
     const failure = runAuth(deps, input);
     await expect(failure).rejects.toThrow(/Invalid project ID: Project:abc/);
-    await expect(failure).rejects.toMatchObject({ exitCode: 202 });
+    await expect(failure).rejects.toMatchObject({ exitCode: 202, userError: false });
   });
 
   it('throws invalidProjectToken on "No app with code"', async () => {
@@ -95,10 +96,15 @@ describe('runAuth', () => {
     const deps = buildDeps({ client: client as any });
 
     const input: AuthInput = { mode: 'app', projectToken: 'bad-token' };
-    const failure = runAuth(deps, input);
-    await expect(failure).rejects.toThrow(/Invalid .*--project-token.* 'bad-token'/);
-    // Not a user error, so the message is still logged in interactive terminals
-    await expect(failure).rejects.toMatchObject({ exitCode: 202, userError: false });
+    const error = await runAuth(deps, input).catch((error_) => error_);
+
+    // A user error, so it isn't reported to Sentry and the task logs its own message
+    expect(error).toBeInstanceOf(TaskFailure);
+    expect(error).toMatchObject({ exitCode: 202, userError: true });
+    expect(error.message).not.toContain('bad-token');
+    expect(deps.log.error).toHaveBeenCalledWith(
+      expect.stringMatching(/Invalid .*--project-token.* 'bad-token'/)
+    );
   });
 
   it('rethrows other errors unchanged', async () => {
