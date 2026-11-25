@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { main } from './doctor';
+import { collectChecks, main } from './doctor';
 
 let root: string;
 const previous = process.cwd();
@@ -64,5 +64,36 @@ describe('doctor without a terminal', () => {
       exitCode: 2,
       message: 'Found no projects with Chromatic set up. Pass --project <directory> to check one.',
     });
+  });
+});
+
+describe('TurboSnap for Vitest', () => {
+  it('turns TurboSnap on only when chromaticPlugin writes what it reads', async () => {
+    const config = (plugin: string) =>
+      writeFileSync(
+        path.join(root, 'vitest.config.ts'),
+        `export default { plugins: [${plugin}] };\n`
+      );
+    writeFileSync(path.join(root, 'chromatic.config.json'), '{ "vitest": true }\n');
+    config('chromaticPlugin({ turboSnap: true })');
+    commit();
+    const turboSnap = async (argv: string[] = []) => {
+      const checks = await collectChecks(root, argv);
+      return checks.find((check) => check.title.includes('TurboSnap'));
+    };
+
+    const readable = await turboSnap();
+    expect(readable?.fix?.summary).toContain('onlyChanged');
+    expect(readable?.fix?.question).toBeUndefined();
+
+    config('chromaticPlugin()');
+    const missing = await turboSnap();
+    expect(missing?.fix).toBeUndefined();
+    const on = await turboSnap(['--only-changed']);
+    expect(on?.status).toBe('fail');
+
+    config('chromaticPlugin(options)');
+    const unreadable = await turboSnap();
+    expect(unreadable?.fix?.question).toContain('turboSnap: true');
   });
 });

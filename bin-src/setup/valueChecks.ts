@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { findBuildScriptName } from '../../node-src/lib/getOptions';
@@ -38,6 +38,81 @@ function runsHereQuestion(input: DoctorInput) {
     : `Does CI run Chromatic from ${here}?`;
 }
 
+const VITEST_CONFIG = /^vite(?:st)?\.config\.[cm]?[jt]s$/;
+
+/**
+ * Whether the Vitest config sets chromaticPlugin's turboSnap option, without which the tests write
+ * nothing for TurboSnap to read and a build with onlyChanged fails.
+ *
+ * @param cwd The project's directory.
+ *
+ * @returns The config file that calls chromaticPlugin, and true or false when its options say.
+ * Undefined when doctor can't tell, such as when the options are in a variable.
+ */
+function vitestTurboSnap(cwd: string) {
+  for (const file of readdirSync(cwd)
+    .filter((name) => VITEST_CONFIG.test(name))
+    .sort()
+    .reverse()) {
+    const text = readFileSync(path.join(cwd, file), 'utf8');
+    if (/chromaticPlugin\(\s*\{[^}]*\bturboSnap\s*:\s*true\b/.test(text)) {
+      return { file, turboSnap: true };
+    }
+    if (/chromaticPlugin\(\s*(?:\{[^}]*\}\s*)?\)/.test(text)) return { file, turboSnap: false };
+  }
+  return {};
+}
+
+/**
+ * The fix that turns TurboSnap on, offered only when the build will have the stats file it reads.
+ *
+ * @param input What loadDoctorInput read.
+ *
+ * @returns The fix, with a question when doctor can't tell; undefined when it knows it would fail.
+ */
+function turnOnFix(input: DoctorInput) {
+  const fix = configFix(
+    input,
+    'onlyChanged',
+    'Turn on TurboSnap with "onlyChanged": true',
+    (json) => {
+      json.onlyChanged = true;
+    },
+    { adds: true }
+  );
+  if (input.options.vitest) {
+    const { turboSnap } = vitestTurboSnap(input.cwd);
+    if (turboSnap === false) return undefined;
+    return turboSnap
+      ? fix
+      : withQuestion(fix, 'Does chromaticPlugin in your Vitest config set turboSnap: true?');
+  }
+  // CI may upload a Storybook it built itself, which doctor can't see. One built with the package's
+  // build script has stats when the script asks for them.
+  const scripts: Record<string, string> = input.packageJson?.scripts ?? {};
+  const script = scripts[findBuildScriptName(scripts, input.options.buildScriptName)] ?? '';
+  if (/--(?:webpack-)?stats-json\b/.test(script)) return fix;
+  return withQuestion(
+    fix,
+    'Will the Storybook CI uploads to Chromatic include preview-stats.json? It does when Chromatic builds Storybook, or when your own build passes --stats-json.'
+  );
+}
+
+/**
+ * What a Vitest project needs before TurboSnap can work, when its config says it's missing.
+ *
+ * @param input What loadDoctorInput read.
+ *
+ * @returns The sentence to add to a check's detail, or an empty string.
+ */
+function vitestPluginNote(input: DoctorInput) {
+  if (!input.options.vitest) return '';
+  const { file, turboSnap } = vitestTurboSnap(input.cwd);
+  return turboSnap === false
+    ? ` chromaticPlugin in ${file} doesn't set turboSnap: true, so the tests write nothing for TurboSnap to read and a build with onlyChanged fails. Add turboSnap: true to it first.`
+    : '';
+}
+
 // eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
 function onlyChangedChecks(input: DoctorInput): Check[] {
   const { onlyChanged, playwright, cypress } = input.options;
@@ -72,24 +147,10 @@ function onlyChangedChecks(input: DoctorInput): Check[] {
         detail:
           onlyChanged === false
             ? '"onlyChanged" is false, so every build captures every story.'
-            : `Not the config file, flags or a package script turn it on. If CI passes --only-changed, it's on there; otherwise set "onlyChanged": true to test only the stories your changes affect. If CI uploads a prebuilt Storybook (--storybook-build-dir), build it with --stats-json first.`,
+            : `Not the config file, flags or a package script turn it on. If CI passes --only-changed, it's on there; otherwise set "onlyChanged": true to test only the stories your changes affect.${input.options.vitest ? vitestPluginNote(input) : ' If CI uploads a prebuilt Storybook (--storybook-build-dir), build it with --stats-json first.'}`,
         // Leave an explicit false alone; that's a choice, not a gap. A prebuilt Storybook may have
-        // no stats file, and TurboSnap fails the build without one; CI may pass one doctor can't see.
-        fix:
-          onlyChanged === undefined && !input.prebuilt
-            ? withQuestion(
-                configFix(
-                  input,
-                  'onlyChanged',
-                  'Turn on TurboSnap with "onlyChanged": true',
-                  (json) => {
-                    json.onlyChanged = true;
-                  },
-                  { adds: true }
-                ),
-                'Does CI let Chromatic build Storybook, rather than pass --storybook-build-dir?'
-              )
-            : undefined,
+        // no stats file, and TurboSnap fails the build without one.
+        fix: onlyChanged === undefined && !input.prebuilt ? turnOnFix(input) : undefined,
       },
     ];
   }
@@ -123,6 +184,17 @@ function onlyChangedChecks(input: DoctorInput): Check[] {
         },
       ];
     }
+  }
+  const missing = vitestPluginNote(input);
+  if (missing) {
+    return [
+      {
+        group: 'Values',
+        status: 'fail',
+        title: "TurboSnap is on, but Vitest doesn't write what it reads",
+        detail: missing.trim(),
+      },
+    ];
   }
   return [{ group: 'Values', status: 'pass', title: 'TurboSnap is on' }];
 }
