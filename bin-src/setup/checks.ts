@@ -85,14 +85,20 @@ function loadingChecks(input: DoctorInput, configError?: string): Check[] {
           group: 'Loading',
           status: 'warn',
           title: 'chromatic is not a dependency',
-          detail:
-            'npx downloads the latest release on every run. Pin it with your package manager.',
+          detail: `npx downloads the latest release on every run. Pin it with your package manager.${
+            input.chromaticVersion === pkg.version
+              ? ''
+              : ` ${pkg.version} is newer than your package manager's minimum release age allows, so the fix adds ${input.chromaticVersion}.`
+          }`,
           fix: {
-            summary: `Add chromatic ^${pkg.version} to devDependencies and install it`,
+            summary: `Add chromatic ^${input.chromaticVersion} to devDependencies and install it`,
             install: true,
             edits: [
               packageJsonEdit(packageJsonPath, (json) => {
-                json.devDependencies = { ...json.devDependencies, chromatic: `^${pkg.version}` };
+                json.devDependencies = {
+                  ...json.devDependencies,
+                  chromatic: `^${input.chromaticVersion}`,
+                };
               }),
             ],
           },

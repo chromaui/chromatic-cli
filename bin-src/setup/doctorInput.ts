@@ -16,7 +16,9 @@ import { matchesFile } from '../../node-src/lib/utilities';
 import { validateFiles } from '../../node-src/tasks/prepare/validateFiles';
 import type { StorybookInfoDeps } from '../../node-src/tasks/storybookInfo';
 import type { Flags, Options } from '../../node-src/types';
+import pkg from '../../package.json';
 import type { Fix } from './checks';
+import { installableVersion } from './install';
 import { forEachRepoFile, isEditableJson, readJson, relativeOrDot, rewriteJson } from './shared';
 
 // One logger for every check run: each createLogger adds a process listener, so `--fix`, which
@@ -47,6 +49,11 @@ export interface DoctorInput {
   options: CheckedOptions;
   packageJsonPath?: string;
   packageJson?: Record<string, any>;
+  /**
+   * The chromatic version the fix that adds it writes: this CLI's own, or the newest release the
+   * package manager's minimum release age lets it install.
+   */
+  chromaticVersion: string;
   /** The Storybook config directory a build would read, resolved by the build's own code. */
   storybookConfigDirectory: string;
   /** Why storybookBuildDir isn't a usable Storybook build, from the build's own validation. */
@@ -181,10 +188,29 @@ export async function loadDoctorInput(input: {
       options,
       packageJsonPath,
       packageJson,
+      chromaticVersion: await chromaticVersion(packageJsonPath, packageJson),
       prebuilt: !!options.storybookBuildDir || scriptUploadsPrebuilt(packageJson?.scripts),
       ...(await resolveStorybook(input.gitRoot, options, packageJson)),
     },
   };
+}
+
+/**
+ * The chromatic version to add when it isn't a dependency: this CLI's own, unless the package
+ * manager's minimum release age refuses it.
+ *
+ * @param packageJsonPath The project's package.json.
+ * @param packageJson Its contents.
+ *
+ * @returns The version.
+ */
+async function chromaticVersion(packageJsonPath?: string, packageJson?: Record<string, any>) {
+  const deps = { ...packageJson?.dependencies, ...packageJson?.devDependencies };
+  if (!packageJsonPath || deps.chromatic) return pkg.version;
+  return (
+    (await installableVersion('chromatic', path.dirname(packageJsonPath), pkg.version)) ??
+    pkg.version
+  );
 }
 
 /**
