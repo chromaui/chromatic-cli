@@ -29,6 +29,11 @@ function commit() {
   });
 }
 
+async function turboSnapCheck(argv: string[] = []) {
+  const checks = await collectChecks(root, argv);
+  return checks.find((check) => check.title.includes('TurboSnap'));
+}
+
 beforeEach(() => {
   root = mkdtempSync(path.join(tmpdir(), 'doctor-test-'));
   writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'root' }));
@@ -77,23 +82,31 @@ describe('TurboSnap for Vitest', () => {
     writeFileSync(path.join(root, 'chromatic.config.json'), '{ "vitest": true }\n');
     config('chromaticPlugin({ turboSnap: true })');
     commit();
-    const turboSnap = async (argv: string[] = []) => {
-      const checks = await collectChecks(root, argv);
-      return checks.find((check) => check.title.includes('TurboSnap'));
-    };
 
-    const readable = await turboSnap();
+    const readable = await turboSnapCheck();
     expect(readable?.fix?.summary).toContain('onlyChanged');
     expect(readable?.fix?.question).toBeUndefined();
 
     config('chromaticPlugin()');
-    const missing = await turboSnap();
+    const missing = await turboSnapCheck();
     expect(missing?.fix).toBeUndefined();
-    const on = await turboSnap(['--only-changed']);
+    const on = await turboSnapCheck(['--only-changed']);
     expect(on?.status).toBe('fail');
 
     config('chromaticPlugin(options)');
-    const unreadable = await turboSnap();
+    const unreadable = await turboSnapCheck();
     expect(unreadable?.fix?.question).toContain('turboSnap: true');
+  });
+});
+
+describe('TurboSnap without a project', () => {
+  it("isn't offered where doctor found no Storybook or Vitest config", async () => {
+    commit();
+
+    for (const argv of [[], ['--vitest']]) {
+      const check = await turboSnapCheck(argv);
+      expect(check?.title).toBe("TurboSnap isn't on here");
+      expect(check?.fix).toBeUndefined();
+    }
   });
 });

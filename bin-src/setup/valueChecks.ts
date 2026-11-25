@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { findBuildScriptName } from '../../node-src/lib/getOptions';
 import type { Check, Fix } from './checks';
-import { matchesBranch } from './checks';
+import { findMainFile, matchesBranch } from './checks';
 import { configFix, DoctorInput, globSuggestions } from './doctorInput';
 import { relativeOrDot, tokenEnvironmentEdits } from './shared';
 
@@ -47,20 +47,22 @@ const VITEST_CONFIG = /^vite(?:st)?\.config\.[cm]?[jt]s$/;
  * @param cwd The project's directory.
  *
  * @returns The config file that calls chromaticPlugin, and true or false when its options say.
- * Undefined when doctor can't tell, such as when the options are in a variable.
+ * Only the file when doctor can't tell, such as when the options are in a variable; no file when
+ * there's no Vitest config.
  */
 function vitestTurboSnap(cwd: string) {
-  for (const file of readdirSync(cwd)
+  const files = readdirSync(cwd)
     .filter((name) => VITEST_CONFIG.test(name))
     .sort()
-    .reverse()) {
+    .reverse();
+  for (const file of files) {
     const text = readFileSync(path.join(cwd, file), 'utf8');
     if (/chromaticPlugin\(\s*\{[^}]*\bturboSnap\s*:\s*true\b/.test(text)) {
       return { file, turboSnap: true };
     }
     if (/chromaticPlugin\(\s*(?:\{[^}]*\}\s*)?\)/.test(text)) return { file, turboSnap: false };
   }
-  return {};
+  return { file: files[0] };
 }
 
 /**
@@ -68,7 +70,8 @@ function vitestTurboSnap(cwd: string) {
  *
  * @param input What loadDoctorInput read.
  *
- * @returns The fix, with a question when doctor can't tell; undefined when it knows it would fail.
+ * @returns The fix, with a question when doctor can't tell; undefined when it knows it would fail,
+ * or when it found no Storybook or Vitest config, which already fails.
  */
 function turnOnFix(input: DoctorInput) {
   const fix = configFix(
@@ -81,12 +84,13 @@ function turnOnFix(input: DoctorInput) {
     { adds: true }
   );
   if (input.options.vitest) {
-    const { turboSnap } = vitestTurboSnap(input.cwd);
-    if (turboSnap === false) return undefined;
+    const { file, turboSnap } = vitestTurboSnap(input.cwd);
+    if (!file || turboSnap === false) return undefined;
     return turboSnap
       ? fix
       : withQuestion(fix, 'Does chromaticPlugin in your Vitest config set turboSnap: true?');
   }
+  if (!findMainFile(input.storybookConfigDirectory)) return undefined;
   // CI may upload a Storybook it built itself, which doctor can't see. One built with the package's
   // build script has stats when the script asks for them.
   const scripts: Record<string, string> = input.packageJson?.scripts ?? {};

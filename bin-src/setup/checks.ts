@@ -147,9 +147,7 @@ function storybookChecks(input: DoctorInput, deps: Record<string, string>): Chec
   }
 
   const configDirectory = input.storybookConfigDirectory;
-  const main = existsSync(configDirectory)
-    ? readdirSync(configDirectory).find((f) => MAIN_FILE.test(f))
-    : undefined;
+  const main = findMainFile(configDirectory);
   if (main) {
     checks.push({
       group: 'Loading',
@@ -180,6 +178,19 @@ function storybookChecks(input: DoctorInput, deps: Record<string, string>): Chec
   }
 
   return checks;
+}
+
+/**
+ * Finds Storybook's main config in a config directory.
+ *
+ * @param configDirectory The Storybook config directory, such as .storybook.
+ *
+ * @returns The file name, or undefined when there's none.
+ */
+export function findMainFile(configDirectory: string) {
+  return existsSync(configDirectory)
+    ? readdirSync(configDirectory).find((f) => MAIN_FILE.test(f))
+    : undefined;
 }
 
 function noStorybookCheck(input: DoctorInput): Check {
