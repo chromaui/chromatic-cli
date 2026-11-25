@@ -172,7 +172,28 @@ describe('traceChangedFiles', () => {
     expect(traceChangedFilesV1).not.toHaveBeenCalled();
   });
 
-  it('keeps an unreadable stats file terminal for both generations', async () => {
+  // Without v1 tracing the stats only feed hash collection, which must not fail the build.
+  it.each([
+    [
+      'changed files are unknown',
+      { git: { changedFiles: undefined, rootPath: '/repo' } },
+      { mechanism: 'v1', bailed: true },
+    ],
+    ['the user did not ask for TurboSnap', { turboSnap: undefined }, { mechanism: 'none' }],
+  ])(
+    'skips an unreadable stats file when v1 does not trace (%s)',
+    async (_, overrides, outcome) => {
+      const input = { ...makeInput(), ...overrides };
+      vi.mocked(readStatsFile).mockRejectedValue(new Error('stats file is unreadable'));
+
+      await expect(traceChangedFiles(input)).resolves.toStrictEqual({ status: 'skipped', outcome });
+
+      expect(traceChangedFilesV2).not.toHaveBeenCalled();
+      expect(traceChangedFilesV1).not.toHaveBeenCalled();
+    }
+  );
+
+  it('keeps an unreadable stats file terminal when v1 traces', async () => {
     const input = makeInput();
     const error = new Error('stats file is unreadable');
     vi.mocked(readStatsFile).mockRejectedValue(error);
