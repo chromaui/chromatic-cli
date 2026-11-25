@@ -5,7 +5,9 @@ import chalk from 'chalk';
 import { execa, ExecaError } from 'execa';
 import { tmpdir } from 'os';
 import path from 'path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
+
+import { createLogger } from './lib/log';
 
 // The filters are tested through the options the module passes to `Sentry.init`.
 const { beforeBreadcrumb, beforeSend } = Sentry.getClient()?.getOptions() ?? {};
@@ -99,6 +101,34 @@ describe('filterErrorEvent', () => {
     expect(version).not.toEqual(
       fingerprintOf(execaError({ command: 'git merge-base --all feature-b develop', exitCode: 1 }))
     );
+  });
+
+  it('redacts every logger secret everywhere in the event', () => {
+    const token = 'ghp_notARealToken';
+    const userToken = 'notARealUserToken';
+    const log = createLogger();
+    log.setSecrets([token, userToken]);
+    onTestFinished(() => log.setSecrets([]));
+    // Sentry's own scope objects reference each other, so scrubbing them would never finish.
+    const scope: Record<string, unknown> = {};
+    scope.self = scope;
+
+    const actual = filterErrorEvent({
+      type: undefined,
+      message: `failed with ${token}`,
+      exception: { values: [{ value: `Invalid --project-token '${token}'` }] },
+      breadcrumbs: [{ category: 'console', message: `Invalid --project-token '${token}'` }],
+      extra: { argv: ['-t', token, '--user-token', userToken] },
+      sdkProcessingMetadata: { scope },
+    });
+
+    expect(actual).toMatchObject({
+      message: 'failed with <redacted>',
+      exception: { values: [{ value: "Invalid --project-token '<redacted>'" }] },
+      breadcrumbs: [{ message: "Invalid --project-token '<redacted>'" }],
+      extra: { argv: ['-t', '<redacted>', '--user-token', '<redacted>'] },
+    });
+    expect(actual.sdkProcessingMetadata?.scope).toBe(scope);
   });
 
   it('leaves other errors and fingerprints set at capture to the default grouping', () => {

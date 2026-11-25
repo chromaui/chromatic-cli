@@ -156,6 +156,13 @@ const fileLogger = {
   },
 };
 
+/**
+ * The secrets set with `setSecrets`, which error monitoring also scrubs from Sentry events.
+ *
+ * @returns The secrets to redact.
+ */
+export const getRedactedSecrets = () => fileLogger.secrets;
+
 /* eslint-disable-next-line complexity */
 export const createLogger = (flags?: Flags, options?: Partial<Options>) => {
   const { DISABLE_LOGGING, LOG_LEVEL = '', LOG_PREFIX } = process.env;
@@ -220,7 +227,7 @@ export const createLogger = (flags?: Flags, options?: Partial<Options>) => {
       if (path) fileLogger.initialize(path, log('error'));
       else fileLogger.disable();
     },
-    // Replace these values with <redacted> in everything written to the log file.
+    // Replace these values with <redacted> in everything written to the log file or sent to Sentry.
     setSecrets(secrets: string[]) {
       fileLogger.secrets = secrets;
     },
