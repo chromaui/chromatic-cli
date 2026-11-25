@@ -103,6 +103,24 @@ export class StoryFilesNotFoundError extends Error {
 }
 
 /**
+ * Thrown when an E2E build has story files that reach no tracked file, as when some or all of a
+ * project's Vitest projects run without `chromaticPlugin({ turboSnap: true })`. A change to the code
+ * those stories test would not move their hashes, so the user has to fix the configuration; it is
+ * not reported as a CLI bug.
+ */
+export class UninstrumentedStoriesError extends Error {
+  constructor(storyFiles: FilePath[]) {
+    const [first, ...rest] = storyFiles;
+    const others =
+      rest.length === 0 ? '' : ` and ${rest.length} more story file${rest.length === 1 ? '' : 's'}`;
+    super(
+      `Found no tracked files behind the E2E story file ${first}${others}, so TurboSnap 2.0 cannot tell when a change affects ${rest.length === 0 ? 'it' : 'them'}. For Vitest, make sure you've enabled chromaticPlugin({ turboSnap: true }) in every Vitest project before running tests.`
+    );
+    this.name = 'UninstrumentedStoriesError';
+  }
+}
+
+/**
  * Rolls the graph a stats file describes up into a TurboSnap manifest: the per-story hashes, the
  * Storybook-wide hashes and the whole-Storybook gate. Reading the stats file is
  * `readStatsGraph`'s job; everything here works in canonical paths.
@@ -115,8 +133,8 @@ export class StoryFilesNotFoundError extends Error {
  *
  * @throws {StoryFilesNotFoundError} When a stories entry we recognize imports modules, but none of
  * them is a story file on disk.
- * @throws {Error} When no stories entry we recognize imports anything, or for an E2E build, when no
- * story file reaches a tracked file; see the checks below.
+ * @throws {UninstrumentedStoriesError} For an E2E build, when a story file reaches no tracked file.
+ * @throws {Error} When no stories entry we recognize imports anything; see the checks below.
  */
 export async function buildManifest(
   stats: Stats,
@@ -157,12 +175,10 @@ export async function buildManifest(
     throw new StoryFilesNotFoundError(input.projectRoot);
   }
   // An E2E build's story files are generated and usually gitignored, so a story's hash only moves through
-  // the tracked files its edges reach. Without any, as when Vitest runs without
-  // chromaticPlugin({ turboSnap: true }), every story hashes the same on every build.
-  if (input.e2ePackage && !reachesTrackedFile(files, hashes, storyFiles)) {
-    throw new Error(
-      `Found no tracked files behind the story files of this E2E build. For Vitest, make sure you've enabled chromaticPlugin({ turboSnap: true }) in your Vitest configuration before running tests.`
-    );
+  // the tracked files its edges reach. A story with none, as from a Vitest project without
+  // chromaticPlugin({ turboSnap: true }), hashes the same on every build, so every story must have one.
+  if (input.e2ePackage) {
+    assertEveryStoryReachesSources(files, hashes, skippedGraphFiles, storyFiles);
   }
 
   const hasher = await xxHashWasm();
@@ -295,17 +311,38 @@ function serializeFiles(files: Map<FilePath, TurboSnapFile>): ManifestFile['file
   return serialized;
 }
 
-function reachesTrackedFile(
+/**
+ * Checks that every story file reaches a file with a content hash or a file the user untraced.
+ * `--untraced` severs edges before this runs, so reaching an untraced file stands in for the edges
+ * it cut, and a story file the user untraced is not checked at all: its hash is constant by the
+ * user's choice. The story file itself doesn't count: its bytes are generated, even when someone
+ * commits them.
+ *
+ * @param files The graph, with the edges of untraced files already severed.
+ * @param hashes The hash of every on-disk file, keyed by canonical path.
+ * @param skippedFiles The graph files v2 skipped, with their reasons.
+ * @param storyFiles The story files to check.
+ *
+ * @throws {UninstrumentedStoriesError} Naming the story files that reach no tracked file.
+ */
+function assertEveryStoryReachesSources(
   files: Map<FilePath, TurboSnapFile>,
   hashes: Map<FilePath, FileHash>,
+  skippedFiles: Map<FilePath, SkipReason>,
   storyFiles: Set<FilePath>
-): boolean {
-  // The story file itself doesn't count: its bytes are generated, even when someone commits them.
-  return [...storyFiles].some((storyFile) =>
-    [...collectTransitiveDependencies(files, storyFile)].some(
-      (filePath) => filePath !== storyFile && hasContentHash(hashes, filePath)
-    )
+) {
+  const isUntraced = (filePath: FilePath) => skippedFiles.get(filePath) === 'untraced';
+  const withoutSources = [...storyFiles].filter(
+    (storyFile) =>
+      !isUntraced(storyFile) &&
+      ![...collectTransitiveDependencies(files, storyFile)].some(
+        (filePath) =>
+          filePath !== storyFile && (hasContentHash(hashes, filePath) || isUntraced(filePath))
+      )
   );
+  if (withoutSources.length > 0) {
+    throw new UninstrumentedStoriesError(withoutSources);
+  }
 }
 
 function sortByKey<Value>(record: Record<string, Value>): Record<string, Value> {

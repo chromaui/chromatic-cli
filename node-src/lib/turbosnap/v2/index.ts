@@ -11,6 +11,7 @@ import {
   buildManifest,
   StoryFilesNotFoundError,
   TurboSnapManifest,
+  UninstrumentedStoriesError,
   writeManifest,
 } from './manifest';
 import { ManifestInput } from './manifestInput';
@@ -83,8 +84,13 @@ export async function traceChangedFiles(
       input.log[input.failureLogLevel](storyFilesNotFound(error.projectRoot));
       return { status: 'fallback' };
     }
-    // Install problems the user can fix, so they're logged and left to TurboSnap 1.0, not reported.
-    if (error instanceof NoTrackedFilesError || error instanceof VersionNotFoundError) {
+    // Install and configuration problems the user can fix, so they're logged and left to TurboSnap
+    // 1.0, not reported.
+    if (
+      [NoTrackedFilesError, VersionNotFoundError, UninstrumentedStoriesError].some(
+        (UserError) => error instanceof UserError
+      )
+    ) {
       input.log[input.failureLogLevel](
         `${error.message} TurboSnap 2.0 skipped this build. When TurboSnap is enabled, the build uses TurboSnap 1.0, so your current TurboSnap behavior is unaffected.`
       );

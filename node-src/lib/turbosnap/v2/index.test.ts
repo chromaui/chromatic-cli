@@ -141,6 +141,27 @@ describe('traceChangedFiles', () => {
     expect(fixture.runQuery).not.toHaveBeenCalled();
   });
 
+  // A Vitest project without chromaticPlugin({ turboSnap: true }) is the user's to fix, not a bug.
+  it('falls back without reporting when an E2E story reaches no tracked file', async () => {
+    const fixture = setup();
+    const uninstrumented: Stats = {
+      modules: [{ id: 1, name: STORY, reasons: [{ moduleName: STORIES_ENTRY }] }],
+    };
+
+    await expect(
+      trace(fixture, {}, 'error', {
+        stats: uninstrumented,
+        e2ePackage: '@chromatic-com/vitest',
+      })
+    ).resolves.toEqual({ status: 'fallback' });
+
+    expect(fixture.log.error).toHaveBeenCalledWith(
+      expect.stringContaining(`Found no tracked files behind the E2E story file ${STORY},`)
+    );
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+    expect(fixture.runQuery).not.toHaveBeenCalled();
+  });
+
   // Storybook built from the repository root names its stories from there, so they resolve nowhere
   // from the project root. That is the user's to fix with --storybook-base-dir, not a bug to report.
   it.each<[FailureLogLevel, FailureLogLevel]>([
@@ -417,6 +438,7 @@ function trace(
     externals?: string[];
     onlyChanged?: boolean;
     stats?: Stats;
+    e2ePackage?: string;
   } = {}
 ) {
   return traceChangedFiles({

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Stats } from '../../../types';
 import { VersionNotFoundError } from '../../installedPackages';
 import { createFixture, projectRoot, syntheticAbsent } from './__fixtures__/manifestFixtures';
-import { buildManifest } from './manifest';
+import { buildManifest, UninstrumentedStoriesError } from './manifest';
 
 // A Vitest build, shaped like the stats `build-archive-storybook` writes: the stories entry imports
 // one generated `.stories.json` per test file, which imports that test, which imports the component.
@@ -123,10 +123,41 @@ describe('buildManifest for an E2E build', () => {
     disk.isUntracked = () => false;
     const storiesOnly: Stats = { modules: [stats.modules[0]] };
 
-    await expect(buildManifest(storiesOnly, input)).rejects.toThrow(
-      'Found no tracked files behind the story files of this E2E build.'
+    await expect(buildManifest(storiesOnly, input)).rejects.toThrow(UninstrumentedStoriesError);
+  });
+
+  // Two Vitest projects where only one has chromaticPlugin({ turboSnap: true }): the other's story
+  // would hash the same on every build however its test changes.
+  it('refuses to build when one story file reaches no tracked file, naming it', async () => {
+    const { disk, input } = e2eFixture();
+    const uninstrumented = `${archives}/src-badge-2.stories.json`;
+    disk.fileHashes = { ...disk.fileHashes, [uninstrumented]: 'B' };
+    const partial: Stats = {
+      modules: [
+        ...stats.modules,
+        { id: 4, name: uninstrumented, reasons: [{ moduleName: './storybook-stories.js' }] },
+      ],
+    };
+
+    await expect(buildManifest(partial, input)).rejects.toThrow(
+      'Found no tracked files behind the E2E story file ./.vitest/chromatic/chromatic-archives/src-badge-2.stories.json,'
     );
   });
+
+  // --untraced severs the edges below a file, which must not read as missing instrumentation.
+  it.each(['packages/ui/src/**/*.test.tsx', 'packages/ui/.vitest/**'])(
+    'builds when --untraced %s cuts the story off from its sources',
+    async (glob) => {
+      const { input } = e2eFixture();
+      input.untraced = [glob];
+
+      const manifest = await buildManifest(stats, input);
+
+      expect([...manifest.storyFileHashes.keys()]).toEqual([
+        './.vitest/chromatic/chromatic-archives/src-button-1.stories.json',
+      ]);
+    }
+  );
 
   it('refuses to build without the E2E package installed', async () => {
     const { disk, input } = e2eFixture();
