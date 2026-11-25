@@ -1,17 +1,15 @@
-import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import * as clack from '@clack/prompts';
 import meow from 'meow';
 
-import getEnvironment from '../node-src/lib/getEnvironment';
 import { findBuildScriptName } from '../node-src/lib/getOptions';
 import { findConfigFlags } from '../node-src/lib/getStorybookMetadata';
 import { allowPnpRuntime } from '../node-src/lib/installedPackages';
 import { meowImportMeta } from '../node-src/lib/meowImportMeta';
 import parseArguments from '../node-src/lib/parseArguments';
-import { runCommand } from '../node-src/lib/shell/shell';
 import type { Flags } from '../node-src/types';
 import pkg from '../package.json';
 import { Check, runChecks } from './setup/checks';
@@ -26,6 +24,7 @@ import {
 } from './setup/detect';
 import { loadDoctorInput } from './setup/doctorInput';
 import { previewReachChecks } from './setup/previewReach';
+import { buildStats } from './setup/previewStats';
 import { applyFixes, doctorCommand, printChecks, skillsHint, summarize } from './setup/report';
 import { answered, color, git, readJson, relativeOrDot } from './setup/shared';
 import { SubcommandFailure } from './subcommandFailure';
@@ -281,70 +280,6 @@ function projectRequired(
     { exitCode: 2 }
   );
 }
-
-/**
- * Runs a check's Storybook build with a spinner. When it fails, its output goes to
- * build-storybook.log, where a Chromatic build writes it.
- *
- * @param build The build a check asked for.
- * @param cwd Directory to build from.
- *
- * @returns The check to show in place of the preview check when the build failed, else undefined.
- */
-async function buildStats(build: NonNullable<Check['build']>, cwd: string) {
-  // Without a terminal, such as in CI, a spinner prints a line per frame, so log the start instead.
-  const spinner = process.stdout.isTTY ? clack.spinner() : undefined;
-  const message = 'Building Storybook with stats to check what preview imports';
-  if (spinner) spinner.start(message);
-  else clack.log.step(`${message}…`);
-  const stop = (text: string, failed = false) => {
-    if (spinner) spinner[failed ? 'error' : 'stop'](text);
-    else clack.log[failed ? 'error' : 'success'](text);
-  };
-  try {
-    await runCommand(build.command, {
-      cwd,
-      stdin: 'ignore',
-      all: true,
-      preferLocal: false,
-      // As in a build, so a build that hangs stops instead of holding doctor forever.
-      timeout: getEnvironment().STORYBOOK_BUILD_TIMEOUT,
-      env: { CI: '1', NODE_ENV: process.env.STORYBOOK_NODE_ENV || 'production' },
-    });
-  } catch (err) {
-    // Stats from a build that failed don't describe the Storybook.
-    rmSync(build.statsFile, { force: true });
-    const logFile = path.join(cwd, 'build-storybook.log');
-    writeFileSync(logFile, String((err as { all?: string }).all ?? err));
-    stop('Storybook build failed', true);
-    return couldNotDetermine(
-      `The Storybook build failed. See ${relativeOrDot(process.cwd(), logFile)} for its output. The rest of the report doesn't depend on it.`
-    );
-  } finally {
-    // Keep only the stats file, which the trace hint points at; the rest of the build, including
-    // what a failed build left, isn't needed.
-    const folder = path.dirname(build.statsFile);
-    for (const entry of readdirSync(folder)) {
-      if (entry !== path.basename(build.statsFile)) {
-        rmSync(path.join(folder, entry), { recursive: true, force: true });
-      }
-    }
-  }
-  if (!existsSync(build.statsFile)) {
-    const shown = relativeOrDot(process.cwd(), build.statsFile);
-    stop(`Storybook built, but wrote no ${shown}`, true);
-    return couldNotDetermine(`The Storybook build wrote no ${shown}. It ran: ${build.command}`);
-  }
-  stop('Built Storybook with stats');
-  return undefined;
-}
-
-const couldNotDetermine = (detail: string): Check => ({
-  group: 'Values',
-  status: 'info',
-  title: "Couldn't determine the impact of preview imports",
-  detail,
-});
 
 /**
  * The main entrypoint for `chromatic doctor`.
