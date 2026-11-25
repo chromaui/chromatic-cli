@@ -94,7 +94,7 @@ cmd_doctor() {
   if [[ -f "$CLI" ]]; then
     local want got
     want="$(node -p "require('$REPO/package.json').version")"
-    got="$(node "$CLI" --version 2>/dev/null || true)"
+    got="$(DISABLE_ERROR_MONITORING=true node "$CLI" --version 2>/dev/null || true)"
     if [[ "$got" == "$want" ]]; then ok "dist/bin.cjs --version = $got"; else bad "dist/bin.cjs --version = '$got', package.json = '$want'"; fi
     local newer
     newer="$(find "$REPO/bin-src" "$REPO/node-src" -type f -newer "$CLI" -not -name '*.test.ts' -not -name '*.stories.ts' 2>/dev/null | head -3)"
@@ -198,31 +198,68 @@ cmd_checkout() {
   echo "$CHECKOUT"
 }
 
-# build-ref <name> <git-ref>: build the CLI at another ref (usually the merge base with main) in a detached worktree at
-# $WORK/cli-<name>, sharing the repo's node_modules, so a change can be compared against it. Prints the
-# bundle path to pass as `run --cli`. Running a dist/ copied out of the repo fails with "Cannot find
-# module 'semver'", because the bundle resolves its externals from node_modules next to it.
+# build-ref <name> <git-ref|WORKTREE> [--sentry]: build the CLI at another ref (usually the merge base with main) in a
+# detached worktree at $WORK/cli-<name>, sharing the repo's node_modules, so a change can be compared against it.
+# WORKTREE copies this checkout's files instead, uncommitted changes included. Prints the bundle path to pass
+# as `run --cli`; the Action bundle is ../action/register.cjs from it. Running a dist/ copied out of the repo
+# fails with "Cannot find module 'semver'", because the bundle resolves its externals from node_modules next to it.
 # Sharing node_modules means <ref> is built and run against this checkout's dependencies, so when the
 # manifests differ, refuse the comparison before creating a worktree or printing a bundle path.
 cmd_build_ref() {
-  local name="${1:-}" ref="${2:-}"
-  [[ -n "$name" && -n "$ref" ]] || die "usage: build-ref <name> <git-ref>"
+  local name="${1:-}" ref="${2:-}" sentry="${3:-}"
+  [[ -n "$name" && -n "$ref" && ( -z "$sentry" || "$sentry" == --sentry ) ]] \
+    || die "usage: build-ref <name> <git-ref|WORKTREE> [--sentry]"
   require_safe_name name "$name"
   local dir="$WORK/cli-$name"
   [[ -e "$dir" ]] && die "$dir already exists; run cleanup first"
-  git -C "$REPO" rev-parse --verify --quiet "$ref^{commit}" > /dev/null || die "unknown git ref $ref"
-  local manifest
-  for manifest in package.json yarn.lock; do
-    git -C "$REPO" show "$ref:$manifest" | cmp -s - "$REPO/$manifest" \
-      || die "package.json or yarn.lock differ between $ref and this checkout. build-ref shares this checkout's node_modules and requires matching manifests. For a branch-only comparison, try the merge base with main (git merge-base HEAD origin/main). If those manifests also differ, compare against a published release or canary (install-published) instead."
-  done
   mkdir -p "$WORK"
-  git -C "$REPO" worktree add -q --detach "$dir" "$ref"
+  if [[ "$ref" == WORKTREE ]]; then
+    # Tracked and untracked files that git doesn't ignore, minus tracked files deleted from the checkout.
+    mkdir -p "$dir"
+    git -C "$REPO" ls-files -z -co --exclude-standard \
+      | while IFS= read -r -d '' f; do [[ -e "$REPO/$f" ]] && printf '%s\0' "$f"; done \
+      | (cd "$REPO" && tar --null -cf - -T -) | tar -xf - -C "$dir"
+  else
+    git -C "$REPO" rev-parse --verify --quiet "$ref^{commit}" > /dev/null || die "unknown git ref $ref"
+    local manifest
+    for manifest in package.json yarn.lock; do
+      git -C "$REPO" show "$ref:$manifest" | cmp -s - "$REPO/$manifest" \
+        || die "package.json or yarn.lock differ between $ref and this checkout. build-ref shares this checkout's node_modules and requires matching manifests. For a branch-only comparison, try the merge base with main (git merge-base HEAD origin/main). If those manifests also differ, compare against a published release or canary (install-published) instead."
+    done
+    git -C "$REPO" worktree add -q --detach "$dir" "$ref"
+  fi
   ln -s "$REPO/node_modules" "$dir/node_modules"
-  echo "==> yarn build ($ref in $dir)" >&2
-  (cd "$dir" && yarn build > "$WORK/build-$name.log" 2>&1) \
+  echo "==> yarn build ($ref in $dir${sentry:+, Sentry on})" >&2
+  # tsdown.config.ts turns Sentry off unless CI is set at build time. The release names this run, so a
+  # stray event would be easy to find in Sentry.
+  (cd "$dir" && env ${sentry:+CI=1 "SENTRY_RELEASE=verify-$RUN_ID"} yarn build > "$WORK/build-$name.log" 2>&1) \
     || { tail -30 "$WORK/build-$name.log"; die "build of $ref failed (log: $WORK/build-$name.log)"; }
+  [[ -n "$sentry" ]] && point_dsn_at_sink "$dir"
   echo "$dir/dist/bin.cjs"
+}
+
+# The DSN in node-src/errorMonitoring.ts, as it appears in the built bundles.
+SENTRY_DSN_PERL='https://([0-9a-f]+)\@[A-Za-z0-9.-]*ingest[A-Za-z0-9.-]*\.sentry\.io/([0-9]+)'
+SENTRY_INGEST_RE='[A-Za-z0-9.-]*ingest[A-Za-z0-9.-]*\.sentry\.io'
+
+# point_dsn_at_sink <build dir>: rewrite the bundles' DSN to this run's local sink, so they can't reach
+# Sentry, and mark the build so run and tty start the sink around its drives.
+point_dsn_at_sink() {
+  local dir="$1" port bundles=() sub
+  for sub in dist action; do [[ -d "$dir/$sub" ]] && bundles+=("$dir/$sub"); done
+  if [[ ! -s "$WORK/sentry-port" ]]; then
+    node -e 'const s = require("net").createServer().listen(0, "127.0.0.1", () => { console.log(s.address().port); s.close(); })' > "$WORK/sentry-port"
+  fi
+  port="$(cat "$WORK/sentry-port")"
+  grep -rqE --include='*.cjs' --include='*.js' "$SENTRY_INGEST_RE" "${bundles[@]}" \
+    || die "no Sentry DSN found in $dir/dist or $dir/action; if errorMonitoring.ts changed how it sets the DSN, update control-chromatic"
+  grep -rlE --null --include='*.cjs' --include='*.js' "$SENTRY_INGEST_RE" "${bundles[@]}" \
+    | xargs -0 perl -pi -e "s#$SENTRY_DSN_PERL#http://\$1\\@127.0.0.1:$port/\$2#g"
+  if grep -rlE --include='*.cjs' --include='*.js' "$SENTRY_INGEST_RE" "${bundles[@]}" >&2; then
+    die "the files above still name Sentry's ingest host after the DSN rewrite; refusing to use this build"
+  fi
+  echo "$port" > "$dir/.sentry-sink-port"
+  echo "==> Sentry DSN points at the sink on 127.0.0.1:$port (release verify-$RUN_ID)" >&2
 }
 
 # install-published <name> <version>: install a published chromatic (a release or a PR canary such as
@@ -261,6 +298,7 @@ redacted_args() {
       -t|--project-token) printf ' %q' "$a"; redact_next=1 ;;
       -t=*|--project-token=*) printf ' %q' "${a%%=*}=REDACTED" ;;
       -t?*) printf ' %q' "-tREDACTED" ;;
+      projectToken=*) printf ' %q' "projectToken=REDACTED" ;; # a run --action input
       *) printf ' %q' "$a" ;;
     esac
   done
@@ -276,6 +314,76 @@ cli_path() {
 record_command() {
   local out="$1" cwd="$2" mode="$3"; shift 3
   printf 'cwd: %s\ncommand%s: node %s%s\n' "$cwd" "$mode" "$CLI" "$(redacted_args "$@")" > "$out/command.txt"
+  local sentry="off (DISABLE_ERROR_MONITORING=true)"
+  [[ -n "$SINK_PORT" ]] && sentry="local sink on 127.0.0.1:$SINK_PORT, recorded in sentry.jsonl"
+  printf 'Sentry: %s\n' "$sentry" >> "$out/command.txt"
+}
+
+# drive_env <cli bundle>: set DRIVE_ENV to the `env` arguments every drive gets, and SINK_PORT to the
+# sink port of a `build-ref --sentry` bundle (empty otherwise). Bundles that still have the real DSN, such
+# as published releases, run with Sentry off, so a drive never reports to the real Sentry project; Sentry
+# builds run with it on, even if the shell turned it off.
+drive_env() {
+  local marker; marker="$(dirname "$1")/../.sentry-sink-port"
+  SINK_PORT=""; [[ -f "$marker" ]] && SINK_PORT="$(cat "$marker")"
+  DRIVE_ENV=()
+  if [[ -n "$SINK_PORT" ]]; then
+    # Sentry's transport honors http_proxy unless no_proxy lists the host.
+    DRIVE_ENV+=(-u DISABLE_ERROR_MONITORING "no_proxy=127.0.0.1${no_proxy:+,$no_proxy}")
+  else
+    DRIVE_ENV+=(DISABLE_ERROR_MONITORING=true)
+  fi
+}
+
+# start_sink <out dir>: start the Sentry sink on $SINK_PORT for one drive, recording to <out dir>/sentry.jsonl.
+start_sink() {
+  local out="$1" ready="$1/.sentry-sink-ready" i
+  : > "$out/sentry.jsonl"; rm -f "$ready"
+  node "$SKILL_DIR/scripts/sentry-sink.mjs" "$SINK_PORT" "$out/sentry.jsonl" "$ready" > "$out/sentry-sink.log" 2>&1 &
+  SINK_PID=$!
+  trap stop_sink EXIT
+  for i in $(seq 100); do
+    [[ -f "$ready" ]] && { rm -f "$ready"; return 0; }
+    kill -0 "$SINK_PID" 2> /dev/null || break
+    sleep 0.1
+  done
+  cat "$out/sentry-sink.log" >&2
+  die "the Sentry sink could not listen on 127.0.0.1:$SINK_PORT, which another drive of this RUN_ID or another process holds; drive Sentry builds of one RUN_ID one at a time, or run cleanup and build again for a new port"
+}
+
+stop_sink() {
+  [[ -n "${SINK_PID:-}" ]] || return 0
+  sleep 0.3 # an envelope sent without waiting for the reply can still be in flight when the CLI exits
+  kill "$SINK_PID" 2> /dev/null || true
+  wait "$SINK_PID" 2> /dev/null || true
+  SINK_PID=""
+}
+
+# report_sink <out dir>: print what reached the sink during the drive.
+report_sink() {
+  local f="$1/sentry.jsonl" items
+  items="$(jq -r .type "$f" | sort | uniq -c | awk '{printf "%s%s %s", sep, $1, $2; sep=", "}')"
+  echo "-- sentry: $(jq -s '[.[] | select(.type == "event")] | length' "$f") events (items: ${items:-none})  (payloads: $f)"
+  jq -r 'select(.type == "event") | "   \(.payload.exception.values[-1].value // .payload.message)"' "$f"
+  if [[ -s "$1/sentry-sink.log" ]]; then echo "-- the sink failed, so the count may be short:"; cat "$1/sentry-sink.log"; fi
+}
+
+# action_env <out dir> <cwd> <inputs...>: add the GitHub Actions environment for a push of <cwd>'s HEAD
+# to DRIVE_ENV. Each input is name=value and becomes INPUT_<NAME>, as action.yml inputs do on a runner.
+action_env() {
+  local out="$1" cwd="$2" sha branch input; shift 2
+  sha="$(git -C "$cwd" rev-parse HEAD 2> /dev/null)" || die "--action needs --cwd in a git repo with a commit (try: control-chromatic fixture)"
+  branch="$(git -C "$cwd" rev-parse --abbrev-ref HEAD)"
+  jq -n --arg sha "$sha" --arg ref "refs/heads/$branch" \
+    '{after: $sha, ref: $ref, repository: {full_name: "my-org/my-app"}}' > "$out/github-event.json"
+  : > "$out/github_output"
+  for input in $(compgen -e | grep '^INPUT_' || true); do DRIVE_ENV=(-u "$input" "${DRIVE_ENV[@]}"); done
+  DRIVE_ENV+=(GITHUB_EVENT_NAME=push "GITHUB_EVENT_PATH=$out/github-event.json" "GITHUB_SHA=$sha"
+    "GITHUB_REF=refs/heads/$branch" GITHUB_REPOSITORY=my-org/my-app "GITHUB_OUTPUT=$out/github_output")
+  for input in "$@"; do
+    [[ "$input" == ?*=* ]] || die "run --action takes inputs as name=value (got '$input')"
+    DRIVE_ENV+=("INPUT_$(tr '[:lower:]' '[:upper:]' <<< "${input%%=*}")=${input#*=}")
+  done
 }
 
 # is_e2e_drive <cli args...>: whether the drive builds an E2E project (--vitest, --playwright,
@@ -290,34 +398,44 @@ is_e2e_drive() {
   return 1
 }
 
-# run <label> [--cwd DIR] [--cli BUNDLE] -- <cli args...>
+# run <label> [--cwd DIR] [--cli BUNDLE] [--action] -- <cli args...>
+# --action drives the Action bundle built beside the CLI bundle (action/register.cjs next to dist/) for a push
+# of --cwd's HEAD; its args are inputs, such as skip=true or projectToken=chpt_0000000000000000.
 cmd_run() {
   local label="${1:-}"; shift || true
   [[ -n "$label" ]] || die "run needs a label"
   require_safe_name label "$label"
-  local cwd="$REPO" CLI="$CLI"   # local CLI: --cli swaps the bundle for this drive only
+  local cwd="$REPO" CLI="$CLI" action=0   # local CLI: --cli swaps the bundle for this drive only
   while [[ $# -gt 0 && "$1" != "--" ]]; do
     case "$1" in
       --cwd) cwd="$2"; shift 2 ;;
       --cli) CLI="$(cli_path "$2")"; shift 2 ;;
+      --action) action=1; shift ;;
       *) die "unknown run option $1" ;;
     esac
   done
   [[ "${1:-}" == "--" ]] && shift
+  if (( action )); then CLI="$(cli_path "$(dirname "$CLI")/../action/register.cjs")"; fi
   local out="$EVIDENCE/$label"; mkdir -p "$out"
-  record_command "$out" "$cwd" "" "$@"
+  drive_env "$CLI"
+  local mode=""; (( action )) && mode=" (action inputs)"
+  record_command "$out" "$cwd" "$mode" "$@"
+  if (( action )); then action_env "$out" "$cwd" "$@"; set --; fi
+  [[ -n "$SINK_PORT" ]] && start_sink "$out"
   set +e
   # stdin is an empty pipe (non-TTY, never /dev/null) so the CLI takes its non-interactive path.
   # An E2E drive gets NODE_PATH so the bundle can require the project's E2E package, as a
   # project-local `chromatic` install would; this checkout's own node_modules still resolve first.
   local e2e=""; is_e2e_drive "$@" && e2e=1
-  (cd "$cwd" && np="${e2e:+$PWD/node_modules}" && : | env ${np:+"NODE_PATH=$np"} node "$CLI" "$@" > "$out/stdout.txt" 2> "$out/stderr.txt")
+  (cd "$cwd" && np="${e2e:+$PWD/node_modules}" && : | env "${DRIVE_ENV[@]}" ${np:+"NODE_PATH=$np"} node "$CLI" "$@" > "$out/stdout.txt" 2> "$out/stderr.txt")
   local code=$?
   set -e
+  stop_sink
   echo "$code" > "$out/exit_code"
   echo "== $label: exit $code  (evidence: $out)"
   echo "-- stdout ($(wc -l < "$out/stdout.txt") lines, first 40):"; head -40 "$out/stdout.txt"
   echo "-- stderr ($(wc -l < "$out/stderr.txt") lines, first 20):"; head -20 "$out/stderr.txt"
+  if [[ -n "$SINK_PORT" ]]; then report_sink "$out"; fi
 }
 
 # kill_tmux <session>: stop the drive's own tmux server and remove the socket it leaves behind.
@@ -346,6 +464,7 @@ cmd_tty() {
   local out="$EVIDENCE/$label" session="${TMUX_PREFIX}${label}"; mkdir -p "$out"
   local argstr; argstr="$(printf ' %q' "$@")"
   local node_path=""; is_e2e_drive "$@" && node_path='NODE_PATH="$PWD/node_modules" '
+  drive_env "$CLI"
   record_command "$out" "$cwd" " (tty)" "$@"
   mkdir -p "$RUN_DIR"; echo "$session" >> "$SESSIONS_FILE"
   # Each drive gets its own tmux server (socket named after the session). A new session on
@@ -353,7 +472,9 @@ cmd_tty() {
   # could hand the CLI a stale CHROMATIC_PROJECT_TOKEN or CHROMATIC_INDEX_URL.
   local t=(tmux -L "$session")
   kill_tmux "$session"
-  "${t[@]}" new-session -d -s "$session" -x 120 -y 50 -c "$cwd" \
+  [[ -n "$SINK_PORT" ]] && start_sink "$out"
+  # The new server, and so the CLI, gets this drive's environment.
+  env "${DRIVE_ENV[@]}" "${t[@]}" new-session -d -s "$session" -x 120 -y 50 -c "$cwd" \
     "${node_path}node '$CLI'$argstr; echo __VERIFY_EXIT=\$?; sleep 3600"
   local waited=0
   until "${t[@]}" capture-pane -p -t "$session" -S - | grep -q '__VERIFY_EXIT='; do
@@ -363,8 +484,10 @@ cmd_tty() {
   "${t[@]}" capture-pane -p -t "$session" -S - > "$out/pane.txt"
   grep -o '__VERIFY_EXIT=[0-9]*' "$out/pane.txt" | tail -1 | cut -d= -f2 > "$out/exit_code"
   kill_tmux "$session"
+  stop_sink
   echo "== $label (tty): exit $(cat "$out/exit_code")  (evidence: $out/pane.txt)"
   grep -v '^$' "$out/pane.txt" | head -40
+  if [[ -n "$SINK_PORT" ]]; then report_sink "$out"; fi
 }
 
 # CLIs before 18.13.1 (CAP-5317) put the raw project token and session JWT under .analytics
@@ -400,7 +523,7 @@ cmd_cleanup() {
   fi
   local wt
   for wt in "$WORK"/cli-*; do
-    [[ -d "$wt" ]] || continue
+    [[ -e "$wt/.git" ]] || continue # build-ref WORKTREE copies are plain directories
     rm -f "$wt/node_modules"
     git -C "$REPO" worktree remove --force "$wt" || true
   done
