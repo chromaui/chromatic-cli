@@ -1,58 +1,102 @@
 import AdmZip from 'adm-zip';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import path from 'path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { validateAndroidArtifact } from './validateAndroidArtifact';
 
-vi.mock('adm-zip', () => ({ default: vi.fn() }));
+let sourceDirectory: string;
 
-const AdmZipMock = vi.mocked(AdmZip);
-
-afterEach(() => {
-  vi.restoreAllMocks();
-  vi.resetAllMocks();
+beforeEach(() => {
+  sourceDirectory = mkdtempSync(path.join(tmpdir(), 'validate-android-'));
 });
 
-const input = (browsers: string[]) => ({ sourceDir: '/static/', browsers });
+afterEach(() => {
+  rmSync(sourceDirectory, { recursive: true, force: true });
+});
 
-const mockEntries = (entryNames: string[]) => {
-  const entries = entryNames.map((entryName) => ({ entryName }));
-  AdmZipMock.mockImplementation(function (this: { getEntries: () => typeof entries }) {
-    this.getEntries = () => entries;
-  });
+const input = (browsers: string[]) => ({ sourceDir: sourceDirectory, browsers });
+
+const writeApk = (entryNames: string[]) => {
+  const zip = new AdmZip();
+  for (const name of entryNames) zip.addFile(name, Buffer.from('x'));
+  zip.writeZip(path.join(sourceDirectory, 'storybook.apk'));
 };
+
+// The root entries every APK built from a React Native project has.
+const apk = (...entryNames: string[]) => ['AndroidManifest.xml', 'resources.arsc', ...entryNames];
+
+const x86Error =
+  'Your storybook.apk contains native libraries but does not include x86_64 support. Chromatic only supports x86_64.';
 
 describe('validateAndroidArtifact', () => {
   it('skips when android is not in browsers', async () => {
     await expect(validateAndroidArtifact(input(['ios']))).resolves.toBeUndefined();
-    expect(AdmZipMock).not.toHaveBeenCalled();
   });
 
   it('passes when APK has no lib/ entries', async () => {
-    mockEntries(['AndroidManifest.xml', 'classes.dex']);
+    writeApk(apk('classes.dex'));
     await expect(validateAndroidArtifact(input(['android']))).resolves.toBeUndefined();
   });
 
   it('passes when APK has only lib/x86_64/ entries', async () => {
-    mockEntries(['lib/x86_64/libnative.so']);
+    writeApk(apk('lib/x86_64/libnative.so'));
     await expect(validateAndroidArtifact(input(['android']))).resolves.toBeUndefined();
   });
 
   it('passes when APK has lib/x86_64/ alongside other ABIs', async () => {
-    mockEntries(['lib/x86_64/libnative.so', 'lib/arm64-v8a/libnative.so']);
+    writeApk(apk('lib/x86_64/libnative.so', 'lib/arm64-v8a/libnative.so'));
     await expect(validateAndroidArtifact(input(['android']))).resolves.toBeUndefined();
   });
 
   it('throws when APK has only ARM ABI entries', async () => {
-    mockEntries(['lib/armeabi-v7a/libnative.so']);
-    await expect(validateAndroidArtifact(input(['android']))).rejects.toThrow(
-      'Your storybook.apk contains native libraries but does not include x86_64 support. Chromatic only supports x86_64.'
-    );
+    writeApk(apk('lib/armeabi-v7a/libnative.so'));
+    await expect(validateAndroidArtifact(input(['android']))).rejects.toThrow(x86Error);
   });
 
   it('throws when APK has multiple ARM ABIs but no x86_64', async () => {
-    mockEntries(['lib/armeabi-v7a/libnative.so', 'lib/arm64-v8a/libnative.so']);
+    writeApk(apk('lib/armeabi-v7a/libnative.so', 'lib/arm64-v8a/libnative.so'));
+    await expect(validateAndroidArtifact(input(['android']))).rejects.toThrow(x86Error);
+  });
+
+  // Each entry only an .aab has, alongside the rest of the layout bundletool gives one.
+  it.each(['BundleConfig.pb', 'base/manifest/AndroidManifest.xml'])(
+    'throws when the artifact is an Android App Bundle with %s',
+    async (marker) => {
+      writeApk([marker, 'base/resources.pb', 'base/dex/classes.dex']);
+      await expect(validateAndroidArtifact(input(['android']))).rejects.toThrow(
+        'Your storybook.apk is an Android App Bundle (.aab), not an APK. Build an APK instead, such as with ./gradlew assembleRelease or an EAS build profile with "buildType": "apk".'
+      );
+    }
+  );
+
+  it.each(['BundleConfig.pb', 'base/manifest/AndroidManifest.xml'])(
+    'passes when an APK carries a Java resource at %s',
+    async (marker) => {
+      writeApk(apk(marker));
+      await expect(validateAndroidArtifact(input(['android']))).resolves.toBeUndefined();
+    }
+  );
+
+  it('throws when the artifact is an empty zip', async () => {
+    writeApk([]);
     await expect(validateAndroidArtifact(input(['android']))).rejects.toThrow(
-      'Your storybook.apk contains native libraries but does not include x86_64 support. Chromatic only supports x86_64.'
+      'Your storybook.apk could not be read as an APK (it has no AndroidManifest.xml). Chromatic needs an APK, such as one built with ./gradlew assembleRelease.'
+    );
+  });
+
+  it('throws when the APK has no resources.arsc', async () => {
+    writeApk(['AndroidManifest.xml', 'classes.dex']);
+    await expect(validateAndroidArtifact(input(['android']))).rejects.toThrow(
+      'could not be read as an APK (it has no resources.arsc)'
+    );
+  });
+
+  it('throws when the artifact is not a zip', async () => {
+    writeFileSync(path.join(sourceDirectory, 'storybook.apk'), 'not an apk');
+    await expect(validateAndroidArtifact(input(['android']))).rejects.toThrow(
+      /^Your storybook\.apk could not be read as an APK \(Invalid or unsupported zip format.*\)\. Chromatic needs an APK/
     );
   });
 });

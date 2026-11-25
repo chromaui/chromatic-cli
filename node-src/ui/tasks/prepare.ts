@@ -31,11 +31,22 @@ export const invalid = (
   };
 };
 
-export const invalidAndroidArtifact = (_ctx?: Context) => ({
+const ANDROID_ARTIFACT_PROBLEMS = {
+  appBundle:
+    'Your storybook.apk is an Android App Bundle (.aab), not an APK. Build an APK instead, such as with ./gradlew assembleRelease or an EAS build profile with "buildType": "apk".',
+  noX86_64:
+    'Your storybook.apk contains native libraries but does not include x86_64 support. Chromatic only supports x86_64.',
+};
+
+export const invalidAndroidArtifact = (
+  reason: keyof typeof ANDROID_ARTIFACT_PROBLEMS | { unreadable: string }
+) => ({
   status: 'error',
   title: 'Preparing your built React Native Storybook',
   output:
-    'Your storybook.apk contains native libraries but does not include x86_64 support. Chromatic only supports x86_64.',
+    typeof reason === 'string'
+      ? ANDROID_ARTIFACT_PROBLEMS[reason]
+      : `Your storybook.apk could not be read as an APK (${reason.unreadable}). Chromatic needs an APK, such as one built with ./gradlew assembleRelease.`,
 });
 
 export const invalidIosArtifact = (reason: { platform: string } | { families: string }) => ({
