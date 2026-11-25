@@ -304,6 +304,7 @@ export async function main(argv: string[]) {
     {
       importMeta: meowImportMeta,
       argv,
+      description: 'Check your Chromatic setup without starting a Chromatic build',
       flags: {
         project: { type: 'string' },
         fix: { type: 'boolean' },
