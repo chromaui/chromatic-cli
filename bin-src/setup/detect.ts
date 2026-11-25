@@ -52,7 +52,7 @@ export const ARCHIVE_DIRECTORIES: Record<TestFramework, string> = {
  *
  * @returns The folders.
  */
-function foldersUp(directory: string, gitRoot?: string) {
+export function foldersUp(directory: string, gitRoot?: string) {
   const folders = [directory];
   for (let current = directory; gitRoot && current !== gitRoot; ) {
     const parent = path.dirname(current);

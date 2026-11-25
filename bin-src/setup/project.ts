@@ -4,7 +4,15 @@ import path from 'node:path';
 import * as clack from '@clack/prompts';
 
 import { SubcommandFailure } from '../subcommandFailure';
-import { describeProject, findTestConfig, Framework, Project, runsAbove } from './detect';
+import {
+  describeProject,
+  findTestConfig,
+  foldersUp,
+  Framework,
+  FRAMEWORK_NAMES,
+  Project,
+  runsAbove,
+} from './detect';
 import { answered, color, readJson, relativeOrDot } from './shared';
 import type { Session } from './token';
 
@@ -76,6 +84,55 @@ function ranAbove(
   return new SubcommandFailure(`Nothing to set up in ${project}`, { exitCode: 1 });
 }
 
+const SETUP_DOCS: Record<Exclude<Framework, 'storybook'>, string> = {
+  playwright: 'https://www.chromatic.com/docs/playwright/',
+  cypress: 'https://www.chromatic.com/docs/cypress/',
+  vitest: 'https://www.chromatic.com/docs/vitest/',
+};
+
+/**
+ * Stops init before it writes anything when the project can't be set up where it is: its test
+ * framework has no config here or above, the config is in a folder above (so Chromatic has to run
+ * there), or the folder has no package.json for chromatic and its script.
+ *
+ * @param session The init session.
+ * @param session.gitRoot The repository root.
+ * @param project The project init picked.
+ */
+function checkSetUpHere({ gitRoot }: Session, project: Project) {
+  const place = (folder: string) =>
+    folder === gitRoot ? 'the repository root' : relativeOrDot(gitRoot, folder);
+  const name = place(project.directory);
+  const label = FRAMEWORK_NAMES[project.framework];
+  if (project.framework !== 'storybook') {
+    const config = findTestConfig(project.framework, project.directory, gitRoot);
+    if (!config) {
+      clack.log.error(`No ${label} config found in ${name} or above.`);
+      const guide = color.cta(SETUP_DOCS[project.framework]);
+      clack.log.info(`Set up ${label} with Chromatic first (${guide}), then run this again.`);
+      throw new SubcommandFailure(`No ${label} config`, { exitCode: 1 });
+    }
+    const folder = path.dirname(config);
+    const file = path.basename(config);
+    if (folder !== project.directory) {
+      const { framework } = project;
+      throw ranAbove({ folder, framework, file, what: `${label} runs` }, gitRoot, name);
+    }
+  }
+  if (existsSync(path.join(project.directory, 'package.json'))) return;
+  clack.log.error(
+    `${name} has no package.json, so init has nowhere to add chromatic and a "chromatic" script.`
+  );
+  const nearest = foldersUp(project.directory, gitRoot)
+    .slice(1)
+    .find((folder) => existsSync(path.join(folder, 'package.json')));
+  const move = nearest
+    ? `, or move the ${label} config to ${place(nearest)}, the nearest package, and update the paths in it`
+    : '';
+  clack.log.info(`Add a package.json to ${name}${move}, then run this again.`);
+  throw new SubcommandFailure(`No package.json in ${name}`, { exitCode: 1 });
+}
+
 /**
  * Picks the project to set up: the only one, the one init ran in, or the user's choice.
  *
@@ -103,7 +160,13 @@ export async function pickProject(session: Session, projects: Project[]): Promis
   const name = (p: Project) => (p.relative === '.' ? 'the repository root' : p.relative);
   const label = (p: Project) => `${name(p)} ${color.muted(`· ${describeProject(p)}`)}`;
   const kind = candidates.every((p) => p.framework === 'storybook') ? 'Storybooks' : 'test setups';
+  // Checked before the "Found" line, which a --framework override would otherwise contradict.
+  const ready = (p: Project) => {
+    checkSetUpHere(session, p);
+    return p;
+  };
   if (candidates.length === 1) {
+    ready(candidates[0]);
     clack.log.info(`Found ${label(candidates[0])}`);
     return candidates[0];
   }
@@ -116,7 +179,7 @@ export async function pickProject(session: Session, projects: Project[]): Promis
   if (!interactive) {
     if (here) {
       clack.log.info(`Found ${candidates.length} ${kind}; using ${label(here)}, where init ran`);
-      return here;
+      return ready(here);
     }
     clack.log.error(
       `Found ${candidates.length} ${kind}:\n${candidates.map((p) => label(p)).join('\n')}`
@@ -124,13 +187,15 @@ export async function pickProject(session: Session, projects: Project[]): Promis
     clack.log.info(`Pick one with ${color.cta('--project <dir>')}, or run init from inside it.`);
     throw new SubcommandFailure('More than one project to set up', { exitCode: 1 });
   }
-  return answered(
-    await clack.select({
-      message: `Found ${candidates.length} ${kind}. Which one should this Chromatic project test?`,
-      initialValue: here ?? candidates[0],
-      // Description in the label, not a hint: Clack shows hints only on the highlighted option.
-      options: candidates.map((p) => ({ value: p, label: label(p) })),
-    })
+  return ready(
+    answered(
+      await clack.select({
+        message: `Found ${candidates.length} ${kind}. Which one should this Chromatic project test?`,
+        initialValue: here ?? candidates[0],
+        // Description in the label, not a hint: Clack shows hints only on the highlighted option.
+        options: candidates.map((p) => ({ value: p, label: label(p) })),
+      })
+    )
   );
 }
 
