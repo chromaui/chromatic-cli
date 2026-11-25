@@ -54,6 +54,8 @@ export interface DoctorInput {
    * package manager's minimum release age lets it install.
    */
   chromaticVersion: string;
+  /** CHROMATIC_ARCHIVE_LOCATION as a build from cwd sees it, from the environment or its .env. */
+  archiveLocation?: string;
   /** The Storybook config directory a build would read, resolved by the build's own code. */
   storybookConfigDirectory: string;
   /** Why storybookBuildDir isn't a usable Storybook build, from the build's own validation. */
@@ -106,6 +108,18 @@ async function readConfigFile(cwd: string, flags: Flags) {
 }
 
 /**
+ * The .env a build from cwd loads.
+ *
+ * @param cwd Working directory Chromatic runs from.
+ *
+ * @returns Its variables, or none without one.
+ */
+function dotEnvironment(cwd: string): Record<string, string> {
+  const environmentFile = path.join(cwd, '.env');
+  return existsSync(environmentFile) ? dotenv.parse(readFileSync(environmentFile)) : {};
+}
+
+/**
  * The environment a build from cwd sees: .env loaded from there, where a variable already set
  * wins, as with dotenv.
  *
@@ -114,8 +128,7 @@ async function readConfigFile(cwd: string, flags: Flags) {
  * @returns The main command's environment settings.
  */
 function buildEnvironment(cwd: string) {
-  const environmentFile = path.join(cwd, '.env');
-  const fromFile = existsSync(environmentFile) ? dotenv.parse(readFileSync(environmentFile)) : {};
+  const fromFile = dotEnvironment(cwd);
   return {
     ...getEnvironment(),
     CHROMATIC_PROJECT_TOKEN:
@@ -189,6 +202,8 @@ export async function loadDoctorInput(input: {
       packageJsonPath,
       packageJson,
       chromaticVersion: await chromaticVersion(packageJsonPath, packageJson),
+      archiveLocation:
+        process.env.CHROMATIC_ARCHIVE_LOCATION ?? dotEnvironment(cwd).CHROMATIC_ARCHIVE_LOCATION,
       prebuilt: !!options.storybookBuildDir || scriptUploadsPrebuilt(packageJson?.scripts),
       ...(await resolveStorybook(input.gitRoot, options, packageJson)),
     },

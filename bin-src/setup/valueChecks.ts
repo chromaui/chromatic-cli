@@ -4,6 +4,7 @@ import path from 'node:path';
 import { findBuildScriptName } from '../../node-src/lib/getOptions';
 import type { Check, Fix } from './checks';
 import { findMainFile, matchesBranch } from './checks';
+import { findTestConfig } from './detect';
 import { configFix, DoctorInput, globSuggestions } from './doctorInput';
 import { relativeOrDot, tokenEnvironmentEdits } from './shared';
 
@@ -65,6 +66,11 @@ function vitestTurboSnap(cwd: string) {
   return { file: files[0] };
 }
 
+// The folder Vitest runs from, which may be above the project, such as a repo-root config with
+// test.projects.
+const vitestFolder = (input: DoctorInput) =>
+  path.dirname(findTestConfig('vitest', input.cwd, input.gitRoot) ?? path.join(input.cwd, '-'));
+
 /**
  * The fix that turns TurboSnap on, offered only when the build will have the stats file it reads.
  *
@@ -84,7 +90,7 @@ function turnOnFix(input: DoctorInput) {
     { adds: true }
   );
   if (input.options.vitest) {
-    const { file, turboSnap } = vitestTurboSnap(input.cwd);
+    const { file, turboSnap } = vitestTurboSnap(vitestFolder(input));
     if (!file || turboSnap === false) return undefined;
     return turboSnap
       ? fix
@@ -111,7 +117,7 @@ function turnOnFix(input: DoctorInput) {
  */
 function vitestPluginNote(input: DoctorInput) {
   if (!input.options.vitest) return '';
-  const { file, turboSnap } = vitestTurboSnap(input.cwd);
+  const { file, turboSnap } = vitestTurboSnap(vitestFolder(input));
   return turboSnap === false
     ? ` chromaticPlugin in ${file} doesn't set turboSnap: true, so the tests write nothing for TurboSnap to read and a build with onlyChanged fails. Add turboSnap: true to it first.`
     : '';

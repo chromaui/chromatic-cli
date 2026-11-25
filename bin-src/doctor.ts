@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 import * as clack from '@clack/prompts';
@@ -13,10 +13,12 @@ import pkg from '../package.json';
 import { Check, runChecks } from './setup/checks';
 import {
   describeProject,
-  E2E_CONFIG,
   findProjects,
+  findTestConfig,
   listProjectFiles,
   Project,
+  runsAbove,
+  TEST_FRAMEWORKS,
 } from './setup/detect';
 import { loadDoctorInput } from './setup/doctorInput';
 import { applyFixes, doctorCommand, printChecks, summarize } from './setup/report';
@@ -93,7 +95,7 @@ function hasProject(directory: string, mainFlags: Flags) {
   if (hasPathFlags(mainFlags) || hasConfigFile(directory) || scriptRunsChromatic(directory)) {
     return true;
   }
-  if (readdirSync(directory).some((file) => E2E_CONFIG.test(file))) return true;
+  if (TEST_FRAMEWORKS.some((framework) => findTestConfig(framework, directory))) return true;
   const packageJson = readJson(path.join(directory, 'package.json')) ?? {};
   const { configDir } = findConfigFlags({
     buildScriptName: findBuildScriptName(packageJson.scripts),
@@ -103,21 +105,36 @@ function hasProject(directory: string, mainFlags: Flags) {
 }
 
 /**
- * Stops doctor where there's nothing to check, and points to init instead. Every check would
- * otherwise fail or offer fixes, such as adding chromatic, to a folder that isn't a project.
+ * Stops doctor where there's nothing to check. When tests or a Storybook in a folder above cover
+ * the project, it points there, since Chromatic has to run from that folder; otherwise to init.
+ * Every check would otherwise fail or offer fixes, such as adding chromatic, to a folder that
+ * isn't a project.
  *
  * @param cwd The directory doctor runs from.
  * @param directory The folder doctor would check.
+ * @param mainFlags The main command's flags.
  *
  * @returns The failure to throw: exit code 2, as for --project.
  */
-function noProject(cwd: string, directory: string) {
+function noProject(cwd: string, directory: string, mainFlags: Flags) {
   const relative = relativeOrDot(cwd, directory);
-  const init = relative === '.' ? 'npx chromatic init' : `npx chromatic init --project ${relative}`;
-  return new SubcommandFailure(
-    `No Storybook or test config found in ${relative === '.' ? 'this folder' : relative}. Run ${init} to set one up.`,
-    { exitCode: 2 }
+  const missing = `No Storybook or test config found in ${relative === '.' ? 'this folder' : relative}.`;
+  const gitRoot = git(['rev-parse', '--show-toplevel'], directory);
+  const above = runsAbove(
+    directory,
+    gitRoot,
+    TEST_FRAMEWORKS.find((framework) => mainFlags[framework])
   );
+  if (above) {
+    const place =
+      above.folder === gitRoot ? 'the repository root' : relativeOrDot(cwd, above.folder);
+    return new SubcommandFailure(
+      `${missing} ${above.what} from ${place} (${above.file}), so run doctor and Chromatic from ${place === '.' ? 'this folder' : place}.`,
+      { exitCode: 2 }
+    );
+  }
+  const init = relative === '.' ? 'npx chromatic init' : `npx chromatic init --project ${relative}`;
+  return new SubcommandFailure(`${missing} Run ${init} to set one up.`, { exitCode: 2 });
 }
 
 // Whether a path is a folder or inside it.
@@ -271,7 +288,8 @@ export async function main(argv: string[]) {
     Run it from a project to check that project. From anywhere else in a monorepo, it asks which
     project with Chromatic set up to check. Without a terminal (in CI), pass --project instead:
     doctor lists the projects and exits 2 without checking any. In a folder with no Storybook,
-    no Vitest, Playwright or Cypress config and no Chromatic setup, it points to init and exits 2.
+    no Vitest, Playwright or Cypress config and no Chromatic setup, it points to the folder
+    above where they run, or else to init, and exits 2.
 
     Options
       --project <dir>     Check only this project.
@@ -308,7 +326,7 @@ export async function main(argv: string[]) {
   const { notSetUp } = found;
   // Several targets are all set up; one may be any folder, such as --project or a repo's root.
   if (found.targets.length === 1 && !hasProject(found.targets[0].directory, mainFlags)) {
-    throw noProject(cwd, found.targets[0].directory);
+    throw noProject(cwd, found.targets[0].directory, mainFlags);
   }
   if (!interactive && found.targets.length !== 1) throw projectRequired(cwd, found);
   // Like init, ask which project to check when there's a terminal.

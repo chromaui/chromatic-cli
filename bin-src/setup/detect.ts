@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { findConfigFlags, MAIN_CONFIG_PATTERN } from '../../node-src/lib/getStorybookMetadata';
@@ -29,6 +29,108 @@ export interface Project {
 
 const STORYBOOK_MAIN = /(^|\/)\.storybook\/main\.[cm]?[jt]sx?$/;
 export const E2E_CONFIG = /(^|\/)(playwright|cypress|vitest)\.config\.[cm]?[jt]s$/;
+
+export type TestFramework = Exclude<Framework, 'storybook'>;
+export const TEST_FRAMEWORKS: TestFramework[] = ['vitest', 'playwright', 'cypress'];
+
+// Where each framework's Chromatic package writes its archives, from the folder its config is in.
+// `chromatic --<framework>` looks for them there from the folder it runs in, unless
+// CHROMATIC_ARCHIVE_LOCATION says otherwise.
+export const ARCHIVE_DIRECTORIES: Record<TestFramework, string> = {
+  vitest: '.vitest/chromatic',
+  playwright: 'test-results',
+  cypress: 'cypress/downloads',
+};
+
+/**
+ * Folders from a directory up to the repository root, nearest first. Outside a repository, only the
+ * directory, so doctor never reads above a project it can't place.
+ *
+ * @param directory Where to start.
+ * @param gitRoot The repository root.
+ *
+ * @returns The folders.
+ */
+function foldersUp(directory: string, gitRoot?: string) {
+  const folders = [directory];
+  for (let current = directory; gitRoot && current !== gitRoot; ) {
+    const parent = path.dirname(current);
+    if (parent === current || !directory.startsWith(`${gitRoot}${path.sep}`)) break;
+    folders.push((current = parent));
+  }
+  return folders;
+}
+
+function isTestConfig(framework: TestFramework, folder: string, file: string) {
+  if (file.match(E2E_CONFIG)?.[2] === framework) return true;
+  if (framework !== 'vitest') return false;
+  // Vitest 3 also reads a workspace file, and any Vitest reads vite.config.
+  if (/^vitest\.workspace\.([cm]?[jt]s|json)$/.test(file)) return true;
+  return (
+    /^vite\.config\.[cm]?[jt]s$/.test(file) &&
+    readFileSync(path.join(folder, file), 'utf8').includes('chromaticPlugin')
+  );
+}
+
+/**
+ * Finds the config of the test framework a project runs, in its folder or one above it up to the
+ * repository root. The framework runs from that config's folder and writes its archives there.
+ *
+ * @param framework The test framework.
+ * @param directory The project's folder.
+ * @param gitRoot The repository root.
+ *
+ * @returns The config's absolute path, or undefined.
+ */
+export function findTestConfig(framework: TestFramework, directory: string, gitRoot?: string) {
+  for (const folder of foldersUp(directory, gitRoot)) {
+    const file = readdirSync(folder).find((name) => isTestConfig(framework, folder, name));
+    if (file) return path.join(folder, file);
+  }
+  return undefined;
+}
+
+/**
+ * The nearest folder above a project where its tests or Storybook run, such as a repo-root
+ * Playwright config or .storybook that covers every package. With a test framework's flag, only
+ * that framework counts.
+ *
+ * @param directory The folder doctor would check.
+ * @param gitRoot The repository root.
+ * @param flagged The test framework the options name, if any.
+ *
+ * @returns The folder and what runs there, or undefined.
+ */
+export function runsAbove(directory: string, gitRoot: string | undefined, flagged?: TestFramework) {
+  for (const folder of foldersUp(directory, gitRoot).slice(1)) {
+    const framework = (flagged ? [flagged] : TEST_FRAMEWORKS).find((f) =>
+      findTestConfig(f, folder)
+    );
+    if (framework) {
+      const config = findTestConfig(framework, folder) ?? folder;
+      return {
+        folder,
+        framework,
+        what: `${FRAMEWORK_NAMES[framework]} runs`,
+        file: path.basename(config),
+      };
+    }
+    const storybook = path.join(folder, '.storybook');
+    if (
+      !flagged &&
+      existsSync(storybook) &&
+      readdirSync(storybook).some((f) => MAIN_CONFIG_PATTERN.test(f))
+    ) {
+      return {
+        folder,
+        framework: 'storybook' as const,
+        what: 'Storybook builds',
+        file: '.storybook',
+      };
+    }
+  }
+  return undefined;
+}
 
 // eslint-disable-next-line complexity -- prototype; split into smaller steps if this ships
 function versionOf(directory: string, gitRoot: string, name: string) {
