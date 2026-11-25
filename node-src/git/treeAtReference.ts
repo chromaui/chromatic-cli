@@ -20,10 +20,14 @@ export async function pathExistsAtReference(
   reference: string,
   repositoryPath: string
 ) {
-  const entry = await execGitCommand(
-    deps,
-    `git ls-tree --full-tree ${reference} -- "${repositoryPath}"`
-  );
+  const entry = await execGitCommand(deps, [
+    'git',
+    'ls-tree',
+    '--full-tree',
+    reference,
+    '--',
+    repositoryPath,
+  ]);
   return entry.trim() !== '';
 }
 
@@ -49,10 +53,14 @@ export async function resolveSymlinkAtReference(
 
   while (!visited.has(current)) {
     visited.add(current);
-    const entry = await execGitCommand(
-      deps,
-      `git ls-tree --full-tree ${reference} -- "${current}"`
-    );
+    const entry = await execGitCommand(deps, [
+      'git',
+      'ls-tree',
+      '--full-tree',
+      reference,
+      '--',
+      current,
+    ]);
     // `ls-tree` prints nothing for a path the tree doesn't have, and fails for a missing reference.
     // A symlink whose target is missing is a broken file, not an added one.
     if (!entry.trim() && current === fileName) return undefined;
@@ -60,7 +68,7 @@ export async function resolveSymlinkAtReference(
       return current;
     }
 
-    const target = await execGitCommand(deps, `git show "${reference}:${current}"`);
+    const target = await execGitCommand(deps, ['git', 'show', `${reference}:${current}`]);
     current = path.posix.join(path.posix.dirname(current), target.trim());
   }
 

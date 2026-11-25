@@ -16,6 +16,7 @@ import {
   commitExists,
   commitsExist,
   findFilesFromRepositoryRoot,
+  findMergeBase,
   getBranch,
   getChangedFiles,
   getCloneDepth,
@@ -42,6 +43,7 @@ const execGitCommand = vi.mocked(execGit.execGitCommand);
 const execGitCommandEntries = vi.mocked(execGit.execGitCommandEntries);
 const execGitCommandOneLine = vi.mocked(execGit.execGitCommandOneLine);
 const execGitCommandCountLines = vi.mocked(execGit.execGitCommandCountLines);
+const execGitCommandToFile = vi.mocked(execGit.execGitCommandToFile);
 
 const { mkdir, readFile, stat } = vi.mocked(await import('fs/promises'));
 
@@ -166,10 +168,15 @@ describe('getUncommittedHash', () => {
   it('lists untracked files relative to the repository root', async () => {
     execGitCommand.mockResolvedValue('1234567890');
     await getUncommittedHash(ctx);
-    expect(execGitCommand).toHaveBeenCalledWith(
-      ctx,
-      'git -c core.quotePath=false ls-files --others --exclude-standard --full-name'
-    );
+    expect(execGitCommand).toHaveBeenCalledWith(ctx, [
+      'git',
+      '-c',
+      'core.quotePath=false',
+      'ls-files',
+      '--others',
+      '--exclude-standard',
+      '--full-name',
+    ]);
   });
 
   it('hashes only regular files, leaving out the files the CLI writes', async () => {
@@ -195,7 +202,7 @@ describe('getUncommittedHash', () => {
       'git hash-object --stdin-paths': 'a\nb\nc\nd\n',
       'git hash-object --stdin': 'abc123\n',
     };
-    execGitCommand.mockImplementation(async (_, command) => outputs[String(command)]);
+    execGitCommand.mockImplementation(async (_, command) => outputs[command.join(' ')]);
     stat.mockImplementation(async (filePath) => {
       if (filePath === path.join(root, 'src/vanished.ts')) throw new Error('ENOENT');
       // A submodule and an untracked nested repository are directories.
@@ -206,7 +213,7 @@ describe('getUncommittedHash', () => {
     expect(await getUncommittedHash(ctx, [path.join(root, 'logs/custom.log'), undefined])).toBe(
       'abc123'
     );
-    expect(execGitCommand).toHaveBeenCalledWith(ctx, 'git hash-object --stdin-paths', {
+    expect(execGitCommand).toHaveBeenCalledWith(ctx, ['git', 'hash-object', '--stdin-paths'], {
       input: 'src/staged.ts\nsrc/unstaged.ts\nchromatic.log\nsrc/untracked.ts',
     });
   });
@@ -352,15 +359,15 @@ describe('commitsExist', () => {
     );
     // The short `aaa` is printed back as its full SHA, so text matching would miss it.
     expect(await commitsExist(ctx, ['bbb', 'aaa', 'ccc', 'ddd'])).toEqual(new Set(['aaa', 'ddd']));
-    expect(execGitCommand).toHaveBeenCalledWith(ctx, 'git cat-file --batch-check', {
+    expect(execGitCommand).toHaveBeenCalledWith(ctx, ['git', 'cat-file', '--batch-check'], {
       input: 'bbb^{commit}\naaa^{commit}\nccc^{commit}\nddd^{commit}',
     });
   });
 
   it('checks commits one at a time when the line count does not match the input', async () => {
     execGitCommand.mockImplementation(async (_, command) => {
-      if (command === 'git cat-file --batch-check') return `${'a'.repeat(40)} commit 284`;
-      if (command === 'git cat-file -e "bbb^{commit}"') return '';
+      if (command.join(' ') === 'git cat-file --batch-check') return `${'a'.repeat(40)} commit 284`;
+      if (command.join(' ') === 'git cat-file -e bbb^{commit}') return '';
       throw new Error('fatal: Not a valid object name');
     });
     // By position, the single line would wrongly mark `aaa` as existing.
@@ -369,10 +376,43 @@ describe('commitsExist', () => {
 
   it('checks commits one at a time when the batch call fails', async () => {
     execGitCommand.mockImplementation(async (_, command) => {
-      if (command === 'git cat-file -e "aaa^{commit}"') return '';
+      if (command.join(' ') === 'git cat-file -e aaa^{commit}') return '';
       throw new Error('Command timed out');
     });
     expect(await commitsExist(ctx, ['aaa', 'bbb'])).toEqual(new Set(['aaa']));
+  });
+});
+
+describe('with values from outside the CLI', () => {
+  let markerDirectory: string;
+
+  beforeEach(async () => {
+    const actualExecGit = await vi.importActual<typeof execGit>('./execGit');
+    execGitCommand.mockImplementation(actualExecGit.execGitCommand);
+    markerDirectory = mkdtempSync(path.join(os.tmpdir(), 'chromatic-git-'));
+  });
+
+  afterEach(() => {
+    execGitCommand.mockReset();
+    rmSync(markerDirectory, { recursive: true, force: true });
+  });
+
+  it('does not pass a commit from the index that is not a SHA to git', async () => {
+    const marker = path.join(markerDirectory, 'marker');
+
+    expect(await commitExists(ctx, `$(touch ${marker})`)).toBe(false);
+    await expect(getChangedFiles(ctx, `--output=${marker}`)).rejects.toThrow(AncestorMissingError);
+    expect(execGitCommand).not.toHaveBeenCalled();
+    expect(existsSync(marker)).toBe(false);
+  });
+
+  it('does not let a --patch-build branch pass options to git', async () => {
+    const marker = path.join(markerDirectory, 'marker');
+
+    await expect(findMergeBase(ctx, `--output=${marker}`, 'HEAD')).rejects.toThrow(
+      'Invalid revision'
+    );
+    expect(existsSync(marker)).toBe(false);
   });
 });
 
@@ -421,9 +461,11 @@ describe('trackedFiles', () => {
 
     const results = await Array.fromAsync(trackedFiles(ctx, '/root'));
 
-    expect(execGitCommandEntries).toHaveBeenCalledWith(ctx, 'git ls-files --full-name -z', {
-      cwd: '/root',
-    });
+    expect(execGitCommandEntries).toHaveBeenCalledWith(
+      ctx,
+      ['git', 'ls-files', '--full-name', '-z'],
+      { cwd: '/root' }
+    );
     expect(results).toEqual(['tailwind.config.js', 'packages/ui/src/Button.tsx']);
   });
 });
@@ -443,11 +485,14 @@ describe('findFilesFromRepositoryRoot', () => {
     );
 
     expect(execGitCommand).toBeCalledTimes(1);
-    expect(execGitCommand).toHaveBeenNthCalledWith(
-      1,
-      ctx,
-      'git ls-files --full-name -z "/root/package.json" "/root/**/package.json"'
-    );
+    expect(execGitCommand).toHaveBeenNthCalledWith(1, ctx, [
+      'git',
+      'ls-files',
+      '--full-name',
+      '-z',
+      '/root/package.json',
+      '/root/**/package.json',
+    ]);
     expect(results).toEqual(filesFound);
   });
 });
@@ -455,31 +500,34 @@ describe('findFilesFromRepositoryRoot', () => {
 describe('checkoutFile', () => {
   it('shows the file at the reference when it is a regular file', async () => {
     execGitCommand.mockResolvedValueOnce('100644 blob abc123\tpackage.json');
-    execGitCommand.mockResolvedValueOnce('');
 
     await checkoutFile(ctx, 'abc123', 'package.json', '/tmp/anywhere');
 
-    expect(execGitCommand).toHaveBeenNthCalledWith(
-      1,
+    expect(execGitCommand).toHaveBeenNthCalledWith(1, ctx, [
+      'git',
+      'ls-tree',
+      '--full-tree',
+      'abc123',
+      '--',
+      'package.json',
+    ]);
+    expect(execGitCommandToFile).toHaveBeenCalledWith(
       ctx,
-      'git ls-tree --full-tree abc123 -- "package.json"'
-    );
-    expect(execGitCommand).toHaveBeenLastCalledWith(
-      ctx,
-      'git show "abc123:package.json" > "/tmp/anywhere/package.json"'
+      ['git', 'show', 'abc123:package.json'],
+      '/tmp/anywhere/package.json'
     );
   });
 
   it('keeps the repository-relative path of the file under tmpdir', async () => {
     execGitCommand.mockResolvedValueOnce('100644 blob abc123\tpackages/ui/package.json');
-    execGitCommand.mockResolvedValueOnce('');
 
     await checkoutFile(ctx, 'abc123', 'packages/ui/package.json', '/tmp/anywhere');
 
     expect(mkdir).toHaveBeenCalledWith('/tmp/anywhere/packages/ui', { recursive: true });
-    expect(execGitCommand).toHaveBeenLastCalledWith(
+    expect(execGitCommandToFile).toHaveBeenCalledWith(
       ctx,
-      'git show "abc123:packages/ui/package.json" > "/tmp/anywhere/packages/ui/package.json"'
+      ['git', 'show', 'abc123:packages/ui/package.json'],
+      '/tmp/anywhere/packages/ui/package.json'
     );
   });
 
@@ -487,19 +535,19 @@ describe('checkoutFile', () => {
     execGitCommand.mockResolvedValueOnce('120000 blob abc123\tpackages/app/pnpm-lock.yaml');
     execGitCommand.mockResolvedValueOnce('../../shared/pnpm-lock.yaml\n');
     execGitCommand.mockResolvedValueOnce('100644 blob def456\tshared/pnpm-lock.yaml');
-    execGitCommand.mockResolvedValueOnce('');
 
     await checkoutFile(ctx, 'abc123', 'packages/app/pnpm-lock.yaml', '/tmp/anywhere');
 
-    expect(execGitCommand).toHaveBeenNthCalledWith(
-      2,
-      ctx,
-      'git show "abc123:packages/app/pnpm-lock.yaml"'
-    );
+    expect(execGitCommand).toHaveBeenNthCalledWith(2, ctx, [
+      'git',
+      'show',
+      'abc123:packages/app/pnpm-lock.yaml',
+    ]);
     // The linked file's contents land at the symlink's own path, which is where callers look.
-    expect(execGitCommand).toHaveBeenLastCalledWith(
+    expect(execGitCommandToFile).toHaveBeenCalledWith(
       ctx,
-      'git show "abc123:shared/pnpm-lock.yaml" > "/tmp/anywhere/packages/app/pnpm-lock.yaml"'
+      ['git', 'show', 'abc123:shared/pnpm-lock.yaml'],
+      '/tmp/anywhere/packages/app/pnpm-lock.yaml'
     );
   });
 
@@ -518,7 +566,7 @@ describe('checkoutFile', () => {
   it('marks the error when the file is not at the reference, and otherwise fails as before', async () => {
     const cause = new Error("fatal: path 'packages/new/package.json' does not exist in 'abc123'");
     execGitCommand.mockResolvedValueOnce('');
-    execGitCommand.mockRejectedValueOnce(cause);
+    execGitCommandToFile.mockRejectedValueOnce(cause);
 
     await expect(
       checkoutFile(ctx, 'abc123', 'packages/new/package.json', '/tmp/anywhere')
@@ -528,9 +576,10 @@ describe('checkoutFile', () => {
         { fileMissing: true }
       )
     );
-    expect(execGitCommand).toHaveBeenLastCalledWith(
+    expect(execGitCommandToFile).toHaveBeenCalledWith(
       ctx,
-      'git show "abc123:packages/new/package.json" > "/tmp/anywhere/packages/new/package.json"'
+      ['git', 'show', 'abc123:packages/new/package.json'],
+      '/tmp/anywhere/packages/new/package.json'
     );
   });
 
@@ -542,7 +591,7 @@ describe('checkoutFile', () => {
         execGitCommand.mockResolvedValueOnce('120000 blob abc123\tpackages/ui/package.json');
         execGitCommand.mockResolvedValueOnce('../gone/package.json\n');
         execGitCommand.mockResolvedValueOnce('');
-        execGitCommand.mockRejectedValueOnce(new Error('git show failed'));
+        execGitCommandToFile.mockRejectedValueOnce(new Error('git show failed'));
       },
     ],
   ])('does not report a missing file when %s', async (_, mockGit) => {
@@ -556,7 +605,7 @@ describe('checkoutFile', () => {
   it('wraps a failing `git show` in BaselineCheckoutFailedError with cause', async () => {
     const cause = new Error('git show failed');
     execGitCommand.mockResolvedValueOnce('100644 blob abc123\tpackage.json');
-    execGitCommand.mockRejectedValueOnce(cause);
+    execGitCommandToFile.mockRejectedValueOnce(cause);
 
     let err;
     try {
@@ -586,7 +635,7 @@ describe('getStorybookCreationDate', () => {
     await getStorybookCreationDate(ctxWithConfig);
     expect(execGitCommandOneLine).toHaveBeenCalledWith(
       ctxWithConfig,
-      expect.stringMatching(/special-config-dir/),
+      expect.arrayContaining(['special-config-dir']),
       expect.anything()
     );
   });
@@ -595,7 +644,7 @@ describe('getStorybookCreationDate', () => {
     await getStorybookCreationDate({ ...ctx, options: {} });
     expect(execGitCommandOneLine).toHaveBeenCalledWith(
       { ...ctx, options: {} },
-      expect.stringMatching(/.storybook/),
+      expect.arrayContaining(['.storybook']),
       expect.anything()
     );
   });
@@ -620,7 +669,19 @@ describe('getCommittedFileCount', () => {
     await getCommittedFileCount(ctx, ['page', 'screen'], ['js', 'ts']);
     expect(execGitCommandCountLines).toHaveBeenCalledWith(
       ctx,
-      'git ls-files -- "*page*.js" "*page*.ts" "*Page*.js" "*Page*.ts" "*screen*.js" "*screen*.ts" "*Screen*.js" "*Screen*.ts"',
+      [
+        'git',
+        'ls-files',
+        '--',
+        '*page*.js',
+        '*page*.ts',
+        '*Page*.js',
+        '*Page*.ts',
+        '*screen*.js',
+        '*screen*.ts',
+        '*Screen*.js',
+        '*Screen*.ts',
+      ],
       expect.anything()
     );
   });
@@ -736,7 +797,13 @@ describe('getVisitedCommitDetails', () => {
     );
     await getVisitedCommitDetails(ctx, commits);
     const [, command, options] = execGitCommand.mock.calls[0];
-    expect(command).toBe('git log --no-walk=unsorted --stdin --format=%H%x00%P%x00%s%x00');
+    expect(command).toEqual([
+      'git',
+      'log',
+      '--no-walk=unsorted',
+      '--stdin',
+      '--format=%H%x00%P%x00%s%x00',
+    ]);
     expect(command).not.toContain(commits[0]);
     expect(options).toEqual({ input: commits.join('\n') });
   });

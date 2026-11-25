@@ -87,7 +87,7 @@ export const installArchiveDependencies = async (
   }
 
   const [cmd, ...args] = parseCommandString(installCommand);
-  await execa(cmd, args, { shell: true });
+  await execa(cmd, args);
 };
 
 const intializeChromatic = async ({

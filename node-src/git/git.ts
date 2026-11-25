@@ -21,6 +21,7 @@ import {
   execGitCommandCountLines,
   execGitCommandEntries,
   execGitCommandOneLine,
+  execGitCommandToFile,
   getGitTimeout,
   GitDeps,
 } from './execGit';
@@ -36,7 +37,7 @@ const newline = /\r\n|\r|\n/; // Git may return \n even on Windows, so we can't 
  * @returns The Git version.
  */
 export async function getVersion(deps: GitDeps) {
-  const result = await execGitCommand(deps, `git --version`);
+  const result = await execGitCommand(deps, ['git', '--version']);
   return result.replace('git version ', '').replace(/\s*\(.*\)/, '');
 }
 
@@ -48,7 +49,7 @@ export async function getVersion(deps: GitDeps) {
  * @returns The user's email.
  */
 export async function getUserEmail(deps: GitDeps) {
-  return execGitCommand(deps, `git config user.email`);
+  return execGitCommand(deps, ['git', 'config', 'user.email']);
 }
 
 /**
@@ -66,7 +67,7 @@ export async function getUserEmail(deps: GitDeps) {
  * @returns The slug of the remote URL.
  */
 export async function getSlug(deps: GitDeps) {
-  const result = await execGitCommand(deps, `git config --get remote.origin.url`);
+  const result = await execGitCommand(deps, ['git', 'config', '--get', 'remote.origin.url']);
   const downcasedResult = result?.toLowerCase().replace(/\/+$/, '') || '';
   const [, genericSlug] = downcasedResult.match(/([^/:]+\/[^/]+?)(\.git)?$/) || [];
   if (!/(dev\.azure\.com|visualstudio\.com)/.test(downcasedResult)) return genericSlug;
@@ -117,12 +118,8 @@ function safeDecode(value: string) {
  * @returns Commit details from Git.
  */
 export async function getCommit(deps: GitDeps, revision = '') {
-  // The revision can be a branch name from the environment (GITHUB_HEAD_REF), so pass it as its own
-  // argument rather than through a shell, and never as an option. `--end-of-options` would do the
-  // latter, but needs git 2.24.
-  if (revision.startsWith('-')) {
-    throw new Error(`Invalid revision '${revision}'`);
-  }
+  // The revision can be a branch name from the environment (GITHUB_HEAD_REF).
+  assertNotOption(revision);
   const result = await execGitCommand(deps, [
     'git',
     '--no-pager',
@@ -154,18 +151,18 @@ export async function getBranch(deps: GitDeps) {
   try {
     // Git v2.22 and above
     // Yields an empty string when in detached HEAD state
-    const branch = await execGitCommand(deps, 'git branch --show-current');
+    const branch = await execGitCommand(deps, ['git', 'branch', '--show-current']);
     return branch || 'HEAD';
   } catch {
     try {
       // Git v1.8 and above
       // Throws when in detached HEAD state
-      const reference = await execGitCommand(deps, 'git symbolic-ref HEAD');
+      const reference = await execGitCommand(deps, ['git', 'symbolic-ref', 'HEAD']);
       return reference.replace(/^refs\/heads\//, ''); // strip the "refs/heads/" prefix
     } catch {
       // Git v1.7 and above
       // Yields 'HEAD' when in detached HEAD state
-      const reference = await execGitCommand(deps, 'git rev-parse --abbrev-ref HEAD');
+      const reference = await execGitCommand(deps, ['git', 'rev-parse', '--abbrev-ref', 'HEAD']);
       return reference.replace(/^heads\//, ''); // strip the "heads/" prefix that's sometimes present
     }
   }
@@ -187,17 +184,28 @@ export async function getBranch(deps: GitDeps) {
 export async function getUncommittedHash(deps: GitDeps, ignoredFiles: (string | undefined)[] = []) {
   // Without `core.quotePath=false`, git quotes names with non-ASCII characters, which `stat` can't
   // find. Names with quotes, backslashes or control characters are still quoted and left out.
-  const listStagedFiles =
-    'git -c core.quotePath=false diff --name-only --no-relative --diff-filter=d --cached';
-  const listUnstagedFiles =
-    'git -c core.quotePath=false diff --name-only --no-relative --diff-filter=d';
-  const listUntrackedFiles =
-    'git -c core.quotePath=false ls-files --others --exclude-standard --full-name';
+  const listChangedFiles = [
+    'git',
+    '-c',
+    'core.quotePath=false',
+    'diff',
+    '--name-only',
+    '--no-relative',
+    '--diff-filter=d',
+  ] as const;
 
   const [stagedOutput, unstagedOutput, untrackedOutput, repositoryRoot] = await Promise.all([
-    execGitCommand(deps, listStagedFiles),
-    execGitCommand(deps, listUnstagedFiles),
-    execGitCommand(deps, listUntrackedFiles),
+    execGitCommand(deps, [...listChangedFiles, '--cached']),
+    execGitCommand(deps, listChangedFiles),
+    execGitCommand(deps, [
+      'git',
+      '-c',
+      'core.quotePath=false',
+      'ls-files',
+      '--others',
+      '--exclude-standard',
+      '--full-name',
+    ]),
     getRepositoryRoot(deps),
   ]);
 
@@ -240,11 +248,11 @@ export async function getUncommittedHash(deps: GitDeps, ignoredFiles: (string | 
   // Pass the combined list of filenames to hash-object to retrieve a list of hashes. Then pass
   // the list of hashes to hash-object again to retrieve a single hash of all hashes. We use
   // stdin to avoid the limit on command line arguments.
-  const fileHashes = await execGitCommand(deps, 'git hash-object --stdin-paths', {
+  const fileHashes = await execGitCommand(deps, ['git', 'hash-object', '--stdin-paths'], {
     input: files,
   });
 
-  const uncommittedHashWithPadding = await execGitCommand(deps, 'git hash-object --stdin', {
+  const uncommittedHashWithPadding = await execGitCommand(deps, ['git', 'hash-object', '--stdin'], {
     input: fileHashes,
   });
   const uncommittedHash = uncommittedHashWithPadding.trim();
@@ -262,7 +270,15 @@ export async function getUncommittedHash(deps: GitDeps, ignoredFiles: (string | 
  * @returns True if the current commit has at least one parent.
  */
 export async function hasPreviousCommit(deps: GitDeps) {
-  const result = await execGitCommand(deps, `git --no-pager log -n 1 --skip=1 --format="%H"`);
+  const result = await execGitCommand(deps, [
+    'git',
+    '--no-pager',
+    'log',
+    '-n',
+    '1',
+    '--skip=1',
+    '--format=%H',
+  ]);
 
   // Ignore lines that don't match the expected format (e.g. gpg signature info)
   const allhex = new RegExp('^[a-f0-9]+$');
@@ -270,16 +286,42 @@ export async function hasPreviousCommit(deps: GitDeps) {
 }
 
 /**
+ * Reject a value from outside the CLI, such as a branch name, that git would read as an option
+ * (`--output=<file>`) rather than a revision. `--end-of-options` would do the same, but needs git
+ * 2.24.
+ *
+ * @param revision The revision to check.
+ */
+function assertNotOption(revision: string) {
+  if (revision.startsWith('-')) {
+    throw new Error(`Invalid revision '${revision}'`);
+  }
+}
+
+/**
+ * Whether a value is a commit SHA, full or abbreviated. Commits read back from the index are only
+ * passed to git when they are.
+ *
+ * @param commit The value to check.
+ *
+ * @returns True if the value is a hexadecimal SHA.
+ */
+export function isCommitSha(commit: string) {
+  return /^[\da-f]+$/i.test(commit);
+}
+
+/**
  * Check if a commit exists in the repository
  *
  * @param deps Function dependencies.
- * @param commit The commit to check.
+ * @param commit The commit to check. Anything other than a SHA doesn't exist.
  *
  * @returns True if the commit exists.
  */
 export async function commitExists(deps: GitDeps, commit: string) {
+  if (!isCommitSha(commit)) return false;
   try {
-    await execGitCommand(deps, `git cat-file -e "${commit}^{commit}"`);
+    await execGitCommand(deps, ['git', 'cat-file', '-e', `${commit}^{commit}`]);
     return true;
   } catch {
     return false;
@@ -316,7 +358,7 @@ export async function commitsExist(deps: GitDeps, commits: string[]): Promise<Se
 
   let result: string;
   try {
-    result = await execGitCommand(deps, 'git cat-file --batch-check', {
+    result = await execGitCommand(deps, ['git', 'cat-file', '--batch-check'], {
       input: commits.map((commit) => `${commit}^{commit}`).join('\n'),
     });
   } catch (error) {
@@ -345,12 +387,22 @@ export async function commitsExist(deps: GitDeps, commits: string[]): Promise<Se
  * unstaged) changes to tracked files. Untracked files are not listed.
  *
  * @param deps Function dependencies.
- * @param baseCommit The base commit to check.
+ * @param baseCommit The base commit to check. Anything other than a SHA is missing.
  *
  * @returns The list of files changed since the base commit.
  */
 export async function getChangedFiles(deps: GitDeps, baseCommit: string) {
-  const command = `git --no-pager diff --name-only --no-relative ${baseCommit}`;
+  if (!isCommitSha(baseCommit)) {
+    throw new AncestorMissingError(baseCommit);
+  }
+  const command = [
+    'git',
+    '--no-pager',
+    'diff',
+    '--name-only',
+    '--no-relative',
+    baseCommit,
+  ] as const;
   try {
     const files = await execGitCommand(deps, command);
     return files.split(newline).filter(Boolean);
@@ -358,7 +410,7 @@ export async function getChangedFiles(deps: GitDeps, baseCommit: string) {
     if (/bad object/.test(error.message)) {
       throw new AncestorMissingError(baseCommit, { cause: error });
     }
-    throw new GitCommandError(command, { cause: error });
+    throw new GitCommandError(command.join(' '), { cause: error });
   }
 }
 
@@ -374,7 +426,7 @@ export async function isUpToDate(deps: GitDeps) {
   const { log } = deps;
 
   try {
-    await execGitCommand(deps, `git remote update`);
+    await execGitCommand(deps, ['git', 'remote', 'update']);
   } catch (err) {
     log.warn(err);
     return true;
@@ -382,7 +434,7 @@ export async function isUpToDate(deps: GitDeps) {
 
   let localCommit;
   try {
-    localCommit = await execGitCommand(deps, 'git rev-parse HEAD');
+    localCommit = await execGitCommand(deps, ['git', 'rev-parse', 'HEAD']);
     if (!localCommit) throw new Error('Failed to retrieve last local commit hash');
   } catch (err) {
     log.warn(err);
@@ -391,7 +443,7 @@ export async function isUpToDate(deps: GitDeps) {
 
   let remoteCommit;
   try {
-    remoteCommit = await execGitCommand(deps, 'git rev-parse "@{upstream}"');
+    remoteCommit = await execGitCommand(deps, ['git', 'rev-parse', '@{upstream}']);
     if (!remoteCommit) throw new Error('Failed to retrieve last remote commit hash');
   } catch (err) {
     log.warn(err);
@@ -409,7 +461,7 @@ export async function isUpToDate(deps: GitDeps) {
  * @returns True if the workspace has no changes.
  */
 export async function isClean(deps: GitDeps) {
-  const status = await execGitCommand(deps, 'git status --porcelain');
+  const status = await execGitCommand(deps, ['git', 'status', '--porcelain']);
   return status === '';
 }
 
@@ -422,7 +474,7 @@ export async function isClean(deps: GitDeps) {
  * @returns A message indicating how far behind the branch is from the remote.
  */
 export async function getUpdateMessage(deps: GitDeps) {
-  const status = await execGitCommand(deps, 'git status');
+  const status = await execGitCommand(deps, ['git', 'status']);
   return status
     .split(/(\r\n|\r|\n){2}/)[0] // drop the 'nothing to commit' part
     .split(newline)
@@ -465,10 +517,16 @@ export async function getUpdateMessage(deps: GitDeps) {
  * @returns The best common ancestor commit between the two provided.
  */
 export async function findMergeBase(deps: GitDeps, headReference: string, baseReference: string) {
-  const result = await execGitCommand(
-    deps,
-    `git merge-base --all ${headReference} ${baseReference}`
-  );
+  // Both come from `--patch-build`.
+  assertNotOption(headReference);
+  assertNotOption(baseReference);
+  const result = await execGitCommand(deps, [
+    'git',
+    'merge-base',
+    '--all',
+    headReference,
+    baseReference,
+  ]);
   const mergeBases = result.split(newline).filter((line) => line && !line.startsWith('warning: '));
   if (mergeBases.length === 0) return undefined;
   if (mergeBases.length === 1) return mergeBases[0];
@@ -477,10 +535,14 @@ export async function findMergeBase(deps: GitDeps, headReference: string, baseRe
   // If we don't find a merge base on the base branch, just return the first one.
   const branchNames = await Promise.all(
     mergeBases.map(async (sha) => {
-      const name = await execGitCommand(
-        deps,
-        `git name-rev --name-only --no-relative --exclude="tags/*" ${sha}`
-      );
+      const name = await execGitCommand(deps, [
+        'git',
+        'name-rev',
+        '--name-only',
+        '--no-relative',
+        '--exclude=tags/*',
+        sha,
+      ]);
       return name.replace(/~\d+$/, ''); // Drop the potential suffix
     })
   );
@@ -496,7 +558,7 @@ export async function findMergeBase(deps: GitDeps, headReference: string, baseRe
  * @returns The result of the Git checkout call in the terminal.
  */
 export async function checkout(deps: GitDeps, reference: string) {
-  return execGitCommand(deps, `git checkout ${reference}`);
+  return execGitCommand(deps, ['git', 'checkout', reference]);
 }
 
 const limitConcurrency = pLimit(10);
@@ -530,9 +592,10 @@ export async function checkoutFile(
       const resolvedFileName = await resolveSymlinkAtReference(deps, reference, fileName);
       fileMissing = resolvedFileName === undefined;
       // A missing file still goes through `git show`, so the error it fails with is unchanged.
-      await execGitCommand(
+      await execGitCommandToFile(
         deps,
-        `git show "${reference}:${resolvedFileName ?? fileName}" > "${targetFileName}"`
+        ['git', 'show', `${reference}:${resolvedFileName ?? fileName}`],
+        targetFileName
       );
     } catch (error) {
       throw new BaselineCheckoutFailedError(pathspec, { cause: error, fileMissing });
@@ -548,7 +611,7 @@ export async function checkoutFile(
  * @returns The result of the `git checkout` command in the terminal.
  */
 export async function checkoutPrevious(deps: GitDeps) {
-  return execGitCommand(deps, `git checkout -`);
+  return execGitCommand(deps, ['git', 'checkout', '-']);
 }
 
 /**
@@ -559,7 +622,7 @@ export async function checkoutPrevious(deps: GitDeps) {
  * @returns The result of the `git reset` command in the terminal.
  */
 export async function discardChanges(deps: GitDeps) {
-  return execGitCommand(deps, `git reset --hard`);
+  return execGitCommand(deps, ['git', 'reset', '--hard']);
 }
 
 /**
@@ -570,7 +633,7 @@ export async function discardChanges(deps: GitDeps) {
  * @returns The root directory of the Git repository.
  */
 export async function getRepositoryRoot(deps: GitDeps) {
-  return execGitCommand(deps, `git rev-parse --show-toplevel`);
+  return execGitCommand(deps, ['git', 'rev-parse', '--show-toplevel']);
 }
 
 /**
@@ -596,8 +659,13 @@ export async function findFilesFromRepositoryRoot(
 
   // Uses `--full-name` to ensure that all files found are relative to the repository root,
   // not the directory in which this is executed from
-  const gitCommand = `git ls-files --full-name -z ${patternsFromRoot.map((p) => `"${p}"`).join(' ')}`;
-  const files = await execGitCommand(deps, gitCommand);
+  const files = await execGitCommand(deps, [
+    'git',
+    'ls-files',
+    '--full-name',
+    '-z',
+    ...patternsFromRoot,
+  ]);
   return files.split(NULL_BYTE).filter(Boolean);
 }
 
@@ -627,19 +695,22 @@ export function trackedFiles(
   globs: string[] = []
 ): AsyncIterable<string> {
   const prefixes = new Set(globs.filter(Boolean).map((glob) => literalGlobPrefix(glob)));
-  const pathspecs = [...prefixes].join(' ');
-  // Prefixes contain only literal path components without spaces. Keep the original listing if
-  // any pattern needs the whole tree or the argument list would be too long on some platforms.
-  if (pathspecs && !prefixes.has('') && pathspecs.length <= 4096) {
-    return execGitCommandEntries(deps, `git ls-files --full-name -z -- ${pathspecs}`, {
-      cwd: repoRoot,
-      shell: false,
-    });
+  const pathspecs = [...prefixes];
+  // Keep the original listing if any pattern needs the whole tree or the argument list would be too
+  // long on some platforms.
+  if (pathspecs.length > 0 && !prefixes.has('') && pathspecs.join(' ').length <= 4096) {
+    return execGitCommandEntries(
+      deps,
+      ['git', 'ls-files', '--full-name', '-z', '--', ...pathspecs],
+      {
+        cwd: repoRoot,
+      }
+    );
   }
 
   // Run from the root because git lists only the current directory's subtree, and the CLI may run
   // from a subdirectory.
-  return execGitCommandEntries(deps, 'git ls-files --full-name -z', { cwd: repoRoot });
+  return execGitCommandEntries(deps, ['git', 'ls-files', '--full-name', '-z'], { cwd: repoRoot });
 }
 
 /**
@@ -669,7 +740,7 @@ export async function getRepositoryCreationDate(deps: GitDeps) {
   try {
     const dateString = await execGitCommandOneLine(
       deps,
-      `git log --reverse --format=%cd --date=iso`,
+      ['git', 'log', '--reverse', '--format=%cd', '--date=iso'],
       {
         timeout: getMetadataGitTimeout(deps),
       }
@@ -700,7 +771,7 @@ export async function getStorybookCreationDate(
     const configDirectory = deps.options.storybookConfigDir ?? '.storybook';
     const dateString = await execGitCommandOneLine(
       deps,
-      `git log --follow --reverse --format=%cd --date=iso -- ${configDirectory}`,
+      ['git', 'log', '--follow', '--reverse', '--format=%cd', '--date=iso', '--', configDirectory],
       {
         timeout: getMetadataGitTimeout(deps),
       }
@@ -723,9 +794,13 @@ export async function getStorybookCreationDate(
  */
 export async function getNumberOfCommitters(deps: GitDeps) {
   try {
-    return await execGitCommandCountLines(deps, `git shortlog -sn --all --since="6 months ago"`, {
-      timeout: getMetadataGitTimeout(deps),
-    });
+    return await execGitCommandCountLines(
+      deps,
+      ['git', 'shortlog', '-sn', '--all', '--since=6 months ago'],
+      {
+        timeout: getMetadataGitTimeout(deps),
+      }
+    );
   } catch {
     return undefined;
   }
@@ -755,9 +830,9 @@ export async function getCommittedFileCount(
     ]);
 
     const globs = bothCasesNameMatches.flatMap((match) =>
-      extensions.map((extension) => `"*${match}*.${extension}"`)
+      extensions.map((extension) => `*${match}*.${extension}`)
     );
-    return await execGitCommandCountLines(deps, `git ls-files -- ${globs.join(' ')}`, {
+    return await execGitCommandCountLines(deps, ['git', 'ls-files', '--', ...globs], {
       timeout: getMetadataGitTimeout(deps),
     });
   } catch {
@@ -776,7 +851,7 @@ export async function getCommittedFileCount(
  * @returns `'shallow'` if the repository has truncated history, `'full'` otherwise.
  */
 export async function getCloneDepth(deps: GitDeps): Promise<CloneDepth> {
-  const result = await execGitCommandOneLine(deps, `git rev-parse --is-shallow-repository`);
+  const result = await execGitCommandOneLine(deps, ['git', 'rev-parse', '--is-shallow-repository']);
   return result.trim() === 'true' ? 'shallow' : 'full';
 }
 
@@ -793,7 +868,12 @@ export async function getCloneDepth(deps: GitDeps): Promise<CloneDepth> {
  * @returns A list of commit SHAs at the shallow boundary, or `[]` for a non-shallow repository.
  */
 export async function getShallowBoundaryCommits(deps: GitDeps): Promise<string[]> {
-  const shallowFilePath = await execGitCommandOneLine(deps, `git rev-parse --git-path shallow`);
+  const shallowFilePath = await execGitCommandOneLine(deps, [
+    'git',
+    'rev-parse',
+    '--git-path',
+    'shallow',
+  ]);
   // Security check: ensure the shallow file path looks right before reading it
   if (!/\.git[/\\]shallow$/.test(shallowFilePath.trim())) {
     throw new Error(`Unexpected shallow file path: ${shallowFilePath}`);
@@ -836,7 +916,7 @@ export async function getVisitedCommitDetails(
   try {
     result = await execGitCommand(
       deps,
-      'git log --no-walk=unsorted --stdin --format=%H%x00%P%x00%s%x00',
+      ['git', 'log', '--no-walk=unsorted', '--stdin', '--format=%H%x00%P%x00%s%x00'],
       { input: commits.join('\n') }
     );
   } catch (error) {
@@ -877,10 +957,11 @@ export async function getVisitedCommitDetails(
  */
 export async function getCloneFilter(deps: GitDeps): Promise<CloneFilter> {
   // git config exits non-zero when the key is absent, which is the normal case for a full clone.
-  const result = await execGitCommandOneLine(
-    deps,
-    `git config remote.origin.partialclonefilter`
-  ).catch(() => '');
+  const result = await execGitCommandOneLine(deps, [
+    'git',
+    'config',
+    'remote.origin.partialclonefilter',
+  ]).catch(() => '');
   if (result.trim() === 'blob:none') return 'blobless';
   if (result.trim() === 'tree:0') return 'treeless';
   return 'full';

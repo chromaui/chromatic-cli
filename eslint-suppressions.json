@@ -21,7 +21,7 @@
   },
   "node-src/git/getParentCommits.ts": {
     "@typescript-eslint/no-unnecessary-condition": {
-      "count": 5
+      "count": 4
     }
   },
   "node-src/git/git.ts": {

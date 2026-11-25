@@ -27,10 +27,16 @@ describe('getChangedFilesWithStatus', () => {
       { status: 'modified', path: 'src/index.ts' },
       { status: 'deleted', path: 'old.ts' },
     ]);
-    expect(execGitCommand).toHaveBeenCalledWith(
-      ctx,
-      'git --no-pager diff --name-status --no-relative --find-renames=20% abc123 HEAD'
-    );
+    expect(execGitCommand).toHaveBeenCalledWith(ctx, [
+      'git',
+      '--no-pager',
+      'diff',
+      '--name-status',
+      '--no-relative',
+      '--find-renames=20%',
+      'abc123',
+      'HEAD',
+    ]);
   });
 
   it('parses a rename row into a renamed status carrying both paths', async () => {
@@ -59,14 +65,22 @@ describe('getChangedFilesWithStatus', () => {
     expect(result).toEqual([]);
   });
 
-  it('appends a quoted pathspec when one is provided', async () => {
+  it('appends the pathspec when one is provided', async () => {
     execGitCommand.mockResolvedValue('');
 
     await getChangedFilesWithStatus(ctx, 'abc123', 'HEAD', ':(glob,top)**/pnpm-lock.yaml');
 
-    expect(execGitCommand).toHaveBeenCalledWith(
-      ctx,
-      'git --no-pager diff --name-status --no-relative --find-renames=20% abc123 HEAD -- ":(glob,top)**/pnpm-lock.yaml"'
-    );
+    expect(execGitCommand).toHaveBeenCalledWith(ctx, [
+      'git',
+      '--no-pager',
+      'diff',
+      '--name-status',
+      '--no-relative',
+      '--find-renames=20%',
+      'abc123',
+      'HEAD',
+      '--',
+      ':(glob,top)**/pnpm-lock.yaml',
+    ]);
   });
 });

@@ -99,7 +99,7 @@ describe('installArchiveDependencies', () => {
     const [cmd, ...args] = parseCommandString(installCommand);
 
     expect(execa).toHaveBeenCalledOnce();
-    expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
+    expect(execa).toHaveBeenCalledWith(cmd, args);
   });
 
   it('successfully installs list of dependencies for Cypress if SB package is not found and Essentials is not found', async () => {
@@ -110,7 +110,7 @@ describe('installArchiveDependencies', () => {
     const [cmd, ...args] = parseCommandString(installCommand);
 
     expect(execa).toHaveBeenCalledOnce();
-    expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
+    expect(execa).toHaveBeenCalledWith(cmd, args);
   });
 
   it('successfully installs list of dependencies for Vitest if SB package is not found and Essentials is not found', async () => {
@@ -121,7 +121,7 @@ describe('installArchiveDependencies', () => {
     const [cmd, ...args] = parseCommandString(installCommand);
 
     expect(execa).toHaveBeenCalledOnce();
-    expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
+    expect(execa).toHaveBeenCalledWith(cmd, args);
   });
 
   it('successfully installs list of dependencies if SB package is found and Essentials is not found', async () => {
@@ -136,7 +136,7 @@ describe('installArchiveDependencies', () => {
     const [cmd, ...args] = parseCommandString(installCommand);
 
     expect(execa).toHaveBeenCalledOnce();
-    expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
+    expect(execa).toHaveBeenCalledWith(cmd, args);
   });
 
   it('successfully installs list of dependencies if SB package is found and Essentials is found in devDependencies', async () => {
@@ -153,7 +153,7 @@ describe('installArchiveDependencies', () => {
     const [cmd, ...args] = parseCommandString(installCommand);
 
     expect(execa).toHaveBeenCalledOnce();
-    expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
+    expect(execa).toHaveBeenCalledWith(cmd, args);
   });
 
   it('successfully installs list of dependencies if SB package is found and Essentials is found in dependencies', async () => {
@@ -170,7 +170,7 @@ describe('installArchiveDependencies', () => {
     const [cmd, ...args] = parseCommandString(installCommand);
 
     expect(execa).toHaveBeenCalledOnce();
-    expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
+    expect(execa).toHaveBeenCalledWith(cmd, args);
   });
 
   it('successfully installs list of dependencies if SB package is not found and Essentials is found in dependencies', async () => {
@@ -185,6 +185,6 @@ describe('installArchiveDependencies', () => {
     const [cmd, ...args] = parseCommandString(installCommand);
 
     expect(execa).toHaveBeenCalledOnce();
-    expect(execa).toHaveBeenCalledWith(cmd, args, { shell: true });
+    expect(execa).toHaveBeenCalledWith(cmd, args);
   });
 });

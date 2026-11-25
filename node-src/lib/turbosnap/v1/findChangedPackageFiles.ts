@@ -61,7 +61,7 @@ const readGitFile = async (
 ) => {
   const key = `${commit}:${fileName}`;
   if (fileCache.has(key)) return fileCache.get(key);
-  const contents = await execGitCommand(ctx, `git show ${key}`);
+  const contents = await execGitCommand(ctx, ['git', 'show', key]);
   if (contents) fileCache.set(key, contents);
   return contents;
 };

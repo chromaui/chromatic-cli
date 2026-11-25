@@ -837,11 +837,12 @@ describe('getParentCommits', () => {
       //  [A]- C -<(D)> [main]
       const repository = repositories.twoRoots;
       await checkoutCommit('D', 'main', repository);
+      const missingHash = 'f00dfeed'.repeat(5);
       const client = createClient({
         repository,
         builds: [
           ['A', 'main'],
-          ['MISSING', 'branch'],
+          [missingHash, 'branch'],
         ],
         // Talking to GH (etc) tells us that commit D is the merge commit for "branch" (which no longer exists)
         prs: [['D', 'branch']],
@@ -852,7 +853,28 @@ describe('getParentCommits', () => {
         { client, log, options } as any,
         withGit(git)
       );
-      expectCommitsToEqualNames(parentCommits, ['MISSING', 'A'], repository);
+      expectCommitsToEqualNames(parentCommits, [missingHash, 'A'], repository);
+    });
+
+    it(`ignores a build commit from the index that is not a SHA`, async () => {
+      // As above, but the index returns a commit that git could read as shell syntax or an option.
+      const repository = repositories.twoRoots;
+      await checkoutCommit('D', 'main', repository);
+      const client = createClient({
+        repository,
+        builds: [
+          ['A', 'main'],
+          ['$(exit 1)--output=x', 'branch'],
+        ],
+        prs: [['D', 'branch']],
+      });
+      const git = { branch: 'main', ...(await getCommit(ctx)) };
+
+      const { ancestorCommits: parentCommits } = await getParentCommits(
+        { client, log, options } as any,
+        withGit(git)
+      );
+      expectCommitsToEqualNames(parentCommits, ['A'], repository);
     });
 
     // We could support this situation via recursing and doing a second (etc) check for squash merge commits,
@@ -1026,7 +1048,7 @@ describe('getParentCommits with unusual git output', () => {
     const { execGitCommand } = execGit;
     vi.spyOn(execGit, 'execGitCommand').mockImplementation(async (deps, command, options) => {
       const output = await execGitCommand(deps, command, options);
-      return String(command).startsWith('git rev-list') ? `warning: something\n${output}` : output;
+      return command[1] === 'rev-list' ? `warning: something\n${output}` : output;
     });
     const client = createClient({ repository, builds: [['B', 'main']] });
     const git = { branch: 'main', ...(await getCommit(ctx)) };

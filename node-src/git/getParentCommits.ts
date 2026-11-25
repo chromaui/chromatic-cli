@@ -3,7 +3,7 @@ import gql from 'fake-tag';
 import { localBuildsSpecifier } from '../lib/localBuildsSpecifier';
 import { Deps, Git, VisitedCommit } from '../types';
 import { execGitCommand, GitDeps } from './execGit';
-import { commitExists, commitsExist, getVisitedCommitDetails } from './git';
+import { commitExists, commitsExist, getVisitedCommitDetails, isCommitSha } from './git';
 
 const FETCH_N_INITIAL_BUILD_COMMITS = 20;
 
@@ -70,10 +70,6 @@ export interface MergeCommitsQueryResult {
   };
 }
 
-function commitsForCLI(commits: string[]) {
-  return commits.map((c) => c.trim()).join(' ');
-}
-
 // `git rev-list` prints one full SHA-1 or SHA-256 per line. Keep only those, so nothing else that
 // reaches its output, such as a warning, is ever sent to the index as a commit.
 const FULL_SHA = /^(?:[\da-f]{40}|[\da-f]{64})$/;
@@ -113,10 +109,18 @@ async function nextCommits(
   // We want the next limit commits that aren't "covered" by `commitsWithBuilds`
   // This will print out all commits in `commitsWithoutBuilds` (except if they are covered),
   // so we ask enough that we'll definitely get `limit` unknown commits
-  const command = `git rev-list HEAD \
-      ${firstCommittedAtSeconds ? `--since ${firstCommittedAtSeconds}` : ''} \
-      -n ${limit + commitsWithoutBuilds.length} --not ${commitsForCLI(commitsWithBuilds)}`;
-  const commits = parseCommits(await execGitCommand(deps, command));
+  const commits = parseCommits(
+    await execGitCommand(deps, [
+      'git',
+      'rev-list',
+      'HEAD',
+      ...(firstCommittedAtSeconds ? ['--since', String(firstCommittedAtSeconds)] : []),
+      '-n',
+      String(limit + commitsWithoutBuilds.length),
+      '--not',
+      ...commitsWithBuilds,
+    ])
+  );
 
   // Later on we want to know which commits we visited on the way to finding the ancestor commits
   // The output of the above rev-list commit includes possibly commits with builds so filter them.
@@ -180,11 +184,12 @@ async function step(
   }
 
   const {
-    app: { hasBuildsWithCommits: newCommitsWithBuilds },
+    app: { hasBuildsWithCommits },
   } = await client.runQuery<HasBuildsWithCommitsQueryResult>(HasBuildsWithCommitsQuery, {
     commits: candidateCommits,
     localBuilds: localBuildsSpecifier({ options }, git),
   });
+  const newCommitsWithBuilds = hasBuildsWithCommits.filter((commit) => isCommitSha(commit));
   log.debug(`step: newCommitsWithBuilds: ${newCommitsWithBuilds}`);
 
   const newCommitsWithoutBuilds = candidateCommits.filter(
@@ -206,11 +211,12 @@ async function maximallyDescendentCommits(deps: GitDeps, commits: string[]) {
   }
 
   // <commit>^@ expands to all parents of commit
-  const parentCommits = commits.map((c) => `"${c}^@"`);
+  const parentCommits = commits.map((c) => `${c}^@`);
   // List the tree from <commits> not including the tree from <parentCommits>
   // This just filters any commits that are ancestors of other commits
-  const command = `git rev-list ${commitsForCLI(commits)} --not ${commitsForCLI(parentCommits)}`;
-  return parseCommits(await execGitCommand(deps, command));
+  return parseCommits(
+    await execGitCommand(deps, ['git', 'rev-list', ...commits, '--not', ...parentCommits])
+  );
 }
 
 /**
@@ -243,8 +249,10 @@ export async function getParentCommits(
     { branch, localBuilds: localBuildsSpecifier({ options }, git) },
     { retries: 5 } // This query requires a request to an upstream provider which may fail
   );
-  const { firstBuild, lastBuild } = app;
-  log.debug(`App firstBuild: %o, lastBuild: %o`, firstBuild, lastBuild);
+  const { firstBuild } = app;
+  // Commits read back from the index are passed to git, so ignore any that isn't a SHA.
+  const lastBuild = app.lastBuild && isCommitSha(app.lastBuild.commit) ? app.lastBuild : undefined;
+  log.debug(`App firstBuild: %o, lastBuild: %o`, firstBuild, app.lastBuild);
 
   if (!firstBuild) {
     log.debug('App has no builds, returning []');
@@ -309,14 +317,18 @@ export async function getParentCommits(
   // Track which visited commits the platform index identified as PR merge points.
   const mergePointCommits = new Set<string>();
   const existingHeadBuildCommits = await commitsExist(deps, [
-    ...new Set(mergedPullRequests.flatMap((pr) => pr.lastHeadBuild?.commit ?? [])),
+    ...new Set(
+      mergedPullRequests.flatMap((pr) =>
+        pr.lastHeadBuild && isCommitSha(pr.lastHeadBuild.commit) ? [pr.lastHeadBuild.commit] : []
+      )
+    ),
   ]);
   for (const pullRequest of mergedPullRequests) {
     // Add the most recent build on a (merged) branch as an ancestor if we visit a commit
     // during our ancestor selection that was the merge commit for that PR.
     // @see https://www.chromatic.com/docs/branching-and-baselines#squash-and-rebase-merging
     const lastHeadBuildCommit = pullRequest.lastHeadBuild?.commit;
-    if (lastHeadBuildCommit) {
+    if (lastHeadBuildCommit && isCommitSha(lastHeadBuildCommit)) {
       if (existingHeadBuildCommits.has(lastHeadBuildCommit)) {
         log.debug(`Adding merged PR build commit ${lastHeadBuildCommit} to commits with builds`);
         commitsWithBuilds.push(lastHeadBuildCommit);

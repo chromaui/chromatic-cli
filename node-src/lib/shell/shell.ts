@@ -16,7 +16,7 @@ import { treeKill } from './treeKill';
  * @returns An execa `ResultPromise` with .kill() and timeout overwritten.
  */
 export function runCommand(
-  command: string | [string, ...string[]],
+  command: string | readonly [string, ...string[]],
   options: Options = {}
 ): ResultPromise {
   const { timeout, ...optionsWithoutTimeout } = options;

@@ -44,11 +44,17 @@ export async function getChangedFilesWithStatus(
   headCommit = '',
   pathspec = ''
 ): Promise<ChangedFileWithStatus[]> {
-  const pathspecArgument = pathspec ? ` -- "${pathspec}"` : '';
-  const output = await execGitCommand(
-    deps,
-    `git --no-pager diff --name-status --no-relative --find-renames=20% ${baseCommit} ${headCommit}${pathspecArgument}`
-  );
+  const output = await execGitCommand(deps, [
+    'git',
+    '--no-pager',
+    'diff',
+    '--name-status',
+    '--no-relative',
+    '--find-renames=20%',
+    baseCommit,
+    ...(headCommit ? [headCommit] : []),
+    ...(pathspec ? ['--', pathspec] : []),
+  ]);
 
   return output
     .split(newline)
