@@ -2,6 +2,9 @@ import * as Sentry from '@sentry/node';
 import { ExecaError, parseCommandString } from 'execa';
 import stripAnsi from 'strip-ansi';
 
+import { getRedactedSecrets } from './lib/log';
+import { scrubSecrets } from './lib/utilities';
+
 /**
  * Groups a failed git command by its subcommand and how it failed, rather than by its message.
  * The message holds the full command line and exit code or signal, so Sentry would otherwise open a
@@ -33,7 +36,8 @@ function gitCommandFingerprint(error: unknown): string[] | undefined {
 }
 
 /**
- * Remove ANSI escape codes from Sentry ErrorEvents, and group failed git commands by subcommand.
+ * Remove ANSI escape codes from Sentry ErrorEvents, group failed git commands by subcommand, and
+ * redact the logger's secrets.
  *
  * @param event An event containing a captured exception.
  * @param hint The event hint, which holds the original exception.
@@ -55,7 +59,12 @@ function filterErrorEvent(event: Sentry.ErrorEvent, hint: Sentry.EventHint) {
       }
     }
   }
-  return event;
+  // The CLI prints tokens, such as in "Invalid --project-token", and every printed line becomes a
+  // breadcrumb on later events. Users sometimes pass other credentials as tokens, so redact them
+  // in every string value of the event. Leave out `sdkProcessingMetadata`: it holds Sentry's own
+  // scope objects, which have circular references, and the SDK sends only its sampling context.
+  const { sdkProcessingMetadata, ...sent } = event;
+  return Object.assign(event, scrubSecrets(sent, getRedactedSecrets()));
 }
 
 /**
