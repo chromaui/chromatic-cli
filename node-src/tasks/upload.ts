@@ -1,5 +1,6 @@
 import path from 'path';
 
+import { TaskFailure } from '../lib/setExitCode';
 import { uploadBuild, UploadBuildContext, UploadBuildResult } from '../lib/upload';
 import { throttle } from '../lib/utilities';
 import { waitForSentinel } from '../lib/waitForSentinel';
@@ -121,7 +122,9 @@ export async function uploadProject(
   let output: UploadOutput;
   try {
     output = await uploadAndWaitForSentinels(deps, input, buildFileList(deps, input, true));
-  } catch {
+  } catch (err) {
+    // The index rejected the files themselves, so uploading them again without hashes won't help.
+    if (err instanceof TaskFailure) throw err;
     deps.log.warn(deduplicationFailed());
     // Retry without file deduplication. uploadBuild returns fresh tallies, so the failed attempt's
     // results are discarded simply by running again.

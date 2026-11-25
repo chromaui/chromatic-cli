@@ -5,6 +5,7 @@ import { maxFileCountExceeded } from '../ui/messages/errors/maxFileCountExceeded
 import { maxFileSizeExceeded } from '../ui/messages/errors/maxFileSizeExceeded';
 import { uploadFailed } from '../ui/messages/errors/uploadFailed';
 import makeZipFile from './compress';
+import { exitCodes, TaskFailure } from './setExitCode';
 import { uploadFiles } from './uploadFiles';
 import { uploadZip } from './uploadZip';
 
@@ -243,7 +244,7 @@ export interface UploadBuildContext extends Pick<
  * @param files The list of files to upload.
  * @param options A collection of callbacks for each stage of the upload.
  * @param options.onProgress A callback to track progress of the upload.
- * @param options.onError A callback for when the build upload errors.
+ * @param options.onError A callback for when uploading the files fails.
  *
  * @returns The upload tallies.
  */
@@ -313,8 +314,11 @@ export async function uploadBuild(
           ctx.log.error(err.message);
         }
       }
-      options.onError?.(new Error('Upload rejected due to user error'));
-      return { sentinelUrls, uploadedBytes, uploadedFiles };
+      // The messages above explain the rejection, so this skips the fatal error block.
+      throw new TaskFailure('Upload rejected due to user error', {
+        exitCode: exitCodes.UNKNOWN_ERROR,
+        userError: true,
+      });
     }
 
     // The index service may decide this build can be skipped (e.g. TurboSnap determined no story
