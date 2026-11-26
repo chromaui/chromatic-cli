@@ -9,7 +9,7 @@ import { getPackageManagerName } from '../../node-src/lib/getPackageManager';
 import type { Check } from './checks';
 import { git, readJson } from './shared';
 
-type PackageManager = 'npm' | 'pnpm' | 'yarn' | 'yarn-classic';
+export type PackageManager = 'npm' | 'pnpm' | 'yarn' | 'yarn-classic';
 
 // Lockfiles at the repository root, so a run from inside a workspace package finds the same answer.
 const ROOT_LOCKFILES: [string, string][] = [
@@ -40,7 +40,7 @@ function yarnFlavor(name: string, gitRoot: string): PackageManager {
  *
  * @returns The package manager, npm when nothing says otherwise.
  */
-async function detectPackageManager(gitRoot: string): Promise<PackageManager> {
+export async function detectPackageManager(gitRoot: string): Promise<PackageManager> {
   const declared = readJson(path.join(gitRoot, 'package.json'))?.packageManager as
     | string
     | undefined;
@@ -65,7 +65,7 @@ const INSTALL_MUTABLE: Partial<Record<PackageManager, string[]>> = {
  *
  * @returns The command and its arguments.
  */
-function installCommand(packageManager: PackageManager) {
+export function installCommand(packageManager: PackageManager) {
   const command = packageManager === 'yarn-classic' ? 'yarn' : packageManager;
   return { command, args: ['install', ...(INSTALL_MUTABLE[packageManager] ?? [])] };
 }
@@ -382,7 +382,7 @@ const RELEASE_AGE_ERRORS = [
  *
  * @returns The check's title and detail, or undefined when something else failed.
  */
-function releaseAgeFailure(output: string, shown: string) {
+export function releaseAgeFailure(output: string, shown: string) {
   const known = RELEASE_AGE_ERRORS.find(({ marker }) => marker.test(output));
   if (!known) return undefined;
   const match = known.blocked.exec(output);

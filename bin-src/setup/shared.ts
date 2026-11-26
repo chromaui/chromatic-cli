@@ -1,5 +1,5 @@
 import { execFileSync, spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -15,6 +15,7 @@ import {
   parseTree,
 } from 'jsonc-parser/lib/esm/main.js';
 import picocolors from 'picocolors';
+import picomatch from 'picomatch';
 
 import { SubcommandFailure } from '../subcommandFailure';
 
@@ -383,6 +384,63 @@ function editJsonc(text: string, key: string, value: unknown, indent: string) {
   return value === undefined ? text : edit.add(root);
 }
 
+/** Writes files unless this is a dry run, and words what it did either way. */
+export class FileWriter {
+  constructor(
+    private readonly dryRun: boolean,
+    private readonly displayRoot: string
+  ) {}
+
+  write(file: string, content: string) {
+    if (existsSync(file) && readFileSync(file, 'utf8') === content) return false;
+    if (!this.dryRun) {
+      mkdirSync(path.dirname(file), { recursive: true });
+      writeFileSync(file, content);
+    }
+    return true;
+  }
+
+  display(file: string) {
+    return relativeOrDot(this.displayRoot, file);
+  }
+
+  /**
+   * Wording for log lines, so a dry run reads "Would write" instead of "Wrote".
+   *
+   * @param done What happened, such as "Wrote".
+   * @param wouldDo The same in a dry run, such as "write".
+   *
+   * @returns The wording to log.
+   */
+  say(done: string, wouldDo: string) {
+    return this.dryRun ? `Would ${wouldDo}` : done;
+  }
+}
+
+/**
+ * Adds lines to the repository's .gitignore that aren't already in it.
+ *
+ * @param gitRoot Absolute repository root.
+ * @param wanted The lines to add.
+ *
+ * @returns The .gitignore's path, the lines it lacked, and its new text.
+ */
+export function gitignoreAdditions(gitRoot: string, wanted: string[]) {
+  const file = path.join(gitRoot, '.gitignore');
+  const text = existsSync(file) ? readFileSync(file, 'utf8') : '';
+  const present = new Set(text.split('\n').map((line) => line.trim()));
+  // Skip entries an existing pattern already covers, like chromatic.log under *.log.
+  const patterns = [...present].filter(
+    (line) => line && !line.startsWith('#') && !line.startsWith('!')
+  );
+  const covered = (entry: string) =>
+    patterns.some(
+      (p) => p === entry || picomatch(p.replace(/^\//, ''), { dot: true })(entry.replace(/^\//, ''))
+    );
+  const missing = wanted.filter((entry) => !covered(entry));
+  return { file, missing, content: missing.length === 0 ? text : withSection(text, missing) };
+}
+
 /**
  * Appends lines to a .gitignore under a "# Chromatic" heading, or after the heading init added
  * earlier when it's the file's last section.
@@ -397,4 +455,42 @@ function withSection(text: string, lines: string[]) {
   const lastSection = ended.split(/\n\s*\n/).at(-1) ?? '';
   if (lastSection.startsWith('# Chromatic\n')) return `${ended}${lines.join('\n')}\n`;
   return `${ended}${ended ? '\n' : ''}# Chromatic\n${lines.join('\n')}\n`;
+}
+
+const SUBCOMMANDS =
+  /^(init|doctor|trace|turbosnap-manifest|trim-stats-file|generate-manifest|react-native-build)\b/;
+
+// A command that runs the CLI, with its arguments: `chromatic --exit-zero-on-changes`, after
+// variables (`CI=1`), an env wrapper (`dotenv -e .env --`, `cross-env X=1`, `env-cmd`) or a package
+// runner (`npx -y`, `pnpm exec`, `yarn dlx`, `npm exec --`), or as
+// `./node_modules/.bin/chromatic`. Not `echo chromatic`.
+const RUNS_CLI =
+  /^(?:\w+=\S*\s+)*(?:(?:dotenv|cross-env|env-cmd)(?:\s+(?:--|\w+=\S*|--?[^\s-]\S*(?:\s+(?!-|chromatic\b)[^\s=]+)?))*\s+)?(?:(?:npx|pnpm(?:\s+(?:dlx|exec))?|yarn(?:\s+(?:dlx|exec))?|npm\s+exec)\s+(?:-\S+\s+)*)?(?:\.\/)?(?:node_modules\/\.bin\/)?chromatic(?:@\S*)?(?=\s|$)(.*)$/;
+
+/**
+ * Whether a script runs a Chromatic build: one of its commands runs the CLI, and not one of its
+ * utility subcommands.
+ *
+ * @param script The script's command.
+ *
+ * @returns Whether it builds.
+ */
+function runsBuild(script = '') {
+  return script.split(/&&|\|\||[;|]/).some((command) => {
+    const match = RUNS_CLI.exec(command.trim());
+    return match !== null && !SUBCOMMANDS.test(match[1].trim());
+  });
+}
+
+/**
+ * The script that runs a Chromatic build, whatever it's called, such as "chromatic" or
+ * "publish-visuals": the one named "chromatic" if it builds, else the first that does.
+ *
+ * @param scripts The package's scripts.
+ *
+ * @returns The script's name, if there is one.
+ */
+export function chromaticScript(scripts: Record<string, string> = {}) {
+  if (runsBuild(scripts.chromatic)) return 'chromatic';
+  return Object.keys(scripts).find((name) => runsBuild(scripts[name]));
 }

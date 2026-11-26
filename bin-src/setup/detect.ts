@@ -1,7 +1,10 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
+import JSON5 from 'json5';
+
 import { findConfigFlags, MAIN_CONFIG_PATTERN } from '../../node-src/lib/getStorybookMetadata';
+import type { PackageManager } from './install';
 import { forEachRepoFile, readJson, relativeOrDot } from './shared';
 
 export type Framework = 'storybook' | 'playwright' | 'cypress' | 'vitest';
@@ -51,7 +54,7 @@ export const ARCHIVE_DIRECTORIES: Record<TestFramework, string> = {
  *
  * @returns The folders.
  */
-function foldersUp(directory: string, gitRoot?: string) {
+export function foldersUp(directory: string, gitRoot?: string) {
   const folders = [directory];
   for (let current = directory; gitRoot && current !== gitRoot; ) {
     const parent = path.dirname(current);
@@ -93,19 +96,18 @@ export function findTestConfig(framework: TestFramework, directory: string, gitR
 /**
  * The nearest folder above a project where its tests or Storybook run, such as a repo-root
  * Playwright config or .storybook that covers every package. With a test framework's flag, only
- * that framework counts.
+ * that framework counts; with Storybook, only a .storybook.
  *
  * @param directory The folder doctor would check.
  * @param gitRoot The repository root.
- * @param flagged The test framework the options name, if any.
+ * @param flagged The framework the options name, if any.
  *
  * @returns The folder and what runs there, or undefined.
  */
-export function runsAbove(directory: string, gitRoot: string | undefined, flagged?: TestFramework) {
+export function runsAbove(directory: string, gitRoot: string | undefined, flagged?: Framework) {
   for (const folder of foldersUp(directory, gitRoot).slice(1)) {
-    const framework = (flagged ? [flagged] : TEST_FRAMEWORKS).find((f) =>
-      findTestConfig(f, folder)
-    );
+    const tests = flagged ? TEST_FRAMEWORKS.filter((f) => f === flagged) : TEST_FRAMEWORKS;
+    const framework = tests.find((f) => findTestConfig(f, folder));
     if (framework) {
       const config = findTestConfig(framework, folder) ?? folder;
       return {
@@ -117,7 +119,7 @@ export function runsAbove(directory: string, gitRoot: string | undefined, flagge
     }
     const storybook = path.join(folder, '.storybook');
     if (
-      !flagged &&
+      (!flagged || flagged === 'storybook') &&
       existsSync(storybook) &&
       readdirSync(storybook).some((f) => MAIN_CONFIG_PATTERN.test(f))
     ) {
@@ -145,9 +147,29 @@ function versionOf(directory: string, gitRoot: string, name: string) {
   return undefined;
 }
 
+const CONFIG_FILES = ['chromatic.config.json', 'chromatic.config.jsonc', 'chromatic.config.json5'];
+
+/**
+ * The folder's Chromatic config file, as the main command finds it without --config-file.
+ *
+ * @param directory The folder Chromatic runs from.
+ *
+ * @returns The config, or an empty object when it has none or it doesn't parse.
+ */
+export function readConfig(directory: string): Record<string, any> {
+  const file = CONFIG_FILES.map((name) => path.join(directory, name)).find((f) => existsSync(f));
+  if (!file) return {};
+  try {
+    return JSON5.parse<Record<string, any> | null>(readFileSync(file, 'utf8')) ?? {};
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Each Storybook's main config, keyed by the package directory it runs from: .storybook/main.*
- * next to it, or the folder a build script passes to -c, as the main command reads it.
+ * next to it, the Chromatic config's storybookConfigDir, or the folder a build script passes to
+ * -c, as the main command reads them.
  *
  * @param gitRoot Absolute repository root.
  * @param present Repository files that exist, relative to the root.
@@ -156,22 +178,33 @@ function versionOf(directory: string, gitRoot: string, name: string) {
  */
 function storybookMains(gitRoot: string, present: Set<string>) {
   const mains = new Map<string, string>();
-  // Every main config by its folder, so a -c folder is one lookup rather than a scan per package.
-  const mainsByFolder = new Map<string, string>();
   for (const file of present) {
     if (STORYBOOK_MAIN.test(file)) mains.set(path.dirname(path.dirname(file)), file);
-    if (MAIN_CONFIG_PATTERN.test(path.basename(file))) mainsByFolder.set(path.dirname(file), file);
   }
+  // Read from disk, as the build and init's own check do, so the repository root (-c .) and a
+  // folder outside the repository count too.
+  const mainIn = (folder: string) => {
+    // A -c that names a file, or nothing, isn't a Storybook.
+    const name = statSync(folder, { throwIfNoEntry: false })?.isDirectory()
+      ? readdirSync(folder).find((f) => MAIN_CONFIG_PATTERN.test(f))
+      : undefined;
+    return name && path.relative(gitRoot, path.join(folder, name));
+  };
   for (const file of [...present].filter((f) => path.basename(f) === 'package.json')) {
     const directory = path.dirname(file);
     if (mains.has(directory)) continue;
     const packageJson = readJson(path.join(gitRoot, file)) ?? {};
     const scripts: Record<string, string> = packageJson.scripts ?? {};
-    const main = Object.keys(scripts)
-      .filter((name) => /\b(storybook build|build-storybook)\b/.test(scripts[name]))
-      .map((buildScriptName) => findConfigFlags({ buildScriptName, packageJson }).configDir)
-      .filter((configDirectory) => configDirectory !== undefined)
-      .map((configDirectory) => mainsByFolder.get(path.join(directory, configDirectory)))
+    const { storybookConfigDir } = readConfig(path.join(gitRoot, directory));
+    const main = [
+      storybookConfigDir,
+      ...Object.keys(scripts)
+        .filter((name) => /\b(storybook build|build-storybook)\b/.test(scripts[name]))
+        .map((buildScriptName) => findConfigFlags({ buildScriptName, packageJson }).configDir),
+    ]
+      .filter((configDirectory) => typeof configDirectory === 'string')
+      // Relative to the package, or absolute.
+      .map((configDirectory) => mainIn(path.resolve(gitRoot, directory, configDirectory)))
       .find((found) => found !== undefined);
     if (main) mains.set(directory, main);
   }
@@ -263,3 +296,29 @@ export function describeProject(project: Project) {
     .filter(Boolean)
     .join(' ');
 }
+
+export const PACKAGE_MANAGER_COMMANDS: Record<
+  PackageManager,
+  { label: string; run: (script: string) => string; dlx: string }
+> = {
+  npm: {
+    label: 'npm',
+    run: (s) => `npm run ${s}`,
+    dlx: 'npx',
+  },
+  pnpm: {
+    label: 'pnpm',
+    run: (s) => `pnpm ${s}`,
+    dlx: 'pnpm dlx',
+  },
+  yarn: {
+    label: 'Yarn',
+    run: (s) => `yarn ${s}`,
+    dlx: 'yarn dlx',
+  },
+  'yarn-classic': {
+    label: 'Yarn 1',
+    run: (s) => `yarn ${s}`,
+    dlx: 'npx',
+  },
+};

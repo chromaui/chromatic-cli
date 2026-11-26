@@ -1,0 +1,158 @@
+import * as clack from '@clack/prompts';
+
+import { SubcommandFailure } from '../subcommandFailure';
+import type { Project } from './detect';
+import { answered, color, FileWriter, tokenEnvironmentEdits } from './shared';
+
+/** State shared by init's steps. */
+export interface Session {
+  gitRoot: string;
+  interactive: boolean;
+  writer: FileWriter;
+  flags: Record<string, any>;
+}
+
+async function verifyToken(token: string) {
+  const index = process.env.CHROMATIC_INDEX_URL || 'https://index.chromatic.com';
+  try {
+    const response = await fetch(`${index}/graphql`, {
+      // Never hold a CI job on a slow network: give up and continue unchecked.
+      signal: AbortSignal.timeout(10_000),
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query:
+          'mutation CreateAppTokenMutation($projectToken: String!) { appToken: createAppToken(code: $projectToken) }',
+        variables: { projectToken: token },
+      }),
+    });
+    const { data, errors } = await response.json();
+    if (data?.appToken) return 'valid';
+    return errors?.[0]?.message?.includes('No app with code') ? 'invalid' : 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
+/**
+ * Asks for the project token, offering Enter to use CHROMATIC_PROJECT_TOKEN when it's set.
+ *
+ * @param fromEnvironment The token in CHROMATIC_PROJECT_TOKEN, unless it was already rejected.
+ *
+ * @returns The token, and whether it came from the environment.
+ */
+async function askForToken(fromEnvironment: string | undefined) {
+  // Still ask when the variable is set: in a repo with several Storybooks it may be another
+  // project's token. Show only its last characters, so people can tell which one it is.
+  const ending = fromEnvironment?.slice(-4);
+  // Clack returns undefined, not an empty string, when Enter is pressed on an empty box.
+  const answer: string | undefined = answered(
+    await clack.password({
+      message: fromEnvironment
+        ? `Paste your project token, or press Enter to use CHROMATIC_PROJECT_TOKEN ${color.muted(`(ends in …${ending})`)}`
+        : 'Paste your project token',
+      validate: (value) =>
+        value?.trim() || fromEnvironment
+          ? undefined
+          : 'Paste a token, or press Ctrl+C and pass --project-token later.',
+    })
+  );
+  const typed = (answer || '').trim();
+  if (typed) return { token: typed, fromEnvironment: false };
+  clack.log.info(`Using CHROMATIC_PROJECT_TOKEN (ends in …${ending}).`);
+  return { token: fromEnvironment as string, fromEnvironment: true };
+}
+
+/**
+ * Checks a token with Chromatic, showing the result in a spinner.
+ *
+ * @param token The project token.
+ *
+ * @returns Whether Chromatic rejected it.
+ */
+async function rejected(token: string) {
+  const spinner = clack.spinner();
+  spinner.start('Checking the token with Chromatic');
+  const result = await verifyToken(token);
+  if (result === 'invalid') {
+    spinner.error("Chromatic doesn't know this token. Check it on your project's Manage page.");
+    return true;
+  }
+  spinner.stop(
+    result === 'valid' ? 'Token works' : "Couldn't reach Chromatic to check the token; continuing"
+  );
+  return false;
+}
+
+/**
+ * Gets the project token, checks it with Chromatic, and in a terminal offers to save a typed one,
+ * or one from --project-token, in .env.
+ * In a terminal, a token Chromatic rejects is asked for again; otherwise it stops the run.
+ *
+ * @param session The init run.
+ * @param project The project being set up.
+ */
+// eslint-disable-next-line complexity, max-statements -- prototype; split into smaller steps if this ships
+export async function tokenStep(session: Session, project: Project) {
+  const { flags, interactive, writer } = session;
+  let fromEnvironment = process.env.CHROMATIC_PROJECT_TOKEN?.trim() || undefined;
+  // True when there's nothing to offer to save: the token came from the environment, so it's set
+  // somewhere already, or there's no terminal to ask in.
+  let given = false;
+  let token: string;
+  if (flags.projectToken) {
+    clack.log.info('Using the project token from --project-token.');
+    token = flags.projectToken;
+    given = !interactive || token === fromEnvironment;
+  } else if (interactive) {
+    clack.log.info(
+      `Find your project token on your project's Manage page: ${color.cta('https://www.chromatic.com/start')}`
+    );
+    for (;;) {
+      const asked = await askForToken(fromEnvironment);
+      if (!(await rejected(asked.token))) {
+        token = asked.token;
+        given = asked.fromEnvironment;
+        break;
+      }
+      // Don't offer Enter for the variable again once Chromatic has rejected it.
+      if (asked.fromEnvironment) fromEnvironment = undefined;
+    }
+  } else if (fromEnvironment) {
+    clack.log.info(`Using CHROMATIC_PROJECT_TOKEN (ends in …${fromEnvironment.slice(-4)}).`);
+    token = fromEnvironment;
+    given = true;
+  } else {
+    clack.log.warn('No project token. Set CHROMATIC_PROJECT_TOKEN before running Chromatic.');
+    return;
+  }
+  // Nobody can correct a token passed as a flag or read without a terminal, so stop.
+  // The interactive prompt already checked its token.
+  const checked = interactive && !flags.projectToken;
+  if (!checked && (await rejected(token))) {
+    throw new SubcommandFailure('Invalid project token', { exitCode: 1 });
+  }
+
+  // Offer to save only a token the user typed or passed as a flag, and only in a terminal.
+  if (given) return;
+  const save = answered(
+    await clack.confirm({
+      message: 'Save it in a gitignored .env for local runs?',
+      initialValue: true,
+    })
+  );
+  if (!save) return;
+  const saved = tokenEnvironmentEdits(session.gitRoot, project.directory, token);
+  if (!saved.edits) {
+    clack.log.warn(`Didn't save the token: ${saved.reason}.`);
+    return;
+  }
+  for (const edit of saved.edits) writer.write(edit.file, edit.content);
+  const environmentFile = saved.edits[0].file;
+  clack.log.success(
+    `${writer.say('Saved', 'save')} the token to ${writer.display(environmentFile)} ${color.muted('(gitignored, never committed)')}`
+  );
+  // The CLI read .env before init wrote it, so set the variable for the checks that follow, the
+  // way dotenv would: a value already in the environment wins.
+  process.env.CHROMATIC_PROJECT_TOKEN ??= token;
+}
