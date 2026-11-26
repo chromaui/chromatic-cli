@@ -1,5 +1,7 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
+
+import JSON5 from 'json5';
 
 import { findConfigFlags, MAIN_CONFIG_PATTERN } from '../../node-src/lib/getStorybookMetadata';
 import type { PackageManager } from './install';
@@ -145,9 +147,29 @@ function versionOf(directory: string, gitRoot: string, name: string) {
   return undefined;
 }
 
+const CONFIG_FILES = ['chromatic.config.json', 'chromatic.config.jsonc', 'chromatic.config.json5'];
+
+/**
+ * The folder's Chromatic config file, as the main command finds it without --config-file.
+ *
+ * @param directory The folder Chromatic runs from.
+ *
+ * @returns The config, or an empty object when it has none or it doesn't parse.
+ */
+export function readConfig(directory: string): Record<string, any> {
+  const file = CONFIG_FILES.map((name) => path.join(directory, name)).find((f) => existsSync(f));
+  if (!file) return {};
+  try {
+    return JSON5.parse<Record<string, any> | null>(readFileSync(file, 'utf8')) ?? {};
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Each Storybook's main config, keyed by the package directory it runs from: .storybook/main.*
- * next to it, or the folder a build script passes to -c, as the main command reads it.
+ * next to it, the Chromatic config's storybookConfigDir, or the folder a build script passes to
+ * -c, as the main command reads them.
  *
  * @param gitRoot Absolute repository root.
  * @param present Repository files that exist, relative to the root.
@@ -156,22 +178,33 @@ function versionOf(directory: string, gitRoot: string, name: string) {
  */
 function storybookMains(gitRoot: string, present: Set<string>) {
   const mains = new Map<string, string>();
-  // Every main config by its folder, so a -c folder is one lookup rather than a scan per package.
-  const mainsByFolder = new Map<string, string>();
   for (const file of present) {
     if (STORYBOOK_MAIN.test(file)) mains.set(path.dirname(path.dirname(file)), file);
-    if (MAIN_CONFIG_PATTERN.test(path.basename(file))) mainsByFolder.set(path.dirname(file), file);
   }
+  // Read from disk, as the build and init's own check do, so the repository root (-c .) and a
+  // folder outside the repository count too.
+  const mainIn = (folder: string) => {
+    // A -c that names a file, or nothing, isn't a Storybook.
+    const name = statSync(folder, { throwIfNoEntry: false })?.isDirectory()
+      ? readdirSync(folder).find((f) => MAIN_CONFIG_PATTERN.test(f))
+      : undefined;
+    return name && path.relative(gitRoot, path.join(folder, name));
+  };
   for (const file of [...present].filter((f) => path.basename(f) === 'package.json')) {
     const directory = path.dirname(file);
     if (mains.has(directory)) continue;
     const packageJson = readJson(path.join(gitRoot, file)) ?? {};
     const scripts: Record<string, string> = packageJson.scripts ?? {};
-    const main = Object.keys(scripts)
-      .filter((name) => /\b(storybook build|build-storybook)\b/.test(scripts[name]))
-      .map((buildScriptName) => findConfigFlags({ buildScriptName, packageJson }).configDir)
-      .filter((configDirectory) => configDirectory !== undefined)
-      .map((configDirectory) => mainsByFolder.get(path.join(directory, configDirectory)))
+    const { storybookConfigDir } = readConfig(path.join(gitRoot, directory));
+    const main = [
+      storybookConfigDir,
+      ...Object.keys(scripts)
+        .filter((name) => /\b(storybook build|build-storybook)\b/.test(scripts[name]))
+        .map((buildScriptName) => findConfigFlags({ buildScriptName, packageJson }).configDir),
+    ]
+      .filter((configDirectory) => typeof configDirectory === 'string')
+      // Relative to the package, or absolute.
+      .map((configDirectory) => mainIn(path.resolve(gitRoot, directory, configDirectory)))
       .find((found) => found !== undefined);
     if (main) mains.set(directory, main);
   }

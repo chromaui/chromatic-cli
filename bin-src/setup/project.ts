@@ -3,7 +3,10 @@ import path from 'node:path';
 
 import * as clack from '@clack/prompts';
 
+import { findBuildScriptName } from '../../node-src/lib/getOptions';
+import { findConfigFlags } from '../../node-src/lib/getStorybookMetadata';
 import { SubcommandFailure } from '../subcommandFailure';
+import { findMainFile } from './checks';
 import {
   describeProject,
   findTestConfig,
@@ -11,6 +14,7 @@ import {
   Framework,
   FRAMEWORK_NAMES,
   Project,
+  readConfig,
   runsAbove,
 } from './detect';
 import { answered, color, readJson, relativeOrDot } from './shared';
@@ -91,9 +95,36 @@ const SETUP_DOCS: Record<Exclude<Framework, 'storybook'>, string> = {
 };
 
 /**
- * Stops init before it writes anything when the project can't be set up where it is: its test
- * framework has no config here or above, the config is in a folder above (so Chromatic has to run
- * there), or the folder has no package.json for chromatic and its script.
+ * Whether a folder has a Storybook main config where its build will look, resolved as doctor
+ * does: the config's storybookConfigDir, else the build script's -c folder or .storybook. Without
+ * that build script, doctor offers to point buildScriptName at another, so any script's -c counts.
+ *
+ * @param directory The project's folder.
+ *
+ * @returns True when Storybook's main config is there.
+ */
+function hasStorybook(directory: string) {
+  const packageJson = readJson(path.join(directory, 'package.json')) ?? {};
+  const scripts: Record<string, string> = packageJson.scripts ?? {};
+  const config = readConfig(directory);
+  const configDirectory = (buildScriptName: string) =>
+    findConfigFlags({ buildScriptName, packageJson }).configDir;
+  const script = findBuildScriptName(scripts, config.buildScriptName);
+  let folders: (string | undefined)[] = [
+    '.storybook',
+    ...Object.keys(scripts).map((name) => configDirectory(name)),
+  ];
+  if (typeof config.storybookConfigDir === 'string') folders = [config.storybookConfigDir];
+  else if (scripts[script]) folders = [configDirectory(script) ?? '.storybook'];
+  return folders.some(
+    (folder) => folder !== undefined && !!findMainFile(path.resolve(directory, folder))
+  );
+}
+
+/**
+ * Stops init before it writes anything when the project can't be set up where it is: its Storybook
+ * or test framework has no config here or above, the config is in a folder above (so Chromatic has
+ * to run there), or the folder has no package.json for chromatic and its script.
  *
  * @param session The init session.
  * @param session.gitRoot The repository root.
@@ -104,6 +135,16 @@ function checkSetUpHere({ gitRoot }: Session, project: Project) {
     folder === gitRoot ? 'the repository root' : relativeOrDot(gitRoot, folder);
   const name = place(project.directory);
   const label = FRAMEWORK_NAMES[project.framework];
+  // --framework storybook can name a folder with no Storybook, such as a Playwright package.
+  if (project.framework === 'storybook' && !hasStorybook(project.directory)) {
+    const above = runsAbove(project.directory, gitRoot, 'storybook');
+    if (above) throw ranAbove(above, gitRoot, name);
+    clack.log.error(`No Storybook found in ${name}.`);
+    clack.log.info(
+      `Set up Storybook first with ${color.cta('npm create storybook@latest')}, then run this again.`
+    );
+    throw new SubcommandFailure('No Storybook', { exitCode: 1 });
+  }
   if (project.framework !== 'storybook') {
     const config = findTestConfig(project.framework, project.directory, gitRoot);
     if (!config) {
