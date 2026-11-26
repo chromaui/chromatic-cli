@@ -10,6 +10,7 @@ import * as Sentry from '@sentry/node';
 import { describe, expect, it, vi } from 'vitest';
 
 import TestLogger from '../lib/testLogger';
+import { buildTests } from '../ui/components/__fixtures__/buildTests';
 import {
   applySnapshotOutput,
   extractSnapshotInput,
@@ -70,6 +71,21 @@ const runLinkedBuild = (options = {}) => {
   });
   return runSnapshot(ctx);
 };
+
+// Answers the poll and the test-list query by name, so the assertions don't depend on call order.
+const contextFor = (status: string, testsQuery: () => unknown, completed = {}) => {
+  const build = { app: {}, number: 7, features: {}, reportToken: 'report-token' };
+  const ctx = { ...createBaseTestContext(), build } as any;
+  ctx.client.runQuery.mockImplementation(async (query: string) =>
+    query.includes('SnapshotBuildTestsQuery')
+      ? testsQuery()
+      : { app: { build: { status, errorCount: 1, pendingCount: 1, completedAt: 1, ...completed } } }
+  );
+  return ctx;
+};
+
+const testsQueryCalls = (ctx: any) =>
+  ctx.client.runQuery.mock.calls.filter(([query]) => query.includes('SnapshotBuildTestsQuery'));
 
 describe('snapshotProject', () => {
   it('waits for the build to complete and sets it on context', async () => {
@@ -245,6 +261,101 @@ describe('snapshotProject', () => {
     await runSnapshot(ctx);
     expect(ctx.build).toEqual({ ...build, changeCount: 2, status: 'BROKEN', completedAt: 1 });
     expect(ctx.exitCode).toBe(2);
+  });
+
+  describe('result test lists', () => {
+    const renderFailureTests = buildTests('Icon', 1);
+    const pendingTests = buildTests('Form', 1);
+
+    it('fetches the lists once the build completes, capped at 50, with the report token', async () => {
+      const ctx = contextFor('BROKEN', () => ({
+        app: { build: { renderFailureCount: 1, renderFailureTests, pendingTests } },
+      }));
+
+      await runSnapshot(ctx);
+
+      expect(testsQueryCalls(ctx)).toEqual([
+        [
+          expect.stringContaining(
+            'renderFailureTests: tests(statuses: [BROKEN], hasInteractionFailure: false, limit: $limit)'
+          ),
+          { number: 7, limit: 50 },
+          { headers: { Authorization: 'Bearer report-token' } },
+        ],
+      ]);
+      expect(ctx.build).toMatchObject({ renderFailureTests, pendingTests });
+      expect(ctx.exitCode).toBe(2);
+    });
+
+    // Someone can review tests between the last poll and the list query.
+    it('replaces the poll counts with the counts read alongside the lists', async () => {
+      const ctx = contextFor(
+        'PENDING',
+        () => ({ app: { build: { pendingCount: 1, pendingTests } } }),
+        {
+          pendingCount: 80,
+        }
+      );
+
+      await runSnapshot(ctx);
+
+      expect(ctx.build.pendingCount).toBe(1);
+      expect(ctx.log.error).toHaveBeenCalledWith(expect.not.stringContaining('more'));
+    });
+
+    it('does not fetch the lists for a passed build', async () => {
+      const ctx = contextFor('PASSED', () => ({ app: { build: { renderFailureTests } } }));
+
+      await runSnapshot(ctx);
+
+      expect(testsQueryCalls(ctx)).toEqual([]);
+    });
+
+    // Auto-accept covers changes, not errors: a broken auto-accepted build still prints its errors.
+    it.each([
+      ['BROKEN', 1],
+      ['PENDING', 0],
+    ])('fetches the lists for an auto-accepted %s build: %i calls', async (status, calls) => {
+      const ctx = contextFor(status, () => ({ app: { build: { renderFailureTests } } }), {
+        autoAcceptChanges: true,
+      });
+
+      await runSnapshot(ctx);
+
+      expect(testsQueryCalls(ctx)).toHaveLength(calls);
+    });
+
+    // Under --exit-zero-on-changes, an accepted build prints the passed message, which lists no
+    // tests. Pending builds print the result block, while onboarding too.
+    it.each([
+      ['ACCEPTED', false, 0],
+      ['PENDING', false, 1],
+      ['PENDING', true, 1],
+    ])(
+      'fetches the lists for a %s build under --exit-zero-on-changes (onboarding: %s): %i calls',
+      async (status, isOnboarding, calls) => {
+        const ctx = contextFor(status, () => ({ app: { build: { pendingTests } } }));
+        ctx.options = { exitZeroOnChanges: 'true' };
+        ctx.isOnboarding = isOnboarding;
+
+        await runSnapshot(ctx);
+
+        expect(testsQueryCalls(ctx)).toHaveLength(calls);
+        expect(ctx.exitCode).toBe(0);
+      }
+    );
+
+    it('keeps the exit code and leaves the lists out when the index rejects the query', async () => {
+      const ctx = contextFor('PENDING', () => {
+        throw { name: 'GraphQLError', message: 'Cannot access those build fields' };
+      });
+
+      await runSnapshot(ctx);
+
+      expect(ctx.exitCode).toBe(1);
+      expect(ctx.build.pendingTests).toBeUndefined();
+      expect(ctx.log.error).toHaveBeenCalledWith(expect.stringContaining('1 change needs review'));
+    });
   });
 
   it('sets exitCode to 3 when build fails (system error)', async () => {
@@ -593,6 +704,6 @@ describe('applySnapshotOutput', () => {
     applySnapshotOutput(ctx, output);
 
     expect(ctx.exitCode).toBe(0);
-    expect(ctx.log.info).toHaveBeenCalledWith(expect.stringContaining('Build 1 completed'));
+    expect(ctx.log.info).toHaveBeenCalledWith(expect.stringContaining('View Build 1: https://x'));
   });
 });

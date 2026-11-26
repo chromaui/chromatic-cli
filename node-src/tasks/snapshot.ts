@@ -10,9 +10,10 @@ import * as Sentry from '@sentry/node';
 import { exitCodes, setExitCode } from '../lib/setExitCode';
 import { delay, throttle } from '../lib/utilities';
 import { Context, Deps, TaskResult } from '../types';
+import { testLabel } from '../ui/components/testLabel';
 import buildHasChanges from '../ui/messages/errors/buildHasChanges';
 import buildHasErrors from '../ui/messages/errors/buildHasErrors';
-import buildSummaryMessage from '../ui/messages/info/buildSummary';
+import buildSummaryMessage, { summaryListsTests } from '../ui/messages/info/buildSummary';
 import speedUpCI from '../ui/messages/info/speedUpCI';
 import { pending } from '../ui/tasks/snapshot';
 
@@ -38,6 +39,66 @@ const SnapshotBuildQuery = `
     }
   }
 `;
+
+// The most tests each section of the result message lists.
+const MAX_LISTED_TESTS = 50;
+
+const testFields = `
+  spec { name component { name displayName } }
+  parameters { viewport viewportIsDefault }
+  mode { id name }
+`;
+
+// The result message's counts and lists, fetched once the build completes rather than on every
+// poll. The counts replace the ones the last poll read, but the build's status and accepted count
+// still come from that poll. The index must allow these aliases (graphql-armor maxAliases) and the
+// `hasInteractionFailure` argument.
+//
+// These reads are not one snapshot. If someone reviews a test between the last poll and this
+// query, or while the index resolves its fields one by one, the message can disagree with itself,
+// such as a pending count of 0 above a listed pending test. That needs a review to land in the
+// one or two requests' time between the last poll and this query returning. It changes only the
+// printed text and the counts the run reports (`getRunOutput` reads them from `ctx.build`), never
+// the exit code, which comes from the poll's status alone. We accept that rather than make the
+// index return one consistent read.
+const SnapshotBuildTestsQuery = `
+  query SnapshotBuildTestsQuery($number: Int!, $limit: Int!) {
+    app {
+      build(number: $number) {
+        errorCount: testCount(statuses: [BROKEN])
+        renderFailureCount: testCount(statuses: [BROKEN], hasInteractionFailure: false)
+        renderFailureTests: tests(statuses: [BROKEN], hasInteractionFailure: false, limit: $limit) { ${testFields} }
+        interactionFailureCount: testCount(statuses: [BROKEN], hasInteractionFailure: true)
+        interactionFailureTests: tests(statuses: [BROKEN], hasInteractionFailure: true, limit: $limit) { ${testFields} }
+        deniedCount: testCount(statuses: [DENIED])
+        deniedTests: tests(statuses: [DENIED], limit: $limit) { ${testFields} }
+        pendingCount: testCount(statuses: [PENDING])
+        pendingTests: tests(statuses: [PENDING], limit: $limit) { ${testFields} }
+        ignoredCount: testCount(statuses: [IGNORED])
+        ignoredTests: tests(statuses: [IGNORED], limit: $limit) { ${testFields} }
+      }
+    }
+  }
+`;
+
+interface BuildTestsQueryResult {
+  app: {
+    build: Pick<
+      Context['build'],
+      | 'errorCount'
+      | 'renderFailureCount'
+      | 'renderFailureTests'
+      | 'interactionFailureCount'
+      | 'interactionFailureTests'
+      | 'deniedCount'
+      | 'deniedTests'
+      | 'pendingCount'
+      | 'pendingTests'
+      | 'ignoredCount'
+      | 'ignoredTests'
+    >;
+  };
+}
 
 interface BuildQueryResult {
   app: {
@@ -111,13 +172,7 @@ export async function snapshotProject(
   }
 
   const testLabels =
-    options.interactive &&
-    testCount === actualTestCount &&
-    tests?.map(({ spec, parameters, mode }) => {
-      const testSuffixName = mode.name || `[${parameters.viewport}px]`;
-      const suffix = parameters.viewportIsDefault ? '' : testSuffixName;
-      return `${spec.component.displayName} › ${spec.name} ${suffix}`;
-    });
+    options.interactive && testCount === actualTestCount && tests?.map((test) => testLabel(test));
 
   const updateProgress = throttle(
     ({ cursor, label }) => {
@@ -163,70 +218,90 @@ export async function snapshotProject(
     await waitForBuildToCompleteAndHandleErrors(deps, build.id, uiStateUpdater, reportToken);
   }
 
-  const completedBuild = await getCompletedBuild();
+  const output = completedOutput(await getCompletedBuild(), options, matchesBranch);
+  if (listsTests(output)) {
+    output.build = { ...output.build, ...(await getResultTests(deps, number, reportToken)) };
+  }
+  return { kind: 'continue', output };
+}
 
+// A build with changes passes when they were auto-accepted or --exit-zero-on-changes applies.
+const changesPass = (
+  completedBuild: Context['build'],
+  options: SnapshotDeps['options'],
+  matchesBranch: SnapshotInput['matchesBranch']
+) =>
+  completedBuild.autoAcceptChanges ||
+  // The boolean version of this check is handled by ctx.git.matchesBranch
+  options?.exitZeroOnChanges === 'true' ||
+  matchesBranch?.(options?.exitZeroOnChanges || false);
+
+// Maps a completed build's status to its exit code and the message that reports it.
+function completedOutput(
+  completedBuild: Context['build'],
+  options: SnapshotDeps['options'],
+  matchesBranch: SnapshotInput['matchesBranch']
+): SnapshotOutput {
   switch (completedBuild.status) {
     case 'PASSED':
-      return {
-        kind: 'continue',
-        output: { exitCode: exitCodes.OK, userError: false, log: 'passed', build: completedBuild },
-      };
+      return { exitCode: exitCodes.OK, userError: false, log: 'passed', build: completedBuild };
 
     // They may have sneakily looked at the build while we were waiting
     case 'ACCEPTED':
     case 'PENDING':
     case 'DENIED': {
-      const passed =
-        completedBuild.autoAcceptChanges ||
-        // The boolean version of this check is handled by ctx.git.matchesBranch
-        options?.exitZeroOnChanges === 'true' ||
-        matchesBranch?.(options?.exitZeroOnChanges || false);
-      return passed
-        ? {
-            kind: 'continue',
-            output: {
-              exitCode: exitCodes.OK,
-              userError: false,
-              log: 'passed',
-              build: completedBuild,
-            },
-          }
+      return changesPass(completedBuild, options, matchesBranch)
+        ? { exitCode: exitCodes.OK, userError: false, log: 'passed', build: completedBuild }
         : {
-            kind: 'continue',
-            output: {
-              exitCode: exitCodes.BUILD_HAS_CHANGES,
-              userError: true,
-              log: 'changes',
-              build: completedBuild,
-            },
+            exitCode: exitCodes.BUILD_HAS_CHANGES,
+            userError: true,
+            log: 'changes',
+            build: completedBuild,
           };
     }
 
     case 'BROKEN':
       return {
-        kind: 'continue',
-        output: {
-          exitCode: exitCodes.BUILD_HAS_ERRORS,
-          userError: true,
-          log: 'errors',
-          build: completedBuild,
-        },
+        exitCode: exitCodes.BUILD_HAS_ERRORS,
+        userError: true,
+        log: 'errors',
+        build: completedBuild,
       };
 
     case 'FAILED':
-      return {
-        kind: 'continue',
-        output: { exitCode: exitCodes.BUILD_FAILED, userError: false, build: completedBuild },
-      };
+      return { exitCode: exitCodes.BUILD_FAILED, userError: false, build: completedBuild };
 
     case 'CANCELLED':
-      return {
-        kind: 'continue',
-        output: { exitCode: exitCodes.BUILD_WAS_CANCELED, userError: true, build: completedBuild },
-      };
+      return { exitCode: exitCodes.BUILD_WAS_CANCELED, userError: true, build: completedBuild };
 
     default:
       throw new Error(`Unexpected build status: ${completedBuild.status}`);
+  }
+}
+
+// Outcomes whose message is the result block, which lists tests. The errors and changes messages
+// always are; the passed message is only for a build that passed because of
+// --exit-zero-on-changes.
+const listsTests = ({ log, build }: SnapshotOutput) =>
+  log === 'errors' || log === 'changes' || (log === 'passed' && summaryListsTests(build));
+
+// The poll's counts already decided the exit code, so a failed fetch keeps them and leaves the
+// lists out instead of failing a completed build.
+async function getResultTests(
+  deps: Pick<Deps, 'client' | 'log'>,
+  number: number,
+  reportToken: string | undefined
+): Promise<Partial<BuildTestsQueryResult['app']['build']>> {
+  try {
+    const data = await deps.client.runQuery<BuildTestsQueryResult>(
+      SnapshotBuildTestsQuery,
+      { number, limit: MAX_LISTED_TESTS },
+      { headers: { Authorization: `Bearer ${reportToken}` } }
+    );
+    return data.app.build;
+  } catch (err) {
+    deps.log.debug(`Could not fetch the tests to list in the build result: ${err.message}`);
+    return {};
   }
 }
 

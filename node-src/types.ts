@@ -385,6 +385,21 @@ export type TaskFunction<TInput, TOutput, TDeps = Deps, TPartial = never> = (
   input: TInput
 ) => Promise<TaskResult<TOutput, TPartial>>;
 
+export interface BuildTest {
+  spec: {
+    name: string;
+    component: { name: string; displayName: string };
+  };
+  parameters: {
+    viewport: number;
+    viewportIsDefault: boolean;
+  };
+  mode: {
+    id: string;
+    name: string;
+  };
+}
+
 export interface Context {
   env: Environment;
   log: Logger;
@@ -481,20 +496,17 @@ export interface Context {
       isReactNativeApp: boolean;
       accessibilityTests?: { enabled: boolean };
     };
-    tests?: {
-      spec: {
-        name: string;
-        component: { name: string; displayName: string };
-      };
-      parameters: {
-        viewport: number;
-        viewportIsDefault: boolean;
-      };
-      mode: {
-        id: string;
-        name: string;
-      };
-    }[];
+    tests?: BuildTest[];
+    // The first tests in each section of the result message, read in one query with the section's
+    // count. A list can be shorter than its count, which the message uses to say how many it left
+    // out. Errors split into render and interaction failures, which only the index can tell apart.
+    renderFailureCount?: number;
+    renderFailureTests?: BuildTest[];
+    interactionFailureCount?: number;
+    interactionFailureTests?: BuildTest[];
+    deniedTests?: BuildTest[];
+    pendingTests?: BuildTest[];
+    ignoredTests?: BuildTest[];
   };
   rebuildForBuild: {
     id: string;

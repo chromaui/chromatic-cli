@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { Context } from '../../../types';
+import { buildTests } from '../../components/__fixtures__/buildTests';
 import { info, success } from '../../components/icons';
 import buildSummary from './buildSummary';
 
@@ -36,23 +37,13 @@ describe('buildSummary changes line', () => {
     ]);
   });
 
-  it.each([
-    [1, '1 visual change must be accepted as baseline.'],
-    [2, '2 visual changes must be accepted as baselines.'],
-  ])('reports %i pending changes on a flag-completed build', (count, expected) => {
-    const output = message({ status: 'PENDING', pendingCount: count, acceptedCount: 4 });
+  it('prints the build results for a flag-completed build with pending changes', () => {
+    const output = message({ status: 'PENDING', pendingCount: 2, acceptedCount: 4 });
 
-    expect(output).toContain(expected);
-  });
-
-  it('uses the accessibility wording when accessibility tests are enabled', () => {
-    const output = message({
-      status: 'PENDING',
-      pendingCount: 2,
-      features: { ...features, accessibilityTests: { enabled: true } },
-    });
-
-    expect(output).toContain('2 visual and accessibility changes must be accepted as baselines.');
+    expect(output.split('\n')).toEqual([
+      `${success} 2 changes need review`,
+      `View Build 42: ${webUrl}`,
+    ]);
   });
 
   it('reports auto-accepted changes', () => {
@@ -97,25 +88,17 @@ describe('buildSummary changes line', () => {
     expect(output).toContain(`${success} Build 42 passed!`);
   });
 
-  it('reports denied changes for a flag-completed build', () => {
-    const output = message({
-      status: 'DENIED',
-      deniedCount: 1,
-      features: { ...features, accessibilityTests: { enabled: true } },
-    });
+  it('prints the build results for a flag-completed build with denied changes', () => {
+    const output = message({ status: 'DENIED', deniedCount: 1 });
 
-    expect(output.split('\n')).toEqual([
-      `${success} Build 42 completed`,
-      '1 visual and accessibility change denied.',
-      `${info} View build details at ${webUrl}`,
-    ]);
+    expect(output.split('\n')).toEqual([`${success} 1 change denied`, `View Build 42: ${webUrl}`]);
   });
 
   it('ignores changeCount, which includes ignored tests', () => {
     const output = message({ status: 'PENDING', changeCount: 9, pendingCount: 2 });
 
-    expect(output).toContain('2 visual changes must be accepted as baselines.');
-    expect(output).not.toContain('9 visual changes');
+    expect(output).toContain('2 changes need review');
+    expect(output).not.toContain('9 changes');
   });
 });
 
@@ -154,16 +137,19 @@ describe('buildSummary while onboarding', () => {
     ]);
   });
 
-  it('welcomes the user without claiming a pass when changes must be reviewed', () => {
+  // Under --exit-zero-on-changes: the same result block as exit 1, with the setup link.
+  it('lists the changes that must be reviewed, with the setup link', () => {
     const output = message(
-      { ...onboarding, status: 'PENDING', pendingCount: 1 },
+      { ...onboarding, status: 'PENDING', pendingCount: 1, pendingTests: buildTests('Form', 1) },
       { isOnboarding: true }
     );
 
     expect(output.split('\n')).toEqual([
-      `${success} Build completed. Welcome to Chromatic!`,
-      'We found 5 components with 8 stories and captured 20 snapshots.',
-      `${info} Please continue setup at ${setupUrl}`,
+      `${success} 1 change needs review`,
+      `Continue setup at ${setupUrl}`,
+      '',
+      'Need review:',
+      '  Form › Primary',
     ]);
   });
 
