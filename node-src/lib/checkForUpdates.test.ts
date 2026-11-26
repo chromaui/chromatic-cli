@@ -48,7 +48,10 @@ describe('checkForUpdates', () => {
       mockedSpawn.mockRejectedValue(new Error('spawn error'));
       await checkForUpdates(ctx as any);
       expect(spawn).toHaveBeenCalledWith(['config', 'get', 'registry']);
-      expect(ctx.http.fetch).toHaveBeenCalledWith('https://registry.npmjs.org/chromatic');
+      expect(ctx.http.fetch).toHaveBeenCalledWith(
+        'https://registry.npmjs.org/chromatic',
+        expect.anything()
+      );
     });
 
     it('uses custom registries', async () => {
@@ -59,7 +62,24 @@ describe('checkForUpdates', () => {
       expect(ctx.log.info).toHaveBeenCalledWith(
         expect.stringContaining('https://custom-registry.example.com/')
       );
-      expect(ctx.http.fetch).toHaveBeenCalledWith('https://custom-registry.example.com/chromatic');
+      expect(ctx.http.fetch).toHaveBeenCalledWith(
+        'https://custom-registry.example.com/chromatic',
+        expect.anything()
+      );
+    });
+
+    it("uses Yarn's npmRegistryServer, which Yarn 2 and later have instead of registry", async () => {
+      const ctx = getContext();
+      mockedSpawn.mockImplementation(async (args) => {
+        if (args.at(-1) === 'registry') throw new Error('Usage Error: no setting named "registry"');
+        return 'https://registry.example.com/api/npm';
+      });
+      await checkForUpdates(ctx as any);
+      expect(ctx.http.fetch).toHaveBeenCalledWith(
+        'https://registry.example.com/api/npm/chromatic',
+        expect.anything()
+      );
+      mockedSpawn.mockReset();
     });
   });
 
@@ -86,18 +106,21 @@ describe('checkForUpdates', () => {
       expect(Sentry.captureException).not.toHaveBeenCalled();
     });
 
-    it('does not crash when the registry fetch times out', async () => {
+    it('gives up after 5 seconds, even while reading the reply, and aborts the request', async () => {
       vi.useFakeTimers();
       try {
         const ctx = getContext();
         mockedSpawn.mockResolvedValue('https://registry.npmjs.org/');
-        http.fetch.mockReturnValue(new Promise(() => {}));
+        // The registry sends headers, then never finishes the body.
+        http.fetch.mockResolvedValue({ json: () => new Promise(() => {}) });
         const promise = checkForUpdates(ctx as any);
         await vi.advanceTimersByTimeAsync(5000);
         await expect(promise).resolves.toBeUndefined();
         expect(ctx.log.warn).toHaveBeenCalledWith(
           expect.objectContaining({ message: expect.stringContaining('Timed out after 5000ms') })
         );
+        // An unaborted request to a registry that stops answering keeps the process alive for minutes.
+        expect(http.fetch.mock.lastCall?.[1].signal.aborted).toBe(true);
       } finally {
         vi.useRealTimers();
       }

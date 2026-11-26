@@ -27,21 +27,12 @@ export default async function checkForUpdates(ctx: Context) {
 
   let latestVersion: string;
   try {
-    const registryUrl = await spawn(['config', 'get', 'registry']).catch(
-      () => 'https://registry.npmjs.org/'
-    );
-    if (!['https://registry.npmjs.org/', 'https://registry.yarnpkg.com'].includes(registryUrl)) {
-      ctx.log.info(`Using custom npm registry: ${registryUrl}`);
-    }
-
-    const pkgUrl = new URL(ctx.pkg.name, registryUrl).href;
-    const result = await withTimeout(ctx.http.fetch(pkgUrl), 5000); // If not fetched within 5 seconds, nevermind.
-    const { 'dist-tags': distributionTags = {} } = (await result.json()) as any;
-    if (!semver.valid(distributionTags.latest)) {
+    const { latest } = await fetchReleases(ctx);
+    if (!latest || !semver.valid(latest)) {
       ctx.log.warn(`Invalid dist-tag 'latest' returned from registry; skipping update check`);
       return;
     }
-    latestVersion = distributionTags.latest;
+    latestVersion = latest;
   } catch (err) {
     if (shouldReportVersionCheckFailure(err)) {
       Sentry.captureException(err);
@@ -53,6 +44,45 @@ export default async function checkForUpdates(ctx: Context) {
 
   if (semver.major(ctx.pkg.version) < semver.major(latestVersion)) {
     ctx.log.warn(outdatedPackage(ctx, latestVersion, hasYarn()));
+  }
+}
+
+/**
+ * Looks up the package's releases on the npm registry the package manager is set up with.
+ *
+ * @param ctx The context's HTTP client, logger, and package name.
+ *
+ * @returns The `latest` dist-tag as the registry returned it, which may not be a valid version,
+ * and when each version was published, as ISO dates by version, if the registry says.
+ */
+export async function fetchReleases(ctx: Pick<Context, 'http' | 'log' | 'pkg'>) {
+  const registryUrl = await spawn(['config', 'get', 'registry'])
+    // Yarn 2 and later call it npmRegistryServer.
+    .catch(() => spawn(['config', 'get', 'npmRegistryServer']))
+    .catch(() => 'https://registry.npmjs.org/');
+  if (!['https://registry.npmjs.org/', 'https://registry.yarnpkg.com'].includes(registryUrl)) {
+    ctx.log.info(`Using custom npm registry: ${registryUrl}`);
+  }
+
+  // Yarn's npmRegistryServer has no trailing slash, which would drop the last part of its path.
+  const pkgUrl = new URL(ctx.pkg.name, registryUrl.replace(/\/?$/, '/')).href;
+  const controller = new AbortController();
+  const lookup = async () => {
+    const result = await ctx.http.fetch(pkgUrl, { signal: controller.signal });
+    const { 'dist-tags': distributionTags = {}, time = {} } = (await result.json()) as any;
+    return {
+      latest: distributionTags.latest as string | undefined,
+      published: time as Record<string, string>,
+    };
+  };
+  try {
+    // If not fetched and read within 5 seconds, nevermind.
+    return await withTimeout(lookup(), 5000);
+  } catch (err) {
+    // A request still waiting on an unresponsive registry would otherwise keep the process alive
+    // until the OS gives up on it, minutes after the command finished.
+    controller.abort();
+    throw err;
   }
 }
 

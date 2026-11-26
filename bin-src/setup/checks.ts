@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { findBuildScriptName } from '../../node-src/lib/getOptions';
 import pkg from '../../package.json';
+import { cliVersionChecks } from './cliVersion';
 import {
   ARCHIVE_DIRECTORIES,
   E2E_CONFIG,
@@ -39,6 +40,22 @@ export interface Fix {
    * project's install once, so a CI that installs with a frozen lockfile doesn't fail on them.
    */
   install?: boolean;
+  /**
+   * Other versions of this fix, such as updates to different chromatic versions. In a terminal,
+   * doctor shows their warnings and asks which one to apply, if any. --yes applies this fix.
+   */
+  choices?: FixChoice[];
+}
+
+/** One version of a fix the user can pick. */
+export interface FixChoice {
+  /** Names the choice for scripts, such as major. */
+  key: string;
+  /** What picking it does, such as "Major update to 19.0.0". */
+  label: string;
+  /** Shown before the choice, such as a link to release notes. */
+  warning?: string;
+  fix: Fix;
 }
 
 export interface Check {
@@ -112,7 +129,8 @@ function loadingChecks(input: DoctorInput, configError?: string): Check[] {
               }),
             ],
           },
-        }
+        },
+    ...cliVersionChecks(input.cliVersions, deps.chromatic, packageJsonPath)
   );
 
   return [...checks, ...storybookChecks(input, deps), ...testConfigChecks(input)];

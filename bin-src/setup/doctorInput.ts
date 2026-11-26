@@ -18,13 +18,14 @@ import type { StorybookInfoDeps } from '../../node-src/tasks/storybookInfo';
 import type { Flags, Options } from '../../node-src/types';
 import pkg from '../../package.json';
 import type { Fix } from './checks';
+import type { CliVersions } from './cliVersion';
 import { installableVersion } from './install';
 import { forEachRepoFile, isEditableJson, readJson, relativeOrDot, rewriteJson } from './shared';
 
 // One logger for every check run: each createLogger adds a process listener, so `--fix`, which
 // checks again after each fix, would pile them up until Node warns.
 let sharedLog: ReturnType<typeof createLogger> | undefined;
-const silentLog = () => (sharedLog ??= createLogger({ logLevel: 'silent' }));
+export const silentLog = () => (sharedLog ??= createLogger({ logLevel: 'silent' }));
 
 /** The options doctor checks, merged by the main command's own option handling. */
 type CheckedOptions = Partial<Options>;
@@ -65,6 +66,8 @@ export interface DoctorInput {
    * it too, which doctor can't see.
    */
   prebuilt: boolean;
+  /** The installed chromatic and the latest release. Only doctor reads these, not init's closing check. */
+  cliVersions?: CliVersions;
 }
 
 function nearestPackageJson(cwd: string, stopAt?: string) {
