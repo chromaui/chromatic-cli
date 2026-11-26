@@ -4,6 +4,7 @@ import path from 'path';
 import { withFile } from 'tmp-promise';
 
 import { trimStatsFile } from '../../bin-src/trimStatsFile';
+import { HTTPClientError } from '../io/httpClient';
 import { Context, FileDesc } from '../types';
 import metadataHtml from '../ui/html/metadata.html';
 import uploadingMetadata from '../ui/messages/info/uploadingMetadata';
@@ -15,8 +16,24 @@ import {
 import { getManifestPath } from './turbosnap/v2/manifest';
 import { uploadMetadata } from './upload';
 
+const MANIFEST_TARGET_PATH = '.chromatic/turbosnap-manifest.json';
+
 const fileSize = (path: string): Promise<number> =>
   new Promise((resolve) => stat(path, (err, stats) => resolve(err ? 0 : stats.size)));
+
+/**
+ * Names how an upload failed without the file path or URL, so repeats group together.
+ *
+ * @param error The error `uploadFiles` rejected with, which holds the fetch error as its cause.
+ *
+ * @returns The HTTP status, the error code (such as `ECONNRESET`), or the error's name.
+ */
+function uploadErrorKind(error: unknown): string {
+  const cause = error instanceof Error && error.cause !== undefined ? error.cause : error;
+  if (cause instanceof HTTPClientError) return `HTTP ${cause.response.status}`;
+  const { code, name } = (cause ?? {}) as { code?: unknown; name?: unknown };
+  return [code, name].find((value) => typeof value === 'string') ?? 'unknown';
+}
 
 /**
  * Upload metadata files to Chromatic for debugging issues with Chromatic support.
@@ -79,7 +96,16 @@ export async function uploadMetadataFiles(ctx: Context) {
         const directoryUrl = `${ctx.build.storybookUrl}.chromatic/`;
         ctx.log.info(uploadingMetadata(directoryUrl, files));
 
-        await uploadMetadata(ctx, files);
+        const failures = await uploadMetadata(ctx, files);
+        for (const { target, error } of failures) {
+          ctx.log.debug(`Failed to upload metadata file ${target.targetPath}`, error);
+          Sentry.captureException(error, {
+            // The index will read the manifest from S3, so keep its failures in one issue per kind.
+            ...(target.targetPath === MANIFEST_TARGET_PATH && {
+              fingerprint: ['turbosnap-manifest-upload', uploadErrorKind(error)],
+            }),
+          });
+        }
       });
     });
   } catch (err) {

@@ -1,7 +1,9 @@
 import * as Sentry from '@sentry/node';
 import { stat } from 'fs';
+import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { HTTPClientError } from '../io/httpClient';
 import TestLogger from './testLogger';
 import { uploadFiles } from './uploadFiles';
 import { uploadMetadataFiles } from './uploadMetadataFiles';
@@ -188,7 +190,66 @@ describe('uploadMetadataFiles', () => {
 
     await expect(uploadMetadataFiles(ctx)).resolves.toBeUndefined();
 
-    expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error));
+    expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), {});
     expect(ctx.log.resume).toHaveBeenCalled();
   });
+
+  it.each([
+    ['HTTP 400', new HTTPClientError({ status: 400, statusText: 'Bad Request' } as any)],
+    ['ECONNRESET', Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' })],
+  ])(
+    'reports every file that fails, grouping manifest failures as %s',
+    async (kind, manifestCause) => {
+      const logCause = new Error('log upload failed');
+      const causes: Partial<Record<string, Error>> = {
+        'chromatic.log': logCause,
+        'turbosnap-manifest.json': manifestCause,
+      };
+      const filePaths = [
+        '.chromatic/chromatic-diagnostics.json',
+        '.chromatic/chromatic.log',
+        '.chromatic/index.html',
+        '.chromatic/turbosnap-manifest.json',
+      ];
+      // An earlier test makes the manifest missing; this one needs every file to exist.
+      vi.mocked(stat).mockImplementation((_path, callback: any) => callback(null, { size: 100 }));
+      for (const _ of filePaths) {
+        vi.mocked(uploadFiles).mockImplementationOnce(async (_ctx, [target]) => {
+          const cause = causes[path.basename(target.localPath)];
+          if (cause) throw new Error(target.localPath, { cause });
+        });
+      }
+      const ctx = {
+        ...baseContext,
+        options: { logFile: 'chromatic.log', diagnosticsFile: 'chromatic-diagnostics.json' },
+        sourceDir: '/repo/storybook-static',
+        announcedBuild: { id: '1' },
+        build: { storybookUrl: 'https://sample-storybook.dev-chromatic.com' },
+        client: {
+          runQuery: vi.fn().mockResolvedValue({
+            uploadMetadata: {
+              info: {
+                targets: filePaths.map((filePath) => ({ filePath, formAction: 'https://s3' })),
+              },
+              userErrors: [],
+            },
+          }),
+        },
+      };
+
+      await uploadMetadataFiles(ctx);
+
+      expect(uploadFiles).toHaveBeenCalledTimes(filePaths.length);
+      expect(vi.mocked(Sentry.captureException).mock.calls).toEqual([
+        [expect.objectContaining({ message: 'chromatic.log', cause: logCause }), {}],
+        [
+          expect.objectContaining({
+            message: '/repo/storybook-static/.chromatic/turbosnap-manifest.json',
+            cause: manifestCause,
+          }),
+          { fingerprint: ['turbosnap-manifest-upload', kind] },
+        ],
+      ]);
+    }
+  );
 });

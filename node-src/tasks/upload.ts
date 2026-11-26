@@ -62,7 +62,9 @@ const uploadAndWaitForSentinels = async (
       options.interactive ? 100 : env.CHROMATIC_OUTPUT_INTERVAL
     ),
     onError: (error: Error, path?: string) => {
-      throw path === error.message ? new Error(failed(deps, { path }).output) : error;
+      throw path === error.message
+        ? new Error(failed(deps, { path }).output, { cause: error.cause })
+        : error;
     },
   });
 

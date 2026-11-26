@@ -457,7 +457,7 @@ interface UploadMetadataMutationResult {
  * @param ctx The context set when executing the CLI.
  * @param files The list of metadata files to upload.
  *
- * @returns A promise that resolves when all metadata files are uploaded.
+ * @returns The files that failed to upload, each with its error. One failure doesn't stop the rest.
  */
 export async function uploadMetadata(ctx: Context, files: FileDesc[]) {
   const { uploadMetadata } = await ctx.client.runQuery<UploadMetadataMutationResult>(
@@ -472,11 +472,15 @@ export async function uploadMetadata(ctx: Context, files: FileDesc[]) {
     }
   );
 
-  if (uploadMetadata.info) {
-    await uploadFiles(ctx, withLocalFiles(uploadMetadata.info.targets, files));
-  }
+  const targets = withLocalFiles(uploadMetadata.info?.targets ?? [], files);
+  // Upload each file on its own, so one failure doesn't hide the others.
+  const results = await Promise.allSettled(targets.map((target) => uploadFiles(ctx, [target])));
 
   if (uploadMetadata.userErrors.length > 0) {
     uploadMetadata.userErrors.map((err) => ctx.log.warn(err.message));
   }
+
+  return results.flatMap((result, index) =>
+    result.status === 'rejected' ? [{ target: targets[index], error: result.reason }] : []
+  );
 }
