@@ -85,7 +85,8 @@ async function rejected(token: string) {
 }
 
 /**
- * Gets the project token, checks it with Chromatic, and offers to save a typed one in .env.
+ * Gets the project token, checks it with Chromatic, and in a terminal offers to save a typed one,
+ * or one from --project-token, in .env.
  * In a terminal, a token Chromatic rejects is asked for again; otherwise it stops the run.
  *
  * @param session The init run.
@@ -95,13 +96,14 @@ async function rejected(token: string) {
 export async function tokenStep(session: Session, project: Project) {
   const { flags, interactive, writer } = session;
   let fromEnvironment = process.env.CHROMATIC_PROJECT_TOKEN?.trim() || undefined;
-  // True when the token came from a flag or the environment, so there's nothing new to save.
+  // True when there's nothing to offer to save: the token came from the environment, so it's set
+  // somewhere already, or there's no terminal to ask in.
   let given = false;
   let token: string;
   if (flags.projectToken) {
     clack.log.info('Using the project token from --project-token.');
     token = flags.projectToken;
-    given = true;
+    given = !interactive || token === fromEnvironment;
   } else if (interactive) {
     clack.log.info(
       `Find your project token on your project's Manage page: ${color.cta('https://www.chromatic.com/start')}`
@@ -131,9 +133,8 @@ export async function tokenStep(session: Session, project: Project) {
     throw new SubcommandFailure('Invalid project token', { exitCode: 1 });
   }
 
-  // Only offer to save a token the user typed; one from the environment is already set somewhere.
+  // Offer to save only a token the user typed or passed as a flag, and only in a terminal.
   if (given) return;
-  // Only an interactive run gets here: without a terminal the token came from a flag or the environment.
   const save = answered(
     await clack.confirm({
       message: 'Save it in a gitignored .env for local runs?',
