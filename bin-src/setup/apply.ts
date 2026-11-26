@@ -3,6 +3,31 @@ import { type Check, fixIds } from './checks';
 import { color } from './shared';
 
 /**
+ * The fix IDs named with --apply. meow drops an --apply without an ID, so a bare --apply or
+ * --apply= is found in the arguments instead, up to the -- that ends the flags. Like an ID the
+ * project doesn't offer, it exits 2.
+ *
+ * @param argv doctor's arguments.
+ * @param apply The values meow read for --apply, which include false for --no-apply.
+ *
+ * @returns The IDs.
+ */
+export function appliedIds(argv: string[], apply: unknown[] = []) {
+  const end = argv.includes('--') ? argv.indexOf('--') : argv.length;
+  const named = argv
+    .slice(0, end)
+    .filter((a) => a === '--apply' || a.startsWith('--apply=')).length;
+  const ids = apply.filter((id): id is string => typeof id === 'string' && id.trim() !== '');
+  if (ids.length < Math.max(named, apply.length)) {
+    throw new SubcommandFailure(
+      '--apply needs the ID of a fix, such as --apply onlyChanged.enable. The report shows each fixable item with its ID.',
+      { exitCode: 2 }
+    );
+  }
+  return ids;
+}
+
+/**
  * The failure for fixes named with --apply that a project doesn't offer. Doctor then applies none
  * of the named fixes, so a run never applies only some of them. A fix can appear only once another
  * is applied, such as TurboSnap once storybookConfigDir finds the Storybook, so when other named

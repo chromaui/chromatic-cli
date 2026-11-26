@@ -193,6 +193,10 @@ Imports`
       ),
       statsFile: path.join(folder, 'preview-stats.json'),
     });
+    // Shown only when doctor didn't build, such as after --fix turns TurboSnap on, so it doesn't
+    // name the build into doctor's own folder, which is gone once doctor exits.
+    expect(on.detail).not.toContain(folder);
+    expect(on.detail).toContain('Run doctor again to build Storybook with stats');
     expect(off.build).toBeUndefined();
     expect(otherBranch.build).toBeUndefined();
     expect(prebuilt.build).toBeUndefined();

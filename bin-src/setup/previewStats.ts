@@ -157,6 +157,19 @@ export async function buildStats(build: NonNullable<Check['build']>, cwd: string
   return undefined;
 }
 
+/**
+ * Whether a report names doctor's stats folder, such as in the trace hint, which shows only when
+ * preview reaches something, or in the title of a stats file doctor couldn't read. When none does,
+ * nothing points at the stats file, so doctor removes it.
+ *
+ * @param checks The checks doctor printed.
+ * @param statsDirectory The temporary folder doctor built Storybook into.
+ *
+ * @returns True when a check names it.
+ */
+export const namesStatsFolder = (checks: Check[], statsDirectory: string) =>
+  checks.some((c) => `${c.title}\n${c.detail ?? ''}`.includes(path.basename(statsDirectory)));
+
 const couldNotDetermine = (detail: string): Check => ({
   group: 'Values',
   status: 'info',

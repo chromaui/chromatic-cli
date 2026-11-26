@@ -90,6 +90,19 @@ describe('doctor where there is no project', () => {
     expect(existsSync(path.join(root, 'packages', 'lib', 'chromatic.config.json'))).toBe(false);
   });
 
+  it("fails a check when the build script's -c names a file, not a folder", async () => {
+    writeFileSync(
+      path.join(root, 'package.json'),
+      JSON.stringify({ scripts: { 'build-storybook': 'storybook build -c README.md' } })
+    );
+    writeFileSync(path.join(root, 'README.md'), '# app\n');
+    commit();
+
+    expect(await collectChecks(root)).toContainEqual(
+      expect.objectContaining({ status: 'fail', title: 'No Storybook found at README.md' })
+    );
+  });
+
   it('still checks a set-up folder without a Storybook', async () => {
     writeFileSync(path.join(root, 'chromatic.config.json'), '{}\n');
     commit();
@@ -262,5 +275,30 @@ describe('doctor --apply', () => {
       ),
     });
     expect(readFileSync(uiConfig(), 'utf8')).toBe('{}\n');
+  });
+
+  it('exits 2 and applies nothing when an --apply names no fix', async () => {
+    writePackage('ui', true);
+    commit();
+    process.chdir(root);
+
+    for (const apply of [
+      ['--apply'],
+      ['--apply='],
+      ['--apply', ''],
+      ['--apply', ' '],
+      ['--no-apply'],
+      ['--apply', 'onlyChanged.enable', '--apply'],
+    ]) {
+      await expect(main(['--project', 'packages/ui', ...apply])).rejects.toMatchObject({
+        exitCode: 2,
+        message: expect.stringContaining('--apply needs the ID of a fix'),
+      });
+    }
+    expect(readFileSync(uiConfig(), 'utf8')).toBe('{}\n');
+    // After --, it's an argument, not the flag.
+    await expect(
+      main(['--project', 'packages/ui', '--skip-update-check', '--', '--apply'])
+    ).resolves.toBeUndefined();
   });
 });

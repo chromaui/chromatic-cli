@@ -12,7 +12,12 @@ import { meowImportMeta } from '../node-src/lib/meowImportMeta';
 import parseArguments from '../node-src/lib/parseArguments';
 import type { Flags } from '../node-src/types';
 import pkg from '../package.json';
-import { notOfferedFailure, skippedFixesMessage, unlockedFixesMessage } from './setup/apply';
+import {
+  appliedIds,
+  notOfferedFailure,
+  skippedFixesMessage,
+  unlockedFixesMessage,
+} from './setup/apply';
 import { Check, runChecks } from './setup/checks';
 import { readCliVersions } from './setup/cliVersion';
 import {
@@ -26,7 +31,7 @@ import {
 } from './setup/detect';
 import { loadDoctorInput } from './setup/doctorInput';
 import { previewReachChecks } from './setup/previewReach';
-import { buildStats } from './setup/previewStats';
+import { buildStats, namesStatsFolder } from './setup/previewStats';
 import { applyFixes, doctorCommand, printChecks, skillsHint, summarize } from './setup/report';
 import { answered, color, git, readJson, relativeOrDot } from './setup/shared';
 import { SubcommandFailure } from './subcommandFailure';
@@ -352,7 +357,7 @@ export async function main(argv: string[]) {
   clack.intro(`Chromatic CLI v${pkg.version}`);
   clack.log.message(color.muted('doctor · checking your setup without starting a Chromatic build'));
 
-  const apply = flags.apply ?? [];
+  const apply = appliedIds(argv, flags.apply);
   const fix = flags.fix || apply.length > 0;
 
   const found = await chooseTargets(cwd, flags, mainFlags);
@@ -416,6 +421,7 @@ export async function main(argv: string[]) {
       checks = await check();
     }
     printChecks(checks);
+    let keepStats = namesStatsFolder(checks, statsDirectory);
 
     const applyCommand = (...ids: string[]) =>
       doctorCommand(argv, [
@@ -441,6 +447,7 @@ export async function main(argv: string[]) {
         });
         clack.log.step(color.bold('After fixes'));
         printChecks(checks);
+        keepStats ||= namesStatsFolder(checks, statsDirectory);
         // --fix and --yes offer the fixes the applied ones unlocked; --apply names them next time.
         const unlocked =
           apply.length > 0 && !flags.yes
@@ -455,7 +462,9 @@ export async function main(argv: string[]) {
     if (multi) clack.log.info(`${target.label}: ${summarize(checks)}`);
     all.push(...checks);
     // Keep the folder only when it holds the stats file the trace hint points at.
-    if (readdirSync(statsDirectory).length === 0) rmSync(statsDirectory, { recursive: true });
+    if (!keepStats || readdirSync(statsDirectory).length === 0) {
+      rmSync(statsDirectory, { recursive: true });
+    }
     if (notOffered) throw notOffered;
   }
 

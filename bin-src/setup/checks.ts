@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 import { findBuildScriptName } from '../../node-src/lib/getOptions';
@@ -312,7 +312,8 @@ function storybookChecks(input: DoctorInput, deps: Record<string, string>): Chec
  * @returns The file name, or undefined when there's none.
  */
 export function findMainFile(configDirectory: string) {
-  return existsSync(configDirectory)
+  // A -c or storybookConfigDir that names a file, such as README.md, isn't a Storybook.
+  return statSync(configDirectory, { throwIfNoEntry: false })?.isDirectory()
     ? readdirSync(configDirectory).find((f) => MAIN_FILE.test(f))
     : undefined;
 }

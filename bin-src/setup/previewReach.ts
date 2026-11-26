@@ -275,7 +275,9 @@ function missingStatsCheck(shown: string, build?: Check['build']): Check {
     status: 'info',
     title: `No ${build ? 'stats file' : shown} to show what preview imports`,
     detail: build
-      ? `With TurboSnap, a change to any file preview imports recaptures every story. Building Storybook with stats shows which files those are: ${build.command}`
+      ? // Shown after fixes, such as one that turns TurboSnap on: doctor builds only before its
+        // first report.
+        'With TurboSnap, a change to any file preview imports recaptures every story. Run doctor again to build Storybook with stats and show which files those are.'
       : `Build Storybook into ${path.dirname(shown)} with --stats-json, then run doctor again. With TurboSnap, a change to any file preview imports recaptures every story.`,
     build,
   };
