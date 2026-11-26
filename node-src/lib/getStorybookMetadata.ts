@@ -31,7 +31,7 @@ import { viewLayers } from './viewLayers';
  *
  * @returns The config directory and static directories the build script names, if any.
  */
-function findConfigFlags({
+export function findConfigFlags({
   buildScriptName,
   packageJson,
 }: {
