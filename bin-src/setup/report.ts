@@ -17,10 +17,12 @@ const MARKS: Record<Check['status'], string> = {
   pass: color.success('✔'),
   warn: color.warning('▲'),
   fail: color.error('✖'),
+  info: color.cta('●'),
 };
 
 /**
- * Wraps text to a width, so long details stay inside their section's box.
+ * Wraps text to a width, so long details stay inside their section's box. A list item's wrapped
+ * lines line up under its text.
  *
  * @param text The text to wrap.
  * @param width The widest a line may be.
@@ -29,12 +31,13 @@ const MARKS: Record<Check['status'], string> = {
  */
 function wrap(text: string, width: number) {
   return text.split('\n').flatMap((line) => {
+    const indent = line.startsWith('- ') ? '  ' : '';
     const lines: string[] = [];
     let current = '';
     for (const word of line.split(' ')) {
       if (current && current.length + word.length + 1 > width) {
         lines.push(current);
-        current = word;
+        current = `${indent}${word}`;
       } else {
         current = current ? `${current} ${word}` : word;
       }

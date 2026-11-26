@@ -18,7 +18,8 @@ import { valueChecks } from './valueChecks';
 
 const MAIN_FILE = /^main\.[cm]?[jt]sx?$/;
 
-type Status = 'pass' | 'warn' | 'fail';
+// An info line reports something without judging it, and isn't counted.
+type Status = 'pass' | 'warn' | 'fail' | 'info';
 export type Group = 'Loading' | 'Values' | 'Environment';
 
 export interface Fix {
@@ -46,6 +47,8 @@ export interface Check {
   title: string;
   detail?: string;
   fix?: Fix;
+  /** A Storybook build that writes the stats file this check needs; doctor runs it first. */
+  build?: { command: string; statsFile: string };
 }
 
 function loadingChecks(input: DoctorInput, configError?: string): Check[] {
