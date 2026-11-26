@@ -16,7 +16,7 @@ The main `chromatic` command lets a user publish a Storybook to Chromatic and st
 - Run `npx chromatic --project-token <token>` in a project with a `build-storybook` script.
 - Run `npx chromatic -t <token> --storybook-build-dir storybook-static` after building Storybook yourself.
 - Set `CHROMATIC_PROJECT_TOKEN` and run `yarn chromatic` in this repo, which publishes the repo's own stories.
-- Run the GitHub Action `chromaui/action`. That entry point is not mapped here.
+- Run the GitHub Action `chromaui/action`. That entry point is not covered here (see SKILL.md).
 
 ## Driving it with control-chromatic
 
