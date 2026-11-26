@@ -94,6 +94,17 @@ export function findTestConfig(framework: TestFramework, directory: string, gitR
 }
 
 /**
+ * Whether a path is a folder. A Storybook config path, such as a build script's -c, can name a
+ * file such as README.md, which isn't a Storybook and can't be listed.
+ *
+ * @param folder The path.
+ *
+ * @returns True when it's a folder.
+ */
+export const isDirectory = (folder: string) =>
+  !!statSync(folder, { throwIfNoEntry: false })?.isDirectory();
+
+/**
  * The nearest folder above a project where its tests or Storybook run, such as a repo-root
  * Playwright config or .storybook that covers every package. With a test framework's flag, only
  * that framework counts; with Storybook, only a .storybook.
@@ -120,7 +131,7 @@ export function runsAbove(directory: string, gitRoot: string | undefined, flagge
     const storybook = path.join(folder, '.storybook');
     if (
       (!flagged || flagged === 'storybook') &&
-      existsSync(storybook) &&
+      isDirectory(storybook) &&
       readdirSync(storybook).some((f) => MAIN_CONFIG_PATTERN.test(f))
     ) {
       return {
@@ -195,7 +206,7 @@ function storybookMains(gitRoot: string, present: Set<string>) {
   // folder outside the repository count too.
   const mainIn = (folder: string) => {
     // A -c that names a file, or nothing, isn't a Storybook.
-    const name = statSync(folder, { throwIfNoEntry: false })?.isDirectory()
+    const name = isDirectory(folder)
       ? readdirSync(folder).find((f) => MAIN_CONFIG_PATTERN.test(f))
       : undefined;
     return name && path.relative(gitRoot, path.join(folder, name));

@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 import { findBuildScriptName } from '../../node-src/lib/getOptions';
@@ -10,6 +10,7 @@ import {
   findTestConfig,
   Framework,
   FRAMEWORK_NAMES,
+  isDirectory,
   TEST_FRAMEWORKS,
 } from './detect';
 import { configFix, DoctorInput } from './doctorInput';
@@ -278,10 +279,10 @@ function storybookChecks(input: DoctorInput, deps: Record<string, string>): Chec
       status: 'pass',
       title: `Found Storybook at ${at(path.join(configDirectory, main))}`,
     });
-  } else if (options.storybookConfigDir === undefined || existsSync(configDirectory)) {
+  } else if (options.storybookConfigDir === undefined || isDirectory(configDirectory)) {
     checks.push(noStorybookCheck(input));
   }
-  // A storybookConfigDir that points nowhere is reported once, with the other option values.
+  // A storybookConfigDir that's missing or a file is reported once, with the other option values.
 
   const storybookVersion = deps.storybook;
   if (main) {
@@ -312,8 +313,7 @@ function storybookChecks(input: DoctorInput, deps: Record<string, string>): Chec
  * @returns The file name, or undefined when there's none.
  */
 export function findMainFile(configDirectory: string) {
-  // A -c or storybookConfigDir that names a file, such as README.md, isn't a Storybook.
-  return statSync(configDirectory, { throwIfNoEntry: false })?.isDirectory()
+  return isDirectory(configDirectory)
     ? readdirSync(configDirectory).find((f) => MAIN_FILE.test(f))
     : undefined;
 }

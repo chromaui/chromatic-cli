@@ -101,6 +101,36 @@ describe('doctor where there is no project', () => {
     expect(await collectChecks(root)).toContainEqual(
       expect.objectContaining({ status: 'fail', title: 'No Storybook found at README.md' })
     );
+
+    // storybookConfigDir naming the same file fails once, with the option values.
+    writeFileSync(
+      path.join(root, 'chromatic.config.json'),
+      '{ "storybookConfigDir": "README.md" }'
+    );
+    const checks = await collectChecks(root);
+    expect(checks).toContainEqual(
+      expect.objectContaining({
+        group: 'Values',
+        status: 'fail',
+        title: "storybookConfigDir README.md isn't a folder",
+        detail: expect.stringContaining('.storybook'),
+      })
+    );
+    const titles = checks.map((check) => check.title).join('\n');
+    expect(titles).not.toMatch(/No Storybook found|README.md exists/);
+  });
+
+  it('points to init when a folder above has a .storybook file, not a folder', async () => {
+    writeFileSync(path.join(root, '.storybook'), 'not a folder\n');
+    mkdirSync(path.join(root, 'packages', 'lib'), { recursive: true });
+    writeFileSync(path.join(root, 'packages', 'lib', 'package.json'), '{ "name": "lib" }');
+    commit();
+    process.chdir(root);
+
+    await expect(main(['--project', 'packages/lib'])).rejects.toMatchObject({
+      exitCode: 2,
+      message: expect.stringContaining('Run npx chromatic init --project packages/lib'),
+    });
   });
 
   it('still checks a set-up folder without a Storybook', async () => {

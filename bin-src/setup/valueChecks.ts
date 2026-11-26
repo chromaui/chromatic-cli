@@ -4,7 +4,7 @@ import path from 'node:path';
 import { findBuildScriptName } from '../../node-src/lib/getOptions';
 import type { Check, Fix } from './checks';
 import { findMainFile, matchesBranch } from './checks';
-import { findTestConfig } from './detect';
+import { findTestConfig, isDirectory } from './detect';
 import { configFix, DoctorInput, globSuggestions } from './doctorInput';
 import { relativeOrDot, tokenEnvironmentEdits } from './shared';
 
@@ -221,8 +221,18 @@ function configDirectoryChecks(input: DoctorInput): Check[] {
   const { cwd, gitRoot, options } = input;
   const value = options.storybookConfigDir;
   if (value === undefined) return [];
-  if (existsSync(input.storybookConfigDirectory)) {
+  if (isDirectory(input.storybookConfigDirectory)) {
     return [{ group: 'Values', status: 'pass', title: `storybookConfigDir ${value} exists` }];
+  }
+  if (existsSync(input.storybookConfigDirectory)) {
+    return [
+      {
+        group: 'Values',
+        status: 'fail',
+        title: `storybookConfigDir ${value} isn't a folder`,
+        detail: "Point it at the folder with Storybook's main config, such as .storybook.",
+      },
+    ];
   }
 
   // A repo-root path used from a subdirectory doubles up, like packages/ui/packages/ui/.storybook.
