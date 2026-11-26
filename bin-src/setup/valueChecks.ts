@@ -244,7 +244,7 @@ function configDirectoryChecks(input: DoctorInput): Check[] {
     prefix !== '.' && normalized.startsWith(`${prefix}/`)
       ? normalized.slice(prefix.length + 1)
       : undefined;
-  const rebasedExists = rebased !== undefined && existsSync(path.join(cwd, rebased));
+  const rebasedExists = rebased !== undefined && isDirectory(path.join(cwd, rebased));
   return [
     {
       group: 'Values',
@@ -276,12 +276,13 @@ function baseDirectoryChecks(input: DoctorInput): Check[] {
   const { gitRoot, options } = input;
   const value = options.storybookBaseDir;
   if (value === undefined || !gitRoot) return [];
-  if (!existsSync(path.resolve(gitRoot, value))) {
+  const folder = path.resolve(gitRoot, value);
+  if (!isDirectory(folder)) {
     return [
       {
         group: 'Values',
         status: 'fail',
-        title: `storybookBaseDir ${value} doesn't exist`,
+        title: `storybookBaseDir ${value} ${existsSync(folder) ? "isn't a folder" : "doesn't exist"}`,
         detail: 'It is relative to the repository root.',
       },
     ];

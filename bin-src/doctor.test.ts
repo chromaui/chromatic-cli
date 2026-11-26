@@ -91,15 +91,26 @@ describe('doctor where there is no project', () => {
   });
 
   it("fails a check when the build script's -c names a file, not a folder", async () => {
+    // Absolute, as a script can pass it; doctor checks it rather than finding no project.
+    const readme = path.join(root, 'README.md');
     writeFileSync(
       path.join(root, 'package.json'),
-      JSON.stringify({ scripts: { 'build-storybook': 'storybook build -c README.md' } })
+      JSON.stringify({ scripts: { 'build-storybook': `storybook build -c ${readme}` } })
     );
-    writeFileSync(path.join(root, 'README.md'), '# app\n');
+    writeFileSync(readme, '# app\n');
     commit();
+    process.chdir(root);
 
     expect(await collectChecks(root)).toContainEqual(
       expect.objectContaining({ status: 'fail', title: 'No Storybook found at README.md' })
+    );
+    await expect(main(['--skip-update-check'])).rejects.toMatchObject({ exitCode: 1 });
+    expect(await collectChecks(root, ['--storybook-build-dir', 'README.md'])).toContainEqual(
+      expect.objectContaining({
+        status: 'fail',
+        title: "storybookBuildDir README.md isn't a folder",
+        detail: "Point it at Storybook's build folder.",
+      })
     );
 
     // storybookConfigDir naming the same file fails once, with the option values.
@@ -120,7 +131,7 @@ describe('doctor where there is no project', () => {
     expect(titles).not.toMatch(/No Storybook found|README.md exists/);
   });
 
-  it('points to init when a folder above has a .storybook file, not a folder', async () => {
+  it('points to init when a .storybook here or above is a file, not a folder', async () => {
     writeFileSync(path.join(root, '.storybook'), 'not a folder\n');
     mkdirSync(path.join(root, 'packages', 'lib'), { recursive: true });
     writeFileSync(path.join(root, 'packages', 'lib', 'package.json'), '{ "name": "lib" }');
@@ -131,6 +142,51 @@ describe('doctor where there is no project', () => {
       exitCode: 2,
       message: expect.stringContaining('Run npx chromatic init --project packages/lib'),
     });
+    await expect(main([])).rejects.toMatchObject({
+      exitCode: 2,
+      message: expect.stringContaining('Run npx chromatic init to set one up'),
+    });
+    // --project names a folder.
+    await expect(main(['--project', 'package.json'])).rejects.toMatchObject({
+      exitCode: 1,
+      message: 'No directory at package.json',
+    });
+    // Nor does it hide a set-up package from the root.
+    writePackage('ui', true);
+    commit();
+    await expect(main(['--skip-update-check'])).resolves.toBeUndefined();
+    // Unless the root's build script names it, which makes it the root's broken Storybook.
+    writeFileSync(
+      path.join(root, 'package.json'),
+      JSON.stringify({ scripts: { 'build-storybook': 'storybook build -c .storybook' } })
+    );
+    commit();
+    await expect(main(['--skip-update-check'])).rejects.toMatchObject({
+      exitCode: 1,
+      message: 'Some checks failed',
+    });
+  });
+
+  it("offers no rebase onto a file, and fails a storybookBaseDir that's a file", async () => {
+    const ui = path.join(root, 'packages', 'ui');
+    mkdirSync(ui, { recursive: true });
+    writeFileSync(path.join(ui, 'package.json'), '{ "name": "ui" }');
+    writeFileSync(path.join(ui, '.storybook'), 'not a folder\n');
+    writeFileSync(uiConfig(), '{ "storybookConfigDir": "packages/ui/.storybook" }\n');
+    commit();
+
+    const checks = await collectChecks(ui);
+    const configDirectory = checks.find((c) => c.title.includes('ConfigDir'));
+    expect(configDirectory?.status).toBe('fail');
+    expect(configDirectory?.fix).toBeUndefined();
+    // Relative to the repository root, where README.md is; packages/ui has none.
+    writeFileSync(path.join(root, 'README.md'), '# app\n');
+    expect(await collectChecks(ui, ['--storybook-base-dir', 'README.md'])).toContainEqual(
+      expect.objectContaining({
+        status: 'fail',
+        title: "storybookBaseDir README.md isn't a folder",
+      })
+    );
   });
 
   it('still checks a set-up folder without a Storybook', async () => {

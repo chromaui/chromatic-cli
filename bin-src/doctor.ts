@@ -5,8 +5,6 @@ import path from 'node:path';
 import * as clack from '@clack/prompts';
 import meow from 'meow';
 
-import { findBuildScriptName } from '../node-src/lib/getOptions';
-import { findConfigFlags } from '../node-src/lib/getStorybookMetadata';
 import { allowPnpRuntime } from '../node-src/lib/installedPackages';
 import { meowImportMeta } from '../node-src/lib/meowImportMeta';
 import parseArguments from '../node-src/lib/parseArguments';
@@ -24,9 +22,12 @@ import {
   describeProject,
   findProjects,
   findTestConfig,
+  hasConfigFile,
+  isDirectory,
   listProjectFiles,
   Project,
   runsAbove,
+  scriptConfigDirectory,
   TEST_FRAMEWORKS,
 } from './setup/detect';
 import { loadDoctorInput } from './setup/doctorInput';
@@ -35,10 +36,6 @@ import { buildStats, namesStatsFolder } from './setup/previewStats';
 import { applyFixes, doctorCommand, printChecks, skillsHint, summarize } from './setup/report';
 import { answered, color, git, readJson, relativeOrDot } from './setup/shared';
 import { SubcommandFailure } from './subcommandFailure';
-
-const CONFIG_FILES = ['chromatic.config.json', 'chromatic.config.jsonc', 'chromatic.config.json5'];
-const hasConfigFile = (directory: string) =>
-  CONFIG_FILES.some((file) => existsSync(path.join(directory, file)));
 
 /**
  * Loads the options the way a build does and runs every check, without starting a Chromatic build.
@@ -117,12 +114,9 @@ function hasProject(directory: string, mainFlags: Flags) {
     return true;
   }
   if (TEST_FRAMEWORKS.some((framework) => findTestConfig(framework, directory))) return true;
-  const packageJson = readJson(path.join(directory, 'package.json')) ?? {};
-  const { configDir } = findConfigFlags({
-    buildScriptName: findBuildScriptName(packageJson.scripts),
-    packageJson,
-  });
-  return existsSync(path.join(directory, configDir ?? '.storybook'));
+  // A script's -c counts even as a file, so doctor reports it; .storybook only as a folder.
+  const named = scriptConfigDirectory(directory);
+  return named ? existsSync(named) : isDirectory(path.join(directory, '.storybook'));
 }
 
 /**
@@ -209,15 +203,18 @@ async function chooseTargets(cwd: string, flags: Record<string, any>, mainFlags:
 
   if (flags.project) {
     const directory = path.resolve(cwd, flags.project);
-    if (!existsSync(directory))
+    if (!isDirectory(directory))
       throw new SubcommandFailure(`No directory at ${flags.project}`, { exitCode: 1 });
     return here(directory);
   }
+  const dotStorybook = path.join(cwd, '.storybook');
   if (
     !gitRoot ||
     hasPathFlags(mainFlags) ||
     hasConfigFile(cwd) ||
-    existsSync(path.join(cwd, '.storybook'))
+    isDirectory(dotStorybook) ||
+    // A .storybook file the build script names is this project's, so doctor reports it here.
+    (existsSync(dotStorybook) && scriptConfigDirectory(cwd) === dotStorybook)
   ) {
     return here(cwd);
   }

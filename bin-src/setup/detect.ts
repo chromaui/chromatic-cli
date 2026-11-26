@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import JSON5 from 'json5';
 
+import { findBuildScriptName } from '../../node-src/lib/getOptions';
 import { findConfigFlags, MAIN_CONFIG_PATTERN } from '../../node-src/lib/getStorybookMetadata';
 import type { PackageManager } from './install';
 import { forEachRepoFile, readJson, relativeOrDot } from './shared';
@@ -169,6 +170,33 @@ export function versionOf(directory: string, gitRoot: string, name: string) {
 }
 
 const CONFIG_FILES = ['chromatic.config.json', 'chromatic.config.jsonc', 'chromatic.config.json5'];
+
+/**
+ * Whether a folder has a Chromatic config file.
+ *
+ * @param directory The folder.
+ *
+ * @returns True when it has one.
+ */
+export const hasConfigFile = (directory: string) =>
+  CONFIG_FILES.some((file) => existsSync(path.join(directory, file)));
+
+/**
+ * The Storybook config folder a folder's build script names with -c, as the build resolves it.
+ *
+ * @param directory The folder with the package.json.
+ *
+ * @returns The absolute path, which may be a file or missing, or undefined when the script names
+ * none.
+ */
+export function scriptConfigDirectory(directory: string) {
+  const packageJson = readJson(path.join(directory, 'package.json')) ?? {};
+  const { configDir } = findConfigFlags({
+    buildScriptName: findBuildScriptName(packageJson.scripts),
+    packageJson,
+  });
+  return configDir === undefined ? undefined : path.resolve(directory, configDir);
+}
 
 /**
  * The folder's Chromatic config file, as the main command finds it without --config-file.

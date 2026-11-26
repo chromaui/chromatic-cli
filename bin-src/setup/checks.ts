@@ -254,11 +254,12 @@ function storybookChecks(input: DoctorInput, deps: Record<string, string>): Chec
         title: `Uploads the Storybook built in ${folder}`,
       });
     } else if (existsSync(path.resolve(cwd, folder))) {
+      const isFolder = isDirectory(path.resolve(cwd, folder));
       checks.push({
         group: 'Loading',
         status: 'fail',
-        title: `storybookBuildDir ${folder} isn't a Storybook build`,
-        detail: input.buildDirectoryError,
+        title: `storybookBuildDir ${folder} isn't a ${isFolder ? 'Storybook build' : 'folder'}`,
+        detail: isFolder ? input.buildDirectoryError : "Point it at Storybook's build folder.",
       });
     } else {
       checks.push({

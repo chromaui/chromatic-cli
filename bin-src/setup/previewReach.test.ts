@@ -164,6 +164,12 @@ Imports`
     expect(checks).toMatchObject([
       { status: 'info', title: 'No out/preview-stats.json to show what preview imports' },
     ]);
+    expect(checks[0].detail).toMatch(/^Build Storybook into out/);
+
+    // A file where Storybook would build can't hold a stats file, so building into it won't help.
+    write('out', 'not a folder');
+    const [inFile] = await reach(inputFor(root, 'out'));
+    expect(inFile.detail).toMatch(/^out is a file, so Storybook can't build into it/);
   });
 
   it('builds Storybook with stats into its own folder only when TurboSnap is on and Chromatic runs the build script', async () => {
