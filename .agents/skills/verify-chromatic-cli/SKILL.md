@@ -1,13 +1,13 @@
 ---
 name: verify-chromatic-cli
-description: Drive the locally built Chromatic CLI (`chromatic` / `dist/bin.cjs` in chromaui/chromatic-cli) the way a user does from a terminal and capture proof — stdout, stderr, exit codes, written files, TTY output. Use whenever a change to bin-src/ or node-src/ affects behavior or output, before calling it done or opening or updating a PR, and when reviewing one whose evidence doesn't cover the change; for comparing main against a branch; for testing in the e2e fixture projects (Vite, webpack, rsbuild; npm, Yarn 1, Yarn 4 and pnpm monorepos); and for trying a published canary. Covers the main publish command and its option/config preflight, `--only-changed` TurboSnap builds, `trace`, `turbosnap-manifest`, `trim-stats-file`, and `doctor`.
+description: Drive the locally built Chromatic CLI (`chromatic` / `dist/bin.cjs` in chromaui/chromatic-cli) the way a user does from a terminal and capture proof — stdout, stderr, exit codes, written files, TTY output. Use whenever a change to bin-src/ or node-src/ affects behavior or output, before calling it done or opening or updating a PR, and when reviewing one whose evidence doesn't cover the change; for comparing main against a branch; for testing in the e2e fixture projects (Vite, webpack, rsbuild; npm, Yarn 1, Yarn 4 and pnpm monorepos); and for trying a published canary. Covers the main publish command and its option/config preflight, `--only-changed` TurboSnap builds, `trace`, `turbosnap-manifest`, `trim-stats-file`, `doctor`, and `init`.
 ---
 
 # Verify the Chromatic CLI
 
 The product is a Node CLI (`chromatic`, published as the `chromatic` npm package). Users run it in their own JS project. It builds or reads a Storybook, authenticates against the Chromatic backend (`https://index.chromatic.com/graphql`, or `CHROMATIC_INDEX_URL`), uploads, and waits for visual tests. It also ships offline utility subcommands. Here you drive `dist/bin.cjs`, the same bundle npm ships. You never drive `node-src/` directly.
 
-Other surfaces in this repo are not covered here yet: the GitHub Action (`action-src/`, `action.yml`), the React Native commands (`generate-manifest`, `react-native-build`; they need an RN/Expo project), `chromatic init` (it rewrites `package.json`, runs a package install and checks the token with the index), and the repo's own Storybook (`yarn storybook`, which shows CLI terminal output as stories and is a dev harness, not a user surface).
+Other surfaces in this repo are not covered here yet: the GitHub Action (`action-src/`, `action.yml`), the React Native commands (`generate-manifest`, `react-native-build`; they need an RN/Expo project) and the repo's own Storybook (`yarn storybook`, which shows CLI terminal output as stories and is a dev harness, not a user surface).
 
 Everything goes through one helper, `scripts/control-chromatic`, which is executable. Invoke it by path from the repo root:
 
