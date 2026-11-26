@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const traceMain = vi.hoisted(() => vi.fn());
 vi.mock('./trace', () => ({ main: traceMain }));
+const mainMain = vi.hoisted(() => vi.fn());
+vi.mock('./main', () => ({ main: mainMain }));
 
 const originalArgv = process.argv;
 
@@ -45,5 +47,19 @@ describe('register', () => {
       253
     );
     expect(output).toBe('Error: No package.json found');
+  });
+
+  it.each([
+    [['--only-changed', '-h'], ['--help'], mainMain],
+    [['--help', '--dry-run'], ['--help'], mainMain],
+    [['main', '-h'], ['--help'], mainMain],
+    [['trace', '--mode', 'compact', '--help'], ['--help'], traceMain],
+    [['trace', '-h'], ['--help'], traceMain],
+    [['--dry-run', '--', '-h'], ['--dry-run', '--', '-h'], mainMain],
+  ])('turns %j into %j for the command', async (args, expected, command) => {
+    command.mockResolvedValue(undefined);
+    process.argv = ['node', 'chromatic', ...args];
+    await import('./register');
+    await vi.waitFor(() => expect(command).toHaveBeenCalledWith(expected));
   });
 });
