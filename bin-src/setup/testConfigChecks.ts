@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 
 import type { Check } from './checks';
@@ -66,7 +66,10 @@ export function testConfigChecks(input: DoctorInput): Check[] {
   }
   const where =
     runsFrom === gitRoot ? 'the repository root' : relativeOrDot(gitRoot ?? cwd, runsFrom);
-  const found = location !== undefined && path.resolve(cwd, location) === archives;
+  // The same folder under another name, such as a test-results symlink, counts too.
+  const sameFolder = (a: string, b: string) =>
+    a === b || (existsSync(a) && existsSync(b) && realpathSync(a) === realpathSync(b));
+  const found = locationPath !== undefined && sameFolder(locationPath, archives);
   const { storybookBaseDir } = input.options;
   // Without storybookBaseDir, a build names files from the folder it runs in.
   const baseDirectory =

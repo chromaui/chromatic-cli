@@ -1,5 +1,13 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { stripVTControlCharacters } from 'node:util';
@@ -235,6 +243,14 @@ describe('tests that run from a folder above the project', () => {
     expect(await status()).toBe('pass');
     // A variable already set wins over .env, as it does for a build.
     vi.stubEnv('CHROMATIC_ARCHIVE_LOCATION', 'elsewhere');
+    expect(await status()).toBe('fail');
+    // The folder test-results links to is the same folder; another folder isn't.
+    mkdirSync(path.join(root, 'real-results'));
+    mkdirSync(path.join(root, 'other-results'));
+    symlinkSync('real-results', path.join(root, 'test-results'));
+    vi.stubEnv('CHROMATIC_ARCHIVE_LOCATION', '../../real-results');
+    expect(await status()).toBe('pass');
+    vi.stubEnv('CHROMATIC_ARCHIVE_LOCATION', '../../other-results');
     expect(await status()).toBe('fail');
   });
 
