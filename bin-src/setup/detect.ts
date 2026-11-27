@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import JSON5 from 'json5';
 
+import { findBuildScriptName } from '../../node-src/lib/getOptions';
 import { findConfigFlags, MAIN_CONFIG_PATTERN } from '../../node-src/lib/getStorybookMetadata';
 import type { PackageManager } from './install';
 import { forEachRepoFile, readJson, relativeOrDot } from './shared';
@@ -94,6 +95,17 @@ export function findTestConfig(framework: TestFramework, directory: string, gitR
 }
 
 /**
+ * Whether a path is a folder. A Storybook config path, such as a build script's -c, can name a
+ * file such as README.md, which isn't a Storybook and can't be listed.
+ *
+ * @param folder The path.
+ *
+ * @returns True when it's a folder.
+ */
+export const isDirectory = (folder: string) =>
+  !!statSync(folder, { throwIfNoEntry: false })?.isDirectory();
+
+/**
  * The nearest folder above a project where its tests or Storybook run, such as a repo-root
  * Playwright config or .storybook that covers every package. With a test framework's flag, only
  * that framework counts; with Storybook, only a .storybook.
@@ -120,7 +132,7 @@ export function runsAbove(directory: string, gitRoot: string | undefined, flagge
     const storybook = path.join(folder, '.storybook');
     if (
       (!flagged || flagged === 'storybook') &&
-      existsSync(storybook) &&
+      isDirectory(storybook) &&
       readdirSync(storybook).some((f) => MAIN_CONFIG_PATTERN.test(f))
     ) {
       return {
@@ -160,6 +172,33 @@ export function versionOf(directory: string, gitRoot: string, name: string) {
 const CONFIG_FILES = ['chromatic.config.json', 'chromatic.config.jsonc', 'chromatic.config.json5'];
 
 /**
+ * Whether a folder has a Chromatic config file.
+ *
+ * @param directory The folder.
+ *
+ * @returns True when it has one.
+ */
+export const hasConfigFile = (directory: string) =>
+  CONFIG_FILES.some((file) => existsSync(path.join(directory, file)));
+
+/**
+ * The Storybook config folder a folder's build script names with -c, as the build resolves it.
+ *
+ * @param directory The folder with the package.json.
+ *
+ * @returns The absolute path, which may be a file or missing, or undefined when the script names
+ * none.
+ */
+export function scriptConfigDirectory(directory: string) {
+  const packageJson = readJson(path.join(directory, 'package.json')) ?? {};
+  const { configDir } = findConfigFlags({
+    buildScriptName: findBuildScriptName(packageJson.scripts),
+    packageJson,
+  });
+  return configDir === undefined ? undefined : path.resolve(directory, configDir);
+}
+
+/**
  * The folder's Chromatic config file, as the main command finds it without --config-file.
  *
  * @param directory The folder Chromatic runs from.
@@ -195,7 +234,7 @@ function storybookMains(gitRoot: string, present: Set<string>) {
   // folder outside the repository count too.
   const mainIn = (folder: string) => {
     // A -c that names a file, or nothing, isn't a Storybook.
-    const name = statSync(folder, { throwIfNoEntry: false })?.isDirectory()
+    const name = isDirectory(folder)
       ? readdirSync(folder).find((f) => MAIN_CONFIG_PATTERN.test(f))
       : undefined;
     return name && path.relative(gitRoot, path.join(folder, name));

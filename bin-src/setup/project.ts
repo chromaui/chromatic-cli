@@ -13,6 +13,7 @@ import {
   foldersUp,
   Framework,
   FRAMEWORK_NAMES,
+  isDirectory,
   Project,
   readConfig,
   runsAbove,
@@ -39,7 +40,7 @@ function matchFlags({ flags, gitRoot }: Session, projects: Project[]): Project[]
   const matching = candidates.filter((p) => p.framework === framework);
   if (matching.length > 0 || candidates.length > 1) return matching;
   if (candidates.length === 1) return [{ ...candidates[0], framework }];
-  if (!wanted || !existsSync(wanted)) return [];
+  if (!wanted) return [];
   return [
     {
       framework,
@@ -65,7 +66,7 @@ function matchFlags({ flags, gitRoot }: Session, projects: Project[]): Project[]
 function pointAbove({ flags, gitRoot }: Session, projects: Project[]) {
   const cwd = process.cwd();
   const wanted = flags.project ? path.resolve(cwd, flags.project) : undefined;
-  if (!wanted || !existsSync(wanted) || projects.some((p) => p.directory === wanted)) return;
+  if (!wanted || projects.some((p) => p.directory === wanted)) return;
   const framework = flags.framework as Framework | undefined;
   const above = runsAbove(wanted, gitRoot, framework);
   if (!above) return;
@@ -184,6 +185,10 @@ function checkSetUpHere({ gitRoot }: Session, project: Project) {
  */
 export async function pickProject(session: Session, projects: Project[]): Promise<Project> {
   const { flags, interactive } = session;
+  // As in doctor, --project names a folder; a file such as README.md isn't a project.
+  if (flags.project && !isDirectory(path.resolve(process.cwd(), flags.project))) {
+    throw new SubcommandFailure(`No directory at ${flags.project}`, { exitCode: 1 });
+  }
   pointAbove(session, projects);
   const candidates = matchFlags(session, projects);
   if (candidates.length === 0) {

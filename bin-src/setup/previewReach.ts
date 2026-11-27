@@ -8,6 +8,7 @@ import { isInstalledPackagePath, isSyntheticFile } from '../../node-src/lib/turb
 import { realProjectFiles } from '../../node-src/lib/turbosnap/v2/projectFiles';
 import { readStatsFile } from '../../node-src/tasks/readStatsFile';
 import type { Check } from './checks';
+import { isDirectory } from './detect';
 import type { DoctorInput } from './doctorInput';
 import { previewStats } from './previewStats';
 import { git, relativeOrDot } from './shared';
@@ -266,17 +267,24 @@ async function readManifest(
  *
  * @param shown The stats file, as shown.
  * @param build The build doctor runs, when it builds.
+ * @param inFile Whether the folder Storybook would build into is a file.
  *
  * @returns The check.
  */
-function missingStatsCheck(shown: string, build?: Check['build']): Check {
+function missingStatsCheck(shown: string, build?: Check['build'], inFile = false): Check {
+  const folder = path.dirname(shown);
+  const move = inFile
+    ? `${folder} is a file, so Storybook can't build into it. Move it, then build`
+    : 'Build';
   return {
     group: 'Values',
     status: 'info',
     title: `No ${build ? 'stats file' : shown} to show what preview imports`,
     detail: build
-      ? `With TurboSnap, a change to any file preview imports recaptures every story. Building Storybook with stats shows which files those are: ${build.command}`
-      : `Build Storybook into ${path.dirname(shown)} with --stats-json, then run doctor again. With TurboSnap, a change to any file preview imports recaptures every story.`,
+      ? // Shown after fixes, such as one that turns TurboSnap on: doctor builds only before its
+        // first report.
+        'With TurboSnap, a change to any file preview imports recaptures every story. Run doctor again to build Storybook with stats and show which files those are.'
+      : `${move} Storybook into ${folder} with --stats-json, then run doctor again. With TurboSnap, a change to any file preview imports recaptures every story.`,
     build,
   };
 }
@@ -304,7 +312,9 @@ export async function previewReachChecks(
   const { statsFile, build } = await previewStats(input, statsDirectory);
   const relative = relativeOrDot(input.cwd, statsFile);
   const shown = relative.startsWith('..') ? statsFile : relative;
-  if (!existsSync(statsFile)) return [missingStatsCheck(shown, build)];
+  // A file where Storybook would build, such as storybook-static, can't hold a stats file.
+  const inFile = existsSync(path.dirname(statsFile)) && !isDirectory(path.dirname(statsFile));
+  if (!existsSync(statsFile)) return [missingStatsCheck(shown, build, inFile)];
 
   const projectRoot = getStorybookProjectRoot({
     storybookBaseDir: options.storybookBaseDir,

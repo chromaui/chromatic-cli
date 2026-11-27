@@ -359,6 +359,7 @@ async function resolveStorybook(
  *
  * @param input What loadDoctorInput read.
  * @param key The option the fix changes.
+ * @param id The fix's ID for --apply.
  * @param summary What the fix does, in one line.
  * @param change Edits the parsed config in place.
  * @param options How to offer it.
@@ -369,13 +370,14 @@ async function resolveStorybook(
 export function configFix(
   input: DoctorInput,
   key: string,
+  id: string,
   summary: string,
   change: (json: Record<string, any>) => void,
   { adds = false }: { adds?: boolean } = {}
 ): Fix | undefined {
   if (!input.configEditable || input.flagKeys.has(key)) return undefined;
   if (!adds && !input.configKeys.has(key)) return undefined;
-  return { summary, edits: [configEdit(input, change)] };
+  return { id, summary, edits: [configEdit(input, change)] };
 }
 
 /**

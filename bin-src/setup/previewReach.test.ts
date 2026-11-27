@@ -164,6 +164,12 @@ Imports`
     expect(checks).toMatchObject([
       { status: 'info', title: 'No out/preview-stats.json to show what preview imports' },
     ]);
+    expect(checks[0].detail).toMatch(/^Build Storybook into out/);
+
+    // A file where Storybook would build can't hold a stats file, so building into it won't help.
+    write('out', 'not a folder');
+    const [inFile] = await reach(inputFor(root, 'out'));
+    expect(inFile.detail).toMatch(/^out is a file, so Storybook can't build into it/);
   });
 
   it('builds Storybook with stats into its own folder only when TurboSnap is on and Chromatic runs the build script', async () => {
@@ -193,6 +199,10 @@ Imports`
       ),
       statsFile: path.join(folder, 'preview-stats.json'),
     });
+    // Shown only when doctor didn't build, such as after --fix turns TurboSnap on, so it doesn't
+    // name the build into doctor's own folder, which is gone once doctor exits.
+    expect(on.detail).not.toContain(folder);
+    expect(on.detail).toContain('Run doctor again to build Storybook with stats');
     expect(off.build).toBeUndefined();
     expect(otherBranch.build).toBeUndefined();
     expect(prebuilt.build).toBeUndefined();

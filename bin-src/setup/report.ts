@@ -3,9 +3,10 @@ import { stripVTControlCharacters } from 'node:util';
 
 import * as clack from '@clack/prompts';
 
-import type { Check, Fix, Group } from './checks';
+import { type Check, type Fix, fixIds, type Group } from './checks';
 import { pickChoice } from './fixChoices';
 import { installDependencies } from './install';
+import { lineDiff } from './lineDiff';
 import { answered, color, relativeOrDot } from './shared';
 
 const GROUP_TITLES: Record<Group, string> = {
@@ -22,8 +23,8 @@ const MARKS: Record<Check['status'], string> = {
 };
 
 /**
- * Wraps text to a width, so long details stay inside their section's box. A list item's wrapped
- * lines line up under its text.
+ * Wraps text to a width, so long titles and details stay inside their section's box. A list item's
+ * wrapped lines line up under its text. Color codes don't count toward the width.
  *
  * @param text The text to wrap.
  * @param width The widest a line may be.
@@ -36,7 +37,7 @@ function wrap(text: string, width: number) {
     const lines: string[] = [];
     let current = '';
     for (const word of line.split(' ')) {
-      if (current && current.length + word.length + 1 > width) {
+      if (current && visible(current) + visible(word) + 1 > width) {
         lines.push(current);
         current = `${indent}${word}`;
       } else {
@@ -72,11 +73,15 @@ export function printChecks(checks: Check[]) {
     const inGroup = checks.filter((c) => c.group === group);
     if (inGroup.length === 0) return [];
     const lines = inGroup.flatMap((check) => {
-      const fixable = check.fix ? color.cta(' (fixable)') : '';
+      // A no-break space keeps the ID on the same line as "fixable:" when the title wraps.
+      const fixable = check.fix
+        ? ` ${color.cta(`(fixable:\u00A0${fixIds(check.fix).join(', ')})`)}`
+        : '';
+      const [first, ...rest] = wrap(`${check.title}${fixable}`, width - 2);
       const details = check.detail
         ? wrap(check.detail, width - 2).map((line) => `  ${color.muted(line)}`)
         : [];
-      return [`${MARKS[check.status]} ${check.title}${fixable}`, ...details];
+      return [`${MARKS[check.status]} ${first}`, ...rest.map((line) => `  ${line}`), ...details];
     });
     return [{ title: `${color.bold(GROUP_TITLES[group])}  ${summarize(inGroup)}`, lines }];
   });
@@ -112,174 +117,6 @@ export function summarize(checks: Check[]) {
   ].filter(Boolean);
   return parts.length > 0 ? parts.join(color.muted(' · ')) : color.muted('nothing to check');
 }
-
-// In JSON, a line that only gains or loses a trailing comma, before a key added after it, isn't a
-// change. In other files, such as .env, a comma is part of the value.
-const withoutComma = (line: string) => line.replace(/,\s*$/, '');
-// A line that is just a key opening an object or array, such as `"scripts": {`, so it holds no value.
-const HEADING = /^\s+"[^"]*"\s*:\s*[[{]\s*$/;
-
-// A line that closes an object or array, such as `},`.
-const CLOSING = /^\s*[\]}],?\s*$/;
-
-/**
- * The line that opens the object or array a line sits in, such as `"scripts": {`, so a diff can
- * say where a change goes. The file's outermost brace doesn't count, nor does a line that holds
- * values as well as opening one.
- *
- * @param lines The file's lines.
- * @param at The changed line.
- *
- * @returns The opening line's index, if there is one.
- */
-function parentLine(lines: string[], at: number) {
-  const indent = lines[at].search(/\S/);
-  for (let index = at - 1; index >= 0; index--) {
-    const depth = lines[index].search(/\S/);
-    if (depth !== -1 && depth < indent) return HEADING.test(lines[index]) ? index : undefined;
-  }
-  return undefined;
-}
-
-interface Op {
-  kind: 'same' | 'del' | 'add';
-  a: number;
-  b: number;
-}
-
-/**
- * Lines kept, removed and added, by longest common subsequence, so an added line that repeats an
- * existing one, such as a second "with:", still shows.
- *
- * @param a The lines before.
- * @param b The lines after.
- * @param same Whether two lines count as the same.
- *
- * @returns One step per line, with its index in each.
- */
-function diffOps(a: string[], b: string[], same: (x: string, y: string) => boolean) {
-  const lcs = commonLengths(a, b, same);
-  const ops: Op[] = [];
-  let index = 0;
-  let index_ = 0;
-  while (index < a.length || index_ < b.length) {
-    if (index < a.length && index_ < b.length && same(a[index], b[index_])) {
-      ops.push({ kind: 'same', a: index++, b: index_++ });
-    } else if (
-      index < a.length &&
-      (index_ === b.length || lcs[index + 1][index_] >= lcs[index][index_ + 1])
-    ) {
-      ops.push({ kind: 'del', a: index++, b: index_ });
-    } else {
-      ops.push({ kind: 'add', a: index, b: index_++ });
-    }
-  }
-  return ops;
-}
-
-/**
- * The longest common subsequence's length from each pair of positions onward.
- *
- * @param a The lines before.
- * @param b The lines after.
- * @param same Whether two lines count as the same.
- *
- * @returns The table, one row per line before and one column per line after.
- */
-function commonLengths(a: string[], b: string[], same: (x: string, y: string) => boolean) {
-  const lcs = Array.from({ length: a.length + 1 }, () =>
-    Array.from({ length: b.length + 1 }, () => 0)
-  );
-  for (let index = a.length - 1; index >= 0; index--) {
-    for (let index_ = b.length - 1; index_ >= 0; index_--) {
-      lcs[index][index_] = same(a[index], b[index_])
-        ? lcs[index + 1][index_ + 1] + 1
-        : Math.max(lcs[index + 1][index_], lcs[index][index_ + 1]);
-    }
-  }
-  return lcs;
-}
-
-/**
- * The context above a group of changes to a JSON file: the key that opens its object, a `...` for
- * the lines in between, and the line just before the group if it sits beside it, so the reader
- * sees where the change goes. A line that holds values as well as opening an object never shows.
- *
- * @param a The lines before.
- * @param b The lines after.
- * @param first The group's first change.
- * @param previous The unchanged line just before the group, if there is one.
- *
- * @returns The lines to show, uncolored.
- */
-function contextAbove(a: string[], b: string[], first: Op, previous: Op | undefined) {
-  const side = first.kind === 'add' ? 'b' : 'a';
-  const lines = { a, b }[side];
-  const at = first[side];
-  const heading = parentLine(lines, at);
-  if (!previous) return heading === undefined ? [] : [lines[heading]];
-  const before = previous[side];
-  const shown = heading === undefined || heading === before ? [] : [lines[heading]];
-  if (before > (heading ?? 0) + 1) shown.push(gap(lines[at]));
-  const sibling = lines[before].search(/\S/) === lines[at].search(/\S/);
-  // Its new form, such as a script that gained a comma before the one added after it.
-  if (sibling || before === heading) shown.push(b[previous.b]);
-  return shown;
-}
-
-/**
- * Runs of changed lines, as start and end indexes into the steps.
- *
- * @param ops The diff's steps.
- *
- * @returns Each run's first step and the step after its last.
- */
-function changeGroups(ops: Op[]) {
-  const groups: [number, number][] = [];
-  for (const [index, op] of ops.entries()) {
-    if (op.kind === 'same') continue;
-    const last = groups.at(-1);
-    if (last?.[1] === index) last[1] = index + 1;
-    else groups.push([index, index + 1]);
-  }
-  return groups;
-}
-
-/**
- * A short line diff: lines removed in red, lines added in green. In JSON, each group of changes
- * also shows, dimmed, the key that opens its object, the line before it and the line that closes
- * it, with `...` for the lines it leaves out.
- *
- * @param before The file's text now.
- * @param after The file's text after the fix.
- * @param json Whether the file is JSON, where a line that only gains a comma isn't a change.
- *
- * @returns The changed lines, colored.
- */
-function lineDiff(before: string, after: string, json: boolean) {
-  const a = before.split('\n');
-  const b = after.split('\n');
-  const ops = diffOps(a, b, (x, y) => (json ? withoutComma(x) === withoutComma(y) : x === y));
-  const changed = (op: Op) => {
-    const line = op.kind === 'del' ? a[op.a] : b[op.b];
-    if (!line.trim()) return [];
-    return [op.kind === 'del' ? color.error(`- ${line}`) : color.success(`+ ${line}`)];
-  };
-  const below = (next: Op | undefined) =>
-    next ? [CLOSING.test(b[next.b]) ? b[next.b] : gap(b[next.b])] : [];
-  return changeGroups(ops)
-    .flatMap(([start, end]) => [
-      ...(json ? contextAbove(a, b, ops[start], ops[start - 1]) : []).map((line) => muted(line)),
-      ...ops.slice(start, end).flatMap((op) => changed(op)),
-      ...(json ? below(ops[end]) : []).map((line) => muted(line)),
-    ])
-    .join('\n');
-}
-
-// A `...` for lines left out, indented like the line it stands next to.
-const gap = (line: string) => `${line.slice(0, line.search(/\S|$/))}...`;
-
-const muted = (line: string) => color.muted(`  ${line}`);
 
 /**
  * Hides all but the last 4 characters of project tokens, so fix previews are safe in CI logs: the
@@ -337,7 +174,7 @@ export function showEdits(
  * @param options.cwd Directory paths are shown relative to.
  * @param options.yes Apply the fix itself without asking.
  * @param options.title The check's title.
- * @param options.skipped Summaries of fixes not to offer again, which gets the choices' too.
+ * @param options.skipped IDs of fixes not to offer again, which gets the choices' too.
  *
  * @returns The fix to apply, or undefined.
  */
@@ -352,9 +189,30 @@ async function chooseFix(
     return ok ? fix : undefined;
   }
   // A choice turned down isn't offered again when a recheck makes it the fix.
-  for (const choice of fix.choices) skipped.add(choice.fix.summary);
+  for (const choice of fix.choices) skipped.add(choice.fix.id);
   const chosen = await pickChoice(fix.choices, title);
   if (chosen) showEdits(chosen.summary, chosen.edits, cwd, chosen.secrets);
+  return chosen;
+}
+
+// The warning of the choice a fix applies, such as a major update's release notes, on its own lines.
+const choiceWarning = (fix: Fix) => {
+  const warning = fix.choices?.find((choice) => choice.fix.id === fix.id)?.warning;
+  return warning ? `${warning}\n` : '';
+};
+
+/**
+ * Shows the fix --apply named, or the choice of it that it named, and returns it to apply.
+ *
+ * @param fix The fix.
+ * @param apply The IDs named with --apply.
+ * @param cwd Directory paths are shown relative to.
+ *
+ * @returns The fix to apply.
+ */
+function pickNamed(fix: Fix, apply: Set<string>, cwd: string) {
+  const chosen = fix.choices?.find((choice) => apply.has(choice.fix.id))?.fix ?? fix;
+  showEdits(chosen.summary, chosen.edits, cwd, chosen.secrets);
   return chosen;
 }
 
@@ -365,28 +223,44 @@ async function chooseFix(
  * @param options How to apply.
  * @param options.cwd Directory paths are shown relative to.
  * @param options.yes Apply every fix without asking, except those with a question.
+ * @param options.apply IDs of fixes to apply without asking, as if their question was answered
+ * yes. When there are any, other fixes are only applied with yes.
+ * @param options.applyCommand The command that applies one fix by its ID, shown for a fix that yes
+ * skips because it asks a question.
  *
  * @returns The checks after the last fix, and the fixes applied.
  */
+// eslint-disable-next-line complexity -- one branch per way a fix is answered: --apply, --yes or a prompt
 async function offerFixes(
   recheck: () => Promise<Check[]>,
-  { cwd, yes }: { cwd: string; yes: boolean }
+  {
+    cwd,
+    yes,
+    apply = new Set(),
+    applyCommand,
+  }: { cwd: string; yes: boolean; apply?: Set<string>; applyCommand: (id: string) => string }
 ) {
-  const skipped = new Set<string>();
+  const offered = new Set<string>();
   const applied: Fix[] = [];
   for (;;) {
     const checks = await recheck();
-    const next = checks.find((c) => c.fix && !skipped.has(c.fix.summary));
+    const next = checks.find((c) => c.fix && !offered.has(c.fix.id));
     if (!next?.fix) return { checks, applied };
     const { fix } = next;
-    skipped.add(fix.summary);
-    if (fix.question && yes) {
+    offered.add(fix.id);
+    // Naming a fix answers its question. With names, only --yes applies the other fixes.
+    const named = fixIds(fix).some((id) => apply.has(id));
+    if (!named && apply.size > 0 && !yes) continue;
+    if (!named && fix.question && yes) {
       clack.log.warn(
-        `Skipped: ${fix.summary}. Run ${color.cta('npx chromatic doctor --fix')} in a terminal to answer: ${fix.question}`
+        `Skipped: ${fix.summary}. It asks: ${fix.question}\n${choiceWarning(fix)}If the answer is yes, run ${color.cta(applyCommand(fix.id))}`
       );
       continue;
     }
-    const chosen = await chooseFix(fix, { cwd, yes, title: next.title, skipped });
+    // A named choice, such as chromatic.update:major, is applied in place of the fix it belongs to.
+    const chosen = named
+      ? pickNamed(fix, apply, cwd)
+      : await chooseFix(fix, { cwd, yes, title: next.title, skipped: offered });
     if (!chosen) continue;
     for (const { file, content } of chosen.edits) writeFileSync(file, content);
     applied.push(chosen);
@@ -403,12 +277,14 @@ async function offerFixes(
  * @param options How to apply.
  * @param options.cwd Directory paths are shown relative to, and the install runs in.
  * @param options.yes Apply every fix without asking, except those with a question.
+ * @param options.apply IDs of fixes to apply without asking, as in offerFixes.
+ * @param options.applyCommand The command that applies one fix by its ID, as in offerFixes.
  *
  * @returns The checks after the last fix, and the install's failure when there is one.
  */
 export async function applyFixes(
   recheck: () => Promise<Check[]>,
-  options: { cwd: string; yes: boolean }
+  options: Parameters<typeof offerFixes>[1]
 ) {
   const { checks, applied } = await offerFixes(recheck, options);
   if (!applied.some((fix) => fix.install)) return checks;
@@ -421,11 +297,19 @@ export async function applyFixes(
 const shellQuote = (argument: string) =>
   /^[\w@%+=:,./-]+$/.test(argument) ? argument : `'${argument.replaceAll("'", String.raw`'\''`)}'`;
 
-// Doctor's own flags, which the rerun command sets itself, with dashes dropped: the parser also
-// takes camelCase, such as --projectToken.
-const RERUN_DROPPED = new Set(['fix', 'nofix', 'yes', 'noyes']);
-// The project token's long flag; its value is a secret, kept out of printed commands.
-const SECRET_FLAG = 'projecttoken';
+// Long flags the rerun command leaves out, with dashes dropped (the parser also takes camelCase,
+// such as --projectToken), and whether each takes a value: doctor's own flags, which the command
+// sets itself, and the project token, a secret kept out of printed commands.
+const RERUN_DROPPED = new Map([
+  ['fix', false],
+  ['nofix', false],
+  ['yes', false],
+  ['noyes', false],
+  ['projecttoken', true],
+]);
+
+// A long flag's name without dashes or case, as the parser matches it.
+const flagName = (argument: string) => argument.split('=')[0].replaceAll('-', '').toLowerCase();
 
 /**
  * The command to run doctor again with the same arguments, such as --config-file, plus more, so a
@@ -433,21 +317,28 @@ const SECRET_FLAG = 'projecttoken';
  * printed.
  *
  * @param argv The arguments doctor ran with.
- * @param extra Arguments to add, such as --fix.
+ * @param extra Arguments to add, such as --fix. A flag here replaces the same flag in argv, with its
+ * value, such as --project or --apply.
  *
  * @returns The command, quoted for a POSIX shell.
  */
 export function doctorCommand(argv: string[], extra: string[]) {
+  const dropped = new Map([
+    ...RERUN_DROPPED,
+    ...extra.flatMap((argument, index) =>
+      argument.startsWith('--')
+        ? [[flagName(argument), !(extra[index + 1] ?? '-').startsWith('-')] as const]
+        : []
+    ),
+  ]);
   const kept: string[] = [];
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
-    const [name] = argument.split('=');
-    if (name.startsWith('--')) {
-      const flag = name.replaceAll('-', '').toLowerCase();
-      if (RERUN_DROPPED.has(flag)) continue;
-      if (flag === SECRET_FLAG) {
+    if (argument.startsWith('--')) {
+      const takesValue = dropped.get(flagName(argument));
+      if (takesValue !== undefined) {
         // The value is the next argument unless it's attached with =.
-        if (!argument.includes('=')) index += 1;
+        if (takesValue && !argument.includes('=')) index += 1;
         continue;
       }
     } else if (/^-[a-z]/i.test(argument)) {

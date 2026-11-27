@@ -208,13 +208,15 @@ function majorWarning(installed: string, target: string) {
 /**
  * The fix that sets chromatic's range in package.json and installs it.
  *
+ * @param key The target, such as major, which names the fix for --apply.
  * @param wanted The new range, such as ^18.15.3.
  * @param packageJsonPath The package.json that lists chromatic.
  *
  * @returns The fix.
  */
-function updateFix(wanted: string, packageJsonPath: string): Fix {
+function updateFix(key: TargetKey, wanted: string, packageJsonPath: string): Fix {
   return {
+    id: `chromatic.update:${key}`,
     summary: `Update chromatic to ${wanted} in package.json and install it`,
     install: true,
     edits: [
@@ -290,7 +292,7 @@ function updateOffer(
     key,
     label: `${LABELS[key]} ${version}`,
     ...(key === 'major' && { warning: majorWarning(installed, version) }),
-    fix: updateFix(`${prefix}${version}`, packageJsonPath),
+    fix: updateFix(key, `${prefix}${version}`, packageJsonPath),
   }));
   const [first] = choices;
   if (choices.length === 1 && !first.warning) return { fix: first.fix };

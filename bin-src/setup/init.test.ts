@@ -120,6 +120,17 @@ describe('init stops before writing anything', () => {
     expect(changedFiles()).toBe('');
   });
 
+  it('when --project names a file, not a folder', async () => {
+    write('.storybook/main.ts', 'export default {}\n');
+    commit();
+    process.chdir(root);
+
+    await expect(
+      main(['--yes', '--skip-install', '--project', 'package.json', '--framework', 'storybook'])
+    ).rejects.toMatchObject({ exitCode: 1, message: 'No directory at package.json' });
+    expect(changedFiles()).toBe('');
+  });
+
   it('when --framework storybook names a package whose Storybook builds from the root', async () => {
     write('.storybook/main.ts', 'export default {}\n');
     write('vitest.config.ts', 'export default {}\n');

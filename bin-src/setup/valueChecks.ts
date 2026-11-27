@@ -4,7 +4,7 @@ import path from 'node:path';
 import { findBuildScriptName } from '../../node-src/lib/getOptions';
 import type { Check, Fix } from './checks';
 import { findMainFile, matchesBranch } from './checks';
-import { findTestConfig } from './detect';
+import { findTestConfig, isDirectory } from './detect';
 import { configFix, DoctorInput, globSuggestions } from './doctorInput';
 import { relativeOrDot, tokenEnvironmentEdits } from './shared';
 
@@ -83,6 +83,7 @@ function turnOnFix(input: DoctorInput) {
   const fix = configFix(
     input,
     'onlyChanged',
+    'onlyChanged.enable',
     'Turn on TurboSnap with "onlyChanged": true',
     (json) => {
       json.onlyChanged = true;
@@ -135,9 +136,15 @@ function onlyChangedChecks(input: DoctorInput): Check[] {
         status: 'warn',
         title: `onlyChanged has no effect on ${playwright ? 'Playwright' : 'Cypress'} tests`,
         detail: 'TurboSnap only works with Storybook and Vitest.',
-        fix: configFix(input, 'onlyChanged', 'Remove onlyChanged from the config file', (json) => {
-          delete json.onlyChanged;
-        }),
+        fix: configFix(
+          input,
+          'onlyChanged',
+          'onlyChanged.remove',
+          'Remove onlyChanged from the config file',
+          (json) => {
+            delete json.onlyChanged;
+          }
+        ),
       },
     ];
   }
@@ -176,6 +183,7 @@ function onlyChangedChecks(input: DoctorInput): Check[] {
           fix: configFix(
             input,
             'onlyChanged',
+            'onlyChanged.setBoolean',
             `Set "onlyChanged": ${trimmed} in the config file`,
             (json) => {
               json.onlyChanged = trimmed === 'true';
@@ -213,8 +221,18 @@ function configDirectoryChecks(input: DoctorInput): Check[] {
   const { cwd, gitRoot, options } = input;
   const value = options.storybookConfigDir;
   if (value === undefined) return [];
-  if (existsSync(input.storybookConfigDirectory)) {
+  if (isDirectory(input.storybookConfigDirectory)) {
     return [{ group: 'Values', status: 'pass', title: `storybookConfigDir ${value} exists` }];
+  }
+  if (existsSync(input.storybookConfigDirectory)) {
+    return [
+      {
+        group: 'Values',
+        status: 'fail',
+        title: `storybookConfigDir ${value} isn't a folder`,
+        detail: "Point it at the folder with Storybook's main config, such as .storybook.",
+      },
+    ];
   }
 
   // A repo-root path used from a subdirectory doubles up, like packages/ui/packages/ui/.storybook.
@@ -226,7 +244,7 @@ function configDirectoryChecks(input: DoctorInput): Check[] {
     prefix !== '.' && normalized.startsWith(`${prefix}/`)
       ? normalized.slice(prefix.length + 1)
       : undefined;
-  const rebasedExists = rebased !== undefined && existsSync(path.join(cwd, rebased));
+  const rebasedExists = rebased !== undefined && isDirectory(path.join(cwd, rebased));
   return [
     {
       group: 'Values',
@@ -241,6 +259,7 @@ function configDirectoryChecks(input: DoctorInput): Check[] {
             configFix(
               input,
               'storybookConfigDir',
+              'storybookConfigDir.rebase',
               `Set storybookConfigDir to ${rebased}`,
               (json) => {
                 json.storybookConfigDir = rebased;
@@ -257,12 +276,13 @@ function baseDirectoryChecks(input: DoctorInput): Check[] {
   const { gitRoot, options } = input;
   const value = options.storybookBaseDir;
   if (value === undefined || !gitRoot) return [];
-  if (!existsSync(path.resolve(gitRoot, value))) {
+  const folder = path.resolve(gitRoot, value);
+  if (!isDirectory(folder)) {
     return [
       {
         group: 'Values',
         status: 'fail',
-        title: `storybookBaseDir ${value} doesn't exist`,
+        title: `storybookBaseDir ${value} ${existsSync(folder) ? "isn't a folder" : "doesn't exist"}`,
         detail: 'It is relative to the repository root.',
       },
     ];
@@ -361,9 +381,15 @@ function unmatchedGlobCheck(
     detail: `Globs are matched from the repository root.${suggestion ? ` ${suggestion.glob} matches ${suggestion.count}${where}.` : ''}`,
     fix:
       suggestion && !folders
-        ? configFix(input, key, `Change ${key} ${glob} to ${suggestion.glob}`, (json) => {
-            json[key] = json[key].map((g: string) => (g === glob ? suggestion.glob : g));
-          })
+        ? configFix(
+            input,
+            key,
+            `${key}.retarget:${glob}`,
+            `Change ${key} ${glob} to ${suggestion.glob}`,
+            (json) => {
+              json[key] = json[key].map((g: string) => (g === glob ? suggestion.glob : g));
+            }
+          )
         : undefined,
   };
 }
@@ -383,6 +409,7 @@ function moveTokenFix(input: DoctorInput) {
   const removal = configFix(
     input,
     'projectToken',
+    'projectToken.moveToEnv',
     'Move the token to a gitignored .env and remove it from the config file',
     (json) => {
       delete json.projectToken;
