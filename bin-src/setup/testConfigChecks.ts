@@ -1,7 +1,14 @@
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 import type { Check } from './checks';
-import { ARCHIVE_DIRECTORIES, findTestConfig, FRAMEWORK_NAMES, TEST_FRAMEWORKS } from './detect';
+import {
+  ARCHIVE_DIRECTORIES,
+  findTestConfig,
+  FRAMEWORK_NAMES,
+  isDirectory,
+  TEST_FRAMEWORKS,
+} from './detect';
 import type { DoctorInput } from './doctorInput';
 import { relativeOrDot } from './shared';
 
@@ -34,6 +41,20 @@ export function testConfigChecks(input: DoctorInput): Check[] {
     ];
   }
   const runsFrom = path.dirname(config);
+  const archives = path.join(runsFrom, ARCHIVE_DIRECTORIES[framework]);
+  const location = input.archiveLocation;
+  // The tests create a missing folder; a file there leaves the build no archives to read.
+  const locationPath = location === undefined ? undefined : path.resolve(cwd, location);
+  if (locationPath && existsSync(locationPath) && !isDirectory(locationPath)) {
+    return [
+      {
+        group: 'Loading',
+        status: 'fail',
+        title: `CHROMATIC_ARCHIVE_LOCATION ${location} isn't a folder`,
+        detail: `It must name the folder ${name} writes its test results to, such as ${relativeOrDot(cwd, archives)}. Chromatic reads the archives from inside it.`,
+      },
+    ];
+  }
   if (runsFrom === cwd) {
     return [
       {
@@ -45,8 +66,6 @@ export function testConfigChecks(input: DoctorInput): Check[] {
   }
   const where =
     runsFrom === gitRoot ? 'the repository root' : relativeOrDot(gitRoot ?? cwd, runsFrom);
-  const archives = path.join(runsFrom, ARCHIVE_DIRECTORIES[framework]);
-  const location = input.archiveLocation;
   const found = location !== undefined && path.resolve(cwd, location) === archives;
   const { storybookBaseDir } = input.options;
   // Without storybookBaseDir, a build names files from the folder it runs in.

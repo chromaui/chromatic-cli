@@ -238,6 +238,27 @@ describe('tests that run from a folder above the project', () => {
     expect(await status()).toBe('fail');
   });
 
+  it('fails a CHROMATIC_ARCHIVE_LOCATION that names a file, here or above', async () => {
+    writeFileSync(path.join(root, 'playwright.config.ts'), 'export default {};\n');
+    writeFileSync(path.join(root, 'test-results'), 'not a folder\n');
+    commit();
+    const failure = (location: string) =>
+      expect.objectContaining({
+        status: 'fail',
+        title: `CHROMATIC_ARCHIVE_LOCATION ${location} isn't a folder`,
+        detail: expect.stringContaining('the folder Playwright writes its test results to'),
+      });
+
+    vi.stubEnv('CHROMATIC_ARCHIVE_LOCATION', '../../test-results');
+    const app = path.join(root, 'packages', 'app');
+    expect(await collectChecks(app, ['--playwright'])).toContainEqual(
+      failure('../../test-results')
+    );
+    // The config here doesn't skip it: a build from here reads the same location.
+    vi.stubEnv('CHROMATIC_ARCHIVE_LOCATION', 'package.json');
+    expect(await collectChecks(root, ['--playwright'])).toContainEqual(failure('package.json'));
+  });
+
   it('points the no-project gate at that folder instead of init', async () => {
     writeFileSync(path.join(root, 'playwright.config.ts'), 'export default {};\n');
     commit();
